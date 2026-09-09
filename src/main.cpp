@@ -13,6 +13,7 @@
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusReply>
 #include <QCursor>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -96,10 +97,39 @@ public:
 
     bool contextAvailable() const { return m_context.available(); }
 
-    Q_INVOKABLE bool applicationIsOpen(const QString &resultId,
-                                       const QString &displayName) const
+    Q_INVOKABLE bool resultIsOpen(int row) const
     {
-        return m_context.applicationIsOpen(resultId, displayName);
+        const QModelIndex index = m_results->index(row, 0);
+        return index.isValid() && m_context.applicationIsOpen(
+            m_results->data(index, KRunner::ResultsModel::IdRole).toString(),
+            m_results->data(index, Qt::DisplayRole).toString());
+    }
+
+    Q_INVOKABLE bool activateIfOpen(int row)
+    {
+        if (!m_context.available()) {
+            refreshContextBlocking();
+        }
+        const QModelIndex index = m_results->index(row, 0);
+        if (!index.isValid()) {
+            return false;
+        }
+        const QString windowId = m_context.windowIdForApplication(
+            m_results->data(index, KRunner::ResultsModel::IdRole).toString(),
+            m_results->data(index, Qt::DisplayRole).toString());
+        if (windowId.isEmpty()) {
+            return false;
+        }
+
+        QDBusMessage request = QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/Kadunce"),
+            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("activateApplicationWindow"));
+        request.setArguments({windowId});
+        const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
+            request, QDBus::Block, 500);
+        return reply.isValid() && reply.value();
     }
 
 public Q_SLOTS:
@@ -137,6 +167,23 @@ Q_SIGNALS:
     void contextChanged();
 
 private:
+    void refreshContextBlocking()
+    {
+        const QDBusMessage request = QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/Kadunce"),
+            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("workspaceContext"));
+        const QDBusReply<QString> reply = QDBusConnection::sessionBus().call(
+            request, QDBus::Block, 500);
+        if (reply.isValid()) {
+            m_context.update(reply.value());
+        } else {
+            m_context.clear();
+        }
+        Q_EMIT contextChanged();
+    }
+
     void refreshContext()
     {
         const QDBusMessage request = QDBusMessage::createMethodCall(

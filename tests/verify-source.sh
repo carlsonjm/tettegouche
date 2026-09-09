@@ -15,5 +15,7 @@ rg -q 'studio\.warbler\.kadunce\.workspace-context' \
 rg -q 'SupportedVersion = 1' "${project_root}/src/WorkspaceContext.cpp"
 rg -q 'Q_INVOKABLE void finishLaunch\(\)' "${project_root}/src/main.cpp"
 rg -Fq 'QTimer::singleShot(750' "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("activateApplicationWindow"\)' \
+    "${project_root}/src/main.cpp"
 
 echo "Tettegouche source checks passed."

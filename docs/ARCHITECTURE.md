@@ -11,13 +11,14 @@ Tettegouche owns:
 - invocation and launcher presentation;
 - installed-application queries through Plasma's application runner;
 - result selection and normal application launch actions;
-- interpretation of the published workspace-context schema.
+- interpretation of the published workspace-context schema;
+- requesting activation of an exact live window from that snapshot.
 
 Kadunce owns:
 
 - KWin window discovery and identity;
 - cards, stacks, focus, and output state;
-- any future command that focuses an existing card.
+- activation behavior for existing windows and cards.
 
 At open time, Tettegouche requests one `workspaceContext` snapshot from
 Kadunce. There is no timer, heartbeat, raw KWin discovery, or reverse surface
@@ -26,11 +27,12 @@ version, the context is discarded and application search continues normally.
 
 ## Launch behavior
 
-The first seed labels results that correspond to an open application, then
-invokes Plasma's ordinary action for the selected result. It does not pretend
-that launching and focusing are equivalent. Exact focus-or-launch behavior is
-blocked on a separately designed Kadunce command with deterministic handling
-for multiple windows, stacks, minimized windows, and different outputs.
+Results that correspond to an open application carry its live `windowId`.
+Tettegouche asks Kadunce to activate that exact window; Kadunce restores it if
+minimized and routes card-backed windows through its existing card selection.
+When several windows belong to one application, the focused window wins,
+followed by the selected card and then the frontmost matching window. Results
+without a live match use Plasma's ordinary launch action.
 
 ## Surface behavior
 

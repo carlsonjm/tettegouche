@@ -20,8 +20,8 @@ private Q_SLOTS:
             "version":1,
             "focus":{"appId":"org.kde.konsole"},
             "applications":[
-                {"appId":"org.kde.konsole","title":"Terminal"},
-                {"appId":"com.spotify.Client","title":"Spotify"}
+                {"windowId":"terminal-window","appId":"org.kde.konsole","title":"Terminal","focused":true},
+                {"windowId":"spotify-window","appId":"com.spotify.Client","title":"Spotify"}
             ]
         })json");
 
@@ -33,6 +33,10 @@ private Q_SLOTS:
             QStringLiteral("org.kde.konsole.desktop"), QString()));
         QVERIFY(context.applicationIsOpen(QString(),
                                           QStringLiteral("Spotify")));
+        QCOMPARE(context.windowIdForApplication(
+                     QStringLiteral("services_org.kde.konsole.desktop"),
+                     QStringLiteral("Konsole")),
+                 QStringLiteral("terminal-window"));
         QVERIFY(!context.applicationIsOpen(
             QStringLiteral("org.kde.dolphin"), QStringLiteral("Dolphin")));
     }
@@ -56,7 +60,7 @@ private Q_SLOTS:
         QVERIFY(context.update(QStringLiteral(R"json({
             "schema":"studio.warbler.kadunce.workspace-context",
             "version":1,
-            "applications":[{"appId":"org.example.App","title":"App"}]
+            "applications":[{"windowId":"app-window","appId":"org.example.App","title":"App"}]
         })json")));
 
         QVERIFY(!context.update(QStringLiteral("not json")));

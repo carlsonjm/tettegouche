@@ -21,6 +21,10 @@ Item {
         if (index < 0 || index >= resultList.count) {
             return false
         }
+        if (root.launcherController.activateIfOpen(index)) {
+            root.launcherController.finishLaunch()
+            return true
+        }
         if (root.searchResults.run(root.searchResults.index(index, 0))) {
             root.launcherController.finishLaunch()
             return true
@@ -206,8 +210,8 @@ Item {
                         required property int index
                         required property var model
                         readonly property bool alreadyOpen:
-                            root.launcherController.applicationIsOpen(
-                                model.id || "", model.display || "")
+                            root.launcherController.contextAvailable
+                            && root.launcherController.resultIsOpen(index)
 
                         width: resultList.width
                         height: 62
