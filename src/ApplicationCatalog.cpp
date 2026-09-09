@@ -38,20 +38,21 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
               [](const Entry &left, const Entry &right) {
         return QString::localeAwareCompare(left.name, right.name) < 0;
     });
+    rebuildVisibleRows();
 }
 
 int ApplicationCatalog::rowCount(const QModelIndex &parent) const
 {
-    return parent.isValid() ? 0 : m_entries.size();
+    return parent.isValid() ? 0 : m_visibleRows.size();
 }
 
 QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() < 0
-        || index.row() >= m_entries.size()) {
+        || index.row() >= m_visibleRows.size()) {
         return {};
     }
-    const Entry &entry = m_entries.at(index.row());
+    const Entry &entry = m_entries.at(m_visibleRows.at(index.row()));
     switch (role) {
     case NameRole:
         return entry.name;
@@ -75,23 +76,80 @@ QHash<int, QByteArray> ApplicationCatalog::roleNames() const
 
 bool ApplicationCatalog::launch(int row)
 {
-    if (row < 0 || row >= m_entries.size()) {
+    if (row < 0 || row >= m_visibleRows.size()) {
         return false;
     }
     auto *job = new KIO::ApplicationLauncherJob(
-        m_entries.at(row).service, this);
+        m_entries.at(m_visibleRows.at(row)).service, this);
     job->start();
     return true;
 }
 
 QString ApplicationCatalog::applicationId(int row) const
 {
-    return row >= 0 && row < m_entries.size()
-        ? m_entries.at(row).applicationId : QString();
+    return row >= 0 && row < m_visibleRows.size()
+        ? m_entries.at(m_visibleRows.at(row)).applicationId : QString();
 }
 
 QString ApplicationCatalog::applicationName(int row) const
 {
-    return row >= 0 && row < m_entries.size()
-        ? m_entries.at(row).name : QString();
+    return row >= 0 && row < m_visibleRows.size()
+        ? m_entries.at(m_visibleRows.at(row)).name : QString();
+}
+
+QString ApplicationCatalog::filterText() const
+{
+    return m_filterText;
+}
+
+void ApplicationCatalog::setFilterText(const QString &filterText)
+{
+    const QString normalized = filterText.trimmed();
+    if (m_filterText == normalized) {
+        return;
+    }
+    m_filterText = normalized;
+    rebuildVisibleRows();
+    Q_EMIT filterTextChanged();
+}
+
+bool ApplicationCatalog::descending() const
+{
+    return m_descending;
+}
+
+void ApplicationCatalog::setDescending(bool descending)
+{
+    if (m_descending == descending) {
+        return;
+    }
+    m_descending = descending;
+    rebuildVisibleRows();
+    Q_EMIT descendingChanged();
+}
+
+void ApplicationCatalog::rebuildVisibleRows()
+{
+    beginResetModel();
+    m_visibleRows.clear();
+    m_visibleRows.reserve(m_entries.size());
+
+    const auto matches = [this](const Entry &entry) {
+        return m_filterText.isEmpty()
+            || entry.name.contains(m_filterText, Qt::CaseInsensitive);
+    };
+    if (m_descending) {
+        for (int row = m_entries.size() - 1; row >= 0; --row) {
+            if (matches(m_entries.at(row))) {
+                m_visibleRows.append(row);
+            }
+        }
+    } else {
+        for (int row = 0; row < m_entries.size(); ++row) {
+            if (matches(m_entries.at(row))) {
+                m_visibleRows.append(row);
+            }
+        }
+    }
+    endResetModel();
 }

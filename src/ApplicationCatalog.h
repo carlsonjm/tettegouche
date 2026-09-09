@@ -13,6 +13,8 @@
 class ApplicationCatalog final : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
+    Q_PROPERTY(bool descending READ descending WRITE setDescending NOTIFY descendingChanged)
 
 public:
     enum Role {
@@ -29,8 +31,17 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE bool launch(int row);
-    [[nodiscard]] QString applicationId(int row) const;
-    [[nodiscard]] QString applicationName(int row) const;
+    Q_INVOKABLE [[nodiscard]] QString applicationId(int row) const;
+    Q_INVOKABLE [[nodiscard]] QString applicationName(int row) const;
+
+    [[nodiscard]] QString filterText() const;
+    void setFilterText(const QString &filterText);
+    [[nodiscard]] bool descending() const;
+    void setDescending(bool descending);
+
+Q_SIGNALS:
+    void filterTextChanged();
+    void descendingChanged();
 
 private:
     struct Entry {
@@ -40,5 +51,10 @@ private:
         QString applicationId;
     };
 
+    void rebuildVisibleRows();
+
     QVector<Entry> m_entries;
+    QVector<int> m_visibleRows;
+    QString m_filterText;
+    bool m_descending = false;
 };

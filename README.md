@@ -24,10 +24,11 @@ normal application action. With a compatible Kadunce version, Tettegouche can
 temporarily occupy Card Line's center without joining its card model. Older or
 missing Kadunce versions always receive the standalone launcher.
 
-At rest, users can type immediately or pull the outlined **Browse everything**
-handle upward. The drawer reads Plasma's installed application catalogue,
-excludes hidden entries, sorts by display name, and launches through KDE's
-normal application job. Typing replaces the drawer with ranked search results.
+At rest, users can type immediately or pull the **Browse everything** grabber
+upward. The drawer reads Plasma's installed application catalogue, excludes
+hidden entries, sorts by display name, and launches through KDE's normal
+application job. Search filters an open drawer in place; search from the resting
+card retains the compact ranked-results view.
 
 ## Build and run
 

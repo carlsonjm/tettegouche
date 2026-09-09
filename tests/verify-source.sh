@@ -56,6 +56,11 @@ rg -q 'launcherController\.showInputMethod\(\)' \
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'text: "Browse everything"' "${project_root}/qml/Launcher.qml"
+rg -q 'Q_PROPERTY\(bool descending' \
+    "${project_root}/src/ApplicationCatalog.h"
+rg -q 'setFilterText' "${project_root}/src/ApplicationCatalog.cpp"
+rg -q 'view-sort-descending-symbolic' \
+    "${project_root}/qml/Launcher.qml"
 rg -q 'property: "drawerProgress"' "${project_root}/qml/Launcher.qml"
 rg -q 'KApplicationTrader::query' \
     "${project_root}/src/ApplicationCatalog.cpp"

@@ -79,10 +79,14 @@ the left, and its action icon on the right. Physical typing engages it directly;
 an intentional tap fills the control, focuses the field, and requests the
 system input method when one is available.
 
-An outlined `Browse everything` handle rests at the bottom edge. A tap or
-upward drag raises it beneath the search control while an alphabetical grid of
-visible Plasma applications grows behind it. The handle can be pulled down or
-tapped again to close. This catalogue comes directly from `KApplicationTrader`
-and launches through `KIO::ApplicationLauncherJob`; it contains no recency,
-recommendation, or usage-ranking layer. Open-window matching still runs before
-catalogue launch, preserving the same no-duplicates behavior as text search.
+A quiet `Browse everything` label and horizontal grabber rest at the bottom
+edge. A tap or upward drag raises them beneath the search control while an
+alphabetical grid of visible Plasma applications grows behind them. In the open
+header, the centered label crossfades to a left-aligned copy, the grabber
+remains centered, and an A-Z/Z-A sort menu appears at right. Typing filters this
+grid in place; resting-card typing continues to use KRunner's ranked result
+view. The catalogue comes
+directly from `KApplicationTrader` and launches through
+`KIO::ApplicationLauncherJob`; it contains no recency, recommendation, or
+usage-ranking layer. Open-window matching still runs before catalogue launch,
+preserving the same no-duplicates behavior as text search.

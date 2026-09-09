@@ -31,9 +31,15 @@ Item {
     property bool searchEngaged: false
     property bool drawerOpen: false
     property real drawerProgress: 0
+    property bool sortMenuOpen: false
 
     function setDrawerOpen(open) {
         root.drawerOpen = open
+        if (!open) {
+            root.sortMenuOpen = false
+        }
+        root.applicationCatalog.filterText = open ? query.text : ""
+        root.searchResults.queryString = open ? "" : query.text
         drawerSettle.to = open ? 1 : 0
         drawerSettle.restart()
         if (open) {
@@ -109,7 +115,11 @@ Item {
     }
 
     function submit() {
-        if (resultList.count > 0) {
+        if (root.drawerOpen && applicationGrid.count > 0) {
+            const row = Math.max(0, applicationGrid.currentIndex)
+            runCatalogApplication(row,
+                root.applicationCatalog.applicationName(row))
+        } else if (resultList.count > 0) {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
             pendingLaunch = true
@@ -147,6 +157,7 @@ Item {
             root.searchEngaged = false
             root.drawerOpen = false
             root.drawerProgress = 0
+            root.sortMenuOpen = false
             root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
@@ -341,13 +352,15 @@ Item {
                     onTextChanged: {
                         if (text.length > 0) {
                             root.searchEngaged = true
-                            if (root.drawerProgress > 0) {
-                                root.setDrawerOpen(false)
-                            }
                         }
                         root.pendingLaunch = false
-                        root.searchResults.queryString = text
+                        root.applicationCatalog.filterText = root.drawerOpen
+                            ? text : ""
+                        root.searchResults.queryString = root.drawerOpen
+                            ? "" : text
                         resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                        applicationGrid.currentIndex =
+                            applicationGrid.count > 0 ? 0 : -1
                     }
 
                     onActiveFocusChanged: {
@@ -357,7 +370,20 @@ Item {
                     }
 
                     Keys.onPressed: event => {
-                        if (event.key === Qt.Key_Down && resultList.count > 0) {
+                        if (root.drawerOpen && event.key === Qt.Key_Down
+                                && applicationGrid.count > 0) {
+                            applicationGrid.currentIndex = Math.min(
+                                applicationGrid.count - 1,
+                                Math.max(0,
+                                    applicationGrid.currentIndex + 1))
+                            event.accepted = true
+                        } else if (root.drawerOpen && event.key === Qt.Key_Up
+                                   && applicationGrid.count > 0) {
+                            applicationGrid.currentIndex = Math.max(
+                                0, applicationGrid.currentIndex - 1)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down
+                                   && resultList.count > 0) {
                             resultList.currentIndex = Math.min(
                                 resultList.count - 1,
                                 Math.max(0, resultList.currentIndex + 1))
@@ -401,7 +427,7 @@ Item {
                 width: parent.width
                 height: parent.height - y
                 opacity: root.applicationLaunchPending ? 0 : 1
-                visible: query.text.length > 0
+                visible: query.text.length > 0 && !root.drawerOpen
 
                 Behavior on opacity {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
@@ -512,34 +538,100 @@ Item {
                 readonly property real revealDistance: Math.max(1,
                     content.height - searchField.height - height - 32)
                 property real dragStartProgress: 0
-                x: Math.round((parent.width - width) / 2)
+                x: 0
                 y: Math.round(parent.height - height - 4
                     - root.drawerProgress * revealDistance)
-                width: 188
-                height: 38
-                opacity: query.text.length === 0
+                width: parent.width
+                height: 44
+                opacity: (query.text.length === 0 || root.drawerOpen)
                     && !root.applicationLaunchPending ? 1 : 0
                 enabled: opacity > 0.5
                 z: 4
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: height / 2
-                    color: drawerHover.hovered || drawerDrag.active
-                        ? "#16ffffff" : "transparent"
-                    border.width: 1
-                    border.color: root.surfaceOutline
-                }
-
                 Text {
-                    anchors.centerIn: parent
+                    id: restingBrowseLabel
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 1
                     text: "Browse everything"
                     color: root.secondaryText
                     font.pixelSize: 13
                     font.letterSpacing: 0.25
+                    opacity: Math.max(0, 1 - root.drawerProgress * 3)
+                    enabled: opacity > 0.5
+
+                    TapHandler {
+                        onTapped: root.setDrawerOpen(true)
+                    }
                 }
 
-                HoverHandler { id: drawerHover }
+                Text {
+                    id: openBrowseLabel
+                    anchors.left: parent.left
+                    anchors.leftMargin: 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Browse everything"
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                    font.letterSpacing: 0.25
+                    opacity: Math.max(0,
+                        (root.drawerProgress - 0.65) / 0.35)
+                    enabled: root.drawerOpen && opacity > 0.9
+
+                    TapHandler {
+                        onTapped: root.setDrawerOpen(false)
+                    }
+                }
+
+                Item {
+                    id: grabberTarget
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: Math.round(10 + (1 - root.drawerProgress) * 10)
+                    width: 104
+                    height: 24
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: drawerDrag.active ? 48 : 42
+                        height: 4
+                        radius: 2
+                        color: drawerHover.hovered || drawerDrag.active
+                            ? root.primaryText : root.surfaceOutline
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 120
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+
+                    HoverHandler { id: drawerHover }
+                }
+
+                Item {
+                    id: sortButton
+                    anchors.right: parent.right
+                    anchors.rightMargin: 1
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 42
+                    height: 42
+                    opacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
+                    enabled: root.drawerOpen && opacity > 0.9
+
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: 20
+                        height: 20
+                        source: root.applicationCatalog.descending
+                            ? "view-sort-descending-symbolic"
+                            : "view-sort-ascending-symbolic"
+                        color: root.primaryText
+                    }
+
+                    TapHandler {
+                        onTapped: root.sortMenuOpen = !root.sortMenuOpen
+                    }
+                }
 
                 DragHandler {
                     id: drawerDrag
@@ -551,6 +643,7 @@ Item {
                         | PointerDevice.TouchScreen
                     onActiveChanged: {
                         if (active) {
+                            root.sortMenuOpen = false
                             drawerHandle.dragStartProgress =
                                 root.drawerProgress
                             drawerSettle.stop()
@@ -567,10 +660,6 @@ Item {
                         }
                     }
                 }
-
-                TapHandler {
-                    onTapped: root.setDrawerOpen(!root.drawerOpen)
-                }
             }
 
             GridView {
@@ -582,7 +671,6 @@ Item {
                 clip: true
                 opacity: root.drawerProgress
                 visible: root.drawerProgress > 0.01
-                    && query.text.length === 0
                     && !root.applicationLaunchPending
                 model: root.applicationCatalog
                 cellWidth: width / Math.max(3,
@@ -590,6 +678,14 @@ Item {
                 cellHeight: 94
                 boundsBehavior: Flickable.StopAtBounds
                 z: 3
+
+                displaced: Transition {
+                    NumberAnimation {
+                        properties: "x,y"
+                        duration: 180
+                        easing.type: Easing.OutCubic
+                    }
+                }
 
                 delegate: Item {
                     id: catalogDelegate
@@ -635,6 +731,82 @@ Item {
                             onTapped: root.runCatalogApplication(
                                 catalogDelegate.index,
                                 catalogDelegate.model.name)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: applicationGrid
+                visible: root.drawerOpen && query.text.length > 0
+                    && applicationGrid.count === 0
+                text: "No applications found"
+                color: root.secondaryText
+                font.pixelSize: 15
+                z: 4
+            }
+
+            Rectangle {
+                id: sortMenu
+                anchors.right: parent.right
+                y: drawerHandle.y + drawerHandle.height + 4
+                width: 132
+                height: 92
+                radius: 14
+                color: root.controlColor
+                border.width: 1
+                border.color: root.surfaceOutline
+                visible: root.sortMenuOpen && root.drawerOpen
+                opacity: visible ? 1 : 0
+                z: 8
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 120
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 4
+
+                    Repeater {
+                        model: [
+                            { "label": "A to Z", "descending": false },
+                            { "label": "Z to A", "descending": true }
+                        ]
+
+                        delegate: Rectangle {
+                            id: sortChoice
+                            required property var modelData
+                            width: parent.width
+                            height: 42
+                            radius: 10
+                            color: choiceHover.hovered
+                                || root.applicationCatalog.descending
+                                    === sortChoice.modelData.descending
+                                ? "#20ffffff" : "transparent"
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: sortChoice.modelData.label
+                                color: root.primaryText
+                                font.pixelSize: 13
+                            }
+
+                            HoverHandler { id: choiceHover }
+                            TapHandler {
+                                onTapped: {
+                                    root.applicationCatalog.descending =
+                                        sortChoice.modelData.descending
+                                    applicationGrid.currentIndex =
+                                        applicationGrid.count > 0 ? 0 : -1
+                                    root.sortMenuOpen = false
+                                }
+                            }
                         }
                     }
                 }
