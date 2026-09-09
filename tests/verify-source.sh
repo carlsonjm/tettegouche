@@ -35,5 +35,10 @@ rg -q 'enabled: root\.launcherController\.guestMode' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'Easing\.OutBack' "${project_root}/qml/Launcher.qml"
 rg -q 'Easing\.InCubic' "${project_root}/qml/Launcher.qml"
+rg -q 'surfaceColor: "#141414"' "${project_root}/qml/Launcher.qml"
+rg -q 'surfaceOutline: "#333333"' "${project_root}/qml/Launcher.qml"
+rg -q 'controlColor: "#242424"' "${project_root}/qml/Launcher.qml"
+rg -q 'cardRadius: 10' "${project_root}/qml/Launcher.qml"
+rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
 
 echo "Tettegouche source checks passed."

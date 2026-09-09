@@ -15,6 +15,11 @@ Item {
     required property var searchResults
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
+    readonly property color surfaceColor: "#141414"
+    readonly property color surfaceOutline: "#333333"
+    readonly property color controlColor: "#242424"
+    readonly property int cardRadius: 10
+    readonly property int contentInset: 22
     property bool pendingLaunch: false
     property real guestDrag: 0
     property bool guestExiting: false
@@ -100,10 +105,10 @@ Item {
         height: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : Math.min(560, parent.height - y - 36)
-        radius: root.launcherController.guestMode ? 10 : 24
-        color: "#f5141414"
+        radius: root.launcherController.guestMode ? root.cardRadius : 24
+        color: root.surfaceColor
         border.width: 1
-        border.color: "#ff333333"
+        border.color: root.surfaceOutline
         clip: true
         transform: Translate { x: root.guestDrag }
 
@@ -144,7 +149,7 @@ Item {
 
         Column {
             anchors.fill: parent
-            anchors.margins: 22
+            anchors.margins: root.contentInset
             spacing: 16
 
             Rectangle {
@@ -152,7 +157,7 @@ Item {
                 width: parent.width
                 height: 58
                 radius: height / 2
-                color: "#ff242424"
+                color: root.controlColor
 
                 Kirigami.Icon {
                     id: searchIcon

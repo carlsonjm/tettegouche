@@ -31,11 +31,13 @@ continues normally.
 
 ## Guest-card handoff
 
-Protocol 1 reserves Card Line's center for Tettegouche without inserting it
-into Kadunce's persistent card model. Kadunce returns the built-in output and
-card geometry; Tettegouche renders its interactive surface there and limits its
-input region to that card. Real application cards remain visible on either
-side and continue to belong exclusively to Kadunce.
+Protocol 1 reserves Card Line's exact center-card footprint for Tettegouche
+without inserting it into Kadunce's persistent card model. Kadunce returns the
+built-in output and canonical center-card geometry; Tettegouche does not infer
+or resize that footprint. It renders an opaque `#141414` surface with a
+one-pixel `#333333` outline, the Card Line corner radius, and a 22-pixel content
+inset, then limits input to that card. Real application cards remain visible on
+either side and continue to belong exclusively to Kadunce.
 
 During a horizontal launcher drag, Tettegouche sends only the current delta.
 Kadunce mirrors that motion onto the incoming real card and decides whether the
