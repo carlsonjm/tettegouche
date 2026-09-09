@@ -245,11 +245,19 @@ public Q_SLOTS:
         }
     }
 
+    Q_SCRIPTABLE void completeGuestNavigation(int slot)
+    {
+        if (m_guestMode && slot != 0) {
+            Q_EMIT guestNavigationReady(slot);
+        }
+    }
+
 Q_SIGNALS:
     void opened();
     void contextChanged();
     void guestChanged();
     void guestLaunchReady();
+    void guestNavigationReady(int slot);
 
 private:
     static QDBusMessage guestMethod(const QString &method)

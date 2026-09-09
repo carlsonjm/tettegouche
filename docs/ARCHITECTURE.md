@@ -43,9 +43,11 @@ either side and continue to belong exclusively to Kadunce.
 During a horizontal launcher drag, Tettegouche sends only the current delta.
 Kadunce mirrors that motion onto the incoming real card and decides whether the
 release commits. A canceled drag springs back. A committed drag lets the real
-card reclaim center, then Tettegouche exits. Input outside the guest card, an
-application activation, or loss of Tettegouche's unique D-Bus owner also ends
-the lease and restores ordinary Card Line input.
+card reclaim center, then Tettegouche exits. A press on a visible neighboring
+card is treated as navigation rather than app activation: Kadunce consumes the
+full input sequence, animates Tettegouche away, selects that neighbor, and
+remains in Card Line. Loss of Tettegouche's unique D-Bus owner safely ends the
+lease.
 
 For a new application launch, Tettegouche asks Kadunce to hold the guest and
 shows a bounded `Opening` state. Kadunce completes the guest only after KWin

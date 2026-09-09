@@ -35,6 +35,8 @@ rg -q 'QStringLiteral\("cancelLauncherGuestLaunch"\)' \
     "${project_root}/src/main.cpp"
 rg -q 'QDBusConnection::ExportScriptableSlots' "${project_root}/src/main.cpp"
 rg -q 'Q_INVOKABLE void completeGuestHandoff' "${project_root}/src/main.cpp"
+rg -q 'Q_SCRIPTABLE void completeGuestNavigation' \
+    "${project_root}/src/main.cpp"
 rg -q 'enabled: root\.launcherController\.guestMode' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'Easing\.OutBack' "${project_root}/qml/Launcher.qml"

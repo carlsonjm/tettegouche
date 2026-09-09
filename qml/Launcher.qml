@@ -101,6 +101,16 @@ Item {
             root.guestExiting = true
             launchReadyExit.restart()
         }
+        function onGuestNavigationReady(slot) {
+            if (root.guestExiting) {
+                return
+            }
+            root.guestExiting = true
+            root.guestDragged = true
+            guestExit.to = slot < 0
+                ? sheet.width * 1.25 : -sheet.width * 1.25
+            guestExit.restart()
+        }
     }
 
     Connections {
