@@ -13,17 +13,36 @@ Tettegouche owns:
 - result selection and normal application launch actions;
 - interpretation of the published workspace-context schema;
 - requesting activation of an exact live window from that snapshot.
+- rendering and interacting with its own temporary guest-card surface.
 
 Kadunce owns:
 
 - KWin window discovery and identity;
 - cards, stacks, focus, and output state;
 - activation behavior for existing windows and cards.
+- guest placement, adjacent real-card motion, and the final Card Line selection.
 
-At open time, Tettegouche requests one `workspaceContext` snapshot from
-Kadunce. There is no timer, heartbeat, raw KWin discovery, or reverse surface
-state publication. If the endpoint is absent, malformed, or has an unsupported
-version, the context is discarded and application search continues normally.
+At open time, Tettegouche first checks Kadunce's independent launcher-guest
+protocol. Guest mode is requested only when Kadunce reports the exact supported
+version. It then requests one `workspaceContext` snapshot. There is no timer,
+heartbeat, or raw KWin discovery. If either endpoint is absent, malformed, or
+unsupported, Tettegouche keeps its standalone surface and application search
+continues normally.
+
+## Guest-card handoff
+
+Protocol 1 reserves Card Line's center for Tettegouche without inserting it
+into Kadunce's persistent card model. Kadunce returns the built-in output and
+card geometry; Tettegouche renders its interactive surface there and limits its
+input region to that card. Real application cards remain visible on either
+side and continue to belong exclusively to Kadunce.
+
+During a horizontal launcher drag, Tettegouche sends only the current delta.
+Kadunce mirrors that motion onto the incoming real card and decides whether the
+release commits. A canceled drag springs back. A committed drag lets the real
+card reclaim center, then Tettegouche exits. Input outside the guest card, an
+application activation, or loss of Tettegouche's unique D-Bus owner also ends
+the lease and restores ordinary Card Line input.
 
 ## Launch behavior
 
@@ -36,8 +55,8 @@ without a live match use Plasma's ordinary launch action.
 
 ## Surface behavior
 
-The launcher uses one full-display input surface with a centered responsive
-sheet. It does not reserve workspace, render a permanent trigger, follow card
-geometry, or assume a particular built-in display size. A second invocation is
-forwarded to the existing process through a small single-instance D-Bus entry
-point.
+Standalone mode uses one full-display input surface with a centered responsive
+sheet. Guest mode keeps that layer-shell surface but masks input to the geometry
+negotiated with Kadunce. Neither mode reserves workspace or renders a permanent
+trigger. A second invocation is forwarded to the existing process through a
+small single-instance D-Bus entry point.

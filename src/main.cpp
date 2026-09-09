@@ -17,8 +17,11 @@
 #include <QCursor>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLockFile>
 #include <QQuickView>
+#include <QRegion>
 #include <QScreen>
 #include <QTimer>
 
@@ -82,6 +85,11 @@ class LauncherController final : public QObject
     Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Tettegouche")
     Q_PROPERTY(bool contextAvailable READ contextAvailable
                NOTIFY contextChanged)
+    Q_PROPERTY(bool guestMode READ guestMode NOTIFY guestChanged)
+    Q_PROPERTY(int guestX READ guestX NOTIFY guestChanged)
+    Q_PROPERTY(int guestY READ guestY NOTIFY guestChanged)
+    Q_PROPERTY(int guestWidth READ guestWidth NOTIFY guestChanged)
+    Q_PROPERTY(int guestHeight READ guestHeight NOTIFY guestChanged)
 
 public:
     LauncherController(QQuickView *view,
@@ -96,6 +104,11 @@ public:
     }
 
     bool contextAvailable() const { return m_context.available(); }
+    bool guestMode() const { return m_guestMode; }
+    int guestX() const { return m_guestRect.x(); }
+    int guestY() const { return m_guestRect.y(); }
+    int guestWidth() const { return m_guestRect.width(); }
+    int guestHeight() const { return m_guestRect.height(); }
 
     Q_INVOKABLE bool resultIsOpen(int row) const
     {
@@ -135,6 +148,7 @@ public:
 public Q_SLOTS:
     Q_SCRIPTABLE void open()
     {
+        tryBeginGuest();
         refreshContext();
         m_runnerManager->setupMatchSession();
         m_results->setQueryString(QString());
@@ -145,6 +159,7 @@ public Q_SLOTS:
 
     Q_INVOKABLE void close()
     {
+        endGuestLease();
         m_results->clear();
         m_runnerManager->matchSessionComplete();
         QGuiApplication::quit();
@@ -155,6 +170,7 @@ public Q_SLOTS:
         // Runner actions may finish their launch asynchronously. Hide the
         // launcher immediately, but keep its event loop and match session
         // alive long enough for Plasma to dispatch the selected action.
+        endGuestLease();
         m_view->hide();
         QTimer::singleShot(750, this, [this]() {
             m_runnerManager->matchSessionComplete();
@@ -162,11 +178,147 @@ public Q_SLOTS:
         });
     }
 
+    Q_INVOKABLE void updateGuestDrag(double horizontalDelta)
+    {
+        if (!m_guestMode) {
+            return;
+        }
+        QDBusMessage request = guestMethod(
+            QStringLiteral("updateLauncherGuest"));
+        request.setArguments({horizontalDelta});
+        QDBusConnection::sessionBus().asyncCall(request);
+    }
+
+    Q_INVOKABLE bool finishGuestDrag(double horizontalDelta)
+    {
+        if (!m_guestMode) {
+            return false;
+        }
+        QDBusMessage request = guestMethod(
+            QStringLiteral("finishLauncherGuest"));
+        request.setArguments({horizontalDelta});
+        const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
+            request, QDBus::Block, 500);
+        return reply.isValid() && reply.value();
+    }
+
+    Q_INVOKABLE void completeGuestHandoff()
+    {
+        m_guestMode = false;
+        m_view->hide();
+        QTimer::singleShot(340, this, []() {
+            QGuiApplication::quit();
+        });
+    }
+
+    Q_SCRIPTABLE void dismissGuest()
+    {
+        m_guestMode = false;
+        m_view->hide();
+        QGuiApplication::quit();
+    }
+
 Q_SIGNALS:
     void opened();
     void contextChanged();
+    void guestChanged();
 
 private:
+    static QDBusMessage guestMethod(const QString &method)
+    {
+        return QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/Kadunce"),
+            QStringLiteral("studio.warbler.Kadunce"), method);
+    }
+
+    void tryBeginGuest()
+    {
+        m_guestMode = false;
+        m_guestRect = {};
+        m_view->setMask(QRegion());
+
+        const QDBusReply<int> protocol = QDBusConnection::sessionBus().call(
+            guestMethod(QStringLiteral("launcherGuestProtocolVersion")),
+            QDBus::Block, 350);
+        if (!protocol.isValid() || protocol.value() != 1) {
+            Q_EMIT guestChanged();
+            return;
+        }
+
+        QDBusMessage request = guestMethod(
+            QStringLiteral("beginLauncherGuest"));
+        request.setArguments({QDBusConnection::sessionBus().baseService()});
+        const QDBusReply<QString> reply = QDBusConnection::sessionBus().call(
+            request, QDBus::Block, 700);
+        if (!reply.isValid()) {
+            Q_EMIT guestChanged();
+            return;
+        }
+
+        QJsonParseError error;
+        const QJsonDocument document = QJsonDocument::fromJson(
+            reply.value().toUtf8(), &error);
+        const QJsonObject root = document.object();
+        const QJsonObject card = root.value(QStringLiteral("card")).toObject();
+        if (error.error != QJsonParseError::NoError
+            || root.value(QStringLiteral("protocol")).toInt() != 1
+            || !root.value(QStringLiteral("accepted")).toBool()
+            || card.isEmpty()) {
+            Q_EMIT guestChanged();
+            return;
+        }
+        m_guestMode = true;
+
+        const QString outputName =
+            root.value(QStringLiteral("output")).toString();
+        QScreen *guestScreen = nullptr;
+        for (QScreen *screen : QGuiApplication::screens()) {
+            if (screen->name() == outputName) {
+                guestScreen = screen;
+                break;
+            }
+        }
+        if (!guestScreen) {
+            endGuestLease();
+            Q_EMIT guestChanged();
+            return;
+        }
+
+        m_view->setScreen(guestScreen);
+        LayerShellQt::Window::get(m_view)->setScreen(guestScreen);
+        m_view->resize(guestScreen->geometry().size());
+        const QRect globalCard(
+            card.value(QStringLiteral("x")).toInt(),
+            card.value(QStringLiteral("y")).toInt(),
+            card.value(QStringLiteral("width")).toInt(),
+            card.value(QStringLiteral("height")).toInt());
+        m_guestRect = globalCard.translated(
+            -guestScreen->geometry().topLeft());
+        if (!m_guestRect.isValid()) {
+            endGuestLease();
+            Q_EMIT guestChanged();
+            return;
+        }
+        constexpr int InputSafety = 16;
+        m_view->setMask(QRegion(m_guestRect.adjusted(
+            -InputSafety, -InputSafety, InputSafety, InputSafety)));
+        m_guestMode = true;
+        Q_EMIT guestChanged();
+    }
+
+    void endGuestLease()
+    {
+        if (!m_guestMode) {
+            return;
+        }
+        QDBusConnection::sessionBus().asyncCall(
+            guestMethod(QStringLiteral("endLauncherGuest")));
+        m_guestMode = false;
+        m_view->setMask(QRegion());
+        Q_EMIT guestChanged();
+    }
+
     void refreshContextBlocking()
     {
         const QDBusMessage request = QDBusMessage::createMethodCall(
@@ -210,6 +362,8 @@ private:
     KRunner::RunnerManager *m_runnerManager;
     KRunner::ResultsModel *m_results;
     WorkspaceContext m_context;
+    QRect m_guestRect;
+    bool m_guestMode = false;
 };
 
 int main(int argc, char **argv)
@@ -269,10 +423,9 @@ int main(int argc, char **argv)
     }
 
     QDBusConnection session = QDBusConnection::sessionBus();
-    if (session.registerService(QString::fromLatin1(ServiceName))) {
-        session.registerObject(QStringLiteral("/Launcher"), &controller,
-                               QDBusConnection::ExportScriptableSlots);
-    }
+    session.registerObject(QStringLiteral("/Launcher"), &controller,
+                           QDBusConnection::ExportScriptableSlots);
+    session.registerService(QString::fromLatin1(ServiceName));
 
     QTimer::singleShot(0, &controller, &LauncherController::open);
     const int result = application.exec();

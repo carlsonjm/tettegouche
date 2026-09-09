@@ -16,6 +16,14 @@ Item {
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
     property bool pendingLaunch: false
+    property real guestDrag: 0
+    property bool guestExiting: false
+
+    onGuestDragChanged: {
+        if (root.launcherController.guestMode && !root.guestExiting) {
+            root.launcherController.updateGuestDrag(root.guestDrag)
+        }
+    }
 
     function runResult(index) {
         if (index < 0 || index >= resultList.count) {
@@ -51,6 +59,10 @@ Item {
             query.text = ""
             root.pendingLaunch = false
             query.forceActiveFocus()
+            root.guestDrag = 0
+            root.guestExiting = false
+            sheet.opacity = 1
+            sheet.scale = 1
         }
     }
 
@@ -67,6 +79,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: "#76000000"
+        visible: !root.launcherController.guestMode
 
         TapHandler {
             onTapped: root.launcherController.close()
@@ -75,16 +88,55 @@ Item {
 
     Rectangle {
         id: sheet
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: parent.top
-        anchors.topMargin: Math.max(36, parent.height * 0.09)
-        width: Math.min(720, parent.width - 40)
-        height: Math.min(560, parent.height - anchors.topMargin - 36)
-        radius: 24
+        x: root.launcherController.guestMode
+            ? root.launcherController.guestX
+            : (parent.width - width) / 2
+        y: root.launcherController.guestMode
+            ? root.launcherController.guestY
+            : Math.max(36, parent.height * 0.09)
+        width: root.launcherController.guestMode
+            ? root.launcherController.guestWidth
+            : Math.min(720, parent.width - 40)
+        height: root.launcherController.guestMode
+            ? root.launcherController.guestHeight
+            : Math.min(560, parent.height - y - 36)
+        radius: root.launcherController.guestMode ? 10 : 24
         color: "#f5141414"
         border.width: 1
         border.color: "#ff333333"
         clip: true
+        transform: Translate { x: root.guestDrag }
+
+        DragHandler {
+            id: guestDragHandler
+            enabled: root.launcherController.guestMode
+                && !root.guestExiting
+            target: null
+            xAxis.enabled: true
+            yAxis.enabled: false
+            acceptedDevices: PointerDevice.Mouse
+                | PointerDevice.TouchPad
+                | PointerDevice.TouchScreen
+
+            onTranslationChanged: {
+                if (active) {
+                    root.guestDrag = translation.x
+                }
+            }
+            onActiveChanged: {
+                if (active || !root.launcherController.guestMode) {
+                    return
+                }
+                if (root.launcherController.finishGuestDrag(translation.x)) {
+                    root.guestExiting = true
+                    guestExit.to = translation.x < 0
+                        ? -sheet.width * 1.25 : sheet.width * 1.25
+                    guestExit.restart()
+                } else {
+                    guestReturn.restart()
+                }
+            }
+        }
 
         TapHandler {
             onTapped: event => event.accepted = true
@@ -295,5 +347,41 @@ Item {
                 }
             }
         }
+    }
+
+    NumberAnimation {
+        id: guestReturn
+        target: root
+        property: "guestDrag"
+        to: 0
+        duration: 210
+        easing.type: Easing.OutBack
+    }
+
+    ParallelAnimation {
+        id: guestExit
+        property real to: 0
+        NumberAnimation {
+            target: root
+            property: "guestDrag"
+            to: guestExit.to
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "scale"
+            to: 0.72
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "opacity"
+            to: 0
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        onFinished: root.launcherController.completeGuestHandoff()
     }
 }

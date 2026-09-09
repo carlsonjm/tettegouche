@@ -14,12 +14,14 @@ unavailable.
 - Manual, application-first launch surface.
 - Keyboard, pointer, and touch-friendly result selection.
 - Versioned Kadunce context with exact existing-window activation.
+- Version-gated Kadunce guest card with a horizontal Card Line handoff.
 - Graceful standalone behavior without Kadunce.
 - No background service, compositor polling, or workspace mutation.
 
 Open matches are activated through Kadunce and unmatched results use Plasma's
-normal application action. This avoids duplicate application windows without
-giving the launcher ownership of card or compositor state.
+normal application action. With a compatible Kadunce version, Tettegouche can
+temporarily occupy Card Line's center without joining its card model. Older or
+missing Kadunce versions always receive the standalone launcher.
 
 ## Build and run
 

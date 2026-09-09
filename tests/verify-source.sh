@@ -17,5 +17,23 @@ rg -q 'Q_INVOKABLE void finishLaunch\(\)' "${project_root}/src/main.cpp"
 rg -Fq 'QTimer::singleShot(750' "${project_root}/src/main.cpp"
 rg -q 'QStringLiteral\("activateApplicationWindow"\)' \
     "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("launcherGuestProtocolVersion"\)' \
+    "${project_root}/src/main.cpp"
+rg -q 'protocol\.value\(\) != 1' "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("beginLauncherGuest"\)' \
+    "${project_root}/src/main.cpp"
+rg -q 'sessionBus\(\)\.baseService\(\)' "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("updateLauncherGuest"\)' \
+    "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("finishLauncherGuest"\)' \
+    "${project_root}/src/main.cpp"
+rg -q 'QStringLiteral\("endLauncherGuest"\)' \
+    "${project_root}/src/main.cpp"
+rg -q 'QDBusConnection::ExportScriptableSlots' "${project_root}/src/main.cpp"
+rg -q 'Q_INVOKABLE void completeGuestHandoff' "${project_root}/src/main.cpp"
+rg -q 'enabled: root\.launcherController\.guestMode' \
+    "${project_root}/qml/Launcher.qml"
+rg -q 'Easing\.OutBack' "${project_root}/qml/Launcher.qml"
+rg -q 'Easing\.InCubic' "${project_root}/qml/Launcher.qml"
 
 echo "Tettegouche source checks passed."
