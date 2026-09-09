@@ -31,10 +31,11 @@ continues normally.
 
 ## Guest-card handoff
 
-Protocol 1 reserves Card Line's exact center-card footprint for Tettegouche
-without inserting it into Kadunce's persistent card model. Kadunce returns the
-built-in output and canonical center-card geometry; Tettegouche does not infer
-or resize that footprint. It renders an opaque `#141414` surface with a
+Protocol 2 reserves a centered Card Line guest footprint for Tettegouche
+without inserting it into Kadunce's persistent card model. Kadunce derives a
+slightly narrower geometry from its canonical card so both real neighbors keep
+useful visible shoulders; Tettegouche does not infer or resize that footprint.
+It renders an opaque `#141414` surface with a
 one-pixel `#333333` outline, the Card Line corner radius, and a 22-pixel content
 inset, then limits input to that card. Real application cards remain visible on
 either side and continue to belong exclusively to Kadunce.
@@ -45,6 +46,12 @@ release commits. A canceled drag springs back. A committed drag lets the real
 card reclaim center, then Tettegouche exits. Input outside the guest card, an
 application activation, or loss of Tettegouche's unique D-Bus owner also ends
 the lease and restores ordinary Card Line input.
+
+For a new application launch, Tettegouche asks Kadunce to hold the guest and
+shows a bounded `Opening` state. Kadunce completes the guest only after KWin
+reports an activated application window, preventing the previously selected
+card from flashing into Active during process startup. A ten-second timeout
+returns the launcher to search if no window arrives.
 
 ## Launch behavior
 

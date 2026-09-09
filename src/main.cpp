@@ -202,6 +202,26 @@ public Q_SLOTS:
         return reply.isValid() && reply.value();
     }
 
+    Q_INVOKABLE bool beginGuestApplicationLaunch()
+    {
+        if (!m_guestMode) {
+            return false;
+        }
+        const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
+            guestMethod(QStringLiteral("prepareLauncherGuestLaunch")),
+            QDBus::Block, 500);
+        return reply.isValid() && reply.value();
+    }
+
+    Q_INVOKABLE void cancelGuestApplicationLaunch()
+    {
+        if (!m_guestMode) {
+            return;
+        }
+        QDBusConnection::sessionBus().asyncCall(
+            guestMethod(QStringLiteral("cancelLauncherGuestLaunch")));
+    }
+
     Q_INVOKABLE void completeGuestHandoff()
     {
         m_guestMode = false;
@@ -218,10 +238,18 @@ public Q_SLOTS:
         QGuiApplication::quit();
     }
 
+    Q_SCRIPTABLE void completeGuestLaunch()
+    {
+        if (m_guestMode) {
+            Q_EMIT guestLaunchReady();
+        }
+    }
+
 Q_SIGNALS:
     void opened();
     void contextChanged();
     void guestChanged();
+    void guestLaunchReady();
 
 private:
     static QDBusMessage guestMethod(const QString &method)
@@ -241,7 +269,7 @@ private:
         const QDBusReply<int> protocol = QDBusConnection::sessionBus().call(
             guestMethod(QStringLiteral("launcherGuestProtocolVersion")),
             QDBus::Block, 350);
-        if (!protocol.isValid() || protocol.value() != 1) {
+        if (!protocol.isValid() || protocol.value() != 2) {
             Q_EMIT guestChanged();
             return;
         }
@@ -262,7 +290,7 @@ private:
         const QJsonObject root = document.object();
         const QJsonObject card = root.value(QStringLiteral("card")).toObject();
         if (error.error != QJsonParseError::NoError
-            || root.value(QStringLiteral("protocol")).toInt() != 1
+            || root.value(QStringLiteral("protocol")).toInt() != 2
             || !root.value(QStringLiteral("accepted")).toBool()
             || card.isEmpty()) {
             Q_EMIT guestChanged();

@@ -21,8 +21,11 @@ Item {
     readonly property int cardRadius: 10
     readonly property int contentInset: 22
     property bool pendingLaunch: false
+    property bool applicationLaunchPending: false
+    property string launchingApplication: ""
     property real guestDrag: 0
     property bool guestExiting: false
+    property bool guestDragged: false
 
     onGuestDragChanged: {
         if (root.launcherController.guestMode && !root.guestExiting) {
@@ -38,9 +41,27 @@ Item {
             root.launcherController.finishLaunch()
             return true
         }
+        const applicationName = String(
+            root.searchResults.data(
+                root.searchResults.index(index, 0), Qt.DisplayRole))
+        const waitsForWindow =
+            root.launcherController.beginGuestApplicationLaunch()
+        if (waitsForWindow) {
+            root.applicationLaunchPending = true
+            root.launchingApplication = applicationName
+            launchTimeout.restart()
+        }
         if (root.searchResults.run(root.searchResults.index(index, 0))) {
-            root.launcherController.finishLaunch()
+            if (!waitsForWindow) {
+                root.launcherController.finishLaunch()
+            }
             return true
+        }
+        if (waitsForWindow) {
+            launchTimeout.stop()
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
         }
         return false
     }
@@ -63,11 +84,22 @@ Item {
         function onOpened() {
             query.text = ""
             root.pendingLaunch = false
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
             query.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
+            root.guestDragged = false
             sheet.opacity = 1
             sheet.scale = 1
+        }
+        function onGuestLaunchReady() {
+            if (!root.applicationLaunchPending) {
+                return
+            }
+            launchTimeout.stop()
+            root.guestExiting = true
+            launchReadyExit.restart()
         }
     }
 
@@ -116,6 +148,7 @@ Item {
             id: guestDragHandler
             enabled: root.launcherController.guestMode
                 && !root.guestExiting
+                && !root.applicationLaunchPending
             target: null
             xAxis.enabled: true
             yAxis.enabled: false
@@ -126,15 +159,20 @@ Item {
             onTranslationChanged: {
                 if (active) {
                     root.guestDrag = translation.x
+                    if (Math.abs(translation.x) > 8) {
+                        root.guestDragged = true
+                    }
                 }
             }
             onActiveChanged: {
                 if (active || !root.launcherController.guestMode) {
                     return
                 }
-                if (root.launcherController.finishGuestDrag(translation.x)) {
+                const projected = translation.x + Math.max(-140,
+                    Math.min(140, centroid.velocity.x * 0.09))
+                if (root.launcherController.finishGuestDrag(projected)) {
                     root.guestExiting = true
-                    guestExit.to = translation.x < 0
+                    guestExit.to = projected < 0
                         ? -sheet.width * 1.25 : sheet.width * 1.25
                     guestExit.restart()
                 } else {
@@ -147,17 +185,37 @@ Item {
             onTapped: event => event.accepted = true
         }
 
-        Column {
+        Item {
+            id: content
             anchors.fill: parent
             anchors.margins: root.contentInset
-            spacing: 16
 
             Rectangle {
                 id: searchField
-                width: parent.width
+                readonly property bool resting:
+                    query.text.length === 0
+                    && resultList.count === 0
+                    && !root.searchResults.querying
+                    && !root.applicationLaunchPending
+                width: resting ? Math.min(parent.width,
+                    Math.max(360, parent.width * 0.72)) : parent.width
                 height: 58
+                x: (parent.width - width) / 2
+                y: resting ? Math.round((parent.height - height) * 0.44) : 0
                 radius: height / 2
                 color: root.controlColor
+                opacity: root.applicationLaunchPending ? 0 : 1
+                enabled: !root.applicationLaunchPending
+
+                Behavior on width {
+                    NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+                }
+                Behavior on y {
+                    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+                }
+                Behavior on opacity {
+                    NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                }
 
                 Kirigami.Icon {
                     id: searchIcon
@@ -242,6 +300,7 @@ Item {
 
                     HoverHandler { id: clearHover }
                     TapHandler {
+                        enabled: !root.guestDragged
                         onTapped: {
                             query.text = ""
                             query.forceActiveFocus()
@@ -251,8 +310,15 @@ Item {
             }
 
             Item {
+                id: resultsArea
+                y: searchField.y + searchField.height + 16
                 width: parent.width
-                height: parent.height - searchField.height - parent.spacing
+                height: parent.height - y
+                opacity: root.applicationLaunchPending ? 0 : 1
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                }
 
                 ListView {
                     id: resultList
@@ -333,6 +399,8 @@ Item {
 
                         HoverHandler { id: hover }
                         TapHandler {
+                            enabled: !root.guestDragged
+                                && !root.applicationLaunchPending
                             onTapped: {
                                 resultList.currentIndex = resultDelegate.index
                                 root.runResult(resultDelegate.index)
@@ -351,6 +419,78 @@ Item {
                     font.pixelSize: 15
                 }
             }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 14
+                visible: root.applicationLaunchPending
+                opacity: root.applicationLaunchPending ? 1 : 0
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Opening"
+                    color: root.secondaryText
+                    font.pixelSize: 14
+                    font.letterSpacing: 0.8
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(content.width * 0.72, 620)
+                    horizontalAlignment: Text.AlignHCenter
+                    text: root.launchingApplication
+                    color: root.primaryText
+                    font.pixelSize: 24
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 84
+                    height: 3
+                    radius: height / 2
+                    color: "#24ffffff"
+
+                    Rectangle {
+                        id: launchProgress
+                        width: 28
+                        height: parent.height
+                        radius: height / 2
+                        color: "#d9ffffff"
+
+                        SequentialAnimation on x {
+                            running: root.applicationLaunchPending
+                            loops: Animation.Infinite
+                            NumberAnimation {
+                                from: 0
+                                to: 56
+                                duration: 560
+                                easing.type: Easing.InOutCubic
+                            }
+                            NumberAnimation {
+                                from: 56
+                                to: 0
+                                duration: 560
+                                easing.type: Easing.InOutCubic
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: launchTimeout
+        interval: 10000
+        repeat: false
+        onTriggered: {
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.guestExiting = false
+            query.forceActiveFocus()
         }
     }
 
@@ -361,6 +501,26 @@ Item {
         to: 0
         duration: 210
         easing.type: Easing.OutBack
+        onFinished: root.guestDragged = false
+    }
+
+    ParallelAnimation {
+        id: launchReadyExit
+        NumberAnimation {
+            target: sheet
+            property: "scale"
+            to: 0.96
+            duration: 190
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "opacity"
+            to: 0
+            duration: 190
+            easing.type: Easing.OutCubic
+        }
+        onFinished: root.launcherController.completeGuestHandoff()
     }
 
     ParallelAnimation {
