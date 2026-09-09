@@ -71,3 +71,10 @@ sheet. Guest mode keeps that layer-shell surface but masks input to the geometry
 negotiated with Kadunce. Neither mode reserves workspace or renders a permanent
 trigger. A second invocation is forwarded to the existing process through a
 small single-instance D-Bus entry point.
+
+Both modes use the same centered card treatment: a one-pixel `#5a5a5a`
+hairline, ten-pixel corners, and an undimmed desktop outside the surface. At
+rest, the search control is transparent with the same hairline, `Just type` on
+the left, and its action icon on the right. Physical typing engages it directly;
+an intentional tap fills the control, focuses the field, and requests the
+system input method when one is available.

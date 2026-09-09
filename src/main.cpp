@@ -17,6 +17,7 @@
 #include <QCursor>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QInputMethod>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QLockFile>
@@ -220,6 +221,13 @@ public Q_SLOTS:
         }
         QDBusConnection::sessionBus().asyncCall(
             guestMethod(QStringLiteral("cancelLauncherGuestLaunch")));
+    }
+
+    Q_INVOKABLE void showInputMethod()
+    {
+        if (QInputMethod *inputMethod = QGuiApplication::inputMethod()) {
+            inputMethod->show();
+        }
     }
 
     Q_INVOKABLE void completeGuestHandoff()

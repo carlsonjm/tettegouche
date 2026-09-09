@@ -13,10 +13,11 @@ Item {
 
     required property var launcherController
     required property var searchResults
+    focus: true
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
     readonly property color surfaceColor: "#141414"
-    readonly property color surfaceOutline: "#333333"
+    readonly property color surfaceOutline: "#5a5a5a"
     readonly property color controlColor: "#242424"
     readonly property int cardRadius: 10
     readonly property int contentInset: 22
@@ -26,6 +27,7 @@ Item {
     property real guestDrag: 0
     property bool guestExiting: false
     property bool guestDragged: false
+    property bool searchEngaged: false
 
     onGuestDragChanged: {
         if (root.launcherController.guestMode && !root.guestExiting) {
@@ -74,9 +76,20 @@ Item {
         }
     }
 
-    Keys.onEscapePressed: event => {
-        root.launcherController.close()
-        event.accepted = true
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Escape) {
+            root.launcherController.close()
+            event.accepted = true
+            return
+        }
+        if (!query.activeFocus && event.text.length > 0
+                && !(event.modifiers & (Qt.ControlModifier
+                    | Qt.AltModifier | Qt.MetaModifier))) {
+            root.searchEngaged = true
+            query.forceActiveFocus()
+            query.insert(query.cursorPosition, event.text)
+            event.accepted = true
+        }
     }
 
     Connections {
@@ -86,7 +99,8 @@ Item {
             root.pendingLaunch = false
             root.applicationLaunchPending = false
             root.launchingApplication = ""
-            query.forceActiveFocus()
+            root.searchEngaged = false
+            root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
             root.guestDragged = false
@@ -125,7 +139,7 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: "#76000000"
+        color: "transparent"
         visible: !root.launcherController.guestMode
 
         TapHandler {
@@ -140,14 +154,14 @@ Item {
             : (parent.width - width) / 2
         y: root.launcherController.guestMode
             ? root.launcherController.guestY
-            : Math.max(36, parent.height * 0.09)
+            : Math.round((parent.height - height) / 2)
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : Math.min(720, parent.width - 40)
         height: root.launcherController.guestMode
             ? root.launcherController.guestHeight
-            : Math.min(560, parent.height - y - 36)
-        radius: root.launcherController.guestMode ? root.cardRadius : 24
+            : Math.min(480, parent.height - 72)
+        radius: root.cardRadius
         color: root.surfaceColor
         border.width: 1
         border.color: root.surfaceOutline
@@ -213,9 +227,12 @@ Item {
                 x: (parent.width - width) / 2
                 y: resting ? Math.round((parent.height - height) * 0.44) : 0
                 radius: height / 2
-                color: root.controlColor
+                color: root.searchEngaged || query.text.length > 0
+                    ? root.controlColor : "transparent"
                 opacity: root.applicationLaunchPending ? 0 : 1
                 enabled: !root.applicationLaunchPending
+                border.width: 1
+                border.color: root.surfaceOutline
 
                 Behavior on width {
                     NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
@@ -226,24 +243,45 @@ Item {
                 Behavior on opacity {
                     NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
                 }
+                Behavior on color {
+                    ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
 
-                Kirigami.Icon {
-                    id: searchIcon
-                    anchors.left: parent.left
-                    anchors.leftMargin: 18
+                Item {
+                    id: trailingAction
+                    anchors.right: parent.right
+                    anchors.rightMargin: 9
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 22
-                    height: 22
-                    source: "system-search"
-                    color: root.primaryText
+                    width: 40
+                    height: 40
+
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: 22
+                        height: 22
+                        source: query.text.length > 0
+                            ? "edit-clear-symbolic" : "system-search"
+                        color: root.primaryText
+                    }
+
+                    TapHandler {
+                        onTapped: {
+                            root.searchEngaged = true
+                            if (query.text.length > 0) {
+                                query.text = ""
+                            }
+                            query.forceActiveFocus()
+                            root.launcherController.showInputMethod()
+                        }
+                    }
                 }
 
                 TextInput {
                     id: query
-                    anchors.left: searchIcon.right
-                    anchors.leftMargin: 12
-                    anchors.right: clearButton.left
-                    anchors.rightMargin: 8
+                    anchors.left: parent.left
+                    anchors.leftMargin: 18
+                    anchors.right: trailingAction.left
+                    anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     color: root.primaryText
                     selectionColor: "#6da9ddff"
@@ -253,6 +291,9 @@ Item {
                     inputMethodHints: Qt.ImhNoPredictiveText
 
                     onTextChanged: {
+                        if (text.length > 0) {
+                            root.searchEngaged = true
+                        }
                         root.pendingLaunch = false
                         root.searchResults.queryString = text
                         resultList.currentIndex = resultList.count > 0 ? 0 : -1
@@ -280,41 +321,19 @@ Item {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         visible: query.text.length === 0
-                        text: "Find an application"
+                        text: "Just type"
                         color: "#86ffffff"
                         font: query.font
                     }
                 }
 
-                Item {
-                    id: clearButton
-                    anchors.right: parent.right
-                    anchors.rightMargin: 9
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 40
-                    height: 40
-                    visible: query.text.length > 0
-
-                    Rectangle {
-                        anchors.fill: parent
-                        radius: width / 2
-                        color: clearHover.hovered ? "#30ffffff" : "transparent"
-                    }
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "×"
-                        color: root.secondaryText
-                        font.pixelSize: 25
-                    }
-
-                    HoverHandler { id: clearHover }
-                    TapHandler {
-                        enabled: !root.guestDragged
-                        onTapped: {
-                            query.text = ""
-                            query.forceActiveFocus()
-                        }
+                TapHandler {
+                    enabled: !root.guestDragged
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: {
+                        root.searchEngaged = true
+                        query.forceActiveFocus()
+                        root.launcherController.showInputMethod()
                     }
                 }
             }

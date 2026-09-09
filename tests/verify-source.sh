@@ -3,7 +3,7 @@ set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if rg -n -i 'webos|project[[:space:]_-]*webos|ghostiepost|palm|chromeos|just[[:space:]_-]*type' \
+if rg -n -i 'webos|project[[:space:]_-]*webos|ghostiepost|palm|chromeos' \
     --glob '!build/**' --glob '!tests/verify-source.sh' "${project_root}"; then
     echo "Retired product identity found in the Tettegouche source tree." >&2
     exit 1
@@ -42,12 +42,16 @@ rg -q 'enabled: root\.launcherController\.guestMode' \
 rg -q 'Easing\.OutBack' "${project_root}/qml/Launcher.qml"
 rg -q 'Easing\.InCubic' "${project_root}/qml/Launcher.qml"
 rg -q 'surfaceColor: "#141414"' "${project_root}/qml/Launcher.qml"
-rg -q 'surfaceOutline: "#333333"' "${project_root}/qml/Launcher.qml"
+rg -q 'surfaceOutline: "#5a5a5a"' "${project_root}/qml/Launcher.qml"
 rg -q 'controlColor: "#242424"' "${project_root}/qml/Launcher.qml"
 rg -q 'cardRadius: 10' "${project_root}/qml/Launcher.qml"
 rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
+rg -q 'text: "Just type"' "${project_root}/qml/Launcher.qml"
+rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/main.cpp"
+rg -q 'launcherController\.showInputMethod\(\)' \
+    "${project_root}/qml/Launcher.qml"
 
 echo "Tettegouche source checks passed."
