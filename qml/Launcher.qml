@@ -22,7 +22,7 @@ Item {
             return false
         }
         if (root.searchResults.run(root.searchResults.index(index, 0))) {
-            root.launcherController.close()
+            root.launcherController.finishLaunch()
             return true
         }
         return false

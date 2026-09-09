@@ -120,6 +120,18 @@ public Q_SLOTS:
         QGuiApplication::quit();
     }
 
+    Q_INVOKABLE void finishLaunch()
+    {
+        // Runner actions may finish their launch asynchronously. Hide the
+        // launcher immediately, but keep its event loop and match session
+        // alive long enough for Plasma to dispatch the selected action.
+        m_view->hide();
+        QTimer::singleShot(750, this, [this]() {
+            m_runnerManager->matchSessionComplete();
+            QGuiApplication::quit();
+        });
+    }
+
 Q_SIGNALS:
     void opened();
     void contextChanged();
