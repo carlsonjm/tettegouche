@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "Jared Carlson"
+            }
+        ],
+        "Category": "Application Launchers",
+        "Description": "A touch-first application launcher for KDE Plasma",
+        "EnabledByDefault": true,
+        "FormFactors": ["desktop"],
+        "Icon": "studio.warbler.tettegouche",
+        "License": "GPL-2.0+",
+        "Name": "Tettegouche",
+        "Version": "0.2.0"
+    },
+    "KPackageStructure": "Plasma/Applet",
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

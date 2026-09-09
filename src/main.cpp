@@ -98,12 +98,14 @@ public:
                        KRunner::RunnerManager *runnerManager,
                        KRunner::ResultsModel *results,
                        ApplicationCatalog *catalog,
+                       bool guestAllowed,
                        QObject *parent = nullptr)
         : QObject(parent)
         , m_view(view)
         , m_runnerManager(runnerManager)
         , m_results(results)
         , m_catalog(catalog)
+        , m_guestAllowed(guestAllowed)
     {
     }
 
@@ -309,6 +311,11 @@ private:
         m_guestRect = {};
         m_view->setMask(QRegion());
 
+        if (!m_guestAllowed) {
+            Q_EMIT guestChanged();
+            return;
+        }
+
         const QDBusReply<int> protocol = QDBusConnection::sessionBus().call(
             guestMethod(QStringLiteral("launcherGuestProtocolVersion")),
             QDBus::Block, 350);
@@ -436,6 +443,7 @@ private:
     WorkspaceContext m_context;
     QRect m_guestRect;
     bool m_guestMode = false;
+    bool m_guestAllowed = true;
 };
 
 int main(int argc, char **argv)
@@ -474,6 +482,8 @@ int main(int argc, char **argv)
     results.setRunnerManager(&runnerManager);
     results.setLimit(12);
     ApplicationCatalog catalog;
+    const bool guestAllowed =
+        !application.arguments().contains(QStringLiteral("--standalone"));
 
     QScreen *screen = preferredScreen();
     if (!screen) {
@@ -483,7 +493,8 @@ int main(int argc, char **argv)
     QQuickView view;
     view.setTitle(QStringLiteral("Tettegouche"));
     configureSurface(&view, screen);
-    LauncherController controller(&view, &runnerManager, &results, &catalog);
+    LauncherController controller(&view, &runnerManager, &results, &catalog,
+                                  guestAllowed);
     view.setInitialProperties({
         {QStringLiteral("launcherController"),
          QVariant::fromValue(static_cast<QObject *>(&controller))},

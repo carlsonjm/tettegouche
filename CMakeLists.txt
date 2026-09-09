@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(tettegouche VERSION 0.1.0 LANGUAGES CXX)
+project(tettegouche VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,6 +19,7 @@ find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons KIO Runner Service)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
+find_package(Plasma 6.7 REQUIRED)
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp
@@ -55,10 +56,43 @@ target_link_libraries(tettegouche PRIVATE
 install(TARGETS tettegouche RUNTIME DESTINATION ${KDE_INSTALL_BINDIR})
 install(PROGRAMS io.github.carlsonjm.Tettegouche.desktop
         DESTINATION ${KDE_INSTALL_APPDIR})
+install(FILES assets/studio.warbler.tettegouche.svg
+        DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+plasma_add_applet(studio.warbler.tettegouche
+    CPP_SOURCES
+        src/TettegoucheApplet.cpp
+        src/TettegoucheApplet.h
+    QML_SOURCES
+        applet/main.qml
+        applet/ConfigGeneral.qml
+        applet/config.qml
+    RESOURCES
+        applet/main.xml
+        assets/studio.warbler.tettegouche.svg
+)
+target_link_libraries(studio.warbler.tettegouche PRIVATE
+    Qt6::Core
+    KF6::CoreAddons
+    Plasma::Plasma
+)
 
 if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Widgets)
+    find_package(PlasmaQuick REQUIRED)
+    find_package(KF6Package REQUIRED)
+    find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
+
     qt_add_executable(workspace-context-test tests/WorkspaceContextTest.cpp)
     target_link_libraries(workspace-context-test PRIVATE
         tettegouche-context Qt6::Test)
     add_test(NAME workspace-context-test COMMAND workspace-context-test)
+
+    qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp)
+    target_link_libraries(panel-applet-test PRIVATE
+        Qt6::Widgets Qt6::Quick Qt6::Test Plasma::Plasma Plasma::PlasmaQuick KF6::Package)
+    add_dependencies(panel-applet-test studio.warbler.tettegouche)
+    add_test(NAME panel-applet-test
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
+            $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    set_tests_properties(panel-applet-test PROPERTIES TIMEOUT 45)
 endif()

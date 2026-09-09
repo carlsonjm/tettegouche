@@ -4,7 +4,7 @@ set -euo pipefail
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if rg -n -i 'webos|project[[:space:]_-]*webos|ghostiepost|palm|chromeos' \
-    --glob '!build/**' --glob '!tests/verify-source.sh' "${project_root}"; then
+    --glob '!build*/**' --glob '!tests/verify-source.sh' "${project_root}"; then
     echo "Retired product identity found in the Tettegouche source tree." >&2
     exit 1
 fi
@@ -68,5 +68,14 @@ rg -q 'KIO::ApplicationLauncherJob' \
     "${project_root}/src/ApplicationCatalog.cpp"
 rg -q 'activateCatalogIfOpen' "${project_root}/src/main.cpp" \
     "${project_root}/qml/Launcher.qml"
+rg -q '\-\-standalone' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
+rg -q 'cfg_useKadunce' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -Fq 'Q_PROPERTY(bool launcherActive' \
+    "${project_root}/src/TettegoucheApplet.h"
+# Panel rendering and input are exercised by panel-applet-test through Plasma.
+rg -q 'cfg_animateIndicator' \
+    "${project_root}/applet/ConfigGeneral.qml"
 
 echo "Tettegouche source checks passed."

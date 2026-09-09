@@ -1,7 +1,7 @@
 # Tettegouche
 
-Tettegouche is a focused application launcher for KDE Plasma. It opens on
-demand, searches installed applications, and exits when dismissed.
+Tettegouche is a focused panel launcher for KDE Plasma. Its widget opens the
+search surface on demand, and the launcher exits when dismissed.
 
 When Kadunce is running, Tettegouche reads its versioned workspace snapshot to
 identify applications that are already open and asks Kadunce to activate the
@@ -12,6 +12,7 @@ unavailable.
 ## Current seed
 
 - Manual, application-first launch surface.
+- Native Plasma panel entry with right-click configuration.
 - Pull-up alphabetical application drawer with no behavioral ranking.
 - Keyboard, pointer, and touch-friendly result selection.
 - Versioned Kadunce context with exact existing-window activation.
@@ -36,9 +37,13 @@ card retains the compact ranked-results view.
 ./install.sh
 ```
 
-The installer builds and tests the project, then installs it for the current
-user. Open **Tettegouche** from Plasma's application launcher. Run
-`./uninstall.sh` to remove the installed files without deleting this checkout.
+The installer builds and tests the project, then installs its native Plasma
+applet and launcher. Restart Plasma to load the new plugin. Existing Tettegouche
+panel widgets stay in place. For a first install, open panel edit mode, choose **Add Widgets**, search for
+**Tettegouche**, and add it to the panel. Right-click the widget and choose
+**Configure Tettegouche** to disable optional Kadunce Card Line integration or
+launcher motion. Run `./uninstall.sh` to remove the installed files without
+deleting this checkout.
 
 Tettegouche requires KDE Plasma on Wayland, Qt 6, KDE Frameworks 6,
 LayerShellQt, CMake, and a C++20 compiler.
@@ -48,8 +53,9 @@ LayerShellQt, CMake, and a C++20 compiler.
 ```text
 src/                    native launcher and context boundary
 qml/                    on-demand launcher surface
-tests/                  context parser tests and source checks
-install.sh              verified per-user installation path
+applet/                 native panel entry and configuration
+tests/                  context tests, Plasma panel/input tests, source checks
+install.sh              verified native Plasma installation path
 uninstall.sh            remove the installed launcher
 ```
 

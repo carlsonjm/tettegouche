@@ -4,6 +4,26 @@ Tettegouche is an on-demand launcher, not a desktop service. One process owns
 one temporary layer-shell surface and exits as soon as the user launches an
 application or dismisses the surface.
 
+Its public entry point is a lightweight Plasma panel applet. The applet has no
+full representation and never embeds the launcher in a panel popup; it starts
+the same native process previously exercised through the desktop entry. That
+desktop service remains installed with `NoDisplay=true` as launch metadata, not
+as a second user-facing icon. Applet configuration can disable Kadunce guest
+negotiation, in which case the process starts with `--standalone` and retains
+the otherwise identical launcher behavior.
+
+The panel button is direct content of the root `PlasmoidItem`, with explicit
+root size hints and a centered white dimple. This follows Temperance's panel
+surface structure. It must not be moved into a lone `compactRepresentation`:
+Plasma treats applets without a `fullRepresentation` as direct-content applets,
+so that compact component would never be instantiated. The installed SVG is
+the widget-browser identity; the live dimple and input target are QML items.
+
+The panel regression test loads the compiled plugin through Plasma in a private
+D-Bus session with temporary configuration. It checks rendered pixels, horizontal
+and vertical geometry, mouse and touch input, and keyboard/shortcut activation.
+Launches use a temporary harmless executable rather than opening the real app.
+
 ## Ownership boundary
 
 Tettegouche owns:
