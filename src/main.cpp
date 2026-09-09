@@ -4,6 +4,7 @@
 */
 
 #include "WorkspaceContext.h"
+#include "ApplicationCatalog.h"
 
 #include <KRunner/ResultsModel>
 #include <KRunner/RunnerManager>
@@ -96,11 +97,13 @@ public:
     LauncherController(QQuickView *view,
                        KRunner::RunnerManager *runnerManager,
                        KRunner::ResultsModel *results,
+                       ApplicationCatalog *catalog,
                        QObject *parent = nullptr)
         : QObject(parent)
         , m_view(view)
         , m_runnerManager(runnerManager)
         , m_results(results)
+        , m_catalog(catalog)
     {
     }
 
@@ -135,6 +138,30 @@ public:
             return false;
         }
 
+        QDBusMessage request = QDBusMessage::createMethodCall(
+            QStringLiteral("org.kde.KWin"),
+            QStringLiteral("/Kadunce"),
+            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("activateApplicationWindow"));
+        request.setArguments({windowId});
+        const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
+            request, QDBus::Block, 500);
+        return reply.isValid() && reply.value();
+    }
+
+    Q_INVOKABLE bool activateCatalogIfOpen(int row)
+    {
+        if (!m_context.available()) {
+            refreshContextBlocking();
+        }
+        if (!m_catalog) {
+            return false;
+        }
+        const QString windowId = m_context.windowIdForApplication(
+            m_catalog->applicationId(row), m_catalog->applicationName(row));
+        if (windowId.isEmpty()) {
+            return false;
+        }
         QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
@@ -405,6 +432,7 @@ private:
     QQuickView *m_view;
     KRunner::RunnerManager *m_runnerManager;
     KRunner::ResultsModel *m_results;
+    ApplicationCatalog *m_catalog;
     WorkspaceContext m_context;
     QRect m_guestRect;
     bool m_guestMode = false;
@@ -445,6 +473,7 @@ int main(int argc, char **argv)
     KRunner::ResultsModel results;
     results.setRunnerManager(&runnerManager);
     results.setLimit(12);
+    ApplicationCatalog catalog;
 
     QScreen *screen = preferredScreen();
     if (!screen) {
@@ -454,12 +483,14 @@ int main(int argc, char **argv)
     QQuickView view;
     view.setTitle(QStringLiteral("Tettegouche"));
     configureSurface(&view, screen);
-    LauncherController controller(&view, &runnerManager, &results);
+    LauncherController controller(&view, &runnerManager, &results, &catalog);
     view.setInitialProperties({
         {QStringLiteral("launcherController"),
          QVariant::fromValue(static_cast<QObject *>(&controller))},
         {QStringLiteral("searchResults"),
          QVariant::fromValue(static_cast<QObject *>(&results))},
+        {QStringLiteral("applicationCatalog"),
+         QVariant::fromValue(static_cast<QObject *>(&catalog))},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

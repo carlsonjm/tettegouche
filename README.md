@@ -12,6 +12,7 @@ unavailable.
 ## Current seed
 
 - Manual, application-first launch surface.
+- Pull-up alphabetical application drawer with no behavioral ranking.
 - Keyboard, pointer, and touch-friendly result selection.
 - Versioned Kadunce context with exact existing-window activation.
 - Version-gated Kadunce guest card with a horizontal Card Line handoff.
@@ -22,6 +23,11 @@ Open matches are activated through Kadunce and unmatched results use Plasma's
 normal application action. With a compatible Kadunce version, Tettegouche can
 temporarily occupy Card Line's center without joining its card model. Older or
 missing Kadunce versions always receive the standalone launcher.
+
+At rest, users can type immediately or pull the outlined **Browse everything**
+handle upward. The drawer reads Plasma's installed application catalogue,
+excludes hidden entries, sorts by display name, and launches through KDE's
+normal application job. Typing replaces the drawer with ranked search results.
 
 ## Build and run
 

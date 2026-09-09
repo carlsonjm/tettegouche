@@ -13,6 +13,7 @@ Item {
 
     required property var launcherController
     required property var searchResults
+    required property var applicationCatalog
     focus: true
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
@@ -28,6 +29,18 @@ Item {
     property bool guestExiting: false
     property bool guestDragged: false
     property bool searchEngaged: false
+    property bool drawerOpen: false
+    property real drawerProgress: 0
+
+    function setDrawerOpen(open) {
+        root.drawerOpen = open
+        drawerSettle.to = open ? 1 : 0
+        drawerSettle.restart()
+        if (open) {
+            root.searchEngaged = false
+            root.forceActiveFocus()
+        }
+    }
 
     onGuestDragChanged: {
         if (root.launcherController.guestMode && !root.guestExiting) {
@@ -68,6 +81,33 @@ Item {
         return false
     }
 
+    function runCatalogApplication(index, applicationName) {
+        if (root.launcherController.activateCatalogIfOpen(index)) {
+            root.launcherController.finishLaunch()
+            return true
+        }
+        const waitsForWindow =
+            root.launcherController.beginGuestApplicationLaunch()
+        if (waitsForWindow) {
+            root.applicationLaunchPending = true
+            root.launchingApplication = applicationName
+            launchTimeout.restart()
+        }
+        if (root.applicationCatalog.launch(index)) {
+            if (!waitsForWindow) {
+                root.launcherController.finishLaunch()
+            }
+            return true
+        }
+        if (waitsForWindow) {
+            launchTimeout.stop()
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+        }
+        return false
+    }
+
     function submit() {
         if (resultList.count > 0) {
             runResult(Math.max(0, resultList.currentIndex))
@@ -78,6 +118,11 @@ Item {
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
+            if (root.drawerProgress > 0.01) {
+                root.setDrawerOpen(false)
+                event.accepted = true
+                return
+            }
             root.launcherController.close()
             event.accepted = true
             return
@@ -100,6 +145,8 @@ Item {
             root.applicationLaunchPending = false
             root.launchingApplication = ""
             root.searchEngaged = false
+            root.drawerOpen = false
+            root.drawerProgress = 0
             root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
@@ -221,6 +268,7 @@ Item {
                     && resultList.count === 0
                     && !root.searchResults.querying
                     && !root.applicationLaunchPending
+                    && root.drawerProgress < 0.01
                 width: resting ? Math.min(parent.width,
                     Math.max(360, parent.width * 0.72)) : parent.width
                 height: 58
@@ -293,10 +341,19 @@ Item {
                     onTextChanged: {
                         if (text.length > 0) {
                             root.searchEngaged = true
+                            if (root.drawerProgress > 0) {
+                                root.setDrawerOpen(false)
+                            }
                         }
                         root.pendingLaunch = false
                         root.searchResults.queryString = text
                         resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                    }
+
+                    onActiveFocusChanged: {
+                        if (activeFocus) {
+                            root.searchEngaged = true
+                        }
                     }
 
                     Keys.onPressed: event => {
@@ -344,6 +401,7 @@ Item {
                 width: parent.width
                 height: parent.height - y
                 opacity: root.applicationLaunchPending ? 0 : 1
+                visible: query.text.length > 0
 
                 Behavior on opacity {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
@@ -449,11 +507,145 @@ Item {
                 }
             }
 
+            Item {
+                id: drawerHandle
+                readonly property real revealDistance: Math.max(1,
+                    content.height - searchField.height - height - 32)
+                property real dragStartProgress: 0
+                x: Math.round((parent.width - width) / 2)
+                y: Math.round(parent.height - height - 4
+                    - root.drawerProgress * revealDistance)
+                width: 188
+                height: 38
+                opacity: query.text.length === 0
+                    && !root.applicationLaunchPending ? 1 : 0
+                enabled: opacity > 0.5
+                z: 4
+
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: drawerHover.hovered || drawerDrag.active
+                        ? "#16ffffff" : "transparent"
+                    border.width: 1
+                    border.color: root.surfaceOutline
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "Browse everything"
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                    font.letterSpacing: 0.25
+                }
+
+                HoverHandler { id: drawerHover }
+
+                DragHandler {
+                    id: drawerDrag
+                    target: null
+                    xAxis.enabled: false
+                    yAxis.enabled: true
+                    acceptedDevices: PointerDevice.Mouse
+                        | PointerDevice.TouchPad
+                        | PointerDevice.TouchScreen
+                    onActiveChanged: {
+                        if (active) {
+                            drawerHandle.dragStartProgress =
+                                root.drawerProgress
+                            drawerSettle.stop()
+                        } else {
+                            root.setDrawerOpen(root.drawerProgress > 0.34)
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (active) {
+                            root.drawerProgress = Math.max(0, Math.min(1,
+                                drawerHandle.dragStartProgress
+                                - translation.y
+                                    / drawerHandle.revealDistance))
+                        }
+                    }
+                }
+
+                TapHandler {
+                    onTapped: root.setDrawerOpen(!root.drawerOpen)
+                }
+            }
+
+            GridView {
+                id: applicationGrid
+                x: 0
+                y: drawerHandle.y + drawerHandle.height + 10
+                width: parent.width
+                height: Math.max(0, parent.height - y)
+                clip: true
+                opacity: root.drawerProgress
+                visible: root.drawerProgress > 0.01
+                    && query.text.length === 0
+                    && !root.applicationLaunchPending
+                model: root.applicationCatalog
+                cellWidth: width / Math.max(3,
+                    Math.min(6, Math.floor(width / 126)))
+                cellHeight: 94
+                boundsBehavior: Flickable.StopAtBounds
+                z: 3
+
+                delegate: Item {
+                    id: catalogDelegate
+                    required property int index
+                    required property var model
+                    width: applicationGrid.cellWidth
+                    height: applicationGrid.cellHeight
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        radius: 16
+                        color: catalogHover.hovered
+                            ? "#20ffffff" : "transparent"
+
+                        Kirigami.Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 10
+                            width: 42
+                            height: 42
+                            source: catalogDelegate.model.icon
+                        }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.leftMargin: 7
+                            anchors.rightMargin: 7
+                            anchors.bottomMargin: 8
+                            horizontalAlignment: Text.AlignHCenter
+                            text: catalogDelegate.model.name
+                            color: root.primaryText
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
+
+                        HoverHandler { id: catalogHover }
+                        TapHandler {
+                            enabled: !root.guestDragged
+                                && !root.applicationLaunchPending
+                            onTapped: root.runCatalogApplication(
+                                catalogDelegate.index,
+                                catalogDelegate.model.name)
+                        }
+                    }
+                }
+            }
+
             Column {
                 anchors.centerIn: parent
                 spacing: 14
                 visible: root.applicationLaunchPending
                 opacity: root.applicationLaunchPending ? 1 : 0
+                z: 10
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -521,6 +713,14 @@ Item {
             root.guestExiting = false
             query.forceActiveFocus()
         }
+    }
+
+    NumberAnimation {
+        id: drawerSettle
+        target: root
+        property: "drawerProgress"
+        duration: 260
+        easing.type: Easing.OutCubic
     }
 
     NumberAnimation {

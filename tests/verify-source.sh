@@ -53,5 +53,15 @@ rg -q 'text: "Just type"' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/main.cpp"
 rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
+rg -q 'required property var applicationCatalog' \
+    "${project_root}/qml/Launcher.qml"
+rg -q 'text: "Browse everything"' "${project_root}/qml/Launcher.qml"
+rg -q 'property: "drawerProgress"' "${project_root}/qml/Launcher.qml"
+rg -q 'KApplicationTrader::query' \
+    "${project_root}/src/ApplicationCatalog.cpp"
+rg -q 'KIO::ApplicationLauncherJob' \
+    "${project_root}/src/ApplicationCatalog.cpp"
+rg -q 'activateCatalogIfOpen' "${project_root}/src/main.cpp" \
+    "${project_root}/qml/Launcher.qml"
 
 echo "Tettegouche source checks passed."

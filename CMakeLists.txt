@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons Runner)
+find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons KIO Runner Service)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -27,7 +27,11 @@ add_library(tettegouche-context STATIC
 target_link_libraries(tettegouche-context PUBLIC Qt6::Core)
 target_include_directories(tettegouche-context PUBLIC src)
 
-qt_add_executable(tettegouche src/main.cpp)
+qt_add_executable(tettegouche
+    src/main.cpp
+    src/ApplicationCatalog.cpp
+    src/ApplicationCatalog.h
+)
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml
@@ -40,7 +44,9 @@ target_link_libraries(tettegouche PRIVATE
     Qt6::Qml
     Qt6::Quick
     KF6::CoreAddons
+    KF6::KIOGui
     KF6::Runner
+    KF6::Service
     KF6Kirigami
     KF6::KirigamiPlatform
     LayerShellQt::Interface
