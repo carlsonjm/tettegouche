@@ -6,10 +6,10 @@
             }
         ],
         "Category": "Application Launchers",
-        "Description": "A touch-first application launcher for KDE Plasma",
+        "Description": "Just type. Find apps, files, settings, and the web in one place",
         "EnabledByDefault": true,
         "FormFactors": ["desktop"],
-        "Icon": "studio.warbler.tettegouche",
+        "Icon": "studio.warbler.tettegouche-logo",
         "License": "GPL-2.0+",
         "Name": "Tettegouche",
         "Version": "0.2.0"

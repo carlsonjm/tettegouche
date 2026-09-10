@@ -1,9 +1,9 @@
 [Desktop Entry]
 Type=Application
 Name=Tettegouche
-Comment=Find and launch applications
+Comment=Just type. Find apps, files, settings, and the web in one place
 Exec=tettegouche
-Icon=system-search
+Icon=studio.warbler.tettegouche-logo
 Terminal=false
 NoDisplay=true
 Categories=Utility;System;

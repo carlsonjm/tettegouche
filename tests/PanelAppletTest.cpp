@@ -53,6 +53,7 @@ private Q_SLOTS:
         m_applet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
         QVERIFY(m_applet);
         QVERIFY(!m_applet->failedToLaunch());
+        QCOMPARE(m_applet->pluginMetaData().iconName(), QStringLiteral("studio.warbler.tettegouche-logo"));
         const QString expectedPlugin = QString::fromLocal8Bit(qgetenv("TETTE_TEST_PLUGIN_ROOT"))
             + QStringLiteral("/plasma/applets/studio.warbler.tettegouche.so");
         QCOMPARE(QFileInfo(m_applet->pluginMetaData().fileName()).canonicalFilePath(),

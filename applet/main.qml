@@ -8,7 +8,7 @@ import org.kde.plasma.plasmoid
 PlasmoidItem {
     id: root
 
-    Plasmoid.icon: "studio.warbler.tettegouche"
+    Plasmoid.icon: "studio.warbler.tettegouche-logo"
     Plasmoid.status: PlasmaCore.Types.ActiveStatus
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     activationTogglesExpanded: false

@@ -68,8 +68,13 @@ target_link_libraries(tettegouche PRIVATE
 install(TARGETS tettegouche RUNTIME DESTINATION ${KDE_INSTALL_BINDIR})
 install(PROGRAMS io.github.carlsonjm.Tettegouche.desktop
         DESTINATION ${KDE_INSTALL_APPDIR})
-install(FILES assets/studio.warbler.tettegouche.svg
-        DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+# Widget Explorer prefers an icon named after the plugin ID over metadata.Icon.
+# The live panel dimple is drawn independently in applet/main.qml.
+install(FILES assets/studio.warbler.tettegouche-logo.png
+        DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps
+        RENAME studio.warbler.tettegouche.png)
+install(FILES assets/studio.warbler.tettegouche-logo.png
+        DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps)
 plasma_add_applet(studio.warbler.tettegouche
     CPP_SOURCES
         src/TettegoucheApplet.cpp
