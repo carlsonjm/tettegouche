@@ -95,4 +95,14 @@ if(BUILD_TESTING)
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
             $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
     set_tests_properties(panel-applet-test PROPERTIES TIMEOUT 45)
+    find_program(QMLTESTRUNNER_EXECUTABLE NAMES qmltestrunner
+        HINTS /usr/lib/qt6/bin)
+    if(QMLTESTRUNNER_EXECUTABLE)
+        add_test(NAME launcher-controls-test
+            COMMAND ${QMLTESTRUNNER_EXECUTABLE}
+                -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)
+        set_tests_properties(launcher-controls-test PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            TIMEOUT 30)
+    endif()
 endif()

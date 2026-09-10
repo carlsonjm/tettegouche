@@ -32,6 +32,26 @@ Item {
     property bool drawerOpen: false
     property real drawerProgress: 0
     property bool sortMenuOpen: false
+    property real openingText: 0
+    property real openingControls: 0
+    property real openingIcon: 0
+    property real openingShine: 0
+
+    SequentialAnimation {
+        id: openingSequence
+        ScriptAction { script: { root.openingText = 0; root.openingControls = 0; root.openingIcon = 0; root.openingShine = 0 } }
+        PauseAnimation { duration: 60 }
+        NumberAnimation { target: root; property: "openingControls"; to: 1; duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "openingIcon"; to: 1; duration: 120; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: 140 }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "openingText"; to: 1; duration: 280; easing.type: Easing.OutCubic }
+            SequentialAnimation {
+                PauseAnimation { duration: 180 }
+                NumberAnimation { target: root; property: "openingShine"; to: 1; duration: 460; easing.type: Easing.InOutSine }
+            }
+        }
+    }
 
     function setDrawerOpen(open) {
         root.drawerOpen = open
@@ -128,6 +148,11 @@ Item {
 
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
+            if (root.sortMenuOpen) {
+                root.sortMenuOpen = false
+                event.accepted = true
+                return
+            }
             if (root.drawerProgress > 0.01) {
                 root.setDrawerOpen(false)
                 event.accepted = true
@@ -164,6 +189,7 @@ Item {
             root.guestDragged = false
             sheet.opacity = 1
             sheet.scale = 1
+            openingSequence.restart()
         }
         function onGuestLaunchReady() {
             if (!root.applicationLaunchPending) {
@@ -196,12 +222,16 @@ Item {
     }
 
     Rectangle {
+        id: backdrop
         anchors.fill: parent
         color: "transparent"
         visible: !root.launcherController.guestMode
 
         TapHandler {
-            onTapped: root.launcherController.close()
+            onTapped: event => {
+                const point = sheet.mapFromItem(backdrop, event.position.x, event.position.y)
+                if (!sheet.contains(point)) root.launcherController.close()
+            }
         }
     }
 
@@ -290,8 +320,19 @@ Item {
                     ? root.controlColor : "transparent"
                 opacity: root.applicationLaunchPending ? 0 : 1
                 enabled: !root.applicationLaunchPending
-                border.width: 1
+                border.width: 0
                 border.color: root.surfaceOutline
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * (0.6 + 0.4 * root.openingControls)
+                    height: parent.height
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: root.surfaceOutline
+                    opacity: root.openingControls
+                }
 
                 Behavior on width {
                     NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
@@ -313,6 +354,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 40
                     height: 40
+                    opacity: root.openingIcon
 
                     Kirigami.Icon {
                         anchors.centerIn: parent
@@ -401,12 +443,40 @@ Item {
                     }
 
                     Text {
+                        id: placeholder
+                        objectName: "just-type-placeholder"
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         visible: query.text.length === 0
                         text: "Just type"
                         color: "#86ffffff"
-                        font: query.font
+                        font.pixelSize: restingBrowseLabel.font.pixelSize
+                        opacity: root.openingText
+                        transform: Translate { y: (1 - root.openingText) * 3 }
+
+                        // A single soft light pass, clipped to copies of the
+                        // glyphs rather than a rectangle crossing the field.
+                        Repeater {
+                            model: 7
+                            delegate: Item {
+                                required property int index
+                                x: root.openingShine * (placeholder.implicitWidth + 35)
+                                    - 35 + index * 5
+                                width: 5
+                                height: placeholder.height
+                                clip: true
+                                visible: root.openingShine > 0 && root.openingShine < 1
+                                opacity: [0.08, 0.18, 0.34, 0.5, 0.34, 0.18, 0.08][index]
+                                Text {
+                                    x: -parent.x
+                                    height: parent.height
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: placeholder.text
+                                    font: placeholder.font
+                                    color: "#ffffff"
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -544,23 +614,40 @@ Item {
                 width: parent.width
                 height: 44
                 opacity: (query.text.length === 0 || root.drawerOpen)
-                    && !root.applicationLaunchPending ? 1 : 0
+                    && !root.applicationLaunchPending ? root.openingControls : 0
+                transform: Translate { y: (1 - root.openingControls) * 10 }
                 enabled: opacity > 0.5
                 z: 4
 
                 Text {
                     id: restingBrowseLabel
+                    objectName: "browse-label"
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 1
                     text: "Browse everything"
-                    color: root.secondaryText
+                    color: restingBrowseHover.running || !restingBrowseMouse.containsMouse
+                        ? root.secondaryText : root.primaryText
+                    Behavior on color { ColorAnimation { duration: 100 } }
                     font.pixelSize: 13
                     font.letterSpacing: 0.25
                     opacity: Math.max(0, 1 - root.drawerProgress * 3)
                     enabled: opacity > 0.5
 
-                    TapHandler {
-                        onTapped: root.setDrawerOpen(true)
+                    Timer { id: restingBrowseHover; interval: 220 }
+                    MouseArea {
+                        id: restingBrowseMouse
+                        anchors.fill: parent
+                        anchors.leftMargin: -12
+                        anchors.rightMargin: -12
+                        anchors.topMargin: -3
+                        anchors.bottomMargin: -3
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: {
+                            if (containsMouse) restingBrowseHover.restart()
+                            else restingBrowseHover.stop()
+                        }
+                        onClicked: root.setDrawerOpen(true)
                     }
                 }
 
@@ -570,24 +657,39 @@ Item {
                     anchors.leftMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
                     text: "Browse everything"
-                    color: root.secondaryText
+                    color: openBrowseHover.running || !openBrowseMouse.containsMouse
+                        ? root.secondaryText : root.primaryText
+                    Behavior on color { ColorAnimation { duration: 100 } }
                     font.pixelSize: 13
                     font.letterSpacing: 0.25
                     opacity: Math.max(0,
                         (root.drawerProgress - 0.65) / 0.35)
                     enabled: root.drawerOpen && opacity > 0.9
 
-                    TapHandler {
-                        onTapped: root.setDrawerOpen(false)
+                    Timer { id: openBrowseHover; interval: 220 }
+                    MouseArea {
+                        id: openBrowseMouse
+                        anchors.fill: parent
+                        anchors.leftMargin: -4
+                        anchors.rightMargin: -12
+                        anchors.topMargin: -3
+                        anchors.bottomMargin: -3
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: {
+                            if (containsMouse) openBrowseHover.restart()
+                            else openBrowseHover.stop()
+                        }
+                        onClicked: root.setDrawerOpen(false)
                     }
                 }
 
                 Item {
                     id: grabberTarget
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: Math.round(10 + (1 - root.drawerProgress) * 10)
-                    width: 104
-                    height: 24
+                    y: Math.round(6 + (1 - root.drawerProgress) * 10)
+                    width: 124
+                    height: 32
 
                     Rectangle {
                         anchors.centerIn: parent
@@ -610,6 +712,7 @@ Item {
 
                 Item {
                     id: sortButton
+                    objectName: "sort-button"
                     anchors.right: parent.right
                     anchors.rightMargin: 1
                     anchors.verticalCenter: parent.verticalCenter
@@ -628,13 +731,16 @@ Item {
                         color: root.primaryText
                     }
 
-                    TapHandler {
-                        onTapped: root.sortMenuOpen = !root.sortMenuOpen
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.sortMenuOpen = !root.sortMenuOpen
                     }
                 }
 
                 DragHandler {
                     id: drawerDrag
+                    margin: 4
                     target: null
                     xAxis.enabled: false
                     yAxis.enabled: true
@@ -748,16 +854,18 @@ Item {
 
             Rectangle {
                 id: sortMenu
+                objectName: "sort-menu"
                 anchors.right: parent.right
                 y: drawerHandle.y + drawerHandle.height + 4
                 width: 132
                 height: 92
                 radius: 14
-                color: root.controlColor
+                color: root.surfaceColor
                 border.width: 1
                 border.color: root.surfaceOutline
-                visible: root.sortMenuOpen && root.drawerOpen
-                opacity: visible ? 1 : 0
+                visible: opacity > 0
+                enabled: root.sortMenuOpen && root.drawerOpen
+                opacity: root.sortMenuOpen && root.drawerOpen ? 1 : 0
                 z: 8
 
                 Behavior on opacity {
@@ -769,7 +877,8 @@ Item {
 
                 Column {
                     anchors.fill: parent
-                    anchors.margins: 4
+                    anchors.margins: 6
+                    spacing: 4
 
                     Repeater {
                         model: [
@@ -781,25 +890,27 @@ Item {
                             id: sortChoice
                             required property var modelData
                             width: parent.width
-                            height: 42
-                            radius: 10
-                            color: choiceHover.hovered
-                                || root.applicationCatalog.descending
-                                    === sortChoice.modelData.descending
-                                ? "#20ffffff" : "transparent"
+                            height: 38
+                            radius: height / 2
+                            readonly property bool selected: root.applicationCatalog.descending
+                                === sortChoice.modelData.descending
+                            color: selected ? root.controlColor : "transparent"
+                            border.width: !selected && choiceHover.hovered ? 1 : 0
+                            border.color: root.surfaceOutline
+                            Behavior on color { ColorAnimation { duration: 100 } }
 
                             Text {
-                                anchors.left: parent.left
-                                anchors.leftMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.centerIn: parent
                                 text: sortChoice.modelData.label
                                 color: root.primaryText
                                 font.pixelSize: 13
                             }
 
                             HoverHandler { id: choiceHover }
-                            TapHandler {
-                                onTapped: {
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
                                     root.applicationCatalog.descending =
                                         sortChoice.modelData.descending
                                     applicationGrid.currentIndex =
