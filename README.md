@@ -10,11 +10,6 @@ or go straight to the settings for a connected device. When nothing local
 matches, continue in your default browser. Built for touch, keyboard, and mouse,
 it opens on demand and gets out of your way when dismissed.
 
-The supplied photo logo identifies the package and widget picker. The live panel
-keeps its independent dimple and ripple. The installer also retires the previous
-scalable picker icon into a backup, since Plasma prioritizes plugin-ID artwork
-over the metadata icon name.
-
 When Kadunce is running, Tettegouche reads its versioned workspace snapshot to
 identify applications that are already open and asks Kadunce to activate the
 exact existing window. Kadunce remains the sole owner of window and card state;
