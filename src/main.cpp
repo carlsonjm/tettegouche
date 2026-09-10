@@ -7,7 +7,9 @@
 #include "ApplicationCatalog.h"
 
 #include <KRunner/ResultsModel>
+#include "RunnerIdentity.h"
 #include <KRunner/RunnerManager>
+#include <KService/KService>
 #include <LayerShellQt/Window>
 
 #include <QDBusConnection>
@@ -15,6 +17,7 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusReply>
+#include <QDBusServiceWatcher>
 #include <QCursor>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -26,6 +29,7 @@
 #include <QRegion>
 #include <QScreen>
 #include <QTimer>
+#include <QUuid>
 
 #include <algorithm>
 
@@ -92,6 +96,7 @@ class LauncherController final : public QObject
     Q_PROPERTY(int guestY READ guestY NOTIFY guestChanged)
     Q_PROPERTY(int guestWidth READ guestWidth NOTIFY guestChanged)
     Q_PROPERTY(int guestHeight READ guestHeight NOTIFY guestChanged)
+    Q_PROPERTY(QRect availableArea READ availableArea NOTIFY guestChanged)
 
 public:
     LauncherController(QQuickView *view,
@@ -107,6 +112,17 @@ public:
         , m_catalog(catalog)
         , m_guestAllowed(guestAllowed)
     {
+        auto bus = QDBusConnection::sessionBus();
+        bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
+                    QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("workspaceContextChanged"),
+                    this, SLOT(workspaceUpdated()));
+        bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
+                    QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("bridgeUnavailable"),
+                    this, SLOT(bridgeLost()));
+        auto *owner = new QDBusServiceWatcher(QStringLiteral("org.kde.KWin"), bus,
+            QDBusServiceWatcher::WatchForOwnerChange, this);
+        connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
+                [this]() { bridgeLost(); });
     }
 
     bool contextAvailable() const { return m_context.available(); }
@@ -115,26 +131,29 @@ public:
     int guestY() const { return m_guestRect.y(); }
     int guestWidth() const { return m_guestRect.width(); }
     int guestHeight() const { return m_guestRect.height(); }
+    QRect availableArea() const {
+        const auto *screen = m_view->screen();
+        return screen ? screen->availableGeometry().translated(-screen->geometry().topLeft())
+                      : QRect(0, 0, m_view->width(), m_view->height());
+    }
 
     Q_INVOKABLE bool resultIsOpen(int row) const
     {
         const QModelIndex index = m_results->index(row, 0);
         return index.isValid() && m_context.applicationIsOpen(
-            m_results->data(index, KRunner::ResultsModel::IdRole).toString(),
+            runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
             m_results->data(index, Qt::DisplayRole).toString());
     }
 
-    Q_INVOKABLE bool activateIfOpen(int row)
+    Q_INVOKABLE int activateIfOpen(int row)
     {
-        if (!m_context.available()) {
-            refreshContextBlocking();
-        }
+        refreshContextBlocking();
         const QModelIndex index = m_results->index(row, 0);
         if (!index.isValid()) {
             return false;
         }
         const QString windowId = m_context.windowIdForApplication(
-            m_results->data(index, KRunner::ResultsModel::IdRole).toString(),
+            runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
             m_results->data(index, Qt::DisplayRole).toString());
         if (windowId.isEmpty()) {
             return false;
@@ -148,14 +167,16 @@ public:
         request.setArguments({windowId});
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
             request, QDBus::Block, 500);
-        return reply.isValid() && reply.value();
+        if (reply.isValid() && reply.value()) return 1;
+        refreshContextBlocking();
+        return m_context.applicationIsOpen(
+            runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
+            m_results->data(index, Qt::DisplayRole).toString()) ? -1 : 0;
     }
 
-    Q_INVOKABLE bool activateCatalogIfOpen(int row)
+    Q_INVOKABLE int activateCatalogIfOpen(int row)
     {
-        if (!m_context.available()) {
-            refreshContextBlocking();
-        }
+        refreshContextBlocking();
         if (!m_catalog) {
             return false;
         }
@@ -172,12 +193,31 @@ public:
         request.setArguments({windowId});
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
             request, QDBus::Block, 500);
-        return reply.isValid() && reply.value();
+        if (reply.isValid() && reply.value()) return 1;
+        refreshContextBlocking();
+        return m_context.applicationIsOpen(m_catalog->applicationId(row), m_catalog->applicationName(row)) ? -1 : 0;
     }
 
 public Q_SLOTS:
+    void workspaceUpdated() { refreshContext(); }
+
+    void bridgeLost()
+    {
+        m_launchToken.clear();
+        ++m_contextGeneration;
+        m_context.clear();
+        m_guestMode = false;
+        m_guestRect = {};
+        m_view->setMask(QRegion());
+        Q_EMIT contextChanged();
+        Q_EMIT guestChanged();
+        Q_EMIT guestBridgeLost();
+    }
+
     Q_SCRIPTABLE void open()
     {
+        m_launchToken.clear();
+        endGuestLease();
         tryBeginGuest();
         refreshContext();
         m_runnerManager->setupMatchSession();
@@ -232,19 +272,34 @@ public Q_SLOTS:
         return reply.isValid() && reply.value();
     }
 
-    Q_INVOKABLE bool beginGuestApplicationLaunch()
+    Q_INVOKABLE bool beginGuestApplicationLaunch(int row, bool catalog = false)
     {
         if (!m_guestMode) {
             return false;
         }
+        QString appId = catalog && m_catalog ? m_catalog->applicationId(row)
+            : runnerApplicationId(m_results->data(m_results->index(row, 0),
+                KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
+        if (appId.isEmpty()) return false;
+        if (appId.startsWith(QStringLiteral("services_"))) appId.remove(0, 9);
+        if (appId.startsWith(QStringLiteral("applications:"))) appId.remove(0, 13);
+        QStringList identities{appId};
+        if (const auto service = KService::serviceByStorageId(appId)) {
+            const auto wmClass = service->property<QString>(QStringLiteral("StartupWMClass"));
+            if (!wmClass.isEmpty()) identities.append(wmClass);
+        }
+        QDBusMessage request = guestMethod(QStringLiteral("prepareLauncherGuestLaunch"));
+        m_launchToken = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        request.setArguments({identities, m_launchToken});
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
-            guestMethod(QStringLiteral("prepareLauncherGuestLaunch")),
+            request,
             QDBus::Block, 500);
         return reply.isValid() && reply.value();
     }
 
     Q_INVOKABLE void cancelGuestApplicationLaunch()
     {
+        m_launchToken.clear();
         if (!m_guestMode) {
             return;
         }
@@ -275,9 +330,10 @@ public Q_SLOTS:
         QGuiApplication::quit();
     }
 
-    Q_SCRIPTABLE void completeGuestLaunch()
+    Q_SCRIPTABLE void completeGuestLaunch(const QString &requestToken)
     {
-        if (m_guestMode) {
+        if (m_guestMode && !m_launchToken.isEmpty() && requestToken == m_launchToken) {
+            m_launchToken.clear();
             Q_EMIT guestLaunchReady();
         }
     }
@@ -295,6 +351,7 @@ Q_SIGNALS:
     void guestChanged();
     void guestLaunchReady();
     void guestNavigationReady(int slot);
+    void guestBridgeLost();
 
 private:
     static QDBusMessage guestMethod(const QString &method)
@@ -319,7 +376,7 @@ private:
         const QDBusReply<int> protocol = QDBusConnection::sessionBus().call(
             guestMethod(QStringLiteral("launcherGuestProtocolVersion")),
             QDBus::Block, 350);
-        if (!protocol.isValid() || protocol.value() != 2) {
+        if (!protocol.isValid() || protocol.value() != 3) {
             Q_EMIT guestChanged();
             return;
         }
@@ -340,7 +397,7 @@ private:
         const QJsonObject root = document.object();
         const QJsonObject card = root.value(QStringLiteral("card")).toObject();
         if (error.error != QJsonParseError::NoError
-            || root.value(QStringLiteral("protocol")).toInt() != 2
+            || root.value(QStringLiteral("protocol")).toInt() != 3
             || !root.value(QStringLiteral("accepted")).toBool()
             || card.isEmpty()) {
             Q_EMIT guestChanged();
@@ -399,6 +456,7 @@ private:
 
     void refreshContextBlocking()
     {
+        ++m_contextGeneration;
         const QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
@@ -416,6 +474,7 @@ private:
 
     void refreshContext()
     {
+        const auto generation = ++m_contextGeneration;
         const QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
@@ -424,7 +483,9 @@ private:
         auto *watcher = new QDBusPendingCallWatcher(
             QDBusConnection::sessionBus().asyncCall(request), this);
         connect(watcher, &QDBusPendingCallWatcher::finished,
-                this, [this, watcher]() {
+                this, [this, watcher, generation]() {
+            watcher->deleteLater();
+            if (generation != m_contextGeneration) return;
             const QDBusPendingReply<QString> reply = *watcher;
             if (reply.isError()) {
                 m_context.clear();
@@ -444,6 +505,8 @@ private:
     QRect m_guestRect;
     bool m_guestMode = false;
     bool m_guestAllowed = true;
+    quint64 m_contextGeneration = 0;
+    QString m_launchToken;
 };
 
 int main(int argc, char **argv)

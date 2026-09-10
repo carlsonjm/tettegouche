@@ -84,6 +84,7 @@ bool WorkspaceContext::update(const QString &payload)
                     .value(QStringLiteral("focused")).toBool(),
                 .selected = application
                     .value(QStringLiteral("selected")).toBool(),
+                .lastActivated = application.value(QStringLiteral("lastActivated")).toInteger(),
             });
         }
     }
@@ -140,7 +141,8 @@ QString WorkspaceContext::windowIdForApplication(
         }
         const int priority = application.focused ? 2
             : application.selected ? 1 : 0;
-        if (priority >= bestPriority) {
+        if (!best || application.lastActivated > best->lastActivated
+            || (application.lastActivated == best->lastActivated && priority >= bestPriority)) {
             best = &application;
             bestPriority = priority;
         }

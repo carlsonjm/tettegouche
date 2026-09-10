@@ -32,6 +32,7 @@ private:
         QString title;
         bool focused = false;
         bool selected = false;
+        qint64 lastActivated = 0;
     };
 
     bool m_available = false;

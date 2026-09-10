@@ -78,7 +78,9 @@ Item {
         if (index < 0 || index >= resultList.count) {
             return false
         }
-        if (root.launcherController.activateIfOpen(index)) {
+        const activation = root.launcherController.activateIfOpen(index)
+        if (activation < 0) return false
+        if (activation > 0) {
             root.launcherController.finishLaunch()
             return true
         }
@@ -86,7 +88,7 @@ Item {
             root.searchResults.data(
                 root.searchResults.index(index, 0), Qt.DisplayRole))
         const waitsForWindow =
-            root.launcherController.beginGuestApplicationLaunch()
+            root.launcherController.beginGuestApplicationLaunch(index, false)
         if (waitsForWindow) {
             root.applicationLaunchPending = true
             root.launchingApplication = applicationName
@@ -108,12 +110,14 @@ Item {
     }
 
     function runCatalogApplication(index, applicationName) {
-        if (root.launcherController.activateCatalogIfOpen(index)) {
+        const activation = root.launcherController.activateCatalogIfOpen(index)
+        if (activation < 0) return false
+        if (activation > 0) {
             root.launcherController.finishLaunch()
             return true
         }
         const waitsForWindow =
-            root.launcherController.beginGuestApplicationLaunch()
+            root.launcherController.beginGuestApplicationLaunch(index, true)
         if (waitsForWindow) {
             root.applicationLaunchPending = true
             root.launchingApplication = applicationName
@@ -174,7 +178,20 @@ Item {
 
     Connections {
         target: root.launcherController
+        function onGuestBridgeLost() {
+            launchTimeout.stop()
+            launchReadyExit.stop()
+            guestExit.stop()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.guestExiting = false
+            root.guestDrag = 0
+            sheet.opacity = 1
+            sheet.scale = 1
+            query.forceActiveFocus()
+        }
         function onOpened() {
+            launchTimeout.stop()
             query.text = ""
             root.pendingLaunch = false
             root.applicationLaunchPending = false
@@ -237,18 +254,21 @@ Item {
 
     Rectangle {
         id: sheet
+        objectName: "launcher-sheet"
         x: root.launcherController.guestMode
             ? root.launcherController.guestX
-            : (parent.width - width) / 2
+            : root.launcherController.availableArea.x
+                + (root.launcherController.availableArea.width - width) / 2
         y: root.launcherController.guestMode
             ? root.launcherController.guestY
-            : Math.round((parent.height - height) / 2)
+            : root.launcherController.availableArea.y
+                + Math.round((root.launcherController.availableArea.height - height) / 2)
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
-            : Math.min(720, parent.width - 40)
+            : Math.round(root.launcherController.availableArea.width * 0.64)
         height: root.launcherController.guestMode
             ? root.launcherController.guestHeight
-            : Math.min(480, parent.height - 72)
+            : Math.round(root.launcherController.availableArea.height * 0.64)
         radius: root.cardRadius
         color: root.surfaceColor
         border.width: 1

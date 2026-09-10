@@ -12,6 +12,21 @@ class WorkspaceContextTest final : public QObject
     Q_OBJECT
 
 private Q_SLOTS:
+    void mostRecentlyActivatedWinsOverSelectedCard()
+    {
+        WorkspaceContext context;
+        QVERIFY(context.update(QStringLiteral(R"({
+            "schema":"studio.warbler.kadunce.workspace-context","version":1,
+            "applications":[
+              {"windowId":"recent","appId":"org.example.App","lastActivated":12},
+              {"windowId":"old","appId":"org.example.App","selected":true,"lastActivated":3}
+            ]})")));
+        QCOMPARE(context.windowIdForApplication(QStringLiteral("org.example.App"), {}), QStringLiteral("recent"));
+        QVERIFY(context.update(QStringLiteral(R"({
+            "schema":"studio.warbler.kadunce.workspace-context","version":1,
+            "applications":[{"windowId":"old","appId":"org.example.App","lastActivated":3}]})")));
+        QCOMPARE(context.windowIdForApplication(QStringLiteral("org.example.App"), {}), QStringLiteral("old"));
+    }
     void acceptsVersionOne()
     {
         WorkspaceContext context;

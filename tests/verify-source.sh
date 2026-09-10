@@ -2,9 +2,10 @@
 set -euo pipefail
 
 project_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${project_root}"
 
 if rg -n -i 'webos|project[[:space:]_-]*webos|ghostiepost|palm|chromeos' \
-    --glob '!build*/**' --glob '!tests/verify-source.sh' "${project_root}"; then
+    --glob '!build*/**' --glob '!tests/verify-source.sh' .; then
     echo "Retired product identity found in the Tettegouche source tree." >&2
     exit 1
 fi
@@ -19,7 +20,7 @@ rg -q 'QStringLiteral\("activateApplicationWindow"\)' \
     "${project_root}/src/main.cpp"
 rg -q 'QStringLiteral\("launcherGuestProtocolVersion"\)' \
     "${project_root}/src/main.cpp"
-rg -q 'protocol\.value\(\) != 2' "${project_root}/src/main.cpp"
+rg -q 'protocol\.value\(\) != 3' "${project_root}/src/main.cpp"
 rg -q 'QStringLiteral\("beginLauncherGuest"\)' \
     "${project_root}/src/main.cpp"
 rg -q 'sessionBus\(\)\.baseService\(\)' "${project_root}/src/main.cpp"

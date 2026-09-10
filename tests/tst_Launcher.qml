@@ -12,6 +12,7 @@ TestCase {
     QtObject {
         id: controller
         property bool guestMode: false
+        property rect availableArea: Qt.rect(0, 0, 1000, 740)
         property bool contextAvailable: false
         property real guestX: 140
         property real guestY: 160
@@ -21,6 +22,7 @@ TestCase {
         signal opened()
         signal guestLaunchReady()
         signal guestNavigationReady(int slot)
+        signal guestBridgeLost()
         function close() { closes++ }
         function showInputMethod() {}
         function updateGuestDrag(value) {}
@@ -44,6 +46,31 @@ TestCase {
     }
     function test_browseAndSort_data() {
         return [{ tag: "standalone", guest: false }, { tag: "card-line", guest: true }]
+    }
+    function test_cardFootprint() {
+        const sheet = findChild(launcher, "launcher-sheet")
+        verify(sheet)
+        controller.guestMode = false
+        compare(sheet.width, 640)
+        compare(sheet.height, Math.round(740 * 0.64))
+        compare(sheet.x, 180)
+        controller.guestMode = true
+        compare(sheet.width, controller.guestWidth)
+        compare(sheet.height, controller.guestHeight)
+        compare(sheet.x, controller.guestX)
+        controller.guestMode = false
+    }
+    function test_bridgeLossRecoversSearch() {
+        controller.guestMode = true
+        controller.opened()
+        launcher.applicationLaunchPending = true
+        launcher.launchingApplication = "Example"
+        controller.guestMode = false
+        controller.guestBridgeLost()
+        compare(launcher.applicationLaunchPending, false)
+        compare(launcher.launchingApplication, "")
+        compare(launcher.guestExiting, false)
+        compare(controller.closes, 0)
     }
     function test_browseAndSort(data) {
         controller.guestMode = data.guest

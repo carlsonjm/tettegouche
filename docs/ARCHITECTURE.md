@@ -44,14 +44,15 @@ Kadunce owns:
 
 At open time, Tettegouche first checks Kadunce's independent launcher-guest
 protocol. Guest mode is requested only when Kadunce reports the exact supported
-version. It then requests one `workspaceContext` snapshot. There is no timer,
+version. It then requests a `workspaceContext` snapshot and refreshes it on
+Kadunce change signals and before window selection. There is no timer,
 heartbeat, or raw KWin discovery. If either endpoint is absent, malformed, or
 unsupported, Tettegouche keeps its standalone surface and application search
 continues normally.
 
 ## Guest-card handoff
 
-Protocol 2 reserves a centered Card Line guest footprint for Tettegouche
+Protocol 3 reserves the same centered Card Line guest footprint for Tettegouche
 without inserting it into Kadunce's persistent card model. Kadunce derives a
 slightly narrower geometry from its canonical card so both real neighbors keep
 useful visible shoulders; Tettegouche does not infer or resize that footprint.
@@ -71,7 +72,8 @@ lease.
 
 For a new application launch, Tettegouche asks Kadunce to hold the guest and
 shows a bounded `Opening` state. Kadunce completes the guest only after KWin
-reports an activated application window, preventing the previously selected
+reports a window matching the requested desktop identity or declared
+StartupWMClass, preventing the previously selected
 card from flashing into Active during process startup. A ten-second timeout
 returns the launcher to search if no window arrives.
 
@@ -80,8 +82,9 @@ returns the launcher to search if no window arrives.
 Results that correspond to an open application carry its live `windowId`.
 Tettegouche asks Kadunce to activate that exact window; Kadunce restores it if
 minimized and routes card-backed windows through its existing card selection.
-When several windows belong to one application, the focused window wins,
-followed by the selected card and then the frontmost matching window. Results
+When several windows belong to one application, the most recently activated
+window recorded during this effect lifetime wins. Without that optional ordering,
+the focused window wins, then the selected card, then the frontmost match. Results
 without a live match use Plasma's ordinary launch action.
 
 ## Surface behavior

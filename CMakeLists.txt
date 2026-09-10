@@ -77,6 +77,10 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(runner-identity-test tests/RunnerIdentityTest.cpp)
+    target_include_directories(runner-identity-test PRIVATE src)
+    target_link_libraries(runner-identity-test PRIVATE KF6::Runner Qt6::Core)
+    add_test(NAME runner-identity-test COMMAND runner-identity-test)
     find_package(Qt6 REQUIRED COMPONENTS Widgets)
     find_package(PlasmaQuick REQUIRED)
     find_package(KF6Package REQUIRED)
