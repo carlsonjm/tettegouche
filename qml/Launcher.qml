@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
 pragma ComponentBehavior: Bound
@@ -23,6 +24,41 @@ Item {
     readonly property int cardRadius: 10
     readonly property int contentInset: 22
     property bool pendingLaunch: false
+    property string selectedChildKey: ""
+    property bool childLaunchFailed: false
+
+    function childKey(child) { return JSON.stringify([child.label, child.status || ""]) }
+    function currentChildren() {
+        const row = root.searchResults.selectionPinned()
+            ? root.searchResults.selectedRow() : resultList.currentIndex
+        return row < 0 ? [] : root.launcherController.relatedItems(row)
+    }
+    function moveResultSelection(direction) {
+        const children = currentChildren()
+        let child = children.findIndex(function(item) { return root.childKey(item) === root.selectedChildKey })
+        if (direction > 0 && child + 1 < children.length) {
+            root.selectedChildKey = root.childKey(children[child + 1])
+        } else if (direction < 0 && root.selectedChildKey !== "") {
+            root.selectedChildKey = child > 0 ? root.childKey(children[child - 1]) : ""
+        } else {
+            if ((direction < 0 && resultList.currentIndex <= 0)
+                || (direction > 0 && resultList.currentIndex >= resultList.count - 1)) return
+            resultList.currentIndex = Math.max(0, Math.min(resultList.count - 1, resultList.currentIndex + direction))
+            root.selectedChildKey = ""
+            if (direction < 0) {
+                const previous = root.launcherController.relatedItems(resultList.currentIndex)
+                if (previous.length) root.selectedChildKey = root.childKey(previous[previous.length - 1])
+            }
+        }
+        root.searchResults.pinSelection(resultList.currentIndex)
+        resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+    }
+    function openChildSettings() {
+        const child = currentChildren().find(function(item) { return root.childKey(item) === root.selectedChildKey })
+        if (!child) return
+        const row = root.searchResults.selectedRow()
+        root.childLaunchFailed = !root.runResult(row)
+    }
     property bool applicationLaunchPending: false
     property string launchingApplication: ""
     property real guestDrag: 0
@@ -139,14 +175,34 @@ Item {
     }
 
     function submit() {
-        if (root.drawerOpen && applicationGrid.count > 0) {
+        if (!root.drawerOpen && root.selectedChildKey !== "") {
+            root.openChildSettings()
+        } else if (!root.drawerOpen && root.searchResults.querying) {
+            pendingLaunch = true
+        } else if (root.drawerOpen && applicationGrid.count > 0) {
             const row = Math.max(0, applicationGrid.currentIndex)
             runCatalogApplication(row,
                 root.applicationCatalog.applicationName(row))
+        } else if (root.searchResults.selectionPinned()) {
+            // A vanished destination must not silently turn Enter into a
+            // different app launch (or a web search).
+            runResult(root.searchResults.selectedRow())
         } else if (resultList.count > 0) {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
             pendingLaunch = true
+        } else if (!root.drawerOpen && query.text.trim().length > 0) {
+            const waiting = root.launcherController.beginGuestWebLaunch()
+            if (waiting) {
+                root.applicationLaunchPending = true
+                root.launchingApplication = "Web search"
+                launchTimeout.restart()
+            }
+            if (!root.launcherController.searchWeb(query.text) && waiting) {
+                root.launcherController.cancelGuestApplicationLaunch()
+                launchTimeout.stop()
+                root.applicationLaunchPending = false
+            }
         }
     }
 
@@ -399,6 +455,7 @@ Item {
 
                 TextInput {
                     id: query
+                    objectName: "search-query"
                     anchors.left: parent.left
                     anchors.leftMargin: 18
                     anchors.right: trailingAction.left
@@ -412,6 +469,8 @@ Item {
                     inputMethodHints: Qt.ImhNoPredictiveText
 
                     onTextChanged: {
+                        root.selectedChildKey = ""
+                        root.childLaunchFailed = false
                         if (text.length > 0) {
                             root.searchEngaged = true
                         }
@@ -421,6 +480,7 @@ Item {
                         root.searchResults.queryString = root.drawerOpen
                             ? "" : text
                         resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                        resultList.settleAtBeginning()
                         applicationGrid.currentIndex =
                             applicationGrid.count > 0 ? 0 : -1
                     }
@@ -446,14 +506,11 @@ Item {
                             event.accepted = true
                         } else if (event.key === Qt.Key_Down
                                    && resultList.count > 0) {
-                            resultList.currentIndex = Math.min(
-                                resultList.count - 1,
-                                Math.max(0, resultList.currentIndex + 1))
+                            root.moveResultSelection(1)
                             event.accepted = true
                         } else if (event.key === Qt.Key_Up
                                    && resultList.count > 0) {
-                            resultList.currentIndex = Math.max(
-                                0, resultList.currentIndex - 1)
+                            root.moveResultSelection(-1)
                             event.accepted = true
                         } else if (event.key === Qt.Key_Return
                                    || event.key === Qt.Key_Enter) {
@@ -519,35 +576,136 @@ Item {
                 opacity: root.applicationLaunchPending ? 0 : 1
                 visible: query.text.length > 0 && !root.drawerOpen
 
+                Row {
+                    spacing: 20
+                    Text {
+                        objectName: "file-scope-toggle"
+                        text: root.searchResults.allFiles ? "All files ⇄" : "Everyday search ⇄"
+                        color: root.primaryText
+                        font.pixelSize: 12
+                        height: 34
+                        verticalAlignment: Text.AlignVCenter
+                        TapHandler {
+                            onTapped: {
+                                root.searchResults.allFiles = !root.searchResults.allFiles
+                                root.selectedChildKey = ""
+                                root.childLaunchFailed = false
+                                resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                                resultList.settleAtBeginning()
+                            }
+                        }
+                    }
+                    Text {
+                        objectName: "quiet-folders-button"
+                        text: "Quiet folders…"
+                        color: root.secondaryText
+                        font.pixelSize: 12
+                        height: 34
+                        verticalAlignment: Text.AlignVCenter
+                        TapHandler { onTapped: { quietPaths.text = root.searchResults.quietFolders || ""; quietPopup.open() } }
+                    }
+                }
+
+                QQC2.Popup {
+                    id: quietPopup
+                    width: Math.min(480, resultsArea.width)
+                    height: 250
+                    x: (resultsArea.width - width) / 2
+                    y: 38
+                    padding: 16
+                    modal: true
+                    background: Rectangle { color: root.surfaceColor; radius: 10; border.color: root.surfaceOutline }
+                    contentItem: Column {
+                        spacing: 10
+                        Text { text: "Quiet folders"; color: root.primaryText; font.pixelSize: 16 }
+                        Text {
+                            text: "One full folder path per line. All files includes these again."
+                            color: root.secondaryText
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                        }
+                        QQC2.ScrollView {
+                            width: parent.width
+                            height: 110
+                            QQC2.TextArea { id: quietPaths; color: root.primaryText; wrapMode: TextEdit.NoWrap }
+                        }
+                        Row {
+                            spacing: 16
+                            QQC2.Button { text: "Save"; onClicked: { root.searchResults.quietFolders = quietPaths.text; quietPopup.close() } }
+                            QQC2.Button { text: "Cancel"; onClicked: quietPopup.close() }
+                        }
+                    }
+                }
+
                 Behavior on opacity {
                     NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
                 }
 
                 ListView {
                     id: resultList
+                    objectName: "search-result-list"
                     anchors.fill: parent
+                    anchors.topMargin: 38
                     clip: true
                     spacing: 6
                     currentIndex: count > 0 ? 0 : -1
                     model: root.searchResults
+                    // Model insertions and changing child heights can preserve
+                    // an old scroll offset even when the first row is selected.
+                    // Let layout settle before aligning a fresh search to its
+                    // actual origin; never reset a user's lower selection.
+                    function settleAtBeginning() {
+                        Qt.callLater(function() {
+                            if (resultList.currentIndex <= 0 && !root.searchResults.selectionPinned()) {
+                                resultList.forceLayout()
+                                resultList.positionViewAtBeginning()
+                            }
+                        })
+                    }
+                    onCountChanged: settleAtBeginning()
+                    onHeightChanged: settleAtBeginning()
+
+                    Connections {
+                        target: root.searchResults
+                        function onQueryingChanged() {
+                            if (!root.searchResults.querying) resultList.settleAtBeginning()
+                        }
+                        function onSelectionChanged() {
+                            if (root.searchResults.selectionPinned())
+                                resultList.currentIndex = root.searchResults.selectedRow()
+                        }
+                    }
 
                     delegate: Rectangle {
                         id: resultDelegate
+                        objectName: "result-" + index
                         required property int index
                         required property var model
+                        readonly property var connectedDevices: {
+                            const revision = root.launcherController.relatedRevision
+                            return root.launcherController.relatedItems(index)
+                        }
                         readonly property bool alreadyOpen:
                             root.launcherController.contextAvailable
                             && root.launcherController.resultIsOpen(index)
 
                         width: resultList.width
-                        height: 62
+                        height: 62 + deviceChildren.height
                         radius: 16
-                        color: ListView.isCurrentItem
-                            ? "#3dffffff"
-                            : (hover.hovered ? "#22ffffff" : "transparent")
+                        color: "transparent"
+                        Rectangle {
+                            objectName: "parent-highlight-" + resultDelegate.index
+                            width: parent.width; height: 62; radius: 16
+                            color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === ""
+                                ? "#3dffffff" : (hover.hovered ? "#22ffffff" : "transparent")
+                        }
 
                         Row {
-                            anchors.fill: parent
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 62
                             anchors.leftMargin: 14
                             anchors.rightMargin: 14
                             spacing: 14
@@ -592,7 +750,7 @@ Item {
                                 Text {
                                     width: parent.width
                                     text: resultDelegate.model.subtext
-                                        || "Application"
+                                        || resultDelegate.model.category || "Result"
                                     color: root.secondaryText
                                     font.pixelSize: 12
                                     elide: Text.ElideRight
@@ -600,14 +758,63 @@ Item {
                             }
                         }
 
+                        Column {
+                            id: deviceChildren
+                            x: 60
+                            y: 62
+                            width: parent.width - x - 14
+                            spacing: 4
+                            Repeater {
+                                model: resultDelegate.connectedDevices
+                                delegate: Rectangle {
+                                    id: childRow
+                                    required property var modelData
+                                    required property int index
+                                    objectName: "child-" + resultDelegate.index + "-" + index
+                                    width: deviceChildren.width
+                                    height: 40
+                                    radius: height / 2
+                                    color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === root.childKey(modelData)
+                                        ? "#3dffffff" : (childHover.hovered ? "#22ffffff" : "transparent")
+                                    Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: root.secondaryText }
+                                    Text {
+                                        x: 27; width: parent.width - x - 12; height: parent.height
+                                        text: childRow.modelData.label + ((root.childLaunchFailed && root.selectedChildKey === root.childKey(childRow.modelData))
+                                            ? " · Couldn't open settings—try again" : (childRow.modelData.status ? " · " + childRow.modelData.status : ""))
+                                        font.pixelSize: 12; color: root.secondaryText
+                                        verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
+                                    }
+                                    HoverHandler { id: childHover }
+                                    TapHandler {
+                                        enabled: !root.guestDragged && !root.applicationLaunchPending
+                                        onPressedChanged: if (pressed) {
+                                            resultList.currentIndex = resultDelegate.index
+                                            root.searchResults.pinSelection(resultDelegate.index)
+                                            root.selectedChildKey = root.childKey(childRow.modelData)
+                                        }
+                                        onTapped: root.openChildSettings()
+                                    }
+                                }
+                            }
+                        }
+                        Item {
+                        width: parent.width
+                        height: 62
                         HoverHandler { id: hover }
                         TapHandler {
                             enabled: !root.guestDragged
                                 && !root.applicationLaunchPending
-                            onTapped: {
-                                resultList.currentIndex = resultDelegate.index
-                                root.runResult(resultDelegate.index)
+                            onPressedChanged: {
+                                if (pressed) {
+                                    root.selectedChildKey = ""
+                                    resultList.currentIndex = resultDelegate.index
+                                    root.searchResults.pinSelection(resultDelegate.index)
+                                }
                             }
+                            onTapped: {
+                                root.runResult(root.searchResults.selectedRow())
+                            }
+                        }
                         }
                     }
                 }
@@ -617,9 +824,14 @@ Item {
                     visible: query.text.length > 0
                         && !root.searchResults.querying
                         && resultList.count === 0
-                    text: "No applications found"
+                    objectName: "web-fallback"
+                    text: "Search the web for “" + query.text + "”"
                     color: root.secondaryText
                     font.pixelSize: 15
+                    width: parent.width - 28
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    TapHandler { onTapped: root.submit() }
                 }
             }
 

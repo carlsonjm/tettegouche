@@ -46,7 +46,12 @@ launcher motion. Run `./uninstall.sh` to remove the installed files without
 deleting this checkout.
 
 Tettegouche requires KDE Plasma on Wayland, Qt 6, KDE Frameworks 6,
-LayerShellQt, CMake, and a C++20 compiler.
+LayerShellQt, BluezQt, Solid, CMake, and a C++20 compiler. Bluetooth hardware is optional;
+connected-device context is omitted when unavailable.
+
+Related setting information uses existing local services and optional read-only
+tools (`pactl`, `nmcli`, `kscreen-doctor`, `powerprofilesctl`, `lpstat`, and
+`kdeconnect-cli`). Missing tools omit those child rows, not the setting itself.
 
 ## Project layout
 

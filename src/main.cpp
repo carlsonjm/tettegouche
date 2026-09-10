@@ -5,11 +5,15 @@
 
 #include "WorkspaceContext.h"
 #include "ApplicationCatalog.h"
+#include "OmniResults.h"
+#include "RelatedInfo.h"
 
 #include <KRunner/ResultsModel>
 #include "RunnerIdentity.h"
 #include <KRunner/RunnerManager>
 #include <KService/KService>
+#include <KService/KApplicationTrader>
+#include <KShell>
 #include <LayerShellQt/Window>
 
 #include <QDBusConnection>
@@ -19,6 +23,10 @@
 #include <QDBusReply>
 #include <QDBusServiceWatcher>
 #include <QCursor>
+#include <QDesktopServices>
+#include <QProcess>
+#include <QMimeDatabase>
+#include <QUrlQuery>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QInputMethod>
@@ -42,9 +50,7 @@ QStringList applicationRunnerIds()
     QStringList ids;
     const auto metadata = KRunner::RunnerManager::runnerMetaDataList();
     for (const KPluginMetaData &plugin : metadata) {
-        const QString identity = (plugin.pluginId() + QLatin1Char(' ')
-            + plugin.fileName()).toLower();
-        if (identity.contains(QStringLiteral("services"))) {
+        if (searchTier(plugin.pluginId()) < 3) {
             ids.append(plugin.pluginId());
         }
     }
@@ -97,11 +103,12 @@ class LauncherController final : public QObject
     Q_PROPERTY(int guestWidth READ guestWidth NOTIFY guestChanged)
     Q_PROPERTY(int guestHeight READ guestHeight NOTIFY guestChanged)
     Q_PROPERTY(QRect availableArea READ availableArea NOTIFY guestChanged)
+    Q_PROPERTY(int relatedRevision READ relatedRevision NOTIFY relatedChanged)
 
 public:
     LauncherController(QQuickView *view,
                        KRunner::RunnerManager *runnerManager,
-                       KRunner::ResultsModel *results,
+                       OmniResults *results,
                        ApplicationCatalog *catalog,
                        bool guestAllowed,
                        QObject *parent = nullptr)
@@ -112,6 +119,7 @@ public:
         , m_catalog(catalog)
         , m_guestAllowed(guestAllowed)
     {
+        connect(&m_related, &RelatedInfo::changed, this, [this]() { ++m_relatedRevision; Q_EMIT relatedChanged(); });
         auto bus = QDBusConnection::sessionBus();
         bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
                     QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("workspaceContextChanged"),
@@ -126,6 +134,32 @@ public:
     }
 
     bool contextAvailable() const { return m_context.available(); }
+    int relatedRevision() const { return m_relatedRevision; }
+    Q_INVOKABLE QString relatedOptionLabel(int row) {
+        const auto match = m_results->getQueryMatch(m_results->index(row, 0));
+        const auto key = RelatedInfo::keyForSetting(match.id());
+        const QHash<QString, QString> labels = {
+            {QStringLiteral("bluetooth"), tr("Open Bluetooth settings")},
+            {QStringLiteral("audio"), tr("Open Sound settings")},
+            {QStringLiteral("network"), tr("Open Network settings")},
+            {QStringLiteral("display"), tr("Open Display settings")},
+            {QStringLiteral("power"), tr("Open Power settings")},
+            {QStringLiteral("printers"), tr("Open Printer settings")},
+            {QStringLiteral("storage"), tr("Open Device Actions")},
+            {QStringLiteral("defaults"), tr("Open Default Applications")},
+            {QStringLiteral("nightlight"), tr("Open Night Light settings")},
+            {QStringLiteral("connect"), tr("Open KDE Connect")}};
+        if (runnerApplicationId(match) == QStringLiteral("org.kde.kdeconnect.app.desktop"))
+            return tr("Open KDE Connect");
+        return labels.value(key);
+    }
+    Q_INVOKABLE QVariantList relatedItems(int row) {
+        const auto match = m_results->getQueryMatch(m_results->index(row, 0));
+        if (runnerApplicationId(match) == QStringLiteral("org.kde.kdeconnect.app.desktop"))
+            return m_related.items(QStringLiteral("connect"));
+        if (!match.runner() || !match.runner()->id().contains(QStringLiteral("systemsettings"))) return {};
+        return m_related.items(RelatedInfo::keyForSetting(match.id()));
+    }
     bool guestMode() const { return m_guestMode; }
     int guestX() const { return m_guestRect.x(); }
     int guestY() const { return m_guestRect.y(); }
@@ -140,6 +174,7 @@ public:
     Q_INVOKABLE bool resultIsOpen(int row) const
     {
         const QModelIndex index = m_results->index(row, 0);
+        if (searchTier(m_results->getQueryMatch(index)) != 0) return false;
         return index.isValid() && m_context.applicationIsOpen(
             runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
             m_results->data(index, Qt::DisplayRole).toString());
@@ -152,6 +187,7 @@ public:
         if (!index.isValid()) {
             return false;
         }
+        if (searchTier(m_results->getQueryMatch(index)) != 0) return 0;
         const QString windowId = m_context.windowIdForApplication(
             runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
             m_results->data(index, Qt::DisplayRole).toString());
@@ -277,13 +313,32 @@ public Q_SLOTS:
         if (!m_guestMode) {
             return false;
         }
+        const auto match = m_results->getQueryMatch(m_results->index(row, 0));
         QString appId = catalog && m_catalog ? m_catalog->applicationId(row)
-            : runnerApplicationId(m_results->data(m_results->index(row, 0),
-                KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
+            : (searchTier(match) == 0 ? runnerApplicationId(match) : QString());
+        if (!catalog && searchTier(match) == 1) {
+            auto urls = match.urls();
+            if (urls.isEmpty() && match.data().canConvert<QUrl>()) urls.append(match.data().toUrl());
+            if (!urls.isEmpty() && urls.first().isLocalFile()) {
+                const auto service = KApplicationTrader::preferredService(
+                    QMimeDatabase().mimeTypeForUrl(urls.first()).name());
+                if (service) appId = service->storageId();
+            }
+        }
+        if (!catalog && match.runner()
+            && match.runner()->id().contains(QStringLiteral("systemsettings")))
+            appId = QStringLiteral("systemsettings.desktop");
+        return prepareGuestIdentity(appId);
+    }
+
+    bool prepareGuestIdentity(QString appId, const QStringList &aliases = {})
+    {
+        if (!m_guestMode) return false;
         if (appId.isEmpty()) return false;
         if (appId.startsWith(QStringLiteral("services_"))) appId.remove(0, 9);
         if (appId.startsWith(QStringLiteral("applications:"))) appId.remove(0, 13);
         QStringList identities{appId};
+        identities.append(aliases);
         if (const auto service = KService::serviceByStorageId(appId)) {
             const auto wmClass = service->property<QString>(QStringLiteral("StartupWMClass"));
             if (!wmClass.isEmpty()) identities.append(wmClass);
@@ -294,7 +349,9 @@ public Q_SLOTS:
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
             request,
             QDBus::Block, 500);
-        return reply.isValid() && reply.value();
+        const bool accepted = reply.isValid() && reply.value();
+        if (!accepted) m_launchToken.clear();
+        return accepted;
     }
 
     Q_INVOKABLE void cancelGuestApplicationLaunch()
@@ -312,6 +369,45 @@ public Q_SLOTS:
         if (QInputMethod *inputMethod = QGuiApplication::inputMethod()) {
             inputMethod->show();
         }
+    }
+
+    Q_INVOKABLE bool searchWeb(const QString &query)
+    {
+        if (query.trimmed().isEmpty() || m_results->querying()
+            || m_results->rowCount() != 0) return false;
+        QUrl url(QStringLiteral("https://duckduckgo.com/"));
+        QUrlQuery parameters;
+        parameters.addQueryItem(QStringLiteral("q"), query.trimmed());
+        url.setQuery(parameters);
+        // URL activation is deliberate; never run text as a shell command.
+        const auto browser = KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/https"));
+        bool opened = false;
+        if (browser) {
+            auto args = KShell::splitArgs(browser->exec());
+            if (!args.isEmpty()) {
+                const QString program = args.takeFirst();
+                const QString name = QFileInfo(program).fileName().toLower();
+                if (name == QStringLiteral("zen") || name == QStringLiteral("firefox")
+                    || name == QStringLiteral("librewolf") || name == QStringLiteral("floorp")) {
+                    args.removeIf([](const QString &arg) { return arg.startsWith(QLatin1Char('%')); });
+                    args << QStringLiteral("--new-tab") << url.toString(QUrl::FullyEncoded);
+                    opened = QProcess::startDetached(program, args);
+                }
+            }
+        }
+        if (!opened) opened = QDesktopServices::openUrl(url);
+        if (!opened) return false;
+        if (m_launchToken.isEmpty()) finishLaunch();
+        return true;
+    }
+
+    Q_INVOKABLE bool beginGuestWebLaunch()
+    {
+        const auto browser = KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/https"));
+        if (!browser) return false;
+        const auto args = KShell::splitArgs(browser->exec());
+        const auto executable = args.isEmpty() ? QString() : QFileInfo(args.first()).fileName();
+        return prepareGuestIdentity(browser->storageId(), {executable});
     }
 
     Q_INVOKABLE void completeGuestHandoff()
@@ -346,6 +442,7 @@ public Q_SLOTS:
     }
 
 Q_SIGNALS:
+    void relatedChanged();
     void opened();
     void contextChanged();
     void guestChanged();
@@ -499,7 +596,9 @@ private:
 
     QQuickView *m_view;
     KRunner::RunnerManager *m_runnerManager;
-    KRunner::ResultsModel *m_results;
+    OmniResults *m_results;
+    RelatedInfo m_related;
+    int m_relatedRevision = 0;
     ApplicationCatalog *m_catalog;
     WorkspaceContext m_context;
     QRect m_guestRect;
@@ -541,9 +640,9 @@ int main(int argc, char **argv)
 
     KRunner::RunnerManager runnerManager;
     runnerManager.setAllowedRunners(runners);
-    KRunner::ResultsModel results;
+    OmniResults results;
     results.setRunnerManager(&runnerManager);
-    results.setLimit(12);
+    results.setLimit(0);
     ApplicationCatalog catalog;
     const bool guestAllowed =
         !application.arguments().contains(QStringLiteral("--standalone"));

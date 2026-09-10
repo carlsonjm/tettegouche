@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons KIO Runner Service)
+find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons KIO Runner Service BluezQt Solid)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -28,8 +28,17 @@ add_library(tettegouche-context STATIC
 target_link_libraries(tettegouche-context PUBLIC Qt6::Core)
 target_include_directories(tettegouche-context PUBLIC src)
 
+add_library(tettegouche-related STATIC
+    src/BluetoothContext.h
+    src/RelatedInfo.h
+    src/RelatedInfo.cpp
+)
+target_include_directories(tettegouche-related PUBLIC src)
+target_link_libraries(tettegouche-related PUBLIC Qt6::DBus KF6::BluezQt KF6::Solid KF6::Service)
+
 qt_add_executable(tettegouche
     src/main.cpp
+    src/OmniResults.h
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
 )
@@ -39,6 +48,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
+    tettegouche-related
     Qt6::Core
     Qt6::DBus
     Qt6::Gui
@@ -48,6 +58,8 @@ target_link_libraries(tettegouche PRIVATE
     KF6::KIOGui
     KF6::Runner
     KF6::Service
+    KF6::BluezQt
+    KF6::Solid
     KF6Kirigami
     KF6::KirigamiPlatform
     LayerShellQt::Interface
@@ -77,6 +89,14 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
+    target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
+    add_test(NAME related-info-test COMMAND related-info-test)
+    qt_add_executable(omni-results-test tests/OmniResultsTest.cpp src/OmniResults.h)
+    target_include_directories(omni-results-test PRIVATE src)
+    target_link_libraries(omni-results-test PRIVATE KF6::Runner Qt6::Gui Qt6::DBus)
+    add_test(NAME omni-results-test COMMAND omni-results-test)
+    set_tests_properties(omni-results-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     qt_add_executable(runner-identity-test tests/RunnerIdentityTest.cpp)
     target_include_directories(runner-identity-test PRIVATE src)
     target_link_libraries(runner-identity-test PRIVATE KF6::Runner Qt6::Core)
