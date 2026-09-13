@@ -1,5 +1,11 @@
 # Changelog
 
+## September 13, 2026 — accepted QoL freeze
+
+- Meta and panel activation toggle the launcher open/closed through normal guest cleanup.
+- Invocation requests panel focus before opening the launcher over fullscreen apps.
+- Seven automated checks and J's physical toggle/fullscreen acceptance passed.
+
 ## Unreleased
 
 - Sequenced opening: card, expanding search outline with Browse entrance,

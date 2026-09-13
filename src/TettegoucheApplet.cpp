@@ -6,6 +6,9 @@
 #include <KPluginFactory>
 #include <QProcess>
 #include <QStandardPaths>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCall>
 
 TettegoucheApplet::TettegoucheApplet(QObject *parent,
                                      const KPluginMetaData &data,
@@ -31,6 +34,14 @@ bool TettegoucheApplet::launcherActive() const
 void TettegoucheApplet::launch(bool useKadunce)
 {
     if (launcherActive()) {
+        if (m_process->state() == QProcess::Running) {
+            const auto request = QDBusMessage::createMethodCall(
+                QStringLiteral("io.github.carlsonjm.Tettegouche"),
+                QStringLiteral("/Launcher"),
+                QStringLiteral("io.github.carlsonjm.Tettegouche"),
+                QStringLiteral("toggle"));
+            QDBusConnection::sessionBus().asyncCall(request);
+        }
         return;
     }
 
@@ -42,6 +53,7 @@ void TettegoucheApplet::launch(bool useKadunce)
     m_process->setProgram(executable);
     m_process->setArguments(useKadunce ? QStringList{}
                                        : QStringList{QStringLiteral("--standalone")});
+    Q_EMIT invocationRequested();
     m_process->start();
 }
 

@@ -10,6 +10,17 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QDBusConnection>
+
+class ToggleEndpoint : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Tettegouche")
+public:
+    int calls = 0;
+public Q_SLOTS:
+    Q_SCRIPTABLE void toggle() { ++calls; }
+};
 
 #include <KConfigGroup>
 #include <KPackage/Package>
@@ -144,6 +155,27 @@ private Q_SLOTS:
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--standalone")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
         m_applet->config().writeEntry(QStringLiteral("useKadunce"), true);
+    }
+
+    void repeatedActivationToggles()
+    {
+        ToggleEndpoint endpoint;
+        auto bus = QDBusConnection::sessionBus();
+        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
+        QVERIFY(bus.registerObject(QStringLiteral("/Launcher"), &endpoint,
+            QDBusConnection::ExportScriptableSlots));
+        // A harmless child represents the running launcher in this private bus.
+        m_process->start(QStringLiteral("sleep"), {QStringLiteral("30")});
+        QTRY_COMPARE(m_process->state(), QProcess::Running);
+        QTRY_COMPARE(m_applet->status(), Plasma::Types::AcceptingInputStatus);
+        m_applet->activated();
+        QTRY_COMPARE(endpoint.calls, 1);
+        QCOMPARE(m_process->state(), QProcess::Running); // No kill/duplicate launch.
+        m_process->terminate();
+        QVERIFY(m_process->waitForFinished());
+        QTRY_COMPARE(m_applet->status(), Plasma::Types::ActiveStatus);
+        bus.unregisterObject(QStringLiteral("/Launcher"));
+        bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
     }
 
     void cleanupTestCase()

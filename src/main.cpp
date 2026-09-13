@@ -250,6 +250,12 @@ public Q_SLOTS:
         Q_EMIT guestBridgeLost();
     }
 
+    Q_SCRIPTABLE void toggle()
+    {
+        if (m_view->isVisible()) close();
+        else open();
+    }
+
     Q_SCRIPTABLE void open()
     {
         m_launchToken.clear();
@@ -627,8 +633,10 @@ int main(int argc, char **argv)
     if (!instanceLock.tryLock()) {
         QDBusMessage request = QDBusMessage::createMethodCall(
             QString::fromLatin1(ServiceName), QStringLiteral("/Launcher"),
-            QString::fromLatin1(ServiceName), QStringLiteral("open"));
-        QDBusConnection::sessionBus().asyncCall(request);
+            QString::fromLatin1(ServiceName), QStringLiteral("toggle"));
+        // This forwarding process exits immediately: wait for delivery, not an
+        // asynchronous call whose connection may disappear before dispatch.
+        QDBusConnection::sessionBus().call(request, QDBus::Block, 1000);
         return 0;
     }
 

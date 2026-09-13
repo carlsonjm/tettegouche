@@ -19,6 +19,7 @@ public:
     Q_INVOKABLE void launch(bool useKadunce);
 
 Q_SIGNALS:
+    void invocationRequested();
     void launcherActiveChanged();
 
 private:

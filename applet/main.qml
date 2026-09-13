@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 import QtQuick
+import QtQuick.Window
 import QtQuick.Layouts
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
@@ -9,11 +10,27 @@ PlasmoidItem {
     id: root
 
     Plasmoid.icon: "studio.warbler.tettegouche-logo"
-    Plasmoid.status: PlasmaCore.Types.ActiveStatus
+    Plasmoid.status: Plasmoid.launcherActive
+        ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     activationTogglesExpanded: false
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool animateIndicator: Plasmoid.configuration.animateIndicator !== false
+
+    Connections {
+        target: Plasmoid
+        function onInvocationRequested() {
+            // Use Plasma's panel focus lifecycle, not minimization/show-desktop.
+            // The launcher subsequently takes focus on its overlay surface.
+            Plasmoid.status = PlasmaCore.Types.AcceptingInputStatus;
+            launcherButton.forceActiveFocus(Qt.ShortcutFocusReason);
+            if (root.Window.window) root.Window.window.requestActivate();
+        }
+        function onLauncherActiveChanged() {
+            Plasmoid.status = Plasmoid.launcherActive
+                ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus;
+        }
+    }
 
     // This launcher has one panel surface and opens a separate application.
     // As in Temperance, render direct contents and size the root itself.

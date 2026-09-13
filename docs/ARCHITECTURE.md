@@ -95,6 +95,15 @@ negotiated with Kadunce. Neither mode reserves workspace or renders a permanent
 trigger. A second invocation is forwarded to the existing process through a
 small single-instance D-Bus entry point.
 
+Repeated invocation now calls `toggle`: a visible launcher closes through normal
+guest-lease cleanup; an invisible launcher opens. The panel applet forwards the
+same command to a running child instead of ignoring activation. Initial panel
+invocation requests Plasma's AcceptingInput status and panel focus before the
+launcher overlay takes keyboard focus, exposing the dock without minimizing a
+fullscreen application. Status returns to Active when the child exits. J passed
+the installed fullscreen/toggle checks; no global window rules or panel layer rewrites
+are installed. Direct forwarding waits for D-Bus delivery before its process exits.
+
 Both modes use the same centered card treatment: a one-pixel `#5a5a5a`
 hairline, ten-pixel corners, and an undimmed desktop outside the surface. At
 rest, the search control is transparent with the same hairline, `Just type` on

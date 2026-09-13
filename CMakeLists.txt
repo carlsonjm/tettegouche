@@ -89,6 +89,7 @@ plasma_add_applet(studio.warbler.tettegouche
 )
 target_link_libraries(studio.warbler.tettegouche PRIVATE
     Qt6::Core
+    Qt6::DBus
     KF6::CoreAddons
     Plasma::Plasma
 )
@@ -118,7 +119,7 @@ if(BUILD_TESTING)
 
     qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp)
     target_link_libraries(panel-applet-test PRIVATE
-        Qt6::Widgets Qt6::Quick Qt6::Test Plasma::Plasma Plasma::PlasmaQuick KF6::Package)
+        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::Package)
     add_dependencies(panel-applet-test studio.warbler.tettegouche)
     add_test(NAME panel-applet-test
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
