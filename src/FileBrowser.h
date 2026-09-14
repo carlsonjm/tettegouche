@@ -11,6 +11,7 @@
 #include <QCollator>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QVariantList>
@@ -205,6 +206,27 @@ public:
     }
     Q_INVOKABLE void paste() {
         pasteInto(path());
+    }
+    Q_INVOKABLE void copyDropped(const QStringList &paths, const QString &destination) {
+        if (m_working || m_busy || m_opening || !m_lister || paths.isEmpty()) return;
+        const auto target=m_lister->findByUrl(QUrl::fromLocalFile(destination));
+        if (target.isNull() || !target.isDir()) return;
+        const auto canonicalTarget=QFileInfo(destination).canonicalFilePath();
+        if (canonicalTarget.isEmpty()) return;
+        QList<QUrl> sources;
+        for (const auto &p:paths) {
+            const auto url=QUrl::fromLocalFile(p);
+            const auto item=m_lister->findByUrl(url);
+            if (item.isNull()) return;
+            const auto canonicalSource=QFileInfo(p).canonicalFilePath();
+            if (canonicalSource.isEmpty() || canonicalTarget==canonicalSource ||
+                (item.isDir() && canonicalTarget.startsWith(canonicalSource+QLatin1Char('/')))) return;
+            if (!sources.contains(url)) sources.append(url);
+        }
+        // Internal drop is an explicit copy, independent of the clipboard.
+        auto *job=KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        watchOperation(job,tr("Copying…"),true);
     }
     Q_INVOKABLE void pasteInto(const QString &destination) {
         if (m_working || m_busy || m_opening || !canPaste()) return;

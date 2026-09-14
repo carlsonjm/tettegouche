@@ -266,6 +266,8 @@ TestCase {
         property string focusedPath: ""
         property string pastedInto: ""
         function pasteInto(path) { pastedInto=path }
+        property var droppedPaths: []
+        function copyDropped(paths,destination) { droppedPaths=paths; pastedInto=destination }
         function paste() { pastedInto=path }
         function selectAll() {}
         property var boxedPaths: []
@@ -422,9 +424,10 @@ TestCase {
         wait(600)
         touch.press(0,file,file.width/2,40).commit()
         wait(650)
+        verify(!menu.visible)
+        touch.release(0,file,file.width/2,40).commit()
         tryCompare(menu,"opened",true)
         compare(menu.targetPath,"/home/test/Notes.txt")
-        touch.release(0,file,file.width/2,40).commit()
         compare(filesMock.openCalls,before+1)
         menu.close()
         tryCompare(menu,"visible",false)
@@ -433,6 +436,55 @@ TestCase {
         touch.release(0,grid,grid.width-10,grid.height-10).commit()
         compare(filesMock.selectedPath,"")
         verify(!menu.visible)
+        const pane=findChild(launcher,"files-pane")
+        filesMock.droppedPaths=[]; filesMock.pastedInto=""
+        wait(600)
+        touch.press(0,file,file.width/2,40).commit()
+        wait(650)
+        touch.move(0,file,file.width/2-30,40).commit()
+        wait(30)
+        touch.move(0,folder,folder.width/2,40).commit()
+        wait(30)
+        verify(pane.draggingFiles)
+        compare(pane.dropFolder,"/home/test/Projects")
+        verify(!menu.visible)
+        touch.release(0,folder,folder.width/2,40).commit()
+        tryCompare(pane,"draggingFiles",false)
+        tryCompare(filesMock,"pastedInto","/home/test/Projects")
+        const savedEntries=filesMock.entries
+        let many=[]
+        for(let i=0;i<100;i++)many.push({name:"Item"+i,path:"/home/test/Item"+i,directory:false,icon:"text-plain",detail:"file"})
+        filesMock.entries=many
+        wait(100)
+        const first=findChild(launcher,"file-entry-Item0")
+        verify(first)
+        mousePress(first,first.width/2,40)
+        mouseMove(first,first.width/2+30,40,30)
+        mouseMove(grid,grid.width/2,grid.height-3,30)
+        wait(160)
+        verify(grid.contentY>0)
+        keyClick(Qt.Key_Escape)
+        verify(!pane.draggingFiles)
+        mouseRelease(grid,grid.width/2,grid.height-3)
+        grid.contentY=0
+        mousePress(grid,1,20)
+        mouseMove(grid,grid.width/2,grid.height-3,30)
+        wait(160)
+        verify(grid.contentY>0)
+        mouseRelease(grid,grid.width/2,grid.height-3)
+        filesMock.entries=savedEntries; grid.contentY=0
+        compare(filesMock.droppedPaths[0],"/home/test/Notes.txt")
+        verify(!menu.visible)
+        filesMock.pastedInto=""
+        wait(100)
+        const fileAgain=findChild(launcher,"file-entry-Notes.txt")
+        const folderAgain=findChild(launcher,"file-entry-Projects")
+        mousePress(fileAgain,fileAgain.width/2,40)
+        mouseMove(fileAgain,fileAgain.width/2-30,40,30)
+        mouseMove(folderAgain,folderAgain.width/2,40,30)
+        verify(pane.draggingFiles)
+        mouseRelease(folderAgain,folderAgain.width/2,40)
+        tryCompare(filesMock,"pastedInto","/home/test/Projects")
     }
     function test_filesPull() {
         launcher.fileBrowser=filesMock

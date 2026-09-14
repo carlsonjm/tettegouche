@@ -7,6 +7,33 @@ Item {
     id: pane
     required property var browser
     property bool creatingFolder: false
+    property bool draggingFiles: false
+    property var dragPaths: []
+    property string dropFolder: ""
+    property point dragPosition
+    function beginFileDrag(path, position) {
+        if(browser.busy || browser.working || browser.opening)return
+        if(selectedPaths.indexOf(path)<0)browser.selectedPath=path
+        dragPaths=selectedPaths.slice(); draggingFiles=true
+        actions.close(); files.forceActiveFocus(); updateFileDrag(position)
+    }
+    function updateFileDrag(position) {
+        if(!draggingFiles)return
+        dragPosition=position
+        const local=files.mapFromItem(pane,position.x,position.y)
+        const index=local.x>=0 && local.y>=0 && local.x<files.width && local.y<files.height
+            ? files.indexAt(local.x+files.contentX,local.y+files.contentY) : -1
+        const entry=index>=0 ? browser.entries[index] : null
+        dropFolder=entry && entry.directory && dragPaths.indexOf(entry.path)<0 ? entry.path : ""
+    }
+    function cancelFileDrag() { draggingFiles=false; dropFolder=""; dragPaths=[] }
+    function finishFileDrag() {
+        if(!draggingFiles)return
+        const paths=dragPaths.slice(), destination=dropFolder
+        cancelFileDrag()
+        if(destination.length)browser.copyDropped(paths,destination)
+    }
+    onVisibleChanged: if(!visible)cancelFileDrag()
     readonly property string selectedPath: browser ? browser.selectedPath : ""
     readonly property var selectedPaths: browser ? browser.selectedPaths : []
     function clearSelection() { browser.selecting=false; browser.selectedPath="" }
@@ -131,10 +158,30 @@ Item {
             GridView {
                 id: files
                 objectName: "files-grid"
+                interactive: !pane.draggingFiles
+                Timer {
+                    interval: 16
+                    running: pane.draggingFiles || box.boxing
+                    repeat: true
+                    onTriggered: {
+                        const p=pane.draggingFiles ? files.mapFromItem(pane,pane.dragPosition.x,pane.dragPosition.y) : box.pointer
+                        if(p.x<0 || p.x>files.width)return
+                        const band=40
+                        const speed=p.y<band ? -Math.min(1,(band-p.y)/band)*10 : p.y>files.height-band ? Math.min(1,(p.y-files.height+band)/band)*10 : 0
+                        if(!speed)return
+                        files.contentY=Math.max(0,Math.min(Math.max(0,files.contentHeight-files.height),files.contentY+speed))
+                        if(pane.draggingFiles)pane.updateFileDrag(pane.dragPosition)
+                        else { box.end=Qt.point(box.pointer.x+files.contentX,box.pointer.y+files.contentY); box.updateSelection() }
+                    }
+                }
                 Keys.onReturnPressed: pane.browser.openSelected()
                 Keys.onEnterPressed: pane.browser.openSelected()
                 Keys.onPressed: event => {
                     event.accepted=false
+                    if(pane.draggingFiles) {
+                        if(event.key===Qt.Key_Escape)pane.cancelFileDrag()
+                        event.accepted=true; return
+                    }
                     if (event.key===Qt.Key_Escape && (pane.selectedPaths.length || pane.browser.selecting)) { pane.clearSelection(); event.accepted=true; return }
                     if (event.modifiers & Qt.ControlModifier) {
                         if (event.key===Qt.Key_C) { pane.browser.copySelected(); event.accepted=true }
@@ -173,6 +220,7 @@ Item {
                     scrollGestureEnabled: false
                     property point origin
                     property point end
+                    property point pointer
                     property bool boxing: false
                     property var original: []
                     property int modifiers: 0
@@ -194,15 +242,19 @@ Item {
                         pane.browser.selectPaths(result)
                     }
                     onPressed: mouse => {
-                        if(mouse.source!==Qt.MouseEventNotSynthesized || pane.browser.busy || files.indexAt(mouse.x+files.contentX,mouse.y+files.contentY)>=0) {
+                        const x=mouse.x+files.contentX, y=mouse.y+files.contentY
+                        const insideTile=files.indexAt(x,y)>=0 && x%files.cellWidth>=4 && x%files.cellWidth<files.cellWidth-4 && y%files.cellHeight>=4 && y%files.cellHeight<files.cellHeight-4
+                        if(mouse.source!==Qt.MouseEventNotSynthesized || pane.browser.busy || insideTile) {
                             mouse.accepted=false; return
                         }
                         original=pane.selectedPaths.slice(); modifiers=mouse.modifiers
                         origin=Qt.point(mouse.x+files.contentX,mouse.y+files.contentY); end=origin
+                        pointer=Qt.point(mouse.x,mouse.y)
                         boxing=false; files.forceActiveFocus()
                     }
                     onPositionChanged: mouse => {
                         if(!pressed)return
+                        pointer=Qt.point(mouse.x,mouse.y)
                         end=Qt.point(mouse.x+files.contentX,mouse.y+files.contentY)
                         if(Math.abs(end.x-origin.x)+Math.abs(end.y-origin.y)>Qt.styleHints.startDragDistance)boxing=true
                         if(boxing)updateSelection()
@@ -249,6 +301,7 @@ Item {
                     readonly property bool selected: pane.selectedPaths ? pane.selectedPaths.indexOf(modelData.path)>=0 : false
                     width: files.cellWidth; height: files.cellHeight
                     Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: parent.selected ? "#303030" : "transparent"; border.color: parent.selected ? "#777777" : "transparent" }
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: "#30444444"; border.color: "#eeeeee"; border.width: 2; visible: pane.draggingFiles && pane.dropFolder===modelData.path }
                     Rectangle { anchors.fill: parent; anchors.margins: 2; radius: 15; color: "transparent"; border.color: "#aaaaaa"; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
                     Text { anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 10; text: parent.selected ? "✓" : "○"; color: "#eeeeee"; visible: pane.browser && pane.browser.selecting }
                     Column {
@@ -269,10 +322,20 @@ Item {
                         onDoubleTapped: { if(!pane.browser.selecting) { pane.browser.selectedPath=modelData.path; pane.browser.openSelected() } }
                     }
                     TapHandler {
+                        id: touchTap
                         acceptedDevices: PointerDevice.TouchScreen
                         longPressThreshold: 0.5
                         property bool held: false
-                        onPressedChanged: if(pressed)held=false
+                        property bool dragged: false
+                        onPressedChanged: {
+                            if(pressed) { held=false; dragged=false }
+                            else if(held) Qt.callLater(function() {
+                                if(!touchTap.dragged && !pane.draggingFiles && pane.visible) {
+                                    pane.browser.selecting=true
+                                    pane.showActions(modelData.path,modelData.directory,tile.mapToItem(pane,tile.width/2,40))
+                                }
+                            })
+                        }
                         onTapped: {
                             if(held)return
                             if(pane.browser.selecting)pane.browser.toggleSelected(modelData.path)
@@ -281,9 +344,30 @@ Item {
                         }
                         onDoubleTapped: { if(!held && !pane.browser.selecting) { pane.browser.selectedPath=modelData.path; pane.browser.openSelected() } }
                         onLongPressed: {
-                            held=true; pane.browser.selecting=true
-                            pane.showActions(modelData.path,modelData.directory,tile.mapToItem(pane,point.position.x,point.position.y))
+                            held=true
+                            if(pane.selectedPaths.indexOf(modelData.path)<0)pane.browser.selectedPath=modelData.path
                         }
+                    }
+                    DragHandler {
+                        target: null
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                        onActiveChanged: {
+                            if(active)pane.beginFileDrag(modelData.path,tile.mapToItem(pane,centroid.position.x,centroid.position.y))
+                            else Qt.callLater(pane.finishFileDrag)
+                        }
+                        onCentroidChanged: if(active)pane.updateFileDrag(tile.mapToItem(pane,centroid.position.x,centroid.position.y))
+                        onCanceled: pane.cancelFileDrag()
+                    }
+                    DragHandler {
+                        target: null
+                        acceptedDevices: PointerDevice.TouchScreen
+                        dragThreshold: touchTap.held ? Qt.styleHints.startDragDistance : 32767
+                        onActiveChanged: {
+                            if(active) { touchTap.dragged=true; pane.beginFileDrag(modelData.path,tile.mapToItem(pane,centroid.position.x,centroid.position.y)) }
+                            else Qt.callLater(pane.finishFileDrag)
+                        }
+                        onCentroidChanged: if(active)pane.updateFileDrag(tile.mapToItem(pane,centroid.position.x,centroid.position.y))
+                        onCanceled: { touchTap.dragged=true; pane.cancelFileDrag() }
                     }
                     TapHandler {
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -322,7 +406,15 @@ Item {
     }
     Connections {
         target: pane.browser
-        function onChanged() { if(!pane.browser.busy) Qt.callLater(function(){ files.contentY=Math.min(pane.browser.scroll,Math.max(0,files.contentHeight-files.height)) }) }
+        function onChanged() { pane.cancelFileDrag(); if(!pane.browser.busy) Qt.callLater(function(){ files.contentY=Math.min(pane.browser.scroll,Math.max(0,files.contentHeight-files.height)) }) }
+    }
+    Rectangle {
+        z: 100; visible: pane.draggingFiles
+        x: Math.max(0,Math.min(pane.width-width,pane.dragPosition.x+18))
+        y: Math.max(0,Math.min(pane.height-height,pane.dragPosition.y-58))
+        width: dragLabel.implicitWidth+28; height: 42; radius: 14
+        color: "#252525"; border.color: "#aaaaaa"
+        Text { id: dragLabel; anchors.centerIn: parent; color: "#eeeeee"; text: pane.dropFolder.length ? "Copy "+pane.dragPaths.length+" to “"+pane.dropFolder.split("/").pop()+"”" : "Copy "+pane.dragPaths.length+" · choose a folder" }
     }
     Shortcut { sequence: "Ctrl+T"; enabled: pane.visible; onActivated: pane.browser.addTab() }
     Shortcut { sequence: "Ctrl+W"; enabled: pane.visible; onActivated: pane.browser.closeTab(pane.browser.currentTab) }

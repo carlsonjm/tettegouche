@@ -1,5 +1,7 @@
 # Architecture
 
+Deferred cross-app release requirements: [Production readiness](PRODUCTION-READINESS.md).
+
 Accepted: [Active App drawer](ACTIVE-DRAWER-20260914.md), following the
 [shared sizing contract](DRAWER-SIZING-PLAN.md). Also accepted:
 [Explore files browsing](FILES-BROWSING-20260914.md), including the startup
@@ -12,6 +14,10 @@ defers process exit during a write job. Its selection corrections passed J;
 the [interaction pass](FILES-INTERACTION-20260914.md), including touch correction,
 is also accepted and frozen.
 See the slice documents for limits.
+
+Mouse box selection is locally accepted (39cd67c). The combined
+[file dragging/edge scroll pass](FILES-DRAG-20260914.md) is awaiting acceptance;
+it does not add move or destructive file operations.
 
 Tettegouche is an on-demand launcher, not a desktop service. One process owns
 one temporary layer-shell surface and exits as soon as the user launches an

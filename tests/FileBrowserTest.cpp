@@ -10,6 +10,27 @@
 class FileBrowserTest : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void dropCopy() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QDir root(dir.path()); QVERIFY(root.mkdir(QStringLiteral("target")));
+        const QString source=root.filePath(QStringLiteral("source.txt")), target=root.filePath(QStringLiteral("target"));
+        { QFile f(source); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("original"); }
+        FileBrowser browser; browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
+        QGuiApplication::clipboard()->setText(QStringLiteral("keep clipboard"));
+        browser.copyDropped({target},target); QVERIFY(!browser.working());
+        browser.copyDropped({root.filePath(QStringLiteral("missing"))},target); QVERIFY(!browser.working());
+        browser.copyDropped({source,source},target); QTRY_VERIFY(!browser.working());
+        QFile copied(QDir(target).filePath(QStringLiteral("source.txt"))); QVERIFY(copied.open(QIODevice::ReadOnly));
+        QCOMPARE(copied.readAll(),QByteArray("original")); copied.close();
+        QVERIFY(QFile::exists(source));
+        QCOMPARE(QGuiApplication::clipboard()->text(),QStringLiteral("keep clipboard"));
+        QTRY_VERIFY(!browser.busy());
+        { QFile f(source); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("changed"); }
+        browser.copyDropped({source},target); QTRY_VERIFY(!browser.working());
+        QVERIFY(copied.open(QIODevice::ReadOnly)); QCOMPARE(copied.readAll(),QByteArray("original"));
+    }
     void copyingAndFolders() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());
