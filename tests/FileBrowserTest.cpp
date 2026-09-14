@@ -26,6 +26,12 @@ private Q_SLOTS:
             QFile file(QDir(source).filePath(name)); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("original");
         }
         FileBrowser browser; browser.navigate(source); QTRY_VERIFY(!browser.busy());
+        const QString listed=QDir(source).filePath(QStringLiteral("one.txt"));
+        browser.selectPaths({listed,listed,QStringLiteral("/not-in-the-listing")});
+        QCOMPARE(browser.selectedPaths(),QStringList{listed});
+        QCOMPARE(browser.focusedPath(),listed);
+        browser.selectPaths({});
+        QVERIFY(browser.selectedPaths().isEmpty());
         browser.setSelecting(true);
         browser.toggleSelected(QDir(source).filePath(QStringLiteral("one.txt")));
         browser.toggleSelected(QDir(source).filePath(QStringLiteral("two space.txt")));

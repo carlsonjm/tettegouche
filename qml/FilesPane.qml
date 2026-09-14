@@ -163,6 +163,64 @@ Item {
                 clip: true; boundsBehavior: Flickable.StopAtBounds
                 cellWidth: width/Math.max(1,Math.floor(width/140)); cellHeight: 132
                 model: pane.browser ? pane.browser.entries : []
+                MouseArea {
+                    id: box
+                    objectName: "file-selection-box"
+                    anchors.fill: parent
+                    z: 10
+                    acceptedButtons: Qt.LeftButton
+                    preventStealing: true
+                    scrollGestureEnabled: false
+                    property point origin
+                    property point end
+                    property bool boxing: false
+                    property var original: []
+                    property int modifiers: 0
+                    function updateSelection() {
+                        const left=Math.min(origin.x,end.x), right=Math.max(origin.x,end.x)
+                        const top=Math.min(origin.y,end.y), bottom=Math.max(origin.y,end.y)
+                        const columns=Math.max(1,Math.round(files.width/files.cellWidth))
+                        let hits=[]
+                        for(let i=0;i<files.count;i++) {
+                            const x=(i%columns)*files.cellWidth+4, y=Math.floor(i/columns)*files.cellHeight+4
+                            if(x<right && x+files.cellWidth-8>left && y<bottom && y+files.cellHeight-8>top)
+                                hits.push(pane.browser.entries[i].path)
+                        }
+                        let result=hits
+                        if(modifiers & Qt.ControlModifier)
+                            result=original.filter(p=>hits.indexOf(p)<0).concat(hits.filter(p=>original.indexOf(p)<0))
+                        else if(modifiers & Qt.ShiftModifier)
+                            result=original.concat(hits.filter(p=>original.indexOf(p)<0))
+                        pane.browser.selectPaths(result)
+                    }
+                    onPressed: mouse => {
+                        if(mouse.source!==Qt.MouseEventNotSynthesized || pane.browser.busy || files.indexAt(mouse.x+files.contentX,mouse.y+files.contentY)>=0) {
+                            mouse.accepted=false; return
+                        }
+                        original=pane.selectedPaths.slice(); modifiers=mouse.modifiers
+                        origin=Qt.point(mouse.x+files.contentX,mouse.y+files.contentY); end=origin
+                        boxing=false; files.forceActiveFocus()
+                    }
+                    onPositionChanged: mouse => {
+                        if(!pressed)return
+                        end=Qt.point(mouse.x+files.contentX,mouse.y+files.contentY)
+                        if(Math.abs(end.x-origin.x)+Math.abs(end.y-origin.y)>Qt.styleHints.startDragDistance)boxing=true
+                        if(boxing)updateSelection()
+                    }
+                    onReleased: {
+                        if(boxing)updateSelection()
+                        else if(!(modifiers & (Qt.ControlModifier|Qt.ShiftModifier)))pane.clearSelection()
+                        boxing=false
+                    }
+                    onCanceled: { if(boxing)pane.browser.selectPaths(original); boxing=false }
+                    Rectangle {
+                        visible: box.boxing
+                        x: Math.min(box.origin.x,box.end.x)-files.contentX
+                        y: Math.min(box.origin.y,box.end.y)-files.contentY
+                        width: Math.abs(box.end.x-box.origin.x); height: Math.abs(box.end.y-box.origin.y)
+                        radius: 6; color: "#28777777"; border.color: "#aaaaaa"
+                    }
+                }
                 onMovementEnded: pane.browser.scroll=contentY
                 TapHandler {
                     longPressThreshold: 0.5

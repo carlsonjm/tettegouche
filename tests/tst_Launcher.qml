@@ -268,6 +268,8 @@ TestCase {
         function pasteInto(path) { pastedInto=path }
         function paste() { pastedInto=path }
         function selectAll() {}
+        property var boxedPaths: []
+        function selectPaths(paths) { boxedPaths=paths }
         property string error: ""
         property string filter: ""
         property bool busy: false
@@ -319,6 +321,22 @@ TestCase {
         mouseClick(grid,grid.width-10,grid.height-10)
         compare(filesMock.selectedPath,"")
         const folderTile=findChild(launcher,"file-entry-Projects")
+        filesMock.boxedPaths=[]
+        mousePress(grid,grid.width-10,grid.height-10)
+        mouseMove(grid,2,2,30)
+        mouseRelease(grid,2,2)
+        compare(filesMock.boxedPaths.length,2)
+        verify(filesMock.boxedPaths.indexOf("/home/test/Projects")>=0)
+        filesMock.selectedPath="/home/test/Projects"
+        mousePress(grid,grid.width-10,grid.height-10,Qt.LeftButton,Qt.ControlModifier)
+        mouseMove(grid,2,2,30)
+        mouseRelease(grid,2,2,Qt.LeftButton,Qt.ControlModifier)
+        compare(filesMock.boxedPaths.length,1)
+        compare(filesMock.boxedPaths[0],"/home/test/Notes.txt")
+        mousePress(grid,grid.width-10,grid.height-10,Qt.LeftButton,Qt.ShiftModifier)
+        mouseMove(grid,2,2,30)
+        mouseRelease(grid,2,2,Qt.LeftButton,Qt.ShiftModifier)
+        compare(filesMock.boxedPaths.length,2)
         mouseClick(folderTile,folderTile.width/2,40)
         compare(filesMock.selectedPath,"/home/test/Projects")
         compare(filesMock.path,"/home/test")
@@ -371,6 +389,7 @@ TestCase {
         launcher.fileBrowser=filesMock
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
+        wait(600) // Let the previous test's gesture/tap sequence finish.
         const entry=findChild(launcher,"files-entry")
         mouseClick(entry,entry.width/2,20)
         tryCompare(launcher,"drawerProgress",1)

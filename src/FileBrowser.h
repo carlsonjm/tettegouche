@@ -165,6 +165,19 @@ public:
         t.selected=t.selection.size()==1 ? t.selection.first() : QString(); Q_EMIT selectionChanged();
     }
     bool working() const { return m_working; }
+    Q_INVOKABLE void selectPaths(const QStringList &paths) {
+        QStringList valid;
+        for (const auto &entry : m_entries) {
+            const auto p=entry.toMap().value(QStringLiteral("path")).toString();
+            if (paths.contains(p)) valid.append(p);
+        }
+        auto &tab=m_tabs[m_current];
+        if (tab.selection==valid) return;
+        tab.selection=valid;
+        tab.selected=valid.size()==1 ? valid.first() : QString();
+        if (!valid.isEmpty()) { tab.focused=valid.last(); tab.anchor=valid.first(); }
+        Q_EMIT selectionChanged();
+    }
     Q_INVOKABLE void selectAll() {
         auto &t=m_tabs[m_current]; t.selection.clear();
         for (const auto &entry:m_entries) t.selection.append(entry.toMap().value(QStringLiteral("path")).toString());
