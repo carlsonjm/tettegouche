@@ -10,6 +10,67 @@
 class FileBrowserTest : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void copyingAndFolders() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QCoreApplication::setOrganizationName(QStringLiteral("TetteTests"));
+        QCoreApplication::setApplicationName(QStringLiteral("Files"));
+        QDir root(dir.path());
+        QVERIFY(root.mkdir(QStringLiteral("source")));
+        const QString source=root.filePath(QStringLiteral("source"));
+        QVERIFY(QDir(source).mkdir(QStringLiteral("nested")));
+        { QFile nested(QDir(source).filePath(QStringLiteral("nested/child.txt"))); QVERIFY(nested.open(QIODevice::WriteOnly)); nested.write("child"); }
+        for (const auto &name:{QStringLiteral("one.txt"),QStringLiteral("two space.txt")}) {
+            QFile file(QDir(source).filePath(name)); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("original");
+        }
+        FileBrowser browser; browser.navigate(source); QTRY_VERIFY(!browser.busy());
+        browser.setSelecting(true);
+        browser.toggleSelected(QDir(source).filePath(QStringLiteral("one.txt")));
+        browser.toggleSelected(QDir(source).filePath(QStringLiteral("two space.txt")));
+        browser.toggleSelected(QDir(source).filePath(QStringLiteral("nested")));
+        QCOMPARE(browser.selectedPaths().size(),3);
+        browser.setSelectedPath(QDir(source).filePath(QStringLiteral("nested")));
+        browser.selectRange(QDir(source).filePath(QStringLiteral("two space.txt")));
+        QCOMPARE(browser.selectedPaths().size(),3);
+        browser.toggleSelected(QDir(source).filePath(QStringLiteral("one.txt")));
+        QCOMPARE(browser.selectedPaths().size(),2);
+        browser.selectRange(QDir(source).filePath(QStringLiteral("two space.txt")),true);
+        QCOMPARE(browser.selectedPaths().size(),3);
+        browser.copySelected(); QVERIFY(browser.canPaste());
+        browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
+        browser.newFolder(QStringLiteral("destination")); QTRY_VERIFY(!browser.working());
+        const QString dest=root.filePath(QStringLiteral("destination"));
+        QVERIFY(QDir(dest).exists());
+        QCOMPARE(browser.path(),dir.path());
+        QCOMPARE(browser.selectedPath(),dest);
+        QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(QString()); QVERIFY(browser.canPaste()); // clipboard independent
+        browser.pasteInto(dest); QVERIFY(browser.working());
+        browser.pasteInto(dest); // duplicate ignored
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.working(),5000);
+        QCOMPARE(browser.operationStatus(),QStringLiteral("Done"));
+        QCOMPARE(browser.path(),dir.path()); // targeted paste never enters destination
+        browser.navigate(dest); QTRY_VERIFY(!browser.busy());
+        QVERIFY(QFile::exists(QDir(dest).filePath(QStringLiteral("nested/child.txt"))));
+        QFile copied(QDir(dest).filePath(QStringLiteral("one.txt")));
+        QVERIFY(copied.open(QIODevice::ReadOnly)); QCOMPARE(copied.readAll(),QByteArray("original")); copied.close();
+        QFile changed(QDir(source).filePath(QStringLiteral("one.txt")));
+        QVERIFY(changed.open(QIODevice::WriteOnly|QIODevice::Truncate)); changed.write("replacement"); changed.close();
+        QTRY_VERIFY(!browser.busy());
+        browser.paste(); QTRY_VERIFY_WITH_TIMEOUT(!browser.working(),5000);
+        QVERIFY(browser.operationStatus().startsWith(QStringLiteral("Stopped:")));
+        QVERIFY(copied.open(QIODevice::ReadOnly)); QCOMPARE(copied.readAll(),QByteArray("original"));
+        browser.newFolder(QStringLiteral("../escape")); QVERIFY(!browser.working());
+        QVERIFY(!QDir(root.filePath(QStringLiteral("escape"))).exists());
+        browser.newFolder(QStringLiteral("new folder")); QTRY_VERIFY(!browser.working());
+        QVERIFY(QDir(QDir(dest).filePath(QStringLiteral("new folder"))).exists());
+        browser.navigate(dest); QTRY_VERIFY(!browser.busy());
+        browser.newFolder(QStringLiteral("new folder")); QTRY_VERIFY(!browser.working());
+        QVERIFY(browser.operationStatus().startsWith(QStringLiteral("Stopped:")));
+        QGuiApplication::clipboard()->clear();
+    }
     void mountMetadata() {
         const auto places = FileBrowser::localPlaces(QByteArrayLiteral(
             "1 0 8:1 / / rw - ext4 /dev/root rw\n"

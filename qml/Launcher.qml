@@ -221,6 +221,12 @@ Item {
         }
     }
 
+    Connections {
+        target: root.fileBrowser
+        ignoreUnknownSignals: true
+        function onFolderCreated() { query.text="" }
+    }
+
     Keys.onPressed: event => {
         if (event.key === Qt.Key_Escape) {
             if (root.sortMenuOpen) {
@@ -237,7 +243,8 @@ Item {
             event.accepted = true
             return
         }
-        if (!query.activeFocus && event.text.length > 0
+        if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
+                && !query.activeFocus && event.text.length > 0
                 && !(event.modifiers & (Qt.ControlModifier
                     | Qt.AltModifier | Qt.MetaModifier))) {
             root.searchEngaged = true

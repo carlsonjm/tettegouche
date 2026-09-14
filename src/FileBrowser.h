@@ -3,6 +3,11 @@
 #include <KCoreDirLister>
 #include <KFileItem>
 #include <KIO/Job>
+#include <KIO/CopyJob>
+#include <KIO/MkdirJob>
+#include <QGuiApplication>
+#include <QClipboard>
+#include <QMimeData>
 #include <QCollator>
 #include <QDir>
 #include <QFile>
@@ -11,7 +16,7 @@
 #include <QVariantList>
 #include <algorithm>
 
-// Read-only local browsing. Each listing has its own lifetime so late replies
+// Local browsing and explicit asynchronous copy/create. Each listing has its own lifetime so late replies
 // from a previous tab cannot replace the current folder. No shell operations.
 class FileBrowser : public QObject
 {
@@ -32,9 +37,18 @@ class FileBrowser : public QObject
     Q_PROPERTY(bool hidden READ hidden WRITE setHidden NOTIFY changed)
     Q_PROPERTY(double scroll READ scroll WRITE setScroll NOTIFY changed)
     Q_PROPERTY(QString selectedPath READ selectedPath WRITE setSelectedPath NOTIFY selectionChanged)
+    Q_PROPERTY(QStringList selectedPaths READ selectedPaths NOTIFY selectionChanged)
+    Q_PROPERTY(QString focusedPath READ focusedPath WRITE setFocusedPath NOTIFY selectionChanged)
+    Q_PROPERTY(bool selecting READ selecting WRITE setSelecting NOTIFY selectionChanged)
+    Q_PROPERTY(bool working READ working NOTIFY operationChanged)
+    Q_PROPERTY(QString operationStatus READ operationStatus NOTIFY operationChanged)
+    Q_PROPERTY(bool canPaste READ canPaste NOTIFY clipboardChanged)
 public:
     explicit FileBrowser(QObject *parent = nullptr) : QObject(parent) {
         QSettings settings;
+        m_operationStatus = settings.value(QStringLiteral("Files/lastOperationError")).toString();
+        settings.remove(QStringLiteral("Files/lastOperationError"));
+        connect(QGuiApplication::clipboard(), &QClipboard::dataChanged, this, &FileBrowser::clipboardChanged);
         const auto paths = settings.value(QStringLiteral("Files/paths")).toStringList();
         for (const auto &p : paths.mid(0, 20))
             // Do not stat saved paths during launcher startup. Offline mounts
@@ -95,15 +109,16 @@ public:
     bool busy() const { return m_busy; }
     bool opening() const { return m_opening; }
     Q_INVOKABLE void openSelected() {
-        if (m_opening || m_busy || !m_lister || selectedPath().isEmpty()) return;
+        if (m_opening || m_busy || m_working || !m_lister || selectedPaths().size()!=1) return;
         // Only dispatch a selection from the currently displayed listing.
         // Passing a URL as data avoids shell parsing of filenames.
         const auto url = QUrl::fromLocalFile(selectedPath());
         const auto item = m_lister->findByUrl(url);
-        if (item.isNull() || item.isDir()) {
+        if (item.isNull()) {
             m_error = tr("This file is no longer available. Refresh the folder.");
             Q_EMIT changed(); return;
         }
+        if (item.isDir()) { setSelecting(false); navigate(url.toLocalFile()); return; }
         m_error.clear(); m_opening = true; Q_EMIT changed();
         Q_EMIT openRequested(url);
     }
@@ -117,7 +132,101 @@ public:
     bool hidden() const { return m_hidden; }
     double scroll() const { return m_tabs[m_current].scroll; }
     QString selectedPath() const { return m_tabs[m_current].selected; }
-    void setSelectedPath(const QString &v) { if (selectedPath()==v) return; m_tabs[m_current].selected=v; Q_EMIT selectionChanged(); }
+    QStringList selectedPaths() const { return m_tabs[m_current].selection; }
+    QString focusedPath() const { return m_tabs[m_current].focused; }
+    void setFocusedPath(const QString &p) { m_tabs[m_current].focused=p; Q_EMIT selectionChanged(); }
+    bool selecting() const { return m_selecting; }
+    void setSelecting(bool v) { m_selecting=v; if (!v) setSelectedPath(QString()); Q_EMIT selectionChanged(); }
+    void setSelectedPath(const QString &v) {
+        auto &t=m_tabs[m_current]; t.selected=v; t.anchor=v;
+        if (!v.isEmpty()) t.focused=v;
+        t.selection=v.isEmpty() ? QStringList{} : QStringList{v}; Q_EMIT selectionChanged();
+    }
+    Q_INVOKABLE void toggleSelected(const QString &p) {
+        if (m_busy || !m_lister || m_lister->findByUrl(QUrl::fromLocalFile(p)).isNull()) return;
+        auto &t=m_tabs[m_current];
+        if (!t.selection.removeOne(p)) t.selection.append(p);
+        t.anchor=p;
+        t.focused=p;
+        t.selected=t.selection.size()==1 ? t.selection.first() : QString(); Q_EMIT selectionChanged();
+    }
+    Q_INVOKABLE void selectRange(const QString &p, bool additive=false) {
+        auto &t=m_tabs[m_current];
+        QStringList visible;
+        for (const auto &entry:m_entries) visible.append(entry.toMap().value(QStringLiteral("path")).toString());
+        const int last=visible.indexOf(p);
+        if (last<0 || m_busy) return;
+        t.focused=p;
+        int first=visible.indexOf(t.anchor);
+        if (first<0) { first=last; t.anchor=p; }
+        if (!additive) t.selection.clear();
+        for (int i=std::min(first,last); i<=std::max(first,last); ++i)
+            if (!t.selection.contains(visible[i])) t.selection.append(visible[i]);
+        t.selected=t.selection.size()==1 ? t.selection.first() : QString(); Q_EMIT selectionChanged();
+    }
+    bool working() const { return m_working; }
+    Q_INVOKABLE void selectAll() {
+        auto &t=m_tabs[m_current]; t.selection.clear();
+        for (const auto &entry:m_entries) t.selection.append(entry.toMap().value(QStringLiteral("path")).toString());
+        t.selected=t.selection.size()==1 ? t.selection.first() : QString();
+        if (t.focused.isEmpty() && !t.selection.isEmpty()) t.focused=t.selection.first();
+        Q_EMIT selectionChanged();
+    }
+    QString operationStatus() const { return m_operationStatus; }
+    bool canPaste() const {
+        const auto *mime=QGuiApplication::clipboard()->mimeData();
+        if (!mime || !mime->hasUrls() || mime->urls().isEmpty()) return false;
+        for (const auto &u:mime->urls()) if (!u.isLocalFile()) return false;
+        return true;
+    }
+    Q_INVOKABLE void copySelected() {
+        if (m_busy || !m_lister || selectedPaths().isEmpty()) return;
+        QList<QUrl> urls;
+        for (const auto &p:selectedPaths()) {
+            const auto url=QUrl::fromLocalFile(p);
+            if (m_lister->findByUrl(url).isNull()) { m_error=tr("Selection changed. Refresh and select again."); Q_EMIT changed(); return; }
+            urls.append(url);
+        }
+        auto *mime=new QMimeData; mime->setUrls(urls); QGuiApplication::clipboard()->setMimeData(mime);
+        m_operationStatus=tr("Copied %1 item(s) to clipboard").arg(urls.size()); Q_EMIT operationChanged();
+    }
+    Q_INVOKABLE void paste() {
+        pasteInto(path());
+    }
+    Q_INVOKABLE void pasteInto(const QString &destination) {
+        if (m_working || m_busy || m_opening || !canPaste()) return;
+        // Explicit context destination must be the current folder or a listed folder.
+        if (destination!=path()) {
+            const auto item=m_lister ? m_lister->findByUrl(QUrl::fromLocalFile(destination)) : KFileItem{};
+            if (item.isNull() || !item.isDir()) { m_error=tr("Destination is no longer available."); Q_EMIT changed(); return; }
+        }
+        // Native URL clipboard, always COPY, even if another app marked it cut.
+        // No Overwrite flag; no conflict dialog that can enable overwriting.
+        const auto sources=QGuiApplication::clipboard()->mimeData()->urls();
+        auto *job=KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        watchOperation(job,tr("Copying…"),true);
+    }
+    Q_INVOKABLE void newFolder(const QString &name) {
+        if (m_working || m_busy || m_opening) return;
+        if (name.isEmpty() || name==QStringLiteral(".") || name==QStringLiteral("..") || name.contains(QLatin1Char('/')) || name.contains(QChar::Null)) {
+            m_operationStatus=tr("Enter a folder name without a slash."); Q_EMIT operationChanged(); return;
+        }
+        const QString destination=QDir(path()).filePath(name);
+        const auto generation=m_listingGeneration;
+        auto *job=KIO::mkdir(QUrl::fromLocalFile(destination));
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        connect(job,&KJob::result,this,[this,destination,generation](KJob *finished) {
+            // Do not steal a tab/navigation change made while mkdir was pending.
+            if (!finished->error() && generation==m_listingGeneration) {
+                setFilter(QString());
+                refresh();
+                setSelectedPath(destination);
+                Q_EMIT folderCreated();
+            }
+        });
+        watchOperation(job,tr("Creating folder…"));
+    }
     void setScroll(double v) { m_tabs[m_current].scroll=std::max(0.0,v); }
     void setFilter(const QString &v) { if(m_filter==v)return; m_filter=v; rebuild(); }
     void setSortMode(int v) { if(v<0||v>3)return; m_sort=v; rebuild(); }
@@ -133,7 +242,7 @@ public:
         const auto clean=QDir::cleanPath(p);
         if(clean==path())return;
         auto &t=m_tabs[m_current]; t.history=t.history.mid(0,t.index+1);
-        t.history.append(clean); ++t.index; t.scroll=0; t.selected.clear(); refresh(); save();
+        t.history.append(clean); ++t.index; t.scroll=0; t.selected.clear(); t.selection.clear(); t.focused.clear(); refresh(); save();
     }
     Q_INVOKABLE void back() { if(canBack()){--m_tabs[m_current].index; m_tabs[m_current].scroll=0; refresh();} }
     Q_INVOKABLE void forward() { if(canForward()){++m_tabs[m_current].index; m_tabs[m_current].scroll=0; refresh();} }
@@ -151,6 +260,7 @@ public:
         m_current=std::min(m_current,int(m_tabs.size())-1); refresh(); save();
     }
     Q_INVOKABLE void refresh() {
+        ++m_listingGeneration;
         Q_EMIT selectionChanged();
         if(m_lister){disconnect(m_lister,nullptr,this,nullptr); m_lister->stop(); m_lister->deleteLater();}
         m_lister=new KCoreDirLister(this); m_lister->setAutoErrorHandlingEnabled(false);
@@ -166,15 +276,34 @@ Q_SIGNALS:
     void changed();
     void placesChanged();
     void selectionChanged();
+    void operationChanged();
+    void clipboardChanged();
+    void folderCreated();
     void openRequested(const QUrl &url);
 private:
-    struct Tab { QStringList history; int index; double scroll; QString selected; };
+    struct Tab { QStringList history; int index; double scroll; QString selected; QStringList selection; QString anchor; QString focused; };
+    quint64 m_listingGeneration=0;
     QList<Tab> m_tabs;
     int m_current=0, m_sort=0;
     bool m_hidden=false, m_busy=false, m_opening=false;
+    bool m_selecting=false, m_working=false;
+    QString m_operationStatus;
     QString m_filter, m_error;
     KCoreDirLister *m_lister=nullptr;
     QVariantList m_entries, m_places;
+    void watchOperation(KJob *job,const QString &label,bool copying=false) {
+        m_working=true; m_operationStatus=label; Q_EMIT operationChanged();
+        connect(job,&KJob::result,this,[this,copying](KJob *finished) {
+            m_working=false;
+            m_operationStatus=finished->error() ? tr("Stopped: %1").arg(finished->errorString()) : tr("Done");
+            if (finished->error() && copying) m_operationStatus += tr(" Some items may already have copied.");
+            QSettings s;
+            if (finished->error()) s.setValue(QStringLiteral("Files/lastOperationError"),m_operationStatus);
+            else s.remove(QStringLiteral("Files/lastOperationError"));
+            // Keep navigation independent: KDirWatch updates whichever tab is shown.
+            Q_EMIT operationChanged();
+        });
+    }
     void save() {
         QStringList paths; for(const auto &t:m_tabs)paths.append(t.history[t.index]);
         QSettings s; s.setValue(QStringLiteral("Files/paths"),paths); s.setValue(QStringLiteral("Files/current"),m_current);

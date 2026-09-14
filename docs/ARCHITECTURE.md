@@ -6,8 +6,12 @@ Accepted: [Active App drawer](ACTIVE-DRAWER-20260914.md), following the
 correction and touch/navigation refinement. Monitor expansion is deferred.
 FileBrowser owns local tab/history/listing state; FilesPane renders it. Files
 reuses the accepted expanded guest lease without changing Kadunce. File operations
-are limited in the new unaccepted [file-open candidate](FILES-OPEN-20260914.md)
-to associated-app dispatch; no mutations. See the slice documents for limits.
+include accepted [file opening](FILES-OPEN-20260914.md). The
+[copy/create slice](FILES-COPY-20260914.md) adds explicit asynchronous writes and
+defers process exit during a write job. Its selection corrections passed J;
+the [interaction pass](FILES-INTERACTION-20260914.md), including touch correction,
+is also accepted and frozen.
+See the slice documents for limits.
 
 Tettegouche is an on-demand launcher, not a desktop service. One process owns
 one temporary layer-shell surface and exits as soon as the user launches an

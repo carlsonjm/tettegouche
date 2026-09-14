@@ -263,11 +263,27 @@ TestCase {
         property int currentTab: 0
         property string path: "/home/test"
         property string selectedPath: ""
+        property string focusedPath: ""
+        property string pastedInto: ""
+        function pasteInto(path) { pastedInto=path }
+        function paste() { pastedInto=path }
+        function selectAll() {}
         property string error: ""
         property string filter: ""
         property bool busy: false
         property bool opening: false
+        property bool working: false
+        property bool selecting: false
+        property bool canPaste: false
+        property string operationStatus: ""
+        property var selectedPaths: selectedPath.length ? [selectedPath] : []
         property int openCalls: 0
+        property int toggles: 0
+        property int ranges: 0
+        property string createdName: ""
+        function newFolder(name) { createdName=name }
+        function toggleSelected(path) { toggles++ }
+        function selectRange(path,additive) { ranges++ }
         property bool canBack: false
         property bool canForward: false
         property bool hidden: false
@@ -289,6 +305,37 @@ TestCase {
         verify(pane.visible)
         verify(!findChild(launcher,"application-grid").visible)
         const opensBefore=filesMock.openCalls
+        const entryFile=findChild(launcher,"file-entry-Notes.txt")
+        verify(entryFile)
+        const togglesBefore=filesMock.toggles
+        const rangesBefore=filesMock.ranges
+        mouseClick(entryFile,entryFile.width/2,40,Qt.LeftButton,Qt.ControlModifier)
+        compare(filesMock.toggles,togglesBefore+1)
+        mouseClick(entryFile,entryFile.width/2,40,Qt.LeftButton,Qt.ShiftModifier)
+        compare(filesMock.ranges,rangesBefore+1)
+        verify(!filesMock.selecting)
+        const grid=findChild(launcher,"files-grid")
+        filesMock.selectedPath="/home/test/Notes.txt"
+        mouseClick(grid,grid.width-10,grid.height-10)
+        compare(filesMock.selectedPath,"")
+        const folderTile=findChild(launcher,"file-entry-Projects")
+        mouseClick(folderTile,folderTile.width/2,40)
+        compare(filesMock.selectedPath,"/home/test/Projects")
+        compare(filesMock.path,"/home/test")
+        filesMock.canPaste=true
+        mouseClick(folderTile,folderTile.width/2,40,Qt.RightButton)
+        const context=findChild(launcher,"file-context-menu")
+        tryCompare(context,"opened",true)
+        compare(context.targetPath,"/home/test/Projects")
+        const pasteItem=findChild(launcher,"context-paste")
+        mouseClick(pasteItem,pasteItem.width/2,pasteItem.height/2)
+        compare(filesMock.pastedInto,"/home/test/Projects")
+        context.close()
+        filesMock.canPaste=false
+        grid.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(filesMock.selectedPath,"")
+        verify(launcher.drawerOpen)
         launcher.submit() // Files Enter routes only to the Files backend.
         compare(filesMock.openCalls,opensBefore+1)
         filesMock.selectedPath="/home/test/Notes.txt"
@@ -297,6 +344,19 @@ TestCase {
         mouseClick(openFile,openFile.width/2,openFile.height/2)
         compare(filesMock.openCalls,opensBefore+2)
         filesMock.selectedPath=""
+        const newFolder=findChild(launcher,"new-folder")
+        mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        verify(findChild(launcher,"folder-name").visible)
+        const folderInput=findChild(launcher,"folder-name")
+        folderInput.text="Created folder"
+        folderInput.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        compare(filesMock.createdName,"Created folder")
+        compare(filesMock.filter,"")
+        mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        const cancel=findChild(launcher,"cancel-folder")
+        mouseClick(cancel,cancel.width/2,cancel.height/2)
+        verify(!findChild(launcher,"folder-name").visible)
         wait(300)
         grabImage(launcher).save("/tmp/tette-files-preview.png")
         launcher.setDrawerOpen(false)
@@ -306,6 +366,54 @@ TestCase {
         tryCompare(launcher,"drawerProgress",1)
         verify(!launcher.filesMode)
         verify(!pane.visible)
+    }
+    function test_filesTouchSelection() {
+        launcher.fileBrowser=filesMock
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+        const entry=findChild(launcher,"files-entry")
+        mouseClick(entry,entry.width/2,20)
+        tryCompare(launcher,"drawerProgress",1)
+        const folder=findChild(launcher,"file-entry-Projects")
+        const file=findChild(launcher,"file-entry-Notes.txt")
+        const menu=findChild(launcher,"file-context-menu")
+        const grid=findChild(launcher,"files-grid")
+        const touch=touchEvent(launcher)
+        filesMock.selecting=false
+        filesMock.selectedPath=""
+        const before=filesMock.openCalls
+        touch.press(0,folder,folder.width/2,40).commit()
+        wait(30)
+        touch.release(0,folder,folder.width/2,40).commit()
+        compare(filesMock.selectedPath,"/home/test/Projects")
+        compare(filesMock.openCalls,before)
+        verify(!menu.visible)
+        wait(50)
+        touch.press(0,folder,folder.width/2,40).commit()
+        wait(30)
+        touch.release(0,folder,folder.width/2,40).commit()
+        compare(filesMock.openCalls,before+1)
+        verify(!menu.visible)
+        wait(600)
+        touch.press(0,file,file.width/2,40).commit()
+        wait(30)
+        touch.release(0,file,file.width/2,40).commit()
+        compare(filesMock.selectedPath,"/home/test/Notes.txt")
+        verify(!menu.visible)
+        wait(600)
+        touch.press(0,file,file.width/2,40).commit()
+        wait(650)
+        tryCompare(menu,"opened",true)
+        compare(menu.targetPath,"/home/test/Notes.txt")
+        touch.release(0,file,file.width/2,40).commit()
+        compare(filesMock.openCalls,before+1)
+        menu.close()
+        tryCompare(menu,"visible",false)
+        touch.press(0,grid,grid.width-10,grid.height-10).commit()
+        wait(30)
+        touch.release(0,grid,grid.width-10,grid.height-10).commit()
+        compare(filesMock.selectedPath,"")
+        verify(!menu.visible)
     }
     function test_filesPull() {
         launcher.fileBrowser=filesMock

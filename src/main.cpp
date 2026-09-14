@@ -331,6 +331,7 @@ public Q_SLOTS:
 
     Q_SCRIPTABLE void open()
     {
+        m_quitAfterFiles=false;
         m_launchToken.clear();
         endGuestLease();
         tryBeginGuest();
@@ -347,7 +348,8 @@ public Q_SLOTS:
         endGuestLease();
         m_results->clear();
         m_runnerManager->matchSessionComplete();
-        QGuiApplication::quit();
+        m_view->hide();
+        finishOrDeferQuit();
     }
 
     Q_INVOKABLE void finishLaunch()
@@ -359,7 +361,7 @@ public Q_SLOTS:
         m_view->hide();
         QTimer::singleShot(750, this, [this]() {
             m_runnerManager->matchSessionComplete();
-            QGuiApplication::quit();
+            finishOrDeferQuit();
         });
     }
 
@@ -493,8 +495,8 @@ public Q_SLOTS:
     {
         m_guestMode = false;
         m_view->hide();
-        QTimer::singleShot(340, this, []() {
-            QGuiApplication::quit();
+        QTimer::singleShot(340, this, [this]() {
+            finishOrDeferQuit();
         });
     }
 
@@ -502,7 +504,7 @@ public Q_SLOTS:
     {
         m_guestMode = false;
         m_view->hide();
-        QGuiApplication::quit();
+        finishOrDeferQuit();
     }
 
     Q_SCRIPTABLE void completeGuestLaunch(const QString &requestToken)
@@ -529,7 +531,20 @@ Q_SIGNALS:
     void guestNavigationReady(int slot);
     void guestBridgeLost();
 
+public:
+    void setFileBrowser(FileBrowser *browser) {
+        m_fileBrowser=browser;
+        connect(browser,&FileBrowser::operationChanged,this,[this] {
+            if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
+        });
+    }
 private:
+    FileBrowser *m_fileBrowser=nullptr;
+    bool m_quitAfterFiles=false;
+    void finishOrDeferQuit() {
+        m_quitAfterFiles=true;
+        if (!m_fileBrowser || !m_fileBrowser->working()) QGuiApplication::quit();
+    }
     static QDBusMessage guestMethod(const QString &method)
     {
         return QDBusMessage::createMethodCall(
@@ -755,6 +770,7 @@ int main(int argc, char **argv)
     configureSurface(&view, screen);
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
+    controller.setFileBrowser(&fileBrowser);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
                      [&fileBrowser, &controller](const QUrl &url) {
         auto *job = new KIO::OpenUrlJob(url);
