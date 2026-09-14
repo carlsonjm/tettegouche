@@ -35,8 +35,8 @@ PlasmoidItem {
     // This launcher has one panel surface and opens a separate application.
     // As in Temperance, render direct contents and size the root itself.
     // A compactRepresentation alone is never instantiated by Plasma.
-    implicitWidth: vertical ? 42 : 26
-    implicitHeight: vertical ? 26 : 42
+    implicitWidth: 42
+    implicitHeight: 42
     Layout.fillWidth: false
     Layout.fillHeight: false
     Layout.minimumWidth: implicitWidth

@@ -341,7 +341,8 @@ Item {
         y: root.launcherController.guestMode
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
-                + Math.round((root.launcherController.availableArea.height - height) / 2)
+                + (root.launcherController.drawerExpanded ? 10
+                    : Math.round((root.launcherController.availableArea.height - height) / 2))
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
@@ -350,7 +351,9 @@ Item {
         height: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
-                ? Math.max(1, root.launcherController.availableArea.height - 20)
+                ? Math.max(1, root.launcherController.availableArea.height - 20
+                    - (root.launcherController.availableArea.y
+                        + root.launcherController.availableArea.height < root.height - 1 ? 10 : 0))
                 : Math.round(root.launcherController.availableArea.height * 0.64)
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }

@@ -222,7 +222,7 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
         tryCompare(sheet, "width", 980)
-        tryCompare(sheet, "height", 720)
+        tryCompare(sheet, "height", 710)
         compare(controller.drawerExpanded, true)
         wait(250)
         const closeDrawer = findChild(launcher, "close-drawer-button")
@@ -241,6 +241,18 @@ TestCase {
         tryCompare(sheet, "width", 640)
         tryCompare(sheet, "height", Math.round(740 * 0.64))
         compare(controller.drawerExpanded, false)
+    }
+    function test_expandedDrawerWithoutLocalDock() {
+        const original=controller.availableArea
+        controller.availableArea=Qt.rect(0,0,launcher.width,launcher.height)
+        launcher.setDrawerOpen(true,"files")
+        const sheet=findChild(launcher,"launcher-sheet")
+        tryCompare(sheet,"height",launcher.height-20)
+        compare(sheet.y,10)
+        compare(launcher.height-sheet.y-sheet.height,10)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+        controller.availableArea=original
     }
     function test_compactDrawerHierarchy() {
         const tab = findChild(launcher, "drawer-grabber")

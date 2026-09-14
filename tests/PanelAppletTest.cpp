@@ -79,7 +79,7 @@ private Q_SLOTS:
         m_window->resize(120, 100);
         m_face->setParentItem(m_window->contentItem());
         m_face->setPosition(QPointF(30, 20));
-        m_face->setSize(QSizeF(26, 42));
+        m_face->setSize(QSizeF(42, 42));
         m_window->show();
         QTest::qWait(100);
     }
@@ -88,9 +88,9 @@ private Q_SLOTS:
     {
         QTest::addColumn<bool>("vertical");
         QTest::addColumn<QSize>("size");
-        QTest::newRow("bottom-panel") << false << QSize(26, 42);
-        QTest::newRow("thin-panel") << false << QSize(26, 32);
-        QTest::newRow("vertical-panel") << true << QSize(42, 26);
+        QTest::newRow("bottom-panel") << false << QSize(42, 42);
+        QTest::newRow("thin-panel") << false << QSize(42, 32);
+        QTest::newRow("vertical-panel") << true << QSize(42, 42);
     }
 
     void visiblePanelControl()
@@ -103,6 +103,8 @@ private Q_SLOTS:
         auto *button = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-button"));
         QVERIFY2(button, "Plasma must instantiate the actual panel button, not just its Component.");
         QVERIFY(button->isVisible());
+        QCOMPARE(m_face->implicitWidth(), 42.0);
+        QCOMPARE(m_face->implicitHeight(), 42.0);
         QCOMPARE(button->size(), QSizeF(size));
         auto *dot = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-dimple"));
         QVERIFY(dot);
@@ -123,9 +125,9 @@ private Q_SLOTS:
     void mouseAndTouchLaunch()
     {
         m_panel->setFormFactor(Plasma::Types::Horizontal);
-        m_face->setSize(QSizeF(26, 42));
+        m_face->setSize(QSizeF(42, 42));
         QSignalSpy started(m_process, &QProcess::started);
-        const QPoint center = m_face->mapToScene(QPointF(13, 21)).toPoint();
+        const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
         QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, center);
         QTRY_COMPARE(started.count(), 1);
         QCOMPARE(m_process->program(), m_executable);

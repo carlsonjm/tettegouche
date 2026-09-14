@@ -2,6 +2,11 @@
 
 ## Next priority: shared Active bounds and pop-out docks
 
+Implemented and J-accepted on connected displays and tablet-only; see
+[Active dock pass](ACTIVE-DOCK-20260914.md). Ghostty's reported stray1px bottom
+line triggering the flat dock remains a separate follow-up, cause unconfirmed.
+Historical request notes below remain context.
+
 J reported 2026-09-14 while testing Files drag/drop: all Active card sizing in
 Tettegouche and Kadunce must allow clearance for pop-out docks. Bento already
 respects this according to J and is the behavioral reference.
