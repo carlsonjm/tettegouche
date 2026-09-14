@@ -1,5 +1,10 @@
 # Architecture
 
+Accepted: [rename, move and recoverable Trash](FILES-OPERATIONS-20260914.md).
+Explicit cut clipboard paste now moves; ordinary drag remains copy-only.
+Accepted: [compact edge hierarchy](COMPACT-EDGES-20260914.md).
+Remaining Files work: [Files completion roadmap](FILES-REMAINING.md).
+
 Deferred cross-app release requirements: [Production readiness](PRODUCTION-READINESS.md).
 
 Accepted: [Active App drawer](ACTIVE-DRAWER-20260914.md), following the
@@ -16,7 +21,7 @@ is also accepted and frozen.
 See the slice documents for limits.
 
 Mouse box selection is locally accepted (39cd67c). The combined
-[file dragging/edge scroll pass](FILES-DRAG-20260914.md) is awaiting acceptance;
+[file dragging/edge scroll pass](FILES-DRAG-20260914.md) is accepted;
 it does not add move or destructive file operations.
 
 Tettegouche is an on-demand launcher, not a desktop service. One process owns

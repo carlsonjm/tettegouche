@@ -247,14 +247,17 @@ TestCase {
         const label = findChild(launcher, "browse-label")
         const header = findChild(launcher, "drawer-header")
         compare(launcher.drawerProgress, 0)
-        verify(tab.y + tab.height / 2 + 2 < label.y)
+        verify(label.y + label.height < tab.y)
         verify(label.y + label.height <= header.height)
         launcher.drawerProgress = 0.5
-        compare(tab.y, -1)
+        compare(tab.y, 13)
         compare(tab.width, 147)
-        compare(tab.height, 36)
+        compare(tab.height, 32)
         launcher.drawerProgress = 0
-        verify(tab.y + tab.height / 2 + 2 < label.y)
+        verify(label.y + label.height < tab.y)
+        const search=findChild(launcher,"search-field")
+        tryCompare(search,"y",Math.round((search.parent.height-search.height)/2))
+        compare(search.x,(search.parent.width-search.width)/2)
     }
     QtObject {
         id: filesMock
@@ -279,6 +282,13 @@ TestCase {
         property bool busy: false
         property bool opening: false
         property bool working: false
+        property bool canRestoreTrash: false
+        function renameSelected(name) { createdName=name }
+        property int cutCalls: 0
+        property int trashCalls: 0
+        function cutSelected() { cutCalls++ }
+        function trashSelected() { trashCalls++ }
+        function restoreTrash() {}
         property bool selecting: false
         property bool canPaste: false
         property string operationStatus: ""
@@ -365,6 +375,24 @@ TestCase {
         verify(openFile.enabled)
         mouseClick(openFile,openFile.width/2,openFile.height/2)
         compare(filesMock.openCalls,opensBefore+2)
+        grid.forceActiveFocus()
+        const cuts=filesMock.cutCalls
+        keyClick(Qt.Key_X,Qt.ControlModifier)
+        compare(filesMock.cutCalls,cuts+1)
+        keyClick(Qt.Key_F2)
+        const renameInput=findChild(launcher,"folder-name")
+        verify(renameInput.visible)
+        compare(renameInput.text,"Notes.txt")
+        renameInput.text="Renamed.txt"
+        keyClick(Qt.Key_Return)
+        compare(filesMock.createdName,"Renamed.txt")
+        grid.forceActiveFocus()
+        keyClick(Qt.Key_Delete)
+        const confirm=findChild(launcher,"trash-confirm")
+        tryCompare(confirm,"opened",true)
+        const trashes=filesMock.trashCalls
+        confirm.reject()
+        compare(filesMock.trashCalls,trashes)
         filesMock.selectedPath=""
         const newFolder=findChild(launcher,"new-folder")
         mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
@@ -527,17 +555,21 @@ TestCase {
         const entry=findChild(launcher,"files-entry")
         const bottom=findChild(launcher,"browse-label")
         const tab=findChild(launcher,"drawer-grabber")
-        compare(Math.round(top.mapToItem(sheet,0,0).y),12)
-        compare(Math.round(sheet.height-bottom.mapToItem(sheet,0,bottom.height).y),12)
-        mouseMove(entry,entry.width/2,30)
+        compare(Math.round(top.mapToItem(sheet,0,0).y),30)
+        compare(Math.round(sheet.height-bottom.mapToItem(sheet,0,bottom.height).y),30)
+        const line=findChild(launcher,"files-edge-line")
+        compare(Math.round(line.mapToItem(sheet,0,line.height/2).y),12)
+        compare(Math.round(sheet.height-tab.mapToItem(sheet,0,tab.height/2).y),12)
+        mouseMove(entry,entry.width/2,12)
         wait(350)
-        compare(top.color,launcher.secondaryText)
+        compare(top.color,launcher.edgeText)
         mouseMove(top,top.width/2,top.height/2)
         wait(350)
         compare(top.color,launcher.primaryText)
         mouseMove(tab,tab.width/2,12)
         wait(350)
-        compare(bottom.color,launcher.secondaryText)
+        compare(bottom.color,launcher.edgeText)
+        grabImage(launcher).save("/tmp/tette-compact-preview.png")
     }
     function test_browseAndSort(data) {
         controller.guestMode = data.guest

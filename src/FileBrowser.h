@@ -5,6 +5,7 @@
 #include <KIO/Job>
 #include <KIO/CopyJob>
 #include <KIO/MkdirJob>
+#include <KIO/RestoreJob>
 #include <QGuiApplication>
 #include <QClipboard>
 #include <QMimeData>
@@ -44,6 +45,7 @@ class FileBrowser : public QObject
     Q_PROPERTY(bool working READ working NOTIFY operationChanged)
     Q_PROPERTY(QString operationStatus READ operationStatus NOTIFY operationChanged)
     Q_PROPERTY(bool canPaste READ canPaste NOTIFY clipboardChanged)
+    Q_PROPERTY(bool canRestoreTrash READ canRestoreTrash NOTIFY operationChanged)
 public:
     explicit FileBrowser(QObject *parent = nullptr) : QObject(parent) {
         QSettings settings;
@@ -207,6 +209,57 @@ public:
     Q_INVOKABLE void paste() {
         pasteInto(path());
     }
+    Q_INVOKABLE void cutSelected() {
+        if(m_busy || m_working || m_opening || selectedPaths().isEmpty())return;
+        copySelected();
+        auto *mime=QGuiApplication::clipboard()->mimeData();
+        if(!mime || mime->urls().size()!=selectedPaths().size())return;
+        for(const auto &p:selectedPaths())if(!mime->urls().contains(QUrl::fromLocalFile(p)))return;
+        auto *cut=new QMimeData;
+        cut->setUrls(mime->urls());
+        cut->setData(QStringLiteral("application/x-kde-cutselection"),QByteArray("1"));
+        QGuiApplication::clipboard()->setMimeData(cut);
+        m_operationStatus=tr("Cut %1 item(s) — paste to move").arg(selectedPaths().size()); Q_EMIT operationChanged();
+    }
+    Q_INVOKABLE void renameSelected(const QString &name) {
+        if(m_working || m_busy || m_opening || selectedPaths().size()!=1 || !m_lister)return;
+        if(name.isEmpty() || name==QStringLiteral(".") || name==QStringLiteral("..") || name.contains(QLatin1Char('/')) || name.contains(QChar::Null))return;
+        const auto source=QUrl::fromLocalFile(selectedPaths().first());
+        if(m_lister->findByUrl(source).isNull())return;
+        const auto destination=QUrl::fromLocalFile(QDir(path()).filePath(name));
+        if(source==destination)return;
+        auto *job=KIO::rename(source,destination,KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        const auto originalPath=path();
+        connect(job,&KJob::result,this,[this,destination,originalPath](KJob *j){ if(!j->error() && path()==originalPath)setSelectedPath(destination.toLocalFile()); });
+        watchOperation(job,tr("Renaming…"));
+    }
+    bool canRestoreTrash() const { return !QSettings().value(QStringLiteral("Files/restoreTrash")).toStringList().isEmpty(); }
+    Q_INVOKABLE void trashSelected() {
+        if(m_working || m_busy || m_opening || !m_lister || selectedPaths().isEmpty())return;
+        QList<QUrl> urls;
+        for(const auto &p:selectedPaths()) { const auto u=QUrl::fromLocalFile(p); if(m_lister->findByUrl(u).isNull())return; urls.append(u); }
+        auto *job=KIO::trash(urls,KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        connect(job,&KIO::CopyJob::copyingDone,this,[](KIO::Job*,const QUrl&,const QUrl &to,const QDateTime&,bool,bool){
+            if(to.scheme()!=QStringLiteral("trash"))return;
+            QSettings s; auto entries=s.value(QStringLiteral("Files/restoreTrash")).toStringList();
+            if(!entries.contains(to.toString()))entries.append(to.toString());
+            s.setValue(QStringLiteral("Files/restoreTrash"),entries);
+        });
+        watchOperation(job,tr("Moving to Trash…"),true);
+    }
+    Q_INVOKABLE void restoreTrash() {
+        if(m_working || m_busy || m_opening)return;
+        const auto entries=QSettings().value(QStringLiteral("Files/restoreTrash")).toStringList();
+        QList<QUrl> urls; for(const auto &s:entries)if(QUrl(s).scheme()==QStringLiteral("trash"))urls.append(QUrl(s));
+        if(urls.isEmpty())return;
+        // Restore one at a time so partial failure preserves pending recovery.
+        auto *job=KIO::restoreFromTrash({urls.last()},KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        connect(job,&KJob::result,this,[entries](KJob *j){ if(!j->error()){auto remaining=entries; remaining.removeLast(); QSettings().setValue(QStringLiteral("Files/restoreTrash"),remaining);} });
+        watchOperation(job,tr("Restoring from Trash…"));
+    }
     Q_INVOKABLE void copyDropped(const QStringList &paths, const QString &destination) {
         if (m_working || m_busy || m_opening || !m_lister || paths.isEmpty()) return;
         const auto target=m_lister->findByUrl(QUrl::fromLocalFile(destination));
@@ -235,12 +288,18 @@ public:
             const auto item=m_lister ? m_lister->findByUrl(QUrl::fromLocalFile(destination)) : KFileItem{};
             if (item.isNull() || !item.isDir()) { m_error=tr("Destination is no longer available."); Q_EMIT changed(); return; }
         }
-        // Native URL clipboard, always COPY, even if another app marked it cut.
+        // Honor the native KDE cut marker only for explicit clipboard paste.
         // No Overwrite flag; no conflict dialog that can enable overwriting.
         const auto sources=QGuiApplication::clipboard()->mimeData()->urls();
-        auto *job=KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
+        const bool moving=QGuiApplication::clipboard()->mimeData()->data(QStringLiteral("application/x-kde-cutselection"))==QByteArray("1");
+        auto *job=moving ? KIO::move(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo)
+                         : KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
         job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
-        watchOperation(job,tr("Copying…"),true);
+        if(moving)connect(job,&KJob::result,this,[sources](KJob *j){
+            const auto *mime=QGuiApplication::clipboard()->mimeData();
+            if(!j->error() && mime && mime->urls()==sources && mime->data(QStringLiteral("application/x-kde-cutselection"))==QByteArray("1"))QGuiApplication::clipboard()->clear();
+        });
+        watchOperation(job,moving ? tr("Moving…") : tr("Copying…"),true);
     }
     Q_INVOKABLE void newFolder(const QString &name) {
         if (m_working || m_busy || m_opening) return;
@@ -331,7 +390,9 @@ private:
         connect(job,&KJob::result,this,[this,copying](KJob *finished) {
             m_working=false;
             m_operationStatus=finished->error() ? tr("Stopped: %1").arg(finished->errorString()) : tr("Done");
-            if (finished->error() && copying) m_operationStatus += tr(" Some items may already have copied.");
+            if (finished->error() && copying) m_operationStatus += tr(" Some items may already have transferred.");
+            m_error=finished->error() ? m_operationStatus : QString();
+            Q_EMIT changed(); // Keep full failure details visible, not elided status only.
             QSettings s;
             if (finished->error()) s.setValue(QStringLiteral("Files/lastOperationError"),m_operationStatus);
             else s.remove(QStringLiteral("Files/lastOperationError"));

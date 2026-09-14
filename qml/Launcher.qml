@@ -20,6 +20,7 @@ Item {
     focus: true
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
+    readonly property color edgeText: "#88ffffff"
     readonly property color surfaceColor: "#141414"
     readonly property color surfaceOutline: "#5a5a5a"
     readonly property color controlColor: "#242424"
@@ -422,7 +423,8 @@ Item {
                     Math.max(360, parent.width * 0.72)) : parent.width
                 height: 58
                 x: (parent.width - width) / 2
-                y: resting ? Math.round((parent.height - height) * 0.44) : root.drawerOpen ? 64 : 0
+                // Mirrored edge affordances leave an equal gap above and below search.
+                y: resting ? Math.round((parent.height - height) / 2) : root.drawerOpen ? 64 : 0
                 radius: height / 2
                 color: root.searchEngaged || query.text.length > 0
                     ? root.controlColor : "transparent"
@@ -872,7 +874,7 @@ Item {
                 id: drawerHandle
                 objectName: "drawer-header"
                 readonly property real sectionGap: 16
-                readonly property real restingY: parent.height + root.contentInset - 12 - 24 - restingBrowseLabel.height
+                readonly property real restingY: parent.height + root.contentInset - 48
                 readonly property real revealDistance: Math.max(1,
                     restingY)
                 property real dragStartProgress: 0
@@ -883,7 +885,7 @@ Item {
                     : Math.round(restingY
                         - root.drawerProgress * revealDistance)
                 width: parent.width
-                height: 44
+                height: 48 - 4 * root.drawerProgress
                 opacity: (query.text.length === 0 || root.drawerOpen)
                     && !root.applicationLaunchPending ? root.openingControls : 0
                 transform: Translate { y: (1 - root.openingControls) * 10 }
@@ -894,12 +896,12 @@ Item {
                     id: restingBrowseLabel
                     objectName: "browse-label"
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: 24
-                    text: "Browse everything"
+                    y: 18 - height
+                    text: "browse everything"
                     color: restingBrowseHover.running || !restingLabelHover.hovered
-                        ? root.secondaryText : root.primaryText
+                        ? root.edgeText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
-                    font.pixelSize: 13
+                    font.pixelSize: 12
                     font.letterSpacing: 0.25
                     opacity: Math.max(0, 1 - root.drawerProgress * 3)
                     enabled: opacity > 0.5
@@ -930,7 +932,7 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 18
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.filesMode ? "Explore files" : "Browse everything"
+                    text: root.filesMode ? "explore files" : "browse everything"
                     color: openBrowseHover.running || !openBrowseMouse.containsMouse
                         ? root.secondaryText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
@@ -963,10 +965,10 @@ Item {
                     objectName: "drawer-grabber"
                     anchors.horizontalCenter: parent.horizontalCenter
                     // Follow the same reveal clock in both directions, including
-                    // partial pulls: compact tab above label -> centered close pill.
-                    y: -4 + 6 * root.drawerProgress
+                    // partial pulls: edge tab below label -> centered close pill.
+                    y: 24 - 22 * root.drawerProgress
                     width: 124 + 46 * root.drawerProgress
-                    height: 32 + 8 * root.drawerProgress
+                    height: 24 + 16 * root.drawerProgress
 
                     Rectangle {
                         anchors.centerIn: parent
@@ -1099,7 +1101,7 @@ Item {
                 id: filesEntry
                 objectName: "files-entry"
                 property real pullStart: 0
-                width: parent.width; height: 48; y: 12-root.contentInset
+                width: parent.width; height: 48; y: -root.contentInset
                 visible: root.fileBrowser !== null && opacity > 0
                 opacity: query.text.length === 0 && !root.applicationLaunchPending
                     ? root.openingControls * Math.max(0,1-root.drawerProgress*3) : 0
@@ -1109,18 +1111,18 @@ Item {
                 Text {
                     id: filesEntryLabel
                     objectName: "files-label"
-                    anchors.horizontalCenter: parent.horizontalCenter; y: 0; text: "Explore files"
-                    color: filesTextHover.hovered && !filesLabelHover.running ? root.primaryText : root.secondaryText
-                    font.pixelSize: 13
+                    anchors.horizontalCenter: parent.horizontalCenter; y: 30; text: "explore files"
+                    color: filesTextHover.hovered && !filesLabelHover.running ? root.primaryText : root.edgeText
+                    font.pixelSize: 12
                     Behavior on color { ColorAnimation { duration: 100 } }
                     HoverHandler { id: filesTextHover; onHoveredChanged: { if (hovered) filesLabelHover.restart(); else filesLabelHover.stop() } }
                 }
                 Item {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    width: 124; height: 24; y: 18
+                    width: 124; height: 24; y: 0
                     HoverHandler { id: filesEntryHover }
                 }
-                Rectangle { anchors.horizontalCenter: parent.horizontalCenter; y: 28; width: filesPull.active ? 48 : 42; height: 4; radius: 2; color: filesEntryHover.hovered || filesPull.active ? root.primaryText : root.surfaceOutline; Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } } }
+                Rectangle { objectName: "files-edge-line"; anchors.horizontalCenter: parent.horizontalCenter; y: 10; width: filesPull.active ? 48 : 42; height: 4; radius: 2; color: filesEntryHover.hovered || filesPull.active ? root.primaryText : root.surfaceOutline; Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } } }
                 TapHandler { onTapped: root.setDrawerOpen(true,"files") }
                 DragHandler {
                     id: filesPull

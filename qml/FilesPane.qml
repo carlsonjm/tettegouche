@@ -7,6 +7,7 @@ Item {
     id: pane
     required property var browser
     property bool creatingFolder: false
+    property string renamePath: ""
     property bool draggingFiles: false
     property var dragPaths: []
     property string dropFolder: ""
@@ -37,7 +38,17 @@ Item {
     readonly property string selectedPath: browser ? browser.selectedPath : ""
     readonly property var selectedPaths: browser ? browser.selectedPaths : []
     function clearSelection() { browser.selecting=false; browser.selectedPath="" }
-    function newFolderForm() { folderName.text=""; creatingFolder=true; folderName.forceActiveFocus() }
+    function newFolderForm() { renamePath=""; folderName.text=""; creatingFolder=true; folderName.forceActiveFocus() }
+    function renameForm() {
+        if(selectedPaths.length!==1)return
+        renamePath=selectedPaths[0]; folderName.text=renamePath.split("/").pop()
+        creatingFolder=true; folderName.forceActiveFocus(); folderName.selectAll()
+    }
+    function submitName() {
+        if(renamePath.length) { if(selectedPaths.length===1 && selectedPaths[0]===renamePath)browser.renameSelected(folderName.text) }
+        else browser.newFolder(folderName.text)
+        creatingFolder=false; renamePath=""
+    }
     function showActions(path, directory, point) {
         if (path.length && selectedPaths.indexOf(path)<0) browser.selectedPath=path
         if (!path.length) clearSelection()
@@ -52,6 +63,10 @@ Item {
         property bool targetDirectory: false
         C.MenuItem { text: "Open"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
         C.MenuItem { text: "Copy"; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
+        C.MenuItem { text: "Cut"; enabled: pane.selectedPaths.length>0 && !pane.browser.working; onTriggered: pane.browser.cutSelected() }
+        C.MenuItem { text: "Rename"; enabled: pane.selectedPaths.length===1 && !pane.browser.working; onTriggered: pane.renameForm() }
+        C.MenuItem { text: "Move to Trash"; enabled: pane.selectedPaths.length>0 && !pane.browser.working; onTriggered: trashConfirm.open() }
+        C.MenuItem { text: "Restore last trashed item"; enabled: pane.browser.canRestoreTrash && !pane.browser.working; onTriggered: pane.browser.restoreTrash() }
         C.MenuItem {
             objectName: "context-paste"
             text: actions.targetDirectory ? "Paste into “"+actions.targetPath.split("/").pop()+"”" : "Paste here"
@@ -61,6 +76,15 @@ Item {
         }
         C.MenuItem { text: "Select all"; onTriggered: pane.browser.selectAll() }
         C.MenuItem { text: "New folder"; visible: !actions.targetPath.length; onTriggered: pane.newFolderForm() }
+    }
+    C.Dialog {
+        id: trashConfirm
+        objectName: "trash-confirm"
+        title: "Move to Trash?"
+        modal: true; anchors.centerIn: parent
+        standardButtons: C.Dialog.Ok | C.Dialog.Cancel
+        Text { text: pane.selectedPaths.length+" item(s). You can restore them afterward."; color: "#eeeeee" }
+        onAccepted: pane.browser.trashSelected()
     }
     component Action: C.Button {
         implicitHeight: 42
@@ -170,8 +194,8 @@ Item {
             }
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
-                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: "Folder name"; Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: { pane.browser.newFolder(text); pane.creatingFolder=false } }
-                Action { text: "Create"; onClicked: { pane.browser.newFolder(folderName.text); pane.creatingFolder=false } }
+                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePath.length ? "New name" : "Folder name"; Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: pane.submitName() }
+                Action { text: pane.renamePath.length ? "Rename" : "Create"; onClicked: pane.submitName() }
                 Action { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
             }
             Text { Layout.fillWidth: true; visible: text.length>0; text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
@@ -203,8 +227,11 @@ Item {
                         event.accepted=true; return
                     }
                     if (event.key===Qt.Key_Escape && (pane.selectedPaths.length || pane.browser.selecting)) { pane.clearSelection(); event.accepted=true; return }
+                    if(event.key===Qt.Key_F2) { pane.renameForm(); event.accepted=true; return }
+                    if(event.key===Qt.Key_Delete) { if(pane.selectedPaths.length && !pane.browser.working)trashConfirm.open(); event.accepted=true; return }
                     if (event.modifiers & Qt.ControlModifier) {
                         if (event.key===Qt.Key_C) { pane.browser.copySelected(); event.accepted=true }
+                        else if(event.key===Qt.Key_X) { pane.browser.cutSelected(); event.accepted=true }
                         else if (event.key===Qt.Key_V) { pane.browser.paste(); event.accepted=true }
                         else if (event.key===Qt.Key_A) { pane.browser.selectAll(); event.accepted=true }
                         if(event.accepted) return

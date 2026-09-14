@@ -10,6 +10,39 @@
 class FileBrowserTest : public QObject {
     Q_OBJECT
 private Q_SLOTS:
+    void renameMoveTrash() {
+        if(!qgetenv("XDG_DATA_HOME").contains("tette-trash-test."))QSKIP("Requires isolated tette-trash-test.* data directory on the home filesystem");
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QDir root(dir.path()); QVERIFY(root.mkdir(QStringLiteral("target")));
+        const auto source=root.filePath(QStringLiteral("before.txt"));
+        const auto renamed=root.filePath(QStringLiteral("after.txt"));
+        { QFile f(source); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("safe content"); }
+        FileBrowser browser; browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(source); browser.renameSelected(QStringLiteral("after.txt"));
+        QTRY_VERIFY(!browser.working()); QVERIFY(QFile::exists(renamed)); QVERIFY(!QFile::exists(source));
+        browser.refresh(); QTRY_VERIFY(!browser.busy()); browser.setSelectedPath(renamed);
+        browser.renameSelected(QStringLiteral("target")); QTRY_VERIFY(!browser.working());
+        QVERIFY(QFile::exists(renamed)); QVERIFY(QFileInfo(root.filePath(QStringLiteral("target"))).isDir());
+        browser.cutSelected(); QVERIFY(browser.canPaste());
+        browser.pasteInto(root.filePath(QStringLiteral("target"))); QTRY_VERIFY(!browser.working());
+        const auto moved=root.filePath(QStringLiteral("target/after.txt"));
+        QVERIFY(QFile::exists(moved)); QVERIFY(!QFile::exists(renamed)); QVERIFY(!browser.canPaste());
+        browser.navigate(root.filePath(QStringLiteral("target"))); QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(moved); browser.trashSelected(); QTRY_VERIFY(!browser.working());
+        QVERIFY2(!QFile::exists(moved),qPrintable(browser.operationStatus())); QVERIFY(browser.canRestoreTrash());
+        // Recovery survives a new backend instance.
+        FileBrowser recovery; recovery.navigate(dir.path()); QTRY_VERIFY(!recovery.busy());
+        { QFile replacement(moved); QVERIFY(replacement.open(QIODevice::WriteOnly)); replacement.write("replacement"); }
+        recovery.restoreTrash(); QTRY_VERIFY(!recovery.working());
+        QVERIFY(recovery.canRestoreTrash());
+        { QFile replacement(moved); QVERIFY(replacement.open(QIODevice::ReadOnly)); QCOMPARE(replacement.readAll(),QByteArray("replacement")); }
+        QVERIFY(QFile::remove(moved)); // only the disposable collision fixture
+        QVERIFY(recovery.canRestoreTrash()); recovery.restoreTrash(); QTRY_VERIFY(!recovery.working());
+        QVERIFY(QFile::exists(moved)); QVERIFY(!recovery.canRestoreTrash());
+        QFile f(moved); QVERIFY(f.open(QIODevice::ReadOnly)); QCOMPARE(f.readAll(),QByteArray("safe content"));
+    }
     void dropCopy() {
         QTemporaryDir dir; QVERIFY(dir.isValid());
         QSettings::setDefaultFormat(QSettings::IniFormat);
