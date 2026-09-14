@@ -10,6 +10,8 @@ TestCase {
     visible: true
     when: windowShown
     function init() {
+        launcher.filesMode = false
+        launcher.fileBrowser = null
         controller.drawerExpanded = false
         controller.guestMode = false
         controller.opened()
@@ -251,6 +253,81 @@ TestCase {
         compare(tab.height, 36)
         launcher.drawerProgress = 0
         verify(tab.y + tab.height / 2 + 2 < label.y)
+    }
+    QtObject {
+        id: filesMock
+        property var entries: [{name:"Projects",path:"/home/test/Projects",directory:true,icon:"folder",detail:"Folder"}, {name:"Notes.txt",path:"/home/test/Notes.txt",directory:false,icon:"text-plain",detail:"842 B"}]
+        property var tabs: [{label:"Home",path:"/home/test"}]
+        property var places: [{label:"Home",path:"/home/test",icon:"user-home"},{label:"Downloads",path:"/home/test/Downloads",icon:"folder-download"}]
+        property var crumbs: [{label:"Home",path:"/home/test"}]
+        property int currentTab: 0
+        property string path: "/home/test"
+        property string selectedPath: ""
+        property string error: ""
+        property string filter: ""
+        property bool busy: false
+        property bool canBack: false
+        property bool canForward: false
+        property bool hidden: false
+        property int sortMode: 0
+        property real scroll: 0
+        signal changed()
+        function open() {}
+    }
+    function test_filesDrawer() {
+        launcher.fileBrowser=filesMock
+        const entry=findChild(launcher,"files-entry")
+        verify(entry.visible)
+        mouseClick(entry,entry.width/2,20)
+        tryCompare(launcher,"drawerProgress",1)
+        verify(launcher.filesMode)
+        compare(controller.drawerExpanded,true)
+        const pane=findChild(launcher,"files-pane")
+        verify(pane.visible)
+        verify(!findChild(launcher,"application-grid").visible)
+        launcher.submit() // Files Enter must not launch a hidden catalogue item.
+        wait(300)
+        grabImage(launcher).save("/tmp/tette-files-preview.png")
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+        compare(controller.drawerExpanded,false)
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher,"drawerProgress",1)
+        verify(!launcher.filesMode)
+        verify(!pane.visible)
+    }
+    function test_filesPull() {
+        launcher.fileBrowser=filesMock
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+        const entry=findChild(launcher,"files-entry")
+        const touch=touchEvent(launcher)
+        touch.press(0,entry,entry.width/2,28).commit()
+        touch.move(0,entry,entry.width/2,48).commit()
+        touch.move(0,entry,entry.width/2,88).commit()
+        touch.move(0,entry,entry.width/2,128).commit()
+        touch.release(0,entry,entry.width/2,128).commit()
+        tryCompare(launcher,"drawerOpen",true)
+        verify(launcher.filesMode)
+    }
+    function test_drawerLabelHoverAndEdges() {
+        launcher.fileBrowser=filesMock
+        const sheet=findChild(launcher,"launcher-sheet")
+        const top=findChild(launcher,"files-label")
+        const entry=findChild(launcher,"files-entry")
+        const bottom=findChild(launcher,"browse-label")
+        const tab=findChild(launcher,"drawer-grabber")
+        compare(top.mapToItem(sheet,0,0).y,12)
+        compare(Math.round(sheet.height-bottom.mapToItem(sheet,0,bottom.height).y),12)
+        mouseMove(entry,entry.width/2,30)
+        wait(350)
+        compare(top.color,launcher.secondaryText)
+        mouseMove(top,top.width/2,top.height/2)
+        wait(350)
+        compare(top.color,launcher.primaryText)
+        mouseMove(tab,tab.width/2,12)
+        wait(350)
+        compare(bottom.color,launcher.secondaryText)
     }
     function test_browseAndSort(data) {
         controller.guestMode = data.guest

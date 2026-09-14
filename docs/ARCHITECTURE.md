@@ -1,8 +1,12 @@
 # Architecture
 
-Current uninstalled candidate: [Active App drawer](ACTIVE-DRAWER-20260914.md),
-following the [shared sizing contract](DRAWER-SIZING-PLAN.md). Prove Apps first;
-All Files and monitor expansion are not implemented by this slice.
+Accepted: [Active App drawer](ACTIVE-DRAWER-20260914.md), following the
+[shared sizing contract](DRAWER-SIZING-PLAN.md). Also accepted:
+[Explore files browsing](FILES-BROWSING-20260914.md), including the startup
+correction and touch/navigation refinement. Monitor expansion is deferred.
+FileBrowser owns local tab/history/listing state; FilesPane renders it. Files
+reuses the accepted expanded guest lease without changing Kadunce. File operations
+are not yet exposed. See the slice document for persistence and search limits.
 
 Tettegouche is an on-demand launcher, not a desktop service. One process owns
 one temporary layer-shell surface and exits as soon as the user launches an

@@ -41,10 +41,11 @@ qt_add_executable(tettegouche
     src/OmniResults.h
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
+    src/FileBrowser.h
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml
+    FILES qml/Launcher.qml qml/FilesPane.qml
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
@@ -95,6 +96,12 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(file-browser-test tests/FileBrowserTest.cpp src/FileBrowser.h)
+    target_include_directories(file-browser-test PRIVATE src)
+    target_link_libraries(file-browser-test PRIVATE KF6::KIOCore Qt6::Test Qt6::Quick)
+    target_compile_definitions(file-browser-test PRIVATE FILES_PANE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}/qml/FilesPane.qml")
+    add_test(NAME file-browser-test COMMAND dbus-run-session -- $<TARGET_FILE:file-browser-test>)
+    set_tests_properties(file-browser-test PROPERTIES TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
     target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
     add_test(NAME related-info-test COMMAND related-info-test)

@@ -15,6 +15,8 @@ Item {
     required property var launcherController
     required property var searchResults
     required property var applicationCatalog
+    property var fileBrowser: null
+    property bool filesMode: false
     focus: true
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
@@ -89,20 +91,27 @@ Item {
         }
     }
 
-    function setDrawerOpen(open) {
+    function setDrawerOpen(open, mode) {
+        if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
         root.drawerOpen = open
         root.launcherController.setDrawerExpanded(open)
         if (!open) {
             root.sortMenuOpen = false
         }
-        root.applicationCatalog.filterText = open ? query.text : ""
+        root.applicationCatalog.filterText = open && !root.filesMode ? query.text : ""
+        if (root.fileBrowser) root.fileBrowser.filter = root.filesMode ? query.text : ""
         root.searchResults.queryString = open ? "" : query.text
         drawerSettle.to = open ? 1 : 0
         drawerSettle.restart()
         if (open) {
             root.searchEngaged = false
             root.forceActiveFocus()
+            // Request the shared presentation first; listing must not precede
+            // the drawer handshake or run at launcher construction time.
+            if (root.filesMode && root.fileBrowser) Qt.callLater(function() {
+                if (root.drawerOpen && root.filesMode) root.fileBrowser.open()
+            })
         }
     }
 
@@ -177,6 +186,7 @@ Item {
     }
 
     function submit() {
+        if (root.drawerOpen && root.filesMode) return
         if (!root.drawerOpen && root.selectedChildKey !== "") {
             root.openChildSettings()
         } else if (!root.drawerOpen && root.searchResults.querying) {
@@ -487,8 +497,9 @@ Item {
                             root.searchEngaged = true
                         }
                         root.pendingLaunch = false
-                        root.applicationCatalog.filterText = root.drawerOpen
+                        root.applicationCatalog.filterText = root.drawerOpen && !root.filesMode
                             ? text : ""
+                        if (root.fileBrowser && root.filesMode) root.fileBrowser.filter = text
                         root.searchResults.queryString = root.drawerOpen
                             ? "" : text
                         resultList.currentIndex = resultList.count > 0 ? 0 : -1
@@ -504,14 +515,14 @@ Item {
                     }
 
                     Keys.onPressed: event => {
-                        if (root.drawerOpen && event.key === Qt.Key_Down
+                        if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Down
                                 && applicationGrid.count > 0) {
                             applicationGrid.currentIndex = Math.min(
                                 applicationGrid.count - 1,
                                 Math.max(0,
                                     applicationGrid.currentIndex + 1))
                             event.accepted = true
-                        } else if (root.drawerOpen && event.key === Qt.Key_Up
+                        } else if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Up
                                    && applicationGrid.count > 0) {
                             applicationGrid.currentIndex = Math.max(
                                 0, applicationGrid.currentIndex - 1)
@@ -851,13 +862,16 @@ Item {
                 id: drawerHandle
                 objectName: "drawer-header"
                 readonly property real sectionGap: 28
+                readonly property real restingY: parent.height + root.contentInset - 12 - 24 - restingBrowseLabel.height
                 readonly property real revealDistance: Math.max(1,
-                    content.height - searchField.height - height - sectionGap - 4)
+                    restingY - searchField.height - sectionGap)
                 property real dragStartProgress: 0
                 property real dragReferenceDistance: 1
                 x: 0
-                y: Math.round(parent.height - height - 4
-                    - root.drawerProgress * revealDistance)
+                y: root.filesMode && root.drawerProgress > 0
+                    ? searchField.height + sectionGap
+                    : Math.round(restingY
+                        - root.drawerProgress * revealDistance)
                 width: parent.width
                 height: 44
                 opacity: (query.text.length === 0 || root.drawerOpen)
@@ -872,7 +886,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 24
                     text: "Browse everything"
-                    color: restingBrowseHover.running || !restingBrowseMouse.containsMouse
+                    color: restingBrowseHover.running || !restingLabelHover.hovered
                         ? root.secondaryText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
                     font.pixelSize: 13
@@ -881,6 +895,13 @@ Item {
                     enabled: opacity > 0.5
 
                     Timer { id: restingBrowseHover; interval: 220 }
+                    HoverHandler {
+                        id: restingLabelHover
+                        onHoveredChanged: {
+                            if (hovered) restingBrowseHover.restart()
+                            else restingBrowseHover.stop()
+                        }
+                    }
                     MouseArea {
                         id: restingBrowseMouse
                         anchors.fill: parent
@@ -888,12 +909,8 @@ Item {
                         anchors.rightMargin: -12
                         anchors.topMargin: -3
                         anchors.bottomMargin: -3
-                        hoverEnabled: true
+                        hoverEnabled: false
                         cursorShape: Qt.PointingHandCursor
-                        onContainsMouseChanged: {
-                            if (containsMouse) restingBrowseHover.restart()
-                            else restingBrowseHover.stop()
-                        }
                         onClicked: root.setDrawerOpen(true)
                     }
                 }
@@ -903,7 +920,7 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 4
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "Browse everything"
+                    text: root.filesMode ? "Explore files" : "Browse everything"
                     color: openBrowseHover.running || !openBrowseMouse.containsMouse
                         ? root.secondaryText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
@@ -959,7 +976,11 @@ Item {
                         }
                     }
 
-                    HoverHandler { id: drawerHover }
+                    Item {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width; height: 24; y: 0
+                        HoverHandler { id: drawerHover }
+                    }
                     Rectangle {
                         objectName: "close-drawer-button"
                         anchors.fill: parent
@@ -967,9 +988,11 @@ Item {
                         visible: opacity > 0
                         enabled: root.drawerOpen && opacity > 0.9
                         radius: height / 2
-                        color: closeDrawerHover.hovered ? "#303030" : root.controlColor
+                        color: closeDrawerHover.hovered || closeDrawerTap.pressed ? "#303030" : "transparent"
                         border.width: 1
-                        border.color: root.surfaceOutline
+                        border.color: closeDrawerHover.hovered || closeDrawerTap.pressed ? root.surfaceOutline : "transparent"
+                        Behavior on color { ColorAnimation { duration: 100 } }
+                        Behavior on border.color { ColorAnimation { duration: 100 } }
                         Accessible.role: Accessible.Button
                         Accessible.name: qsTr("Close drawer")
                         Accessible.onPressAction: root.setDrawerOpen(false)
@@ -980,12 +1003,12 @@ Item {
                             font.pixelSize: 13
                         }
                         HoverHandler { id: closeDrawerHover }
-                        TapHandler { onTapped: root.setDrawerOpen(false) }
+                        TapHandler { id: closeDrawerTap; onTapped: root.setDrawerOpen(false) }
                     }
                 }
 
                 Item {
-                    id: sortButton
+                id: sortButton
                     objectName: "sort-button"
                     anchors.right: parent.right
                     anchors.rightMargin: 1
@@ -997,6 +1020,7 @@ Item {
 
                     Kirigami.Icon {
                         anchors.centerIn: parent
+                        visible: !root.filesMode
                         width: 20
                         height: 20
                         source: root.applicationCatalog.descending
@@ -1008,7 +1032,19 @@ Item {
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: root.sortMenuOpen = !root.sortMenuOpen
+                        onClicked: {
+                            if (root.filesMode) fileSort.open()
+                            else root.sortMenuOpen = !root.sortMenuOpen
+                        }
+                    }
+                    Text { anchors.centerIn: parent; visible: root.filesMode; text: root.fileBrowser ? ["Name", "Z–A", "Newest", "Size"][root.fileBrowser.sortMode] : "Name"; color: root.primaryText; font.pixelSize: 12 }
+                    QQC2.Menu {
+                        id: fileSort
+                        QQC2.MenuItem { text: "Name A–Z"; onTriggered: root.fileBrowser.sortMode=0 }
+                        QQC2.MenuItem { text: "Name Z–A"; onTriggered: root.fileBrowser.sortMode=1 }
+                        QQC2.MenuItem { text: "Newest first"; onTriggered: root.fileBrowser.sortMode=2 }
+                        QQC2.MenuItem { text: "Largest first"; onTriggered: root.fileBrowser.sortMode=3 }
+                        QQC2.MenuItem { text: "Show hidden files"; checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden=checked }
                     }
                 }
 
@@ -1029,7 +1065,7 @@ Item {
                             drawerHandle.dragReferenceDistance = drawerHandle.revealDistance
                             drawerSettle.stop()
                         } else {
-                            root.setDrawerOpen(root.drawerProgress > 0.34)
+                            root.setDrawerOpen(root.drawerProgress > 0.34, root.filesMode ? "files" : "apps")
                         }
                     }
                     onTranslationChanged: {
@@ -1043,6 +1079,54 @@ Item {
                 }
             }
 
+            Item {
+                id: filesEntry
+                objectName: "files-entry"
+                property real pullStart: 0
+                width: parent.width; height: 48; y: 12-root.contentInset
+                visible: root.fileBrowser !== null && root.drawerProgress === 0 && query.text.length === 0
+                Timer { id: filesLabelHover; interval: 220 }
+                Text {
+                    id: filesEntryLabel
+                    objectName: "files-label"
+                    anchors.horizontalCenter: parent.horizontalCenter; y: 0; text: "Explore files"
+                    color: filesTextHover.hovered && !filesLabelHover.running ? root.primaryText : root.secondaryText
+                    font.pixelSize: 13
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    HoverHandler { id: filesTextHover; onHoveredChanged: { if (hovered) filesLabelHover.restart(); else filesLabelHover.stop() } }
+                }
+                Item {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 124; height: 24; y: 18
+                    HoverHandler { id: filesEntryHover }
+                }
+                Rectangle { anchors.horizontalCenter: parent.horizontalCenter; y: 28; width: filesPull.active ? 48 : 42; height: 4; radius: 2; color: filesEntryHover.hovered || filesPull.active ? root.primaryText : root.surfaceOutline; Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } } }
+                TapHandler { onTapped: root.setDrawerOpen(true,"files") }
+                DragHandler {
+                    id: filesPull
+                    target: null; xAxis.enabled: false
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.TouchScreen
+                    onActiveChanged: {
+                        if (active) filesEntry.pullStart = persistentTranslation.y
+                        else if (persistentTranslation.y-filesEntry.pullStart > 24) root.setDrawerOpen(true,"files")
+                    }
+                }
+            }
+            Loader {
+                id: filesLoader
+                active: false
+                asynchronous: true
+                sourceComponent: FilesPane { objectName: "files-pane"; browser: root.fileBrowser }
+                Connections {
+                    target: root
+                    function onFilesModeChanged() { if (root.filesMode) filesLoader.active = true }
+                }
+                x: 0; y: drawerHandle.y + drawerHandle.height + drawerHandle.sectionGap
+                width: parent.width; height: Math.max(0,parent.height-y)
+                visible: root.filesMode && root.drawerProgress>0.01
+                opacity: root.drawerProgress
+                transform: Translate { y: -20*(1-root.drawerProgress) }
+            }
             GridView {
                 id: applicationGrid
                 objectName: "application-grid"
@@ -1052,7 +1136,7 @@ Item {
                 height: Math.max(0, parent.height - y)
                 clip: true
                 opacity: root.drawerProgress
-                visible: root.drawerProgress > 0.01
+                visible: !root.filesMode && root.drawerProgress > 0.01
                     && !root.applicationLaunchPending
                 model: root.applicationCatalog
                 cellWidth: width / Math.max(3,

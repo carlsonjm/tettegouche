@@ -5,6 +5,7 @@
 
 #include "WorkspaceContext.h"
 #include "ApplicationCatalog.h"
+#include "FileBrowser.h"
 #include "OmniResults.h"
 #include "RelatedInfo.h"
 
@@ -739,6 +740,7 @@ int main(int argc, char **argv)
     results.setRunnerManager(&runnerManager);
     results.setLimit(0);
     ApplicationCatalog catalog;
+    FileBrowser fileBrowser;
     const bool guestAllowed =
         !application.arguments().contains(QStringLiteral("--standalone"));
 
@@ -753,6 +755,7 @@ int main(int argc, char **argv)
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
     view.setInitialProperties({
+        {QStringLiteral("fileBrowser"), QVariant::fromValue(static_cast<QObject *>(&fileBrowser))},
         {QStringLiteral("launcherController"),
          QVariant::fromValue(static_cast<QObject *>(&controller))},
         {QStringLiteral("searchResults"),
