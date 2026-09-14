@@ -90,7 +90,9 @@ Item {
     }
 
     function setDrawerOpen(open) {
+        root.guestDrag = 0
         root.drawerOpen = open
+        root.launcherController.setDrawerExpanded(open)
         if (!open) {
             root.sortMenuOpen = false
         }
@@ -321,10 +323,18 @@ Item {
                 + Math.round((root.launcherController.availableArea.height - height) / 2)
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
-            : Math.round(root.launcherController.availableArea.width * 0.64)
+            : root.launcherController.drawerExpanded
+                ? Math.max(1, root.launcherController.availableArea.width - 20)
+                : Math.round(root.launcherController.availableArea.width * 0.64)
         height: root.launcherController.guestMode
             ? root.launcherController.guestHeight
-            : Math.round(root.launcherController.availableArea.height * 0.64)
+            : root.launcherController.drawerExpanded
+                ? Math.max(1, root.launcherController.availableArea.height - 20)
+                : Math.round(root.launcherController.availableArea.height * 0.64)
+        Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on height { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
         radius: root.cardRadius
         color: root.surfaceColor
         border.width: 1
@@ -335,6 +345,7 @@ Item {
         DragHandler {
             id: guestDragHandler
             enabled: root.launcherController.guestMode
+                && !root.drawerOpen
                 && !root.guestExiting
                 && !root.applicationLaunchPending
             target: null
@@ -380,6 +391,7 @@ Item {
 
             Rectangle {
                 id: searchField
+                objectName: "search-field"
                 readonly property bool resting:
                     query.text.length === 0
                     && resultList.count === 0
@@ -837,9 +849,12 @@ Item {
 
             Item {
                 id: drawerHandle
+                objectName: "drawer-header"
+                readonly property real sectionGap: 28
                 readonly property real revealDistance: Math.max(1,
-                    content.height - searchField.height - height - 32)
+                    content.height - searchField.height - height - sectionGap - 4)
                 property real dragStartProgress: 0
+                property real dragReferenceDistance: 1
                 x: 0
                 y: Math.round(parent.height - height - 4
                     - root.drawerProgress * revealDistance)
@@ -855,7 +870,7 @@ Item {
                     id: restingBrowseLabel
                     objectName: "browse-label"
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: 1
+                    y: 24
                     text: "Browse everything"
                     color: restingBrowseHover.running || !restingBrowseMouse.containsMouse
                         ? root.secondaryText : root.primaryText
@@ -918,13 +933,18 @@ Item {
 
                 Item {
                     id: grabberTarget
+                    objectName: "drawer-grabber"
                     anchors.horizontalCenter: parent.horizontalCenter
-                    y: Math.round(6 + (1 - root.drawerProgress) * 10)
-                    width: 124
-                    height: 32
+                    // Follow the same reveal clock in both directions, including
+                    // partial pulls: compact tab above label -> centered close pill.
+                    y: -4 + 6 * root.drawerProgress
+                    width: 124 + 46 * root.drawerProgress
+                    height: 32 + 8 * root.drawerProgress
 
                     Rectangle {
                         anchors.centerIn: parent
+                        opacity: Math.max(0, 1 - root.drawerProgress * 3)
+                        visible: opacity > 0
                         width: drawerDrag.active ? 48 : 42
                         height: 4
                         radius: 2
@@ -940,6 +960,28 @@ Item {
                     }
 
                     HoverHandler { id: drawerHover }
+                    Rectangle {
+                        objectName: "close-drawer-button"
+                        anchors.fill: parent
+                        opacity: Math.max(0, (root.drawerProgress - 0.65) / 0.35)
+                        visible: opacity > 0
+                        enabled: root.drawerOpen && opacity > 0.9
+                        radius: height / 2
+                        color: closeDrawerHover.hovered ? "#303030" : root.controlColor
+                        border.width: 1
+                        border.color: root.surfaceOutline
+                        Accessible.role: Accessible.Button
+                        Accessible.name: qsTr("Close drawer")
+                        Accessible.onPressAction: root.setDrawerOpen(false)
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Close drawer")
+                            color: root.primaryText
+                            font.pixelSize: 13
+                        }
+                        HoverHandler { id: closeDrawerHover }
+                        TapHandler { onTapped: root.setDrawerOpen(false) }
+                    }
                 }
 
                 Item {
@@ -984,6 +1026,7 @@ Item {
                             root.sortMenuOpen = false
                             drawerHandle.dragStartProgress =
                                 root.drawerProgress
+                            drawerHandle.dragReferenceDistance = drawerHandle.revealDistance
                             drawerSettle.stop()
                         } else {
                             root.setDrawerOpen(root.drawerProgress > 0.34)
@@ -994,7 +1037,7 @@ Item {
                             root.drawerProgress = Math.max(0, Math.min(1,
                                 drawerHandle.dragStartProgress
                                 - translation.y
-                                    / drawerHandle.revealDistance))
+                                    / drawerHandle.dragReferenceDistance))
                         }
                     }
                 }
@@ -1002,8 +1045,9 @@ Item {
 
             GridView {
                 id: applicationGrid
+                objectName: "application-grid"
                 x: 0
-                y: drawerHandle.y + drawerHandle.height + 10
+                y: drawerHandle.y + drawerHandle.height + drawerHandle.sectionGap
                 width: parent.width
                 height: Math.max(0, parent.height - y)
                 clip: true
@@ -1013,7 +1057,7 @@ Item {
                 model: root.applicationCatalog
                 cellWidth: width / Math.max(3,
                     Math.min(6, Math.floor(width / 126)))
-                cellHeight: 94
+                cellHeight: root.launcherController.drawerExpanded ? 112 : 94
                 boundsBehavior: Flickable.StopAtBounds
                 z: 3
 
@@ -1043,8 +1087,8 @@ Item {
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.top: parent.top
                             anchors.topMargin: 10
-                            width: 42
-                            height: 42
+                            width: root.launcherController.drawerExpanded ? 52 : 42
+                            height: width
                             source: catalogDelegate.model.icon
                         }
 

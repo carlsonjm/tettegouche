@@ -9,9 +9,17 @@ TestCase {
     height: 800
     visible: true
     when: windowShown
+    function init() {
+        controller.drawerExpanded = false
+        controller.guestMode = false
+        controller.opened()
+        wait(300)
+    }
     QtObject {
         id: controller
         property bool guestMode: false
+        property bool drawerExpanded: false
+        function setDrawerExpanded(expanded) { drawerExpanded = expanded }
         property rect availableArea: Qt.rect(0, 0, 1000, 740)
         property bool contextAvailable: false
         property real guestX: 140
@@ -96,13 +104,13 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         verify(sheet)
         controller.guestMode = false
-        compare(sheet.width, 640)
+        tryCompare(sheet, "width", 640)
         compare(sheet.height, Math.round(740 * 0.64))
         compare(sheet.x, 180)
         controller.guestMode = true
-        compare(sheet.width, controller.guestWidth)
+        tryCompare(sheet, "width", controller.guestWidth)
         compare(sheet.height, controller.guestHeight)
-        compare(sheet.x, controller.guestX)
+        tryCompare(sheet, "x", controller.guestX)
         controller.guestMode = false
     }
     function test_missingSelectionDoesNotSearchWeb() {
@@ -208,6 +216,42 @@ TestCase {
         compare(launcher.guestExiting, false)
         compare(controller.closes, 0)
     }
+    function test_expandedDrawerReturnsCompact() {
+        const sheet = findChild(launcher, "launcher-sheet")
+        launcher.setDrawerOpen(true)
+        tryCompare(sheet, "width", 980)
+        tryCompare(sheet, "height", 720)
+        compare(controller.drawerExpanded, true)
+        wait(250)
+        const closeDrawer = findChild(launcher, "close-drawer-button")
+        verify(closeDrawer && closeDrawer.visible)
+        const header = findChild(launcher, "drawer-header")
+        const search = findChild(launcher, "search-field")
+        const grid = findChild(launcher, "application-grid")
+        compare(closeDrawer.parent.y + closeDrawer.height / 2, header.height / 2)
+        compare(grid.y - header.y - header.height, header.y - search.y - search.height)
+        const closesBefore = controller.closes
+        mouseClick(closeDrawer, closeDrawer.width / 2, closeDrawer.height / 2)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, closesBefore)
+        tryCompare(sheet, "width", 640)
+        tryCompare(sheet, "height", Math.round(740 * 0.64))
+        compare(controller.drawerExpanded, false)
+    }
+    function test_compactDrawerHierarchy() {
+        const tab = findChild(launcher, "drawer-grabber")
+        const label = findChild(launcher, "browse-label")
+        const header = findChild(launcher, "drawer-header")
+        compare(launcher.drawerProgress, 0)
+        verify(tab.y + tab.height / 2 + 2 < label.y)
+        verify(label.y + label.height <= header.height)
+        launcher.drawerProgress = 0.5
+        compare(tab.y, -1)
+        compare(tab.width, 147)
+        compare(tab.height, 36)
+        launcher.drawerProgress = 0
+        verify(tab.y + tab.height / 2 + 2 < label.y)
+    }
     function test_browseAndSort(data) {
         controller.guestMode = data.guest
         controller.closes = 0
@@ -219,6 +263,7 @@ TestCase {
         mouseClick(label, label.width / 2, label.height / 2)
         tryCompare(launcher, "drawerOpen", true)
         tryCompare(launcher, "drawerProgress", 1)
+        wait(250) // wait for animated geometry before clicking the moved sort button
         const sort = findChild(launcher, "sort-button")
         mouseClick(sort, sort.width / 2, sort.height / 2)
         tryCompare(launcher, "sortMenuOpen", true)

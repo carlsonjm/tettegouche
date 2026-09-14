@@ -98,6 +98,7 @@ class LauncherController final : public QObject
     Q_PROPERTY(bool contextAvailable READ contextAvailable
                NOTIFY contextChanged)
     Q_PROPERTY(bool guestMode READ guestMode NOTIFY guestChanged)
+    Q_PROPERTY(bool drawerExpanded READ drawerExpanded NOTIFY guestChanged)
     Q_PROPERTY(int guestX READ guestX NOTIFY guestChanged)
     Q_PROPERTY(int guestY READ guestY NOTIFY guestChanged)
     Q_PROPERTY(int guestWidth READ guestWidth NOTIFY guestChanged)
@@ -131,6 +132,19 @@ public:
             QDBusServiceWatcher::WatchForOwnerChange, this);
         connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
                 [this]() { bridgeLost(); });
+        for (QScreen *screen : QGuiApplication::screens()) {
+            const auto boundsChanged = [this, screen] {
+                if (screen != m_view->screen()) return;
+                const bool expanded = m_requestedExpanded;
+                endGuestLease();
+                m_requestedExpanded = expanded;
+                m_drawerExpanded = expanded && tabletSurface();
+                m_view->resize(screen->geometry().size());
+                Q_EMIT guestChanged();
+            };
+            connect(screen, &QScreen::geometryChanged, this, boundsChanged);
+            connect(screen, &QScreen::availableGeometryChanged, this, boundsChanged);
+        }
     }
 
     bool contextAvailable() const { return m_context.available(); }
@@ -161,6 +175,61 @@ public:
         return m_related.items(RelatedInfo::keyForSetting(match.id()));
     }
     bool guestMode() const { return m_guestMode; }
+    bool drawerExpanded() const { return m_drawerExpanded; }
+    bool tabletSurface() const {
+        return m_view->screen() && m_view->screen()->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
+    }
+    Q_INVOKABLE void setDrawerExpanded(bool expanded)
+    {
+        const quint64 generation = ++m_presentationGeneration;
+        m_requestedExpanded = expanded;
+        if (!m_guestMode) {
+            m_drawerExpanded = expanded && tabletSurface();
+            Q_EMIT guestChanged();
+            return;
+        }
+        if (!m_guestExpansionSupported || !m_activeGuestRect.isValid()) {
+            endGuestLease();
+            m_requestedExpanded = expanded;
+            m_drawerExpanded = expanded && tabletSurface();
+            Q_EMIT guestChanged();
+            return;
+        }
+        if (!expanded) {
+            m_drawerExpanded = false;
+            m_guestRect = m_compactGuestRect;
+            Q_EMIT guestChanged();
+            // Keep the expanded input envelope until the visual collapse ends.
+            QTimer::singleShot(260, this, [this, generation] {
+                if (generation != m_presentationGeneration || !m_guestMode) return;
+                QDBusMessage request = guestMethod(QStringLiteral("setLauncherGuestExpanded"));
+                request.setArguments({false});
+                QDBusConnection::sessionBus().asyncCall(request);
+                m_view->setMask(QRegion(m_guestRect.adjusted(-16, -16, 16, 16)));
+            });
+            return;
+        }
+        QDBusMessage request = guestMethod(QStringLiteral("setLauncherGuestExpanded"));
+        request.setArguments({true});
+        auto *watcher = new QDBusPendingCallWatcher(
+            QDBusConnection::sessionBus().asyncCall(request, 700), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, generation] {
+            const QDBusPendingReply<bool> reply = *watcher;
+            watcher->deleteLater();
+            if (generation != m_presentationGeneration || !m_guestMode) return;
+            if (reply.isError() || !reply.value()) {
+                endGuestLease();
+                m_requestedExpanded = true;
+                m_drawerExpanded = tabletSurface();
+            } else {
+                m_drawerExpanded = true;
+                // Expanded input ends at the same dock-safe boundary as paint.
+                m_view->setMask(QRegion(m_activeGuestRect));
+                m_guestRect = m_activeGuestRect;
+            }
+            Q_EMIT guestChanged();
+        });
+    }
     int guestX() const { return m_guestRect.x(); }
     int guestY() const { return m_guestRect.y(); }
     int guestWidth() const { return m_guestRect.width(); }
@@ -239,6 +308,8 @@ public Q_SLOTS:
 
     void bridgeLost()
     {
+        ++m_presentationGeneration;
+        m_drawerExpanded = m_requestedExpanded && tabletSurface();
         m_launchToken.clear();
         ++m_contextGeneration;
         m_context.clear();
@@ -533,6 +604,14 @@ private:
             card.value(QStringLiteral("height")).toInt());
         m_guestRect = globalCard.translated(
             -guestScreen->geometry().topLeft());
+        m_compactGuestRect = m_guestRect;
+        const auto active = root.value(QStringLiteral("active")).toObject();
+        m_activeGuestRect = QRect(active.value(QStringLiteral("x")).toInt(),
+            active.value(QStringLiteral("y")).toInt(),
+            active.value(QStringLiteral("width")).toInt(),
+            active.value(QStringLiteral("height")).toInt()).translated(-guestScreen->geometry().topLeft());
+        m_guestExpansionSupported = root.value(QStringLiteral("presentationCapability")).toInt() == 1
+            && QRect(QPoint(), guestScreen->geometry().size()).contains(m_activeGuestRect);
         if (!m_guestRect.isValid()) {
             endGuestLease();
             Q_EMIT guestChanged();
@@ -547,6 +626,9 @@ private:
 
     void endGuestLease()
     {
+        ++m_presentationGeneration;
+        m_drawerExpanded = false;
+        m_requestedExpanded = false;
         if (!m_guestMode) {
             return;
         }
@@ -608,6 +690,11 @@ private:
     ApplicationCatalog *m_catalog;
     WorkspaceContext m_context;
     QRect m_guestRect;
+    QRect m_compactGuestRect, m_activeGuestRect;
+    bool m_drawerExpanded = false;
+    bool m_requestedExpanded = false;
+    bool m_guestExpansionSupported = false;
+    quint64 m_presentationGeneration = 0;
     bool m_guestMode = false;
     bool m_guestAllowed = true;
     quint64 m_contextGeneration = 0;

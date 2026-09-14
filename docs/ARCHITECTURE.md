@@ -1,5 +1,9 @@
 # Architecture
 
+Current uninstalled candidate: [Active App drawer](ACTIVE-DRAWER-20260914.md),
+following the [shared sizing contract](DRAWER-SIZING-PLAN.md). Prove Apps first;
+All Files and monitor expansion are not implemented by this slice.
+
 Tettegouche is an on-demand launcher, not a desktop service. One process owns
 one temporary layer-shell surface and exits as soon as the user launches an
 application or dismisses the surface.
