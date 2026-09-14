@@ -422,7 +422,7 @@ Item {
                     Math.max(360, parent.width * 0.72)) : parent.width
                 height: 58
                 x: (parent.width - width) / 2
-                y: resting ? Math.round((parent.height - height) * 0.44) : 0
+                y: resting ? Math.round((parent.height - height) * 0.44) : root.drawerOpen ? 64 : 0
                 radius: height / 2
                 color: root.searchEngaged || query.text.length > 0
                     ? root.controlColor : "transparent"
@@ -871,15 +871,15 @@ Item {
             Item {
                 id: drawerHandle
                 objectName: "drawer-header"
-                readonly property real sectionGap: 28
+                readonly property real sectionGap: 16
                 readonly property real restingY: parent.height + root.contentInset - 12 - 24 - restingBrowseLabel.height
                 readonly property real revealDistance: Math.max(1,
-                    restingY - searchField.height - sectionGap)
+                    restingY)
                 property real dragStartProgress: 0
                 property real dragReferenceDistance: 1
                 x: 0
                 y: root.filesMode && root.drawerProgress > 0
-                    ? searchField.height + sectionGap
+                    ? 0
                     : Math.round(restingY
                         - root.drawerProgress * revealDistance)
                 width: parent.width
@@ -928,7 +928,7 @@ Item {
                 Text {
                     id: openBrowseLabel
                     anchors.left: parent.left
-                    anchors.leftMargin: 4
+                    anchors.leftMargin: 18
                     anchors.verticalCenter: parent.verticalCenter
                     text: root.filesMode ? "Explore files" : "Browse everything"
                     color: openBrowseHover.running || !openBrowseMouse.containsMouse
@@ -1021,7 +1021,7 @@ Item {
                 id: sortButton
                     objectName: "sort-button"
                     anchors.right: parent.right
-                    anchors.rightMargin: 1
+                    anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
@@ -1060,6 +1060,7 @@ Item {
 
                 DragHandler {
                     id: drawerDrag
+                    property string gestureMode: "apps"
                     margin: 4
                     target: null
                     xAxis.enabled: false
@@ -1069,13 +1070,18 @@ Item {
                         | PointerDevice.TouchScreen
                     onActiveChanged: {
                         if (active) {
+                            // The compact bottom pull always opens Apps, even
+                            // when the last drawer closed was Files. Keep mode
+                            // stable for this gesture, not inherited from history.
+                            gestureMode=root.drawerOpen && root.filesMode ? "files" : "apps"
+                            if(!root.drawerOpen)root.filesMode=false
                             root.sortMenuOpen = false
                             drawerHandle.dragStartProgress =
                                 root.drawerProgress
                             drawerHandle.dragReferenceDistance = drawerHandle.revealDistance
                             drawerSettle.stop()
                         } else {
-                            root.setDrawerOpen(root.drawerProgress > 0.34, root.filesMode ? "files" : "apps")
+                            root.setDrawerOpen(root.drawerProgress > 0.34, gestureMode)
                         }
                     }
                     onTranslationChanged: {
@@ -1094,7 +1100,11 @@ Item {
                 objectName: "files-entry"
                 property real pullStart: 0
                 width: parent.width; height: 48; y: 12-root.contentInset
-                visible: root.fileBrowser !== null && root.drawerProgress === 0 && query.text.length === 0
+                visible: root.fileBrowser !== null && opacity > 0
+                opacity: query.text.length === 0 && !root.applicationLaunchPending
+                    ? root.openingControls * Math.max(0,1-root.drawerProgress*3) : 0
+                enabled: opacity>0.5 && !root.drawerOpen
+                transform: Translate { y: (1-root.openingControls)*10 }
                 Timer { id: filesLabelHover; interval: 220 }
                 Text {
                     id: filesEntryLabel
@@ -1131,7 +1141,7 @@ Item {
                     target: root
                     function onFilesModeChanged() { if (root.filesMode) filesLoader.active = true }
                 }
-                x: 0; y: drawerHandle.y + drawerHandle.height + drawerHandle.sectionGap
+                x: 0; y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width; height: Math.max(0,parent.height-y)
                 visible: root.filesMode && root.drawerProgress>0.01
                 opacity: root.drawerProgress
@@ -1141,7 +1151,7 @@ Item {
                 id: applicationGrid
                 objectName: "application-grid"
                 x: 0
-                y: drawerHandle.y + drawerHandle.height + drawerHandle.sectionGap
+                y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width
                 height: Math.max(0, parent.height - y)
                 clip: true

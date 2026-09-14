@@ -68,6 +68,16 @@ Item {
         background: Rectangle { radius: 12; color: parent.down ? "#404040" : parent.hovered || parent.visualFocus ? "#303030" : "transparent"; Behavior on color { ColorAnimation { duration: 100 } } }
         contentItem: Text { text: parent.text; color: parent.enabled ? "#eeeeee" : "#777777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
     }
+    component PillAction: Action {
+        leftPadding: 16; rightPadding: 16
+        background: Rectangle {
+            y: 5; height: parent.height-10
+            radius: height/2
+            color: parent.down ? "#404040" : parent.hovered || parent.visualFocus ? "#303030" : "#222222"
+            border.color: "#505050"
+            Behavior on color { ColorAnimation { duration: 100 } }
+        }
+    }
     RowLayout {
         anchors.fill: parent
         spacing: 20
@@ -132,6 +142,12 @@ Item {
                 Action { text: "Path"; onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.path; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
                 Action { text: "↻"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
             }
+            Rectangle {
+                objectName: "file-navigation-divider"
+                Layout.fillWidth: true
+                implicitHeight: 1
+                color: "#303030"
+            }
             C.TextField {
                 id: pathEditor
                 Keys.onEscapePressed: visible=false
@@ -141,11 +157,16 @@ Item {
             }
             RowLayout {
                 Layout.fillWidth: true
-                Action { text: "Done selecting"; visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
-                Action { text: "Copy"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
-                Item { Layout.fillWidth: true }
-                Action { objectName: "new-folder"; text: "New folder"; enabled: pane.browser && !pane.browser.working && !pane.browser.busy; onClicked: pane.newFolderForm() }
-                Action { text: "⋯"; Accessible.name: "Folder actions"; onClicked: pane.showActions("",false,mapToItem(pane,0,height)) }
+                PillAction { text: "Done selecting"; visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
+                PillAction { text: "Copy"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
+                Text {
+                    objectName: "file-operation-status"
+                    Layout.fillWidth: true; Layout.minimumWidth: 0
+                    text: pane.browser ? pane.browser.operationStatus : ""
+                    color: "#aaaaaa"; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
+                }
+                PillAction { objectName: "new-folder"; text: "New folder"; enabled: pane.browser && !pane.browser.working && !pane.browser.busy; onClicked: pane.newFolderForm() }
+                PillAction { text: "⋯"; Accessible.name: "Folder actions"; onClicked: pane.showActions("",false,mapToItem(pane,0,height)) }
             }
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
@@ -153,7 +174,6 @@ Item {
                 Action { text: "Create"; onClicked: { pane.browser.newFolder(folderName.text); pane.creatingFolder=false } }
                 Action { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
             }
-            Text { Layout.fillWidth: true; text: pane.browser ? pane.browser.operationStatus : ""; visible: text.length>0; color: "#aaaaaa"; wrapMode: Text.Wrap }
             Text { Layout.fillWidth: true; visible: text.length>0; text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
             GridView {
                 id: files
@@ -324,7 +344,7 @@ Item {
                     TapHandler {
                         id: touchTap
                         acceptedDevices: PointerDevice.TouchScreen
-                        longPressThreshold: 0.5
+                        longPressThreshold: 0.18
                         property bool held: false
                         property bool dragged: false
                         onPressedChanged: {
