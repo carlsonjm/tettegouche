@@ -24,13 +24,14 @@ class FileBrowser : public QObject
     Q_PROPERTY(QString path READ path NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
+    Q_PROPERTY(bool opening READ opening NOTIFY changed)
     Q_PROPERTY(bool canBack READ canBack NOTIFY changed)
     Q_PROPERTY(bool canForward READ canForward NOTIFY changed)
     Q_PROPERTY(QString filter READ filter WRITE setFilter NOTIFY changed)
     Q_PROPERTY(int sortMode READ sortMode WRITE setSortMode NOTIFY changed)
     Q_PROPERTY(bool hidden READ hidden WRITE setHidden NOTIFY changed)
     Q_PROPERTY(double scroll READ scroll WRITE setScroll NOTIFY changed)
-    Q_PROPERTY(QString selectedPath READ selectedPath WRITE setSelectedPath NOTIFY changed)
+    Q_PROPERTY(QString selectedPath READ selectedPath WRITE setSelectedPath NOTIFY selectionChanged)
 public:
     explicit FileBrowser(QObject *parent = nullptr) : QObject(parent) {
         QSettings settings;
@@ -92,6 +93,23 @@ public:
     QString path() const { return m_tabs[m_current].history[m_tabs[m_current].index]; }
     QString error() const { return m_error; }
     bool busy() const { return m_busy; }
+    bool opening() const { return m_opening; }
+    Q_INVOKABLE void openSelected() {
+        if (m_opening || m_busy || !m_lister || selectedPath().isEmpty()) return;
+        // Only dispatch a selection from the currently displayed listing.
+        // Passing a URL as data avoids shell parsing of filenames.
+        const auto url = QUrl::fromLocalFile(selectedPath());
+        const auto item = m_lister->findByUrl(url);
+        if (item.isNull() || item.isDir()) {
+            m_error = tr("This file is no longer available. Refresh the folder.");
+            Q_EMIT changed(); return;
+        }
+        m_error.clear(); m_opening = true; Q_EMIT changed();
+        Q_EMIT openRequested(url);
+    }
+    void finishOpen(const QString &error) {
+        m_opening = false; m_error = error; Q_EMIT changed();
+    }
     bool canBack() const { return m_tabs[m_current].index > 0; }
     bool canForward() const { const auto &t=m_tabs[m_current]; return t.index+1<t.history.size(); }
     QString filter() const { return m_filter; }
@@ -99,7 +117,7 @@ public:
     bool hidden() const { return m_hidden; }
     double scroll() const { return m_tabs[m_current].scroll; }
     QString selectedPath() const { return m_tabs[m_current].selected; }
-    void setSelectedPath(const QString &v) { m_tabs[m_current].selected=v; Q_EMIT changed(); }
+    void setSelectedPath(const QString &v) { if (selectedPath()==v) return; m_tabs[m_current].selected=v; Q_EMIT selectionChanged(); }
     void setScroll(double v) { m_tabs[m_current].scroll=std::max(0.0,v); }
     void setFilter(const QString &v) { if(m_filter==v)return; m_filter=v; rebuild(); }
     void setSortMode(int v) { if(v<0||v>3)return; m_sort=v; rebuild(); }
@@ -133,6 +151,7 @@ public:
         m_current=std::min(m_current,int(m_tabs.size())-1); refresh(); save();
     }
     Q_INVOKABLE void refresh() {
+        Q_EMIT selectionChanged();
         if(m_lister){disconnect(m_lister,nullptr,this,nullptr); m_lister->stop(); m_lister->deleteLater();}
         m_lister=new KCoreDirLister(this); m_lister->setAutoErrorHandlingEnabled(false);
         m_lister->setShowHiddenFiles(m_hidden); m_entries.clear(); m_error.clear(); m_busy=true;
@@ -146,11 +165,13 @@ public:
 Q_SIGNALS:
     void changed();
     void placesChanged();
+    void selectionChanged();
+    void openRequested(const QUrl &url);
 private:
     struct Tab { QStringList history; int index; double scroll; QString selected; };
     QList<Tab> m_tabs;
     int m_current=0, m_sort=0;
-    bool m_hidden=false, m_busy=false;
+    bool m_hidden=false, m_busy=false, m_opening=false;
     QString m_filter, m_error;
     KCoreDirLister *m_lister=nullptr;
     QVariantList m_entries, m_places;

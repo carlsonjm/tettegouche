@@ -8,6 +8,7 @@
 #include "FileBrowser.h"
 #include "OmniResults.h"
 #include "RelatedInfo.h"
+#include <KIO/OpenUrlJob>
 
 #include <KRunner/ResultsModel>
 #include "RunnerIdentity.h"
@@ -754,6 +755,19 @@ int main(int argc, char **argv)
     configureSurface(&view, screen);
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
+    QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
+                     [&fileBrowser, &controller](const QUrl &url) {
+        auto *job = new KIO::OpenUrlJob(url);
+        job->setRunExecutables(false);
+        job->setShowOpenOrExecuteDialog(false);
+        QObject::connect(job, &KJob::result, &controller,
+                         [&fileBrowser, &controller](KJob *completed) {
+            const QString error = completed->error() ? completed->errorString() : QString();
+            fileBrowser.finishOpen(error);
+            if (!completed->error()) controller.finishLaunch();
+        });
+        job->start();
+    });
     view.setInitialProperties({
         {QStringLiteral("fileBrowser"), QVariant::fromValue(static_cast<QObject *>(&fileBrowser))},
         {QStringLiteral("launcherController"),

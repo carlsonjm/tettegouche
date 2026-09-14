@@ -60,6 +60,17 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
         QVERIFY2(browser.error().isEmpty(),qPrintable(browser.error()));
         QCOMPARE(browser.entries().size(),2);
+        QSignalSpy requests(&browser, &FileBrowser::openRequested);
+        browser.openSelected(); QCOMPARE(requests.count(),0);
+        browser.setSelectedPath(first+QStringLiteral("/a.txt"));
+        browser.openSelected(); QCOMPARE(requests.count(),1); QVERIFY(browser.opening());
+        QCOMPARE(requests[0][0].toUrl(),QUrl::fromLocalFile(first+QStringLiteral("/a.txt")));
+        browser.openSelected(); QCOMPARE(requests.count(),1);
+        browser.finishOpen(QStringLiteral("No associated application"));
+        QVERIFY(!browser.opening()); QCOMPARE(browser.error(),QStringLiteral("No associated application"));
+        browser.setSelectedPath(first+QStringLiteral("/missing.txt"));
+        browser.openSelected(); QCOMPARE(requests.count(),1); QVERIFY(!browser.error().isEmpty());
+        browser.setSelectedPath(QString());
         browser.setSortMode(1);
         QCOMPARE(browser.entries()[0].toMap().value(QStringLiteral("name")).toString(),QStringLiteral("z.txt"));
         browser.setFilter(QStringLiteral("a.")); QCOMPARE(browser.entries().size(),1);

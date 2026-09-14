@@ -86,6 +86,8 @@ Item {
             Text { Layout.fillWidth: true; visible: text.length>0; text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
             GridView {
                 id: files
+                Keys.onReturnPressed: pane.browser.openSelected()
+                Keys.onEnterPressed: pane.browser.openSelected()
                 Layout.fillWidth: true; Layout.fillHeight: true
                 clip: true; boundsBehavior: Flickable.StopAtBounds
                 cellWidth: width/Math.max(1,Math.floor(width/140)); cellHeight: 132
@@ -102,11 +104,23 @@ Item {
                         Text { text: modelData.name; color: "#eeeeee"; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle }
                         Text { text: modelData.detail; color: "#aaaaaa"; width: parent.width; horizontalAlignment: Text.AlignHCenter; font.pixelSize: 11 }
                     }
-                    TapHandler { onTapped: { if(modelData.directory)pane.browser.navigate(modelData.path); else pane.browser.selectedPath=modelData.path } }
+                    TapHandler {
+                        onTapped: { if(modelData.directory)pane.browser.navigate(modelData.path); else { pane.browser.selectedPath=modelData.path; files.forceActiveFocus() } }
+                        onDoubleTapped: { if(!modelData.directory) { pane.browser.selectedPath=modelData.path; pane.browser.openSelected() } }
+                    }
                 }
                 Text { anchors.centerIn: parent; visible: files.count===0; text: !pane.browser ? "" : pane.browser.busy ? "Loading…" : pane.browser.error ? "" : "No files here"; color: "#aaaaaa" }
             }
-            Text { text: "Browsing preview · file actions follow in the next slice"; color: "#888888"; font.pixelSize: 11 }
+            RowLayout {
+                Layout.fillWidth: true
+                Text { Layout.fillWidth: true; text: pane.selectedPath.length ? pane.selectedPath.split("/").pop() : "Select a file to open"; elide: Text.ElideMiddle; color: "#aaaaaa"; font.pixelSize: 12 }
+                Action {
+                    objectName: "open-file"
+                    text: pane.browser && pane.browser.opening ? "Opening…" : "Open"
+                    enabled: pane.selectedPath.length>0 && !pane.browser.busy && !pane.browser.opening
+                    onClicked: pane.browser.openSelected()
+                }
+            }
         }
     }
     Connections {

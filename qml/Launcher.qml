@@ -186,7 +186,10 @@ Item {
     }
 
     function submit() {
-        if (root.drawerOpen && root.filesMode) return
+        if (root.drawerOpen && root.filesMode) {
+            if (root.fileBrowser) root.fileBrowser.openSelected()
+            return
+        }
         if (!root.drawerOpen && root.selectedChildKey !== "") {
             root.openChildSettings()
         } else if (!root.drawerOpen && root.searchResults.querying) {

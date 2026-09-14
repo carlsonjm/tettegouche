@@ -266,6 +266,8 @@ TestCase {
         property string error: ""
         property string filter: ""
         property bool busy: false
+        property bool opening: false
+        property int openCalls: 0
         property bool canBack: false
         property bool canForward: false
         property bool hidden: false
@@ -273,6 +275,7 @@ TestCase {
         property real scroll: 0
         signal changed()
         function open() {}
+        function openSelected() { openCalls++ }
     }
     function test_filesDrawer() {
         launcher.fileBrowser=filesMock
@@ -285,7 +288,15 @@ TestCase {
         const pane=findChild(launcher,"files-pane")
         verify(pane.visible)
         verify(!findChild(launcher,"application-grid").visible)
-        launcher.submit() // Files Enter must not launch a hidden catalogue item.
+        const opensBefore=filesMock.openCalls
+        launcher.submit() // Files Enter routes only to the Files backend.
+        compare(filesMock.openCalls,opensBefore+1)
+        filesMock.selectedPath="/home/test/Notes.txt"
+        const openFile=findChild(launcher,"open-file")
+        verify(openFile.enabled)
+        mouseClick(openFile,openFile.width/2,openFile.height/2)
+        compare(filesMock.openCalls,opensBefore+2)
+        filesMock.selectedPath=""
         wait(300)
         grabImage(launcher).save("/tmp/tette-files-preview.png")
         launcher.setDrawerOpen(false)
@@ -303,9 +314,13 @@ TestCase {
         const entry=findChild(launcher,"files-entry")
         const touch=touchEvent(launcher)
         touch.press(0,entry,entry.width/2,28).commit()
+        wait(20)
         touch.move(0,entry,entry.width/2,48).commit()
+        wait(20)
         touch.move(0,entry,entry.width/2,88).commit()
+        wait(20)
         touch.move(0,entry,entry.width/2,128).commit()
+        wait(20)
         touch.release(0,entry,entry.width/2,128).commit()
         tryCompare(launcher,"drawerOpen",true)
         verify(launcher.filesMode)
