@@ -139,7 +139,7 @@ Item {
             Row {
                 anchors.centerIn: parent
                 spacing: 4
-                Kirigami.Icon { width: 16; height: 16; source: "folder-download-symbolic" }
+                SuiteIcon { width: 16; height: 16; glyph: "download" }
                 PlasmaComponents.Label {
                     anchors.verticalCenter: parent.verticalCenter
                     text: qsTr("%1 transfers").arg(surface.transfers.length)
@@ -173,7 +173,13 @@ Item {
                     spacing: 3
                     Kirigami.Icon {
                         Layout.preferredWidth: 16; Layout.preferredHeight: 16
-                        source: transferItem.modelData.icon || "folder-download-symbolic"
+                        visible: Boolean(transferItem.modelData.icon)
+                        source: transferItem.modelData.icon || ""
+                    }
+                    SuiteIcon {
+                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        visible: !transferItem.modelData.icon
+                        glyph: "download"
                     }
                     PlasmaComponents.Label {
                         objectName: "ambient-transfer-progress"
@@ -196,7 +202,12 @@ Item {
                     PlasmaComponents.ToolButton {
                         objectName: "ambient-transfer-cancel"
                         visible: surface.capability(transferItem.modelData, "cancel")
-                        icon.name: "dialog-cancel-symbolic"
+                        icon.source: Qt.resolvedUrl("../assets/icons/lucide/x.svg")
+                        icon.color: "#F8F8FF"
+                        contentItem: SuiteIcon {
+                            glyph: "x"
+                            implicitWidth: 20; implicitHeight: 20
+                        }
                         text: qsTr("Cancel")
                         display: PlasmaComponents.AbstractButton.IconOnly
                         Accessible.name: qsTr("Cancel %1").arg(transferItem.modelData.title || qsTr("transfer"))
@@ -290,7 +301,12 @@ Item {
                             objectName: "ambient-media-previous"
                             visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "previous")
-                            icon.name: "media-skip-backward-symbolic"
+                            icon.source: Qt.resolvedUrl("../assets/icons/lucide/skip-back.svg")
+                            icon.color: "#F8F8FF"
+                            contentItem: SuiteIcon {
+                                glyph: "skip-back"
+                                implicitWidth: 20; implicitHeight: 20
+                            }
                             display: PlasmaComponents.AbstractButton.IconOnly
                             Accessible.name: qsTr("Previous")
                             onClicked: surface.invoke(mediaItem.modelData, "previous")
@@ -299,8 +315,14 @@ Item {
                             id: mediaToggle
                             objectName: "ambient-media-toggle"
                             visible: mediaItem.canToggle
-                            icon.name: mediaItem.modelData.state === "playing"
-                                ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
+                            icon.source: mediaItem.modelData.state === "playing"
+                                ? Qt.resolvedUrl("../assets/icons/lucide/pause.svg")
+                                : Qt.resolvedUrl("../assets/icons/lucide/play.svg")
+                            icon.color: "#F8F8FF"
+                            contentItem: SuiteIcon {
+                                glyph: mediaItem.modelData.state === "playing" ? "pause" : "play"
+                                implicitWidth: 20; implicitHeight: 20
+                            }
                             text: mediaItem.modelData.state === "playing" ? qsTr("Pause") : qsTr("Play")
                             display: PlasmaComponents.AbstractButton.IconOnly
                             Accessible.name: text
@@ -312,7 +334,12 @@ Item {
                             objectName: "ambient-media-next"
                             visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "next")
-                            icon.name: "media-skip-forward-symbolic"
+                            icon.source: Qt.resolvedUrl("../assets/icons/lucide/skip-forward.svg")
+                            icon.color: "#F8F8FF"
+                            contentItem: SuiteIcon {
+                                glyph: "skip-forward"
+                                implicitWidth: 20; implicitHeight: 20
+                            }
                             display: PlasmaComponents.AbstractButton.IconOnly
                             Accessible.name: qsTr("Next")
                             onClicked: surface.invoke(mediaItem.modelData, "next")

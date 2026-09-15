@@ -420,6 +420,16 @@ TestCase {
         const cancel=findChild(launcher,"cancel-folder")
         mouseClick(cancel,cancel.width/2,cancel.height/2)
         verify(!findChild(launcher,"folder-name").visible)
+        filesMock.operationStatus="Done"
+        wait(20)
+        verify(pane.showOperationSuccess)
+        compare(pane.operationStatusText,"Done")
+        wait(820)
+        verify(!pane.showOperationSuccess)
+        compare(pane.operationStatusText,"")
+        filesMock.operationStatus="Copying"
+        compare(pane.operationStatusText,"Copying")
+        filesMock.operationStatus=""
         wait(300)
         grabImage(launcher).save("/tmp/tette-files-preview.png")
         launcher.setDrawerOpen(false)

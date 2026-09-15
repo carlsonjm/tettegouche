@@ -12,6 +12,26 @@ Item {
     property var dragPaths: []
     property string dropFolder: ""
     property point dragPosition
+    property bool showOperationSuccess: false
+    readonly property string rawOperationStatus: browser ? browser.operationStatus : ""
+    readonly property string operationStatusText: {
+        if (showOperationSuccess) return qsTr("Done");
+        return rawOperationStatus === qsTr("Done") ? "" : rawOperationStatus;
+    }
+    Timer {
+        id: successHold
+        interval: 800
+        onTriggered: pane.showOperationSuccess = false
+    }
+    onRawOperationStatusChanged: {
+        if (rawOperationStatus === qsTr("Done")) {
+            showOperationSuccess = true;
+            successHold.restart();
+        } else {
+            showOperationSuccess = false;
+            successHold.stop();
+        }
+    }
     function beginFileDrag(path, position) {
         if(browser.busy || browser.working || browser.opening)return
         if(selectedPaths.indexOf(path)<0)browser.selectedPath=path
@@ -65,7 +85,7 @@ Item {
         C.MenuItem { text: "Copy"; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
         C.MenuItem { text: "Cut"; enabled: pane.selectedPaths.length>0 && !pane.browser.working; onTriggered: pane.browser.cutSelected() }
         C.MenuItem { text: "Rename"; enabled: pane.selectedPaths.length===1 && !pane.browser.working; onTriggered: pane.renameForm() }
-        C.MenuItem { text: "Move to Trash"; enabled: pane.selectedPaths.length>0 && !pane.browser.working; onTriggered: trashConfirm.open() }
+        C.MenuItem { text: "Move to trash"; enabled: pane.selectedPaths.length>0 && !pane.browser.working; onTriggered: trashConfirm.open() }
         C.MenuItem { text: "Restore last trashed item"; enabled: pane.browser.canRestoreTrash && !pane.browser.working; onTriggered: pane.browser.restoreTrash() }
         C.MenuItem {
             objectName: "context-paste"
@@ -80,26 +100,56 @@ Item {
     C.Dialog {
         id: trashConfirm
         objectName: "trash-confirm"
-        title: "Move to Trash?"
+        title: "Move to trash?"
         modal: true; anchors.centerIn: parent
         standardButtons: C.Dialog.Ok | C.Dialog.Cancel
-        Text { text: pane.selectedPaths.length+" item(s). You can restore them afterward."; color: "#eeeeee" }
+        Text { text: pane.selectedPaths.length+" item(s). You can restore them afterward."; color: "#F8F8FF" }
         onAccepted: pane.browser.trashSelected()
     }
     component Action: C.Button {
+        property string glyph: ""
         implicitHeight: 42
         hoverEnabled: true
-        background: Rectangle { radius: 12; color: parent.down ? "#404040" : parent.hovered || parent.visualFocus ? "#303030" : "transparent"; Behavior on color { ColorAnimation { duration: 100 } } }
-        contentItem: Text { text: parent.text; color: parent.enabled ? "#eeeeee" : "#777777"; horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }
+        background: Rectangle {
+            radius: 12
+            color: parent.down ? Qt.rgba(1, 1, 1, 0.16)
+                : parent.hovered || parent.visualFocus ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+            Behavior on color {
+                enabled: Kirigami.Units.shortDuration > 0
+                ColorAnimation { duration: Kirigami.Units.shortDuration }
+            }
+        }
+        contentItem: Item {
+            SuiteIcon {
+                visible: parent.parent.glyph.length > 0
+                glyph: parent.parent.glyph || "x"
+                width: 20; height: 20
+                anchors.centerIn: parent
+                opacity: parent.parent.enabled ? 1 : 0.42
+            }
+            Text {
+                visible: parent.parent.glyph.length === 0
+                anchors.fill: parent
+                text: parent.parent.text
+                color: parent.parent.enabled ? "#F8F8FF" : "#6BF8F8FF"
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+            }
+        }
     }
     component PillAction: Action {
         leftPadding: 16; rightPadding: 16
         background: Rectangle {
             y: 5; height: parent.height-10
             radius: height/2
-            color: parent.down ? "#404040" : parent.hovered || parent.visualFocus ? "#303030" : "#222222"
-            border.color: "#505050"
-            Behavior on color { ColorAnimation { duration: 100 } }
+            color: parent.down ? Qt.rgba(1, 1, 1, 0.16)
+                : parent.hovered || parent.visualFocus ? Qt.rgba(1, 1, 1, 0.12) : "#242424"
+            border.color: parent.activeFocus ? "#F8F8FF" : "#5A5A5A"
+            Behavior on color {
+                enabled: Kirigami.Units.shortDuration > 0
+                ColorAnimation { duration: Kirigami.Units.shortDuration }
+            }
         }
     }
     RowLayout {
@@ -113,15 +163,15 @@ Item {
             delegate: Item {
                 required property var modelData
                 width: ListView.view.width; height: 54
-                Rectangle { anchors.fill: parent; anchors.margins: 3; radius: 16; color: pane.browser.path === modelData.path ? "#303030" : "transparent" }
+                Rectangle { anchors.fill: parent; anchors.margins: 3; radius: 16; color: pane.browser.path === modelData.path ? Qt.rgba(1, 1, 1, 0.24) : "transparent" }
                 Row { anchors.verticalCenter: parent.verticalCenter; x: 12; spacing: 12
                     Kirigami.Icon { source: modelData.icon; width: 22; height: 22 }
-                    Text { text: modelData.label; color: "#eeeeee"; width: 116; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
+                    Text { text: modelData.label; color: "#F8F8FF"; width: 116; elide: Text.ElideRight; anchors.verticalCenter: parent.verticalCenter }
                 }
                 TapHandler { onTapped: pane.browser.navigate(modelData.path) }
             }
         }
-        Rectangle { Layout.fillHeight: true; width: 1; color: "#303030" }
+        Rectangle { Layout.fillHeight: true; width: 1; color: "#333333" }
         ColumnLayout {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
             RowLayout {
@@ -136,18 +186,18 @@ Item {
                         width: 180; height: 42; radius: 12
                         color: "transparent"
                         Rectangle { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: parent.width-24; height: 2; radius: 1; color: pane.browser.currentTab===index ? "#888888" : "transparent" }
-                        Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: "#eeeeee"; elide: Text.ElideRight }
+                        Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: "#F8F8FF"; elide: Text.ElideRight }
                         TapHandler { onTapped: pane.browser.selectTab(index) }
-                        Action { anchors.right: parent.right; width: 42; text: "×"; enabled: pane.browser.tabs.length>1; onClicked: pane.browser.closeTab(index) }
+                        Action { anchors.right: parent.right; width: 42; text: qsTr("Close tab"); glyph: "x"; enabled: pane.browser.tabs.length>1; onClicked: pane.browser.closeTab(index) }
                     }
                 }
-                Action { text: "+"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
+                Action { text: qsTr("New tab"); glyph: "plus"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
             }
             RowLayout {
                 Layout.fillWidth: true
-                Action { text: "←"; Accessible.name: "Back"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
-                Action { text: "→"; Accessible.name: "Forward"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
-                Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: "#303030" }
+                Action { text: qsTr("Back"); glyph: "arrow-left"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
+                Action { text: qsTr("Forward"); glyph: "arrow-right"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
+                Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: "#333333" }
                 ListView {
                     Layout.fillWidth: true; Layout.preferredHeight: 42
                     orientation: ListView.Horizontal; spacing: 4; clip: true
@@ -164,13 +214,13 @@ Item {
                     }
                 }
                 Action { text: "Path"; onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.path; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
-                Action { text: "↻"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
+                Action { text: qsTr("Refresh"); glyph: "refresh-cw"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
             }
             Rectangle {
                 objectName: "file-navigation-divider"
                 Layout.fillWidth: true
                 implicitHeight: 1
-                color: "#303030"
+                color: "#333333"
             }
             C.TextField {
                 id: pathEditor
@@ -183,14 +233,33 @@ Item {
                 Layout.fillWidth: true
                 PillAction { text: "Done selecting"; visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
                 PillAction { text: "Copy"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
-                Text {
+                Item {
                     objectName: "file-operation-status"
                     Layout.fillWidth: true; Layout.minimumWidth: 0
-                    text: pane.browser ? pane.browser.operationStatus : ""
-                    color: "#aaaaaa"; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideRight
+                    implicitHeight: 20
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        SuiteIcon {
+                            visible: pane.showOperationSuccess
+                            glyph: "check"
+                            width: 18; height: 18
+                            opacity: visible ? 1 : 0
+                            Behavior on opacity {
+                                enabled: Kirigami.Units.shortDuration > 0
+                                NumberAnimation { duration: Kirigami.Units.shortDuration; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        Text {
+                            text: pane.operationStatusText
+                            color: "#A8FFFFFF"
+                            width: Math.min(implicitWidth, 240)
+                            elide: Text.ElideRight
+                        }
+                    }
                 }
                 PillAction { objectName: "new-folder"; text: "New folder"; enabled: pane.browser && !pane.browser.working && !pane.browser.busy; onClicked: pane.newFolderForm() }
-                PillAction { text: "⋯"; Accessible.name: "Folder actions"; onClicked: pane.showActions("",false,mapToItem(pane,0,height)) }
+                PillAction { text: qsTr("Folder actions"); glyph: "ellipsis"; Accessible.name: text; onClicked: pane.showActions("",false,mapToItem(pane,0,height)) }
             }
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
@@ -347,16 +416,21 @@ Item {
                     objectName: "file-entry-"+modelData.name
                     readonly property bool selected: pane.selectedPaths ? pane.selectedPaths.indexOf(modelData.path)>=0 : false
                     width: files.cellWidth; height: files.cellHeight
-                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: parent.selected ? "#303030" : "transparent"; border.color: parent.selected ? "#777777" : "transparent" }
-                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: "#30444444"; border.color: "#eeeeee"; border.width: 2; visible: pane.draggingFiles && pane.dropFolder===modelData.path }
-                    Rectangle { anchors.fill: parent; anchors.margins: 2; radius: 15; color: "transparent"; border.color: "#aaaaaa"; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
-                    Text { anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 10; text: parent.selected ? "✓" : "○"; color: "#eeeeee"; visible: pane.browser && pane.browser.selecting }
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: parent.selected ? Qt.rgba(1, 1, 1, 0.24) : "transparent"; border.color: parent.selected ? "#5A5A5A" : "transparent" }
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: 14; color: "#30444444"; border.color: "#F8F8FF"; border.width: 2; visible: pane.draggingFiles && pane.dropFolder===modelData.path }
+                    Rectangle { anchors.fill: parent; anchors.margins: 2; radius: 15; color: "transparent"; border.color: "#F8F8FF"; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
+                    SuiteIcon {
+                        anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 10
+                        glyph: parent.selected ? "check" : "circle"
+                        width: 18; height: 18
+                        visible: pane.browser && pane.browser.selecting
+                    }
                     Column {
                         anchors.top: parent.top; anchors.topMargin: 12
                         width: parent.width-16; anchors.horizontalCenter: parent.horizontalCenter; spacing: 8
                         Kirigami.Icon { source: modelData.icon; width: 52; height: 52; anchors.horizontalCenter: parent.horizontalCenter }
-                        Text { text: modelData.name; color: "#eeeeee"; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle }
-                        Text { text: modelData.detail; color: "#aaaaaa"; width: parent.width; horizontalAlignment: Text.AlignHCenter; font.pixelSize: 11 }
+                        Text { text: modelData.name; color: "#F8F8FF"; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle }
+                        Text { text: modelData.detail; color: "#A8FFFFFF"; width: parent.width; horizontalAlignment: Text.AlignHCenter; font.pixelSize: 11 }
                     }
                     TapHandler {
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -437,11 +511,11 @@ Item {
                         onTapped: { pane.browser.selectRange(modelData.path,true); files.forceActiveFocus() }
                     }
                 }
-                Text { anchors.centerIn: parent; visible: files.count===0; text: !pane.browser ? "" : pane.browser.busy ? "Loading…" : pane.browser.error ? "" : "No files here"; color: "#aaaaaa" }
+                Text { anchors.centerIn: parent; visible: files.count===0; text: !pane.browser ? "" : pane.browser.busy ? "Loading…" : pane.browser.error ? "" : "No files here"; color: "#A8FFFFFF" }
             }
             RowLayout {
                 Layout.fillWidth: true
-                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? pane.selectedPaths.length+" selected" : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : "Select a file to open"; elide: Text.ElideMiddle; color: "#aaaaaa"; font.pixelSize: 12 }
+                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? pane.selectedPaths.length+" selected" : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : "Select a file to open"; elide: Text.ElideMiddle; color: "#A8FFFFFF"; font.pixelSize: 12 }
                 Action {
                     objectName: "open-file"
                     text: pane.browser && pane.browser.opening ? "Opening…" : "Open"
@@ -460,8 +534,8 @@ Item {
         x: Math.max(0,Math.min(pane.width-width,pane.dragPosition.x+18))
         y: Math.max(0,Math.min(pane.height-height,pane.dragPosition.y-58))
         width: dragLabel.implicitWidth+28; height: 42; radius: 14
-        color: "#252525"; border.color: "#aaaaaa"
-        Text { id: dragLabel; anchors.centerIn: parent; color: "#eeeeee"; text: pane.dropFolder.length ? "Copy "+pane.dragPaths.length+" to “"+pane.dropFolder.split("/").pop()+"”" : "Copy "+pane.dragPaths.length+" · choose a folder" }
+        color: "#242424"; border.color: "#5A5A5A"
+        Text { id: dragLabel; anchors.centerIn: parent; color: "#F8F8FF"; text: pane.dropFolder.length ? "Copy "+pane.dragPaths.length+" to “"+pane.dropFolder.split("/").pop()+"”" : "Copy "+pane.dragPaths.length+" · choose a folder" }
     }
     Shortcut { sequence: "Ctrl+T"; enabled: pane.visible; onActivated: pane.browser.addTab() }
     Shortcut { sequence: "Ctrl+W"; enabled: pane.visible; onActivated: pane.browser.closeTab(pane.browser.currentTab) }

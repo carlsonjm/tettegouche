@@ -98,6 +98,9 @@ TestCase {
         const previous = findChild(wide, "ambient-media-previous");
         const toggle = findChild(wide, "ambient-media-toggle");
         const next = findChild(wide, "ambient-media-next");
+        verify(String(previous.icon.source).endsWith("/assets/icons/lucide/skip-back.svg"));
+        verify(String(toggle.icon.source).endsWith("/assets/icons/lucide/pause.svg"));
+        verify(String(next.icon.source).endsWith("/assets/icons/lucide/skip-forward.svg"));
         const cluster = findChild(wide, "ambient-media-transport-cluster");
         const title = findChild(wide, "ambient-media-title");
         const artist = findChild(wide, "ambient-media-artist");
