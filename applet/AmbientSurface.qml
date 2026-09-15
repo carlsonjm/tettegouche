@@ -12,6 +12,10 @@ Item {
     property var activities: []
     property var monotonicClock: () => 0
     property double clockNowUs: 0
+    // The panel's measured span can update before Plasma commits this item's
+    // geometry. Drive disclosure from that allocation, not an old implicit width.
+    property real allocatedWidth: width
+    readonly property real availableContentWidth: Math.max(width, allocatedWidth)
     readonly property var transfers: activities.filter(activity => activity.kind === "transfer")
     readonly property var media: activities.filter(activity => activity.kind === "media")
     readonly property int individualCoreWidth: transfers.reduce((sum, activity) =>
@@ -24,11 +28,22 @@ Item {
     readonly property int minimumUsefulWidth: activities.length === 0 ? 0
         : Math.min(individualCoreWidth,
             transfers.length > 1 ? groupedCoreWidth : individualCoreWidth)
-    readonly property string density: width >= 480 ? "wide"
-        : width >= 300 ? "medium" : width >= 170 ? "narrow" : "core"
-    readonly property bool showTransferTitle: density !== "core"
-    readonly property bool showMediaTitle: density === "medium" || density === "wide"
-    readonly property bool showSecondary: density === "wide"
+    readonly property int mediaTransportExtraWidth: media.reduce((sum, activity) =>
+        sum + (capability(activity, "previous") ? 28 : 0)
+            + (capability(activity, "next") ? 28 : 0), 0)
+    readonly property int transportThreshold: minimumUsefulWidth + mediaTransportExtraWidth
+    readonly property int titleThreshold: Math.max(300, transportThreshold + 80)
+    readonly property int artistThreshold: Math.max(480, titleThreshold + 90)
+    readonly property int timeThreshold: Math.max(560, artistThreshold + 70)
+    readonly property string density: availableContentWidth >= timeThreshold ? "wide"
+        : availableContentWidth >= titleThreshold ? "medium"
+        : availableContentWidth >= transportThreshold ? "narrow" : "core"
+    readonly property bool showMediaTransport: availableContentWidth >= transportThreshold
+    readonly property bool showTransferTitle: availableContentWidth >= Math.max(170, transportThreshold)
+    readonly property bool showMediaTitle: availableContentWidth >= titleThreshold
+    readonly property bool showMediaArtist: availableContentWidth >= artistThreshold
+    readonly property bool showMediaTime: availableContentWidth >= timeThreshold
+    readonly property bool showSecondary: showMediaArtist
     readonly property bool hasPlayingClock: media.some(activity =>
         activity.state === "playing" && activity.positionUs !== undefined)
     signal invokeRequested(string activityId, int generation, string action)
@@ -207,13 +222,8 @@ Item {
                 readonly property string toggleAction: modelData.state === "playing" ? "pause" : "play"
                 readonly property bool canToggle: surface.capability(modelData, toggleAction)
                 objectName: "ambient-media-" + modelData.id
-                Layout.minimumWidth: 40
-                Layout.preferredWidth: 40
-                    + (surface.showMediaTitle ? Math.min(120, mediaTitle.implicitWidth + 6) : 0)
-                    + (surface.showSecondary && modelData.artist ? Math.min(90, mediaArtist.implicitWidth + 6) : 0)
-                    + (surface.showSecondary && surface.mediaTime(modelData) ? 68 : 0)
-                    + (surface.showSecondary && surface.capability(modelData, "previous") ? 28 : 0)
-                    + (surface.showSecondary && surface.capability(modelData, "next") ? 28 : 0)
+                Layout.minimumWidth: Math.max(40, transportCluster.implicitWidth)
+                Layout.preferredWidth: mediaRow.implicitWidth
                 Layout.maximumWidth: Layout.preferredWidth
                 Layout.fillHeight: true
                 activeFocusOnTab: true
@@ -224,24 +234,52 @@ Item {
                 Keys.onEnterPressed: surface.openDetails(mediaItem.modelData, mediaItem)
                 Keys.onSpacePressed: surface.openDetails(mediaItem.modelData, mediaItem)
 
-                RowLayout {
+                Row {
+                    id: mediaRow
                     anchors.fill: parent
                     spacing: 3
                     Kirigami.Icon {
                         visible: !mediaItem.canToggle
-                        Layout.preferredWidth: 16; Layout.preferredHeight: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16
+                        height: 16
                         source: mediaItem.modelData.icon || "audio-x-generic-symbolic"
                     }
-                    PlasmaComponents.ToolButton {
-                        objectName: "ambient-media-toggle"
-                        visible: mediaItem.canToggle
-                        icon.name: mediaItem.modelData.state === "playing"
-                            ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
-                        text: mediaItem.modelData.state === "playing" ? qsTr("Pause") : qsTr("Play")
-                        display: PlasmaComponents.AbstractButton.IconOnly
-                        Accessible.name: text
-                        onClicked: surface.invoke(mediaItem.modelData,
-                            mediaItem.toggleAction)
+                    Row {
+                        id: transportCluster
+                        objectName: "ambient-media-transport-cluster"
+                        spacing: 3
+                        anchors.verticalCenter: parent.verticalCenter
+
+                        PlasmaComponents.ToolButton {
+                            objectName: "ambient-media-previous"
+                            visible: surface.showMediaTransport
+                                && surface.capability(mediaItem.modelData, "previous")
+                            icon.name: "media-skip-backward-symbolic"
+                            display: PlasmaComponents.AbstractButton.IconOnly
+                            Accessible.name: qsTr("Previous")
+                            onClicked: surface.invoke(mediaItem.modelData, "previous")
+                        }
+                        PlasmaComponents.ToolButton {
+                            objectName: "ambient-media-toggle"
+                            visible: mediaItem.canToggle
+                            icon.name: mediaItem.modelData.state === "playing"
+                                ? "media-playback-pause-symbolic" : "media-playback-start-symbolic"
+                            text: mediaItem.modelData.state === "playing" ? qsTr("Pause") : qsTr("Play")
+                            display: PlasmaComponents.AbstractButton.IconOnly
+                            Accessible.name: text
+                            onClicked: surface.invoke(mediaItem.modelData,
+                                mediaItem.toggleAction)
+                        }
+                        PlasmaComponents.ToolButton {
+                            objectName: "ambient-media-next"
+                            visible: surface.showMediaTransport
+                                && surface.capability(mediaItem.modelData, "next")
+                            icon.name: "media-skip-forward-symbolic"
+                            display: PlasmaComponents.AbstractButton.IconOnly
+                            Accessible.name: qsTr("Next")
+                            onClicked: surface.invoke(mediaItem.modelData, "next")
+                        }
                     }
                     PlasmaComponents.Label {
                         id: mediaTitle
@@ -249,36 +287,25 @@ Item {
                         visible: surface.showMediaTitle
                         text: mediaItem.modelData.title || mediaItem.modelData.source || qsTr("Media")
                         elide: Text.ElideRight
-                        Layout.maximumWidth: 120
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(120, implicitWidth)
                     }
                     PlasmaComponents.Label {
                         id: mediaArtist
                         objectName: "ambient-media-artist"
-                        visible: surface.showSecondary && Boolean(mediaItem.modelData.artist)
+                        visible: surface.showMediaArtist && Boolean(mediaItem.modelData.artist)
                         text: mediaItem.modelData.artist || ""
                         opacity: 0.72
                         elide: Text.ElideRight
-                        Layout.maximumWidth: 90
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Math.min(90, implicitWidth)
                     }
                     PlasmaComponents.Label {
                         objectName: "ambient-media-time"
-                        visible: surface.showSecondary && text.length > 0
+                        visible: surface.showMediaTime && text.length > 0
                         text: surface.mediaTime(mediaItem.modelData)
                         opacity: 0.72
-                    }
-                    PlasmaComponents.ToolButton {
-                        visible: surface.showSecondary && surface.capability(mediaItem.modelData, "previous")
-                        icon.name: "media-skip-backward-symbolic"
-                        display: PlasmaComponents.AbstractButton.IconOnly
-                        Accessible.name: qsTr("Previous")
-                        onClicked: surface.invoke(mediaItem.modelData, "previous")
-                    }
-                    PlasmaComponents.ToolButton {
-                        visible: surface.showSecondary && surface.capability(mediaItem.modelData, "next")
-                        icon.name: "media-skip-forward-symbolic"
-                        display: PlasmaComponents.AbstractButton.IconOnly
-                        Accessible.name: qsTr("Next")
-                        onClicked: surface.invoke(mediaItem.modelData, "next")
+                        anchors.verticalCenter: parent.verticalCenter
                     }
                 }
                 TapHandler {

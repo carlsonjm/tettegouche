@@ -69,24 +69,71 @@ TestCase {
         const core = createSurface(130, [transfer, media]);
         compare(core.showTransferTitle, false);
         compare(core.showMediaTitle, false);
+        compare(core.showMediaTransport, false);
         compare(core.showSecondary, false);
 
         const narrow = createSurface(220, [transfer, media]);
         compare(narrow.density, "narrow");
         compare(narrow.showTransferTitle, true);
         compare(narrow.showMediaTitle, false);
+        compare(narrow.showMediaTransport, true);
+        verify(findChild(narrow, "ambient-media-previous").visible);
+        verify(findChild(narrow, "ambient-media-next").visible);
 
         const medium = createSurface(340, [transfer, media]);
         compare(medium.showMediaTitle, true);
-        compare(medium.showSecondary, false);
+        compare(medium.showMediaArtist, false);
+        compare(medium.showMediaTime, false);
 
-        const wide = createSurface(560, [transfer, media]);
+        // Reproduce the live panel mismatch: Plasma has assigned the wide strip
+        // while the last explicit boundary measurement still says medium.
+        const wide = createSurface(900, [transfer, media]);
+        wide.allocatedWidth = 340;
+        wait(0);
+        compare(wide.density, "wide");
         compare(wide.showSecondary, true);
         verify(findChild(wide, "ambient-transfer-transfer-1").visible);
         verify(findChild(wide, "ambient-media-media-1").visible);
+        verify(findChild(wide, "ambient-media-previous").visible);
+        verify(findChild(wide, "ambient-media-toggle").visible);
+        verify(findChild(wide, "ambient-media-next").visible);
         verify(findChild(wide, "ambient-media-title").visible);
         verify(findChild(wide, "ambient-media-artist").visible);
         verify(findChild(wide, "ambient-media-time").visible);
+        const mediaItem = findChild(wide, "ambient-media-media-1");
+        const previous = findChild(wide, "ambient-media-previous");
+        const toggle = findChild(wide, "ambient-media-toggle");
+        const next = findChild(wide, "ambient-media-next");
+        const cluster = findChild(wide, "ambient-media-transport-cluster");
+        const title = findChild(wide, "ambient-media-title");
+        const artist = findChild(wide, "ambient-media-artist");
+        const time = findChild(wide, "ambient-media-time");
+        verify(mediaItem.width > 0);
+        verify(title.width > 0);
+        verify(artist.width > 0);
+        verify(time.width > 0);
+        const previousRight = previous.mapToItem(wide, previous.width, 0).x;
+        const toggleLeft = toggle.mapToItem(wide, 0, 0).x;
+        const toggleRight = toggle.mapToItem(wide, toggle.width, 0).x;
+        const nextLeft = next.mapToItem(wide, 0, 0).x;
+        const nextRight = next.mapToItem(wide, next.width, 0).x;
+        const titleLeft = title.mapToItem(wide, 0, 0).x;
+        const titleRight = title.mapToItem(wide, title.width, 0).x;
+        const artistLeft = artist.mapToItem(wide, 0, 0).x;
+        const artistRight = artist.mapToItem(wide, artist.width, 0).x;
+        const timeLeft = time.mapToItem(wide, 0, 0).x;
+        const timeRight = time.mapToItem(wide, time.width, 0).x;
+        verify(toggleLeft >= previousRight && toggleLeft - previousRight <= 4);
+        verify(nextLeft >= toggleRight && nextLeft - toggleRight <= 4);
+        verify(titleLeft >= nextRight && titleLeft - nextRight <= 4,
+            "nextRight=" + nextRight + " titleLeft=" + titleLeft
+                + " mediaWidth=" + mediaItem.width
+                + " clusterLeft=" + cluster.mapToItem(wide, 0, 0).x
+                + " clusterWidth=" + cluster.width
+                + " nextLeft=" + nextLeft + " nextWidth=" + next.width);
+        verify(artistLeft >= titleRight && artistLeft - titleRight <= 4);
+        verify(timeLeft >= artistRight && timeLeft - artistRight <= 4);
+        verify(timeRight < wide.width - 100);
     }
 
     function test_similar_transfers_group_only_at_core_overflow() {

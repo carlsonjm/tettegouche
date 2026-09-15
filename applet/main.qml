@@ -88,6 +88,7 @@ PlasmoidItem {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         activities: Plasmoid.ambientActivities
+        allocatedWidth: Math.max(0, root.responsiveMeasuredWidth - root.endpointWidth)
         monotonicClock: () => Plasmoid.monotonicNowUs()
         onInvokeRequested: (activityId, generation, action) =>
             Plasmoid.invokeActivity(activityId, generation, action)
