@@ -82,6 +82,8 @@ plasma_add_applet(studio.warbler.tettegouche
         src/TettegoucheApplet.h
     QML_SOURCES
         applet/main.qml
+        applet/AmbientSurface.qml
+        applet/ActivityDetails.qml
         applet/ConfigGeneral.qml
         applet/config.qml
     RESOURCES
@@ -93,6 +95,7 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     Qt6::DBus
     KF6::CoreAddons
     Plasma::Plasma
+    Plasma::PlasmaQuick
 )
 
 if(BUILD_TESTING)
@@ -135,6 +138,12 @@ if(BUILD_TESTING)
     find_program(QMLTESTRUNNER_EXECUTABLE NAMES qmltestrunner
         HINTS /usr/lib/qt6/bin)
     if(QMLTESTRUNNER_EXECUTABLE)
+        add_test(NAME ambient-surface-test
+            COMMAND ${QMLTESTRUNNER_EXECUTABLE}
+                -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Ambient.qml)
+        set_tests_properties(ambient-surface-test PROPERTIES
+            ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+            TIMEOUT 30)
         add_test(NAME launcher-controls-test
             COMMAND ${QMLTESTRUNNER_EXECUTABLE}
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)

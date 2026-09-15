@@ -16,6 +16,9 @@ PlasmoidItem {
     activationTogglesExpanded: false
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool animateIndicator: Plasmoid.configuration.animateIndicator !== false
+    readonly property int endpointWidth: 42
+    readonly property int ambientCoreWidth: ambient.minimumUsefulWidth
+    property int responsiveMeasuredWidth: endpointWidth
 
     Connections {
         target: Plasmoid
@@ -35,11 +38,11 @@ PlasmoidItem {
     // This launcher has one panel surface and opens a separate application.
     // As in Temperance, render direct contents and size the root itself.
     // A compactRepresentation alone is never instantiated by Plasma.
-    implicitWidth: 42
+    implicitWidth: vertical ? endpointWidth : responsiveMeasuredWidth
     implicitHeight: 42
     Layout.fillWidth: false
     Layout.fillHeight: false
-    Layout.minimumWidth: implicitWidth
+    Layout.minimumWidth: vertical ? endpointWidth : endpointWidth + ambientCoreWidth
     Layout.preferredWidth: implicitWidth
     Layout.maximumWidth: implicitWidth
     Layout.minimumHeight: implicitHeight
@@ -51,10 +54,65 @@ PlasmoidItem {
         ? i18n("Launcher is open")
         : i18n("Find an application")
 
+    function refreshResponsiveWidth() {
+        if (vertical) {
+            responsiveMeasuredWidth = endpointWidth;
+            return;
+        }
+        Plasmoid.watchPanelGeometry(root);
+        const minimum = endpointWidth + ambientCoreWidth;
+        const measured = Plasmoid.availablePanelWidth(root, minimum, 6);
+        if (Math.abs(measured - responsiveMeasuredWidth) > 1)
+            responsiveMeasuredWidth = measured;
+    }
+
+    onVerticalChanged: Qt.callLater(refreshResponsiveWidth)
+    onAmbientCoreWidthChanged: Qt.callLater(refreshResponsiveWidth)
+    onVisibleChanged: Qt.callLater(refreshResponsiveWidth)
+    Component.onCompleted: Qt.callLater(refreshResponsiveWidth)
+
+    Connections {
+        target: Plasmoid
+        function onPanelGeometryChanged() { Qt.callLater(root.refreshResponsiveWidth); }
+    }
+
+    AmbientSurface {
+        id: ambient
+        objectName: "tettegouche-ambient-surface"
+        visible: !root.vertical && width > 0
+        anchors.left: parent.left
+        anchors.right: launcherButton.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        activities: Plasmoid.ambientActivities
+        monotonicClock: () => Plasmoid.monotonicNowUs()
+        onInvokeRequested: (activityId, generation, action) =>
+            Plasmoid.invokeActivity(activityId, generation, action)
+    }
+
+    PlasmaCore.Dialog {
+        id: ambientDetailsDialog
+        visualParent: ambient
+        location: PlasmaCore.Types.BottomEdge
+        hideOnWindowDeactivate: true
+        visible: ambient.detailsOpen
+        onVisibleChanged: if (!visible) ambient.detailsOpen = false
+        mainItem: ActivityDetails {
+            activities: ambient.activities
+            monotonicNowUs: ambient.clockNowUs
+            onCloseRequested: ambient.detailsOpen = false
+            onInvokeRequested: (activityId, generation, action) =>
+                Plasmoid.invokeActivity(activityId, generation, action)
+        }
+    }
+
     Item {
         id: launcherButton
         objectName: "tettegouche-launcher-button"
-        anchors.fill: parent
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: root.endpointWidth
         activeFocusOnTab: true
         Accessible.name: i18n("Open Tettegouche")
         Accessible.role: Accessible.Button

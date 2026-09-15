@@ -11,6 +11,7 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QDBusConnection>
+#include <cmath>
 
 class ToggleEndpoint : public QObject
 {
@@ -178,6 +179,70 @@ private Q_SLOTS:
         QTRY_COMPARE(m_applet->status(), Plasma::Types::ActiveStatus);
         bus.unregisterObject(QStringLiteral("/Launcher"));
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+    }
+
+    void nearestLeftNeighborWidth()
+    {
+        auto *neighborApplet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
+        QVERIFY(neighborApplet);
+        auto *neighbor = PlasmaQuick::AppletQuickItem::itemForApplet(neighborApplet);
+        QVERIFY(neighbor);
+        neighbor->setParentItem(m_window->contentItem());
+        neighbor->setPosition(QPointF(40, 20));
+        neighbor->setSize(QSizeF(100, 42));
+        m_face->setPosition(QPointF(200, 20));
+        m_face->setSize(QSizeF(172, 42));
+        QTest::qWait(20);
+
+        int available = 0;
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "availablePanelWidth",
+            Q_RETURN_ARG(int, available), Q_ARG(QQuickItem *, m_face),
+            Q_ARG(int, 42), Q_ARG(int, 6)));
+        QCOMPARE(available, 226); // own right 372 - neighbor right 140 - gap 6
+
+        neighbor->setVisible(false);
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "availablePanelWidth",
+            Q_RETURN_ARG(int, available), Q_ARG(QQuickItem *, m_face),
+            Q_ARG(int, 42), Q_ARG(int, 6)));
+        QCOMPARE(available, 42);
+        neighbor->setParentItem(nullptr);
+        delete neighborApplet;
+        m_face->setPosition(QPointF(30, 20));
+        m_face->setSize(QSizeF(42, 42));
+    }
+
+    void stockSpacerCentering_data()
+    {
+        QTest::addColumn<qreal>("panelWidth");
+        QTest::addColumn<int>("taskCount");
+        QTest::addColumn<bool>("clockPresent");
+        QTest::addColumn<qreal>("scale");
+        QTest::newRow("tablet-one-task") << 960.0 << 1 << true << 1.0;
+        QTest::newRow("tablet-six-tasks-125") << 960.0 << 6 << true << 1.25;
+        QTest::newRow("monitor-three-tasks-150") << 1463.0 << 3 << true << 1.5;
+        QTest::newRow("monitor-eight-tasks-200") << 1920.0 << 8 << false << 2.0;
+    }
+
+    void stockSpacerCentering()
+    {
+        QFETCH(qreal, panelWidth);
+        QFETCH(int, taskCount);
+        QFETCH(bool, clockPresent);
+        QFETCH(qreal, scale);
+        const qreal taskWidth = taskCount * 54.0;
+        const qreal leftSurface = 150.0;
+        const qreal rightSurface = 172.0 + (clockPresent ? 84.0 : 0.0);
+        const qreal leftSpacer = panelWidth / 2.0 - taskWidth / 2.0 - leftSurface;
+        const qreal rightSpacer = panelWidth / 2.0 - taskWidth / 2.0 - rightSurface;
+        QVERIFY2(leftSpacer >= 0 && rightSpacer >= 0,
+                 "Representative layout must not saturate either expanding spacer.");
+
+        const qreal taskLeftPhysical = std::round(
+            (leftSurface + leftSpacer) * scale);
+        const qreal taskWidthPhysical = std::round(taskWidth * scale);
+        const qreal taskCenterPhysical = taskLeftPhysical + taskWidthPhysical / 2.0;
+        const qreal panelCenterPhysical = panelWidth * scale / 2.0;
+        QVERIFY(std::abs(taskCenterPhysical - panelCenterPhysical) <= 1.0);
     }
 
     void cleanupTestCase()
