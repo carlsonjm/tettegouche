@@ -32,18 +32,14 @@ Item {
         sum + (capability(activity, "previous") ? 28 : 0)
             + (capability(activity, "next") ? 28 : 0), 0)
     readonly property int transportThreshold: minimumUsefulWidth + mediaTransportExtraWidth
-    readonly property int titleThreshold: Math.max(300, transportThreshold + 80)
-    readonly property int artistThreshold: Math.max(480, titleThreshold + 90)
-    readonly property int timeThreshold: Math.max(560, artistThreshold + 70)
-    readonly property string density: availableContentWidth >= timeThreshold ? "wide"
-        : availableContentWidth >= titleThreshold ? "medium"
-        : availableContentWidth >= transportThreshold ? "narrow" : "core"
-    readonly property bool showMediaTransport: availableContentWidth >= transportThreshold
+    readonly property int visibleTransferCount: transfersGrouped ? 1 : transfers.length
+    readonly property real transferCoreOccupiedWidth: transfersGrouped ? 72
+        : transfers.reduce((sum, activity) => sum + transferCoreWidth(activity), 0)
+    readonly property real mediaBudget: media.length === 0 ? 0 : Math.max(40,
+        (availableContentWidth - transferCoreOccupiedWidth
+            - Math.max(0, visibleTransferCount + media.length - 1) * 4) / media.length)
     readonly property bool showTransferTitle: availableContentWidth >= Math.max(170, transportThreshold)
-    readonly property bool showMediaTitle: availableContentWidth >= titleThreshold
-    readonly property bool showMediaArtist: availableContentWidth >= artistThreshold
-    readonly property bool showMediaTime: availableContentWidth >= timeThreshold
-    readonly property bool showSecondary: showMediaArtist
+    readonly property bool showSecondary: availableContentWidth >= 480
     readonly property bool hasPlayingClock: media.some(activity =>
         activity.state === "playing" && activity.positionUs !== undefined)
     signal invokeRequested(string activityId, int generation, string action)
@@ -221,10 +217,40 @@ Item {
                 required property var modelData
                 readonly property string toggleAction: modelData.state === "playing" ? "pause" : "play"
                 readonly property bool canToggle: surface.capability(modelData, toggleAction)
+                readonly property real budget: surface.mediaBudget
+                readonly property real fullTransportWidth: transportCluster.fullWidth
+                readonly property real compactTransportWidth: transportCluster.compactWidth
+                readonly property real songNaturalWidth: mediaTitle.implicitWidth
+                readonly property real songUsefulWidth: Math.min(songNaturalWidth, 56)
+                readonly property real artistNaturalWidth: mediaArtist.implicitWidth
+                readonly property real artistUsefulWidth: Math.min(artistNaturalWidth, 56)
+                readonly property real runtimeNaturalWidth: mediaRuntime.implicitWidth
+                readonly property bool showFullTransport: budget >= fullTransportWidth
+                readonly property bool showSong: showFullTransport
+                    && budget >= fullTransportWidth + 3 + songUsefulWidth
+                readonly property bool showArtist: showSong
+                    && budget >= fullTransportWidth + 3 + songNaturalWidth
+                        + 3 + artistUsefulWidth
+                readonly property bool showRuntime: showArtist
+                    && budget >= fullTransportWidth + 3 + songNaturalWidth
+                        + 3 + artistNaturalWidth + 3 + runtimeNaturalWidth
+                readonly property real songWidth: !showSong ? 0
+                    : showArtist ? songNaturalWidth
+                    : Math.min(songNaturalWidth, budget - fullTransportWidth - 3)
+                readonly property real artistWidth: !showArtist ? 0
+                    : showRuntime ? artistNaturalWidth
+                    : Math.min(artistNaturalWidth,
+                        budget - fullTransportWidth - 6 - songNaturalWidth)
+                readonly property real fittedContentWidth: showRuntime
+                    ? fullTransportWidth + songNaturalWidth + artistNaturalWidth
+                        + runtimeNaturalWidth + 9
+                    : showArtist ? fullTransportWidth + songNaturalWidth + artistWidth + 6
+                    : showSong ? fullTransportWidth + songWidth + 3
+                    : showFullTransport ? fullTransportWidth : compactTransportWidth
                 objectName: "ambient-media-" + modelData.id
-                Layout.minimumWidth: Math.max(40, transportCluster.implicitWidth)
-                Layout.preferredWidth: mediaRow.implicitWidth
-                Layout.maximumWidth: Layout.preferredWidth
+                Layout.minimumWidth: compactTransportWidth
+                Layout.preferredWidth: Math.min(budget, fittedContentWidth)
+                Layout.maximumWidth: Math.min(budget, fittedContentWidth)
                 Layout.fillHeight: true
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
@@ -239,6 +265,7 @@ Item {
                     anchors.fill: parent
                     spacing: 3
                     Kirigami.Icon {
+                        id: mediaFallback
                         visible: !mediaItem.canToggle
                         anchors.verticalCenter: parent.verticalCenter
                         width: 16
@@ -248,12 +275,20 @@ Item {
                     Row {
                         id: transportCluster
                         objectName: "ambient-media-transport-cluster"
+                        readonly property real compactWidth: mediaItem.canToggle
+                            ? mediaToggle.implicitWidth : mediaFallback.implicitWidth
+                        readonly property real fullWidth: compactWidth
+                            + (surface.capability(mediaItem.modelData, "previous")
+                                ? mediaPrevious.implicitWidth + spacing : 0)
+                            + (surface.capability(mediaItem.modelData, "next")
+                                ? mediaNext.implicitWidth + spacing : 0)
                         spacing: 3
                         anchors.verticalCenter: parent.verticalCenter
 
                         PlasmaComponents.ToolButton {
+                            id: mediaPrevious
                             objectName: "ambient-media-previous"
-                            visible: surface.showMediaTransport
+                            visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "previous")
                             icon.name: "media-skip-backward-symbolic"
                             display: PlasmaComponents.AbstractButton.IconOnly
@@ -261,6 +296,7 @@ Item {
                             onClicked: surface.invoke(mediaItem.modelData, "previous")
                         }
                         PlasmaComponents.ToolButton {
+                            id: mediaToggle
                             objectName: "ambient-media-toggle"
                             visible: mediaItem.canToggle
                             icon.name: mediaItem.modelData.state === "playing"
@@ -272,8 +308,9 @@ Item {
                                 mediaItem.toggleAction)
                         }
                         PlasmaComponents.ToolButton {
+                            id: mediaNext
                             objectName: "ambient-media-next"
-                            visible: surface.showMediaTransport
+                            visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "next")
                             icon.name: "media-skip-forward-symbolic"
                             display: PlasmaComponents.AbstractButton.IconOnly
@@ -284,25 +321,26 @@ Item {
                     PlasmaComponents.Label {
                         id: mediaTitle
                         objectName: "ambient-media-title"
-                        visible: surface.showMediaTitle
+                        visible: mediaItem.showSong
                         text: mediaItem.modelData.title || mediaItem.modelData.source || qsTr("Media")
                         elide: Text.ElideRight
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(120, implicitWidth)
+                        width: mediaItem.songWidth
                     }
                     PlasmaComponents.Label {
                         id: mediaArtist
                         objectName: "ambient-media-artist"
-                        visible: surface.showMediaArtist && Boolean(mediaItem.modelData.artist)
+                        visible: mediaItem.showArtist && Boolean(mediaItem.modelData.artist)
                         text: mediaItem.modelData.artist || ""
                         opacity: 0.72
                         elide: Text.ElideRight
                         anchors.verticalCenter: parent.verticalCenter
-                        width: Math.min(90, implicitWidth)
+                        width: mediaItem.artistWidth
                     }
                     PlasmaComponents.Label {
+                        id: mediaRuntime
                         objectName: "ambient-media-time"
-                        visible: surface.showMediaTime && text.length > 0
+                        visible: mediaItem.showRuntime && text.length > 0
                         text: surface.mediaTime(mediaItem.modelData)
                         opacity: 0.72
                         anchors.verticalCenter: parent.verticalCenter
