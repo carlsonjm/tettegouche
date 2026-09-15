@@ -57,7 +57,20 @@ qt_add_executable(tettegouche
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml qml/FilesPane.qml
+    FILES qml/Launcher.qml qml/FilesPane.qml qml/SuiteIcon.qml
+        assets/icons/lucide/skip-back.svg
+        assets/icons/lucide/play.svg
+        assets/icons/lucide/pause.svg
+        assets/icons/lucide/skip-forward.svg
+        assets/icons/lucide/download.svg
+        assets/icons/lucide/x.svg
+        assets/icons/lucide/plus.svg
+        assets/icons/lucide/arrow-left.svg
+        assets/icons/lucide/arrow-right.svg
+        assets/icons/lucide/refresh-cw.svg
+        assets/icons/lucide/ellipsis.svg
+        assets/icons/lucide/check.svg
+        assets/icons/lucide/circle.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
@@ -95,12 +108,19 @@ plasma_add_applet(studio.warbler.tettegouche
     QML_SOURCES
         applet/main.qml
         applet/AmbientSurface.qml
+        applet/SuiteIcon.qml
         applet/ActivityDetails.qml
         applet/ConfigGeneral.qml
         applet/config.qml
     RESOURCES
         applet/main.xml
         assets/studio.warbler.tettegouche.svg
+        assets/icons/lucide/skip-back.svg
+        assets/icons/lucide/play.svg
+        assets/icons/lucide/pause.svg
+        assets/icons/lucide/skip-forward.svg
+        assets/icons/lucide/download.svg
+        assets/icons/lucide/x.svg
 )
 target_link_libraries(studio.warbler.tettegouche PRIVATE
     tettegouche-activities

@@ -1,0 +1,25 @@
+{
+  "family": "Lucide",
+  "package": "lucide-static",
+  "version": "1.46.0",
+  "license": "ISC with inherited Feather MIT notice",
+  "foreground": {
+    "name": "Ghost White",
+    "value": "#F8F8FF"
+  },
+  "icons": {
+    "media-previous": "skip-back",
+    "media-play": "play",
+    "media-pause": "pause",
+    "media-next": "skip-forward",
+    "transfer-download": "download",
+    "action-cancel": "x",
+    "action-add": "plus",
+    "navigation-back": "arrow-left",
+    "navigation-forward": "arrow-right",
+    "action-refresh": "refresh-cw",
+    "action-overflow": "ellipsis",
+    "status-success": "check",
+    "status-unselected": "circle"
+  }
+}
