@@ -19,6 +19,9 @@ PlasmoidItem {
     readonly property int endpointWidth: 42
     readonly property int ambientCoreWidth: ambient.minimumUsefulWidth
     property int responsiveMeasuredWidth: endpointWidth
+    property var detailActivity: null
+    property var detailAnchor: null
+    property bool detailOpen: false
 
     Connections {
         target: Plasmoid
@@ -80,27 +83,39 @@ PlasmoidItem {
         id: ambient
         objectName: "tettegouche-ambient-surface"
         visible: !root.vertical && width > 0
-        anchors.left: parent.left
-        anchors.right: launcherButton.left
+        anchors.left: launcherButton.right
+        anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         activities: Plasmoid.ambientActivities
         monotonicClock: () => Plasmoid.monotonicNowUs()
         onInvokeRequested: (activityId, generation, action) =>
             Plasmoid.invokeActivity(activityId, generation, action)
+        onDetailsRequested: (activity, anchorItem) => {
+            root.detailActivity = activity;
+            root.detailAnchor = anchorItem;
+            root.detailOpen = true;
+        }
     }
 
     PlasmaCore.Dialog {
         id: ambientDetailsDialog
-        visualParent: ambient
-        location: PlasmaCore.Types.BottomEdge
+        visualParent: root.detailAnchor || ambient
+        location: Plasmoid.location
+        type: PlasmaCore.Dialog.AppletPopup
+        floating: 10
+        backgroundHints: PlasmaCore.Dialog.NoBackground
         hideOnWindowDeactivate: true
-        visible: ambient.detailsOpen
-        onVisibleChanged: if (!visible) ambient.detailsOpen = false
+        visible: root.detailOpen && root.detailActivity !== null
+        appletInterface: root
+        onVisibleChanged: {
+            if (!visible) root.detailOpen = false;
+            else requestActivate();
+        }
         mainItem: ActivityDetails {
-            activities: ambient.activities
+            activity: root.detailActivity
             monotonicNowUs: ambient.clockNowUs
-            onCloseRequested: ambient.detailsOpen = false
+            onCloseRequested: root.detailOpen = false
             onInvokeRequested: (activityId, generation, action) =>
                 Plasmoid.invokeActivity(activityId, generation, action)
         }
@@ -109,7 +124,7 @@ PlasmoidItem {
     Item {
         id: launcherButton
         objectName: "tettegouche-launcher-button"
-        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.endpointWidth

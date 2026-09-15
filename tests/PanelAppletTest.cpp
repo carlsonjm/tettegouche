@@ -148,6 +148,22 @@ private Q_SLOTS:
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
     }
 
+    void launcherPrecedesAmbientStrip()
+    {
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        m_face->setSize(QSizeF(300, 42));
+        QTest::qWait(20);
+        auto *button = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-button"));
+        auto *ambient = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-ambient-surface"));
+        QVERIFY(button);
+        QVERIFY(ambient);
+        QCOMPARE(button->x(), 0.0);
+        QCOMPARE(button->width(), 42.0);
+        QCOMPARE(ambient->x(), 42.0);
+        QCOMPARE(ambient->width(), 258.0);
+        m_face->setSize(QSizeF(42, 42));
+    }
+
     void configuredActivation()
     {
         m_applet->config().writeEntry(QStringLiteral("useKadunce"), false);

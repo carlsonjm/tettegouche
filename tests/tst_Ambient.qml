@@ -53,7 +53,6 @@ TestCase {
         const surface = createSurface(300, []);
         compare(surface.minimumUsefulWidth, 0);
         compare(surface.children[0].visible, true);
-        compare(surface.detailsOpen, false);
     }
 
     function test_transfer_and_media_keep_cores() {
@@ -126,9 +125,22 @@ TestCase {
         compare(spy.signalArguments[0][2], "cancel");
     }
 
+    function test_details_select_one_activity_at_a_time() {
+        const surface = createSurface(300, [transfer, media]);
+        const spy = createTemporaryQmlObject(
+            'import QtTest; SignalSpy {}', testCase);
+        spy.target = surface;
+        spy.signalName = "detailsRequested";
+        surface.openDetails(transfer, surface);
+        surface.openDetails(media, surface);
+        compare(spy.count, 2);
+        compare(spy.signalArguments[0][0].id, "transfer-1");
+        compare(spy.signalArguments[1][0].id, "media-1");
+    }
+
     function test_details_keep_supported_actions_reachable() {
         const details = createTemporaryObject(detailsComponent, testCase,
-            {activities: [unknownFile, media]});
+            {activity: unknownFile});
         verify(details !== null);
         wait(0);
         const showInFiles = findChild(details, "ambient-detail-showInFiles");

@@ -12,7 +12,6 @@ Item {
     property var activities: []
     property var monotonicClock: () => 0
     property double clockNowUs: 0
-    property bool detailsOpen: false
     readonly property var transfers: activities.filter(activity => activity.kind === "transfer")
     readonly property var media: activities.filter(activity => activity.kind === "media")
     readonly property int individualCoreWidth: transfers.reduce((sum, activity) =>
@@ -33,6 +32,7 @@ Item {
     readonly property bool hasPlayingClock: media.some(activity =>
         activity.state === "playing" && activity.positionUs !== undefined)
     signal invokeRequested(string activityId, int generation, string action)
+    signal detailsRequested(var activity, var anchorItem)
 
     clip: true
 
@@ -93,8 +93,8 @@ Item {
         invokeRequested(String(activity.id), Number(activity.generation), action);
     }
 
-    function openDetails() {
-        if (activities.length > 0) detailsOpen = true;
+    function openDetails(activity, anchorItem) {
+        if (activity) detailsRequested(activity, anchorItem);
     }
 
     Timer {
@@ -111,6 +111,7 @@ Item {
         spacing: 4
 
         Item {
+            id: transferGroup
             objectName: "ambient-transfer-group"
             visible: surface.transfersGrouped
             Layout.preferredWidth: visible ? 72 : 0
@@ -120,9 +121,9 @@ Item {
             activeFocusOnTab: visible
             Accessible.role: Accessible.Button
             Accessible.name: qsTr("%1 transfers, details").arg(surface.transfers.length)
-            Keys.onReturnPressed: surface.openDetails()
-            Keys.onEnterPressed: surface.openDetails()
-            Keys.onSpacePressed: surface.openDetails()
+            Keys.onReturnPressed: surface.openDetails(surface.transfers[0], transferGroup)
+            Keys.onEnterPressed: surface.openDetails(surface.transfers[0], transferGroup)
+            Keys.onSpacePressed: surface.openDetails(surface.transfers[0], transferGroup)
 
             Row {
                 anchors.centerIn: parent
@@ -133,7 +134,7 @@ Item {
                     text: qsTr("%1 transfers").arg(surface.transfers.length)
                 }
             }
-            TapHandler { onTapped: surface.openDetails() }
+            TapHandler { onTapped: surface.openDetails(surface.transfers[0], transferGroup) }
         }
 
         Repeater {
@@ -152,9 +153,9 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: qsTr("Transfer %1, %2").arg(modelData.title || modelData.source || "")
                     .arg(surface.percentage(modelData))
-                Keys.onReturnPressed: surface.openDetails()
-                Keys.onEnterPressed: surface.openDetails()
-                Keys.onSpacePressed: surface.openDetails()
+                Keys.onReturnPressed: surface.openDetails(transferItem.modelData, transferItem)
+                Keys.onEnterPressed: surface.openDetails(transferItem.modelData, transferItem)
+                Keys.onSpacePressed: surface.openDetails(transferItem.modelData, transferItem)
 
                 RowLayout {
                     anchors.fill: parent
@@ -191,7 +192,10 @@ Item {
                         onClicked: surface.invoke(transferItem.modelData, "cancel")
                     }
                 }
-                TapHandler { acceptedButtons: Qt.LeftButton; onTapped: surface.openDetails() }
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    onTapped: surface.openDetails(transferItem.modelData, transferItem)
+                }
             }
         }
 
@@ -216,9 +220,9 @@ Item {
                 Accessible.role: Accessible.Button
                 Accessible.name: qsTr("Media %1 by %2").arg(modelData.title || modelData.source || "")
                     .arg(modelData.artist || "")
-                Keys.onReturnPressed: surface.openDetails()
-                Keys.onEnterPressed: surface.openDetails()
-                Keys.onSpacePressed: surface.openDetails()
+                Keys.onReturnPressed: surface.openDetails(mediaItem.modelData, mediaItem)
+                Keys.onEnterPressed: surface.openDetails(mediaItem.modelData, mediaItem)
+                Keys.onSpacePressed: surface.openDetails(mediaItem.modelData, mediaItem)
 
                 RowLayout {
                     anchors.fill: parent
@@ -274,7 +278,10 @@ Item {
                         onClicked: surface.invoke(mediaItem.modelData, "next")
                     }
                 }
-                TapHandler { acceptedButtons: Qt.LeftButton; onTapped: surface.openDetails() }
+                TapHandler {
+                    acceptedButtons: Qt.LeftButton
+                    onTapped: surface.openDetails(mediaItem.modelData, mediaItem)
+                }
             }
         }
 
