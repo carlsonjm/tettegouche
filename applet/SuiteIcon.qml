@@ -3,12 +3,15 @@ import QtQuick
 
 Item {
     required property string glyph
+    objectName: "suiteIcon-" + glyph
     implicitWidth: 20
     implicitHeight: 20
 
     Image {
+        objectName: "suiteIconImage"
         anchors.fill: parent
-        source: Qt.resolvedUrl("../assets/icons/lucide/" + parent.glyph + ".svg")
+        source: "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/"
+            + parent.glyph + ".svg"
         fillMode: Image.PreserveAspectFit
         smooth: true
     }

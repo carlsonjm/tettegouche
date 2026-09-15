@@ -5,7 +5,10 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QQuickItem>
+#include <QQuickItemGrabResult>
 #include <QQuickWindow>
+#include <QQmlComponent>
+#include <QQmlEngine>
 #include <QSignalSpy>
 #include <QStandardPaths>
 #include <QTemporaryDir>
@@ -259,6 +262,52 @@ private Q_SLOTS:
         const auto rows=m_applet->property("ambientActivities").toList();
         if (qgetenv("TETTE_AMBIENT_FIXTURE")=="transfer-media") QCOMPARE(rows.size(),2);
         else QVERIFY(rows.isEmpty());
+    }
+
+    void packagedSuiteIconsRender()
+    {
+        QQmlEngine engine;
+        QQmlComponent component(&engine,
+            QUrl(QStringLiteral("qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/SuiteIcon.qml")),
+            QQmlComponent::PreferSynchronous);
+        QVERIFY2(component.isReady(), qPrintable(component.errorString()));
+        const QStringList glyphs{
+            QStringLiteral("skip-back"), QStringLiteral("play"), QStringLiteral("pause"),
+            QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x")
+        };
+        for (const QString &glyph : glyphs) {
+            QScopedPointer<QObject> icon(component.createWithInitialProperties(
+                {{QStringLiteral("glyph"), glyph}}));
+            auto *item = qobject_cast<QQuickItem *>(icon.data());
+            QVERIFY2(item, qPrintable(glyph));
+            item->setSize(QSizeF(20, 20));
+            item->setParentItem(m_window->contentItem());
+            item->setPosition(QPointF(0, 0));
+            QVERIFY2(item->isVisible() && item->width() >= 20 && item->height() >= 20,
+                qPrintable(QStringLiteral("Zero-size or invisible SuiteIcon: ") + glyph));
+            auto *imageItem = item->findChild<QQuickItem *>(QStringLiteral("suiteIconImage"));
+            QVERIFY2(imageItem, qPrintable(glyph));
+            QTRY_COMPARE_WITH_TIMEOUT(imageItem->property("status").toInt(), 1, 3000);
+            QVERIFY(imageItem->isVisible());
+            const auto grab = item->grabToImage(QSize(40, 40));
+            QSignalSpy ready(grab.data(), &QQuickItemGrabResult::ready);
+            QVERIFY2(ready.wait(3000), qPrintable(glyph));
+            const QImage rendered = grab->image();
+            bool hasVisibleInk = false;
+            for (int y = 0; y < rendered.height() && !hasVisibleInk; ++y) {
+                for (int x = 0; x < rendered.width(); ++x) {
+                    const QColor pixel = rendered.pixelColor(x, y);
+                    if (pixel.alpha() > 32 && pixel.red() > 180
+                        && pixel.green() > 180 && pixel.blue() > 180) {
+                        hasVisibleInk = true;
+                        break;
+                    }
+                }
+            }
+            QVERIFY2(hasVisibleInk,
+                qPrintable(QStringLiteral("No visible Ghost White ink for ") + glyph));
+            item->setParentItem(nullptr);
+        }
     }
 
     void stockSpacerCentering_data()

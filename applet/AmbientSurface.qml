@@ -202,7 +202,7 @@ Item {
                     PlasmaComponents.ToolButton {
                         objectName: "ambient-transfer-cancel"
                         visible: surface.capability(transferItem.modelData, "cancel")
-                        icon.source: Qt.resolvedUrl("../assets/icons/lucide/x.svg")
+                        icon.source: "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/x.svg"
                         icon.color: "#F8F8FF"
                         contentItem: SuiteIcon {
                             glyph: "x"
@@ -301,7 +301,7 @@ Item {
                             objectName: "ambient-media-previous"
                             visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "previous")
-                            icon.source: Qt.resolvedUrl("../assets/icons/lucide/skip-back.svg")
+                            icon.source: "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/skip-back.svg"
                             icon.color: "#F8F8FF"
                             contentItem: SuiteIcon {
                                 glyph: "skip-back"
@@ -316,8 +316,8 @@ Item {
                             objectName: "ambient-media-toggle"
                             visible: mediaItem.canToggle
                             icon.source: mediaItem.modelData.state === "playing"
-                                ? Qt.resolvedUrl("../assets/icons/lucide/pause.svg")
-                                : Qt.resolvedUrl("../assets/icons/lucide/play.svg")
+                                ? "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/pause.svg"
+                                : "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/play.svg"
                             icon.color: "#F8F8FF"
                             contentItem: SuiteIcon {
                                 glyph: mediaItem.modelData.state === "playing" ? "pause" : "play"
@@ -334,7 +334,7 @@ Item {
                             objectName: "ambient-media-next"
                             visible: mediaItem.showFullTransport
                                 && surface.capability(mediaItem.modelData, "next")
-                            icon.source: Qt.resolvedUrl("../assets/icons/lucide/skip-forward.svg")
+                            icon.source: "qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/skip-forward.svg"
                             icon.color: "#F8F8FF"
                             contentItem: SuiteIcon {
                                 glyph: "skip-forward"

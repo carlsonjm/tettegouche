@@ -162,6 +162,16 @@ if(BUILD_TESTING)
     find_package(KF6Package REQUIRED)
     find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
 
+    qt_add_executable(tettegouche-suite-icon-test tests/SuiteIconRenderTest.cpp)
+    target_compile_definitions(tettegouche-suite-icon-test PRIVATE
+        SUITE_ICON_QML="${CMAKE_CURRENT_SOURCE_DIR}/qml/SuiteIcon.qml")
+    target_link_libraries(tettegouche-suite-icon-test PRIVATE
+        Qt6::Widgets Qt6::Quick Qt6::Test)
+    add_test(NAME suite-icon-render-test COMMAND tettegouche-suite-icon-test)
+    set_tests_properties(suite-icon-render-test PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+        TIMEOUT 30)
+
     qt_add_executable(workspace-context-test tests/WorkspaceContextTest.cpp)
     target_link_libraries(workspace-context-test PRIVATE
         tettegouche-context Qt6::Test)
