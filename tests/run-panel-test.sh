@@ -16,4 +16,4 @@ export QT_QUICK_BACKEND=software
 export QT_PLUGIN_PATH="$2"
 export TETTE_TEST_PLUGIN_ROOT="$2"
 
-dbus-run-session --config-file="$(dirname "$0")/panel-test-bus.conf" -- "$1"
+dbus-run-session --config-file="$(dirname "$0")/panel-test-bus.conf" -- "$1" "${@:3}"

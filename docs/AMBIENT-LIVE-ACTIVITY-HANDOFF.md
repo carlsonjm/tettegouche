@@ -3,7 +3,9 @@
 Status: B1 compositor implemented and physically accepted by J on September 15,
 2026. The accepted source is frozen on main by contract commit `715626c` and
 integrated implementation commits `4317116` and `5ad0ca6` (accepted candidate
-commits `7ea93ec` and `e8f9ab3`). Production activity providers remain A2.
+commits `7ea93ec` and `e8f9ab3`). A2 now has a
+[source-only provider candidate](AMBIENT-PROVIDERS-20260915.md); installation and
+J's physical acceptance are pending.
 
 ## Accepted B1 freeze
 
@@ -18,10 +20,9 @@ dock remains physically centered between the two allocations. Each activity
 opens its own compact, Temperance-style popup anchored to that activity. The
 earlier combined full-screen activity view was removed before acceptance.
 
-B1 remains a fixture-backed compositor. `TETTE_AMBIENT_FIXTURE=transfer-media`
-exposes the acceptance transfer and media models; it is not a production data
-provider. Real Tette file-operation, MPRIS, and supported desktop-job providers
-and their action routing remain exclusively in A2.
+B1 was accepted as a fixture-backed compositor. `TETTE_AMBIENT_FIXTURE=transfer-media`
+still exposes the acceptance transfer and media models for tests/demo. The A2
+candidate uses real providers in normal mode without changing B1's composition.
 
 ## Product role
 

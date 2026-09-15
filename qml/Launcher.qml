@@ -287,6 +287,7 @@ Item {
             sheet.scale = 1
             openingSequence.restart()
         }
+        function onRevealFileRequested() { root.setDrawerOpen(true, "files") }
         function onGuestLaunchReady() {
             if (!root.applicationLaunchPending) {
                 return

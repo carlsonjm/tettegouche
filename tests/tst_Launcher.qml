@@ -41,6 +41,7 @@ TestCase {
             property var connectedDevices: []
         }
         signal opened()
+        signal revealFileRequested()
         signal guestLaunchReady()
         signal guestNavigationReady(int slot)
         signal guestBridgeLost()

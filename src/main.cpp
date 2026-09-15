@@ -6,6 +6,7 @@
 #include "WorkspaceContext.h"
 #include "ApplicationCatalog.h"
 #include "FileBrowser.h"
+#include "TransferActivityBridge.h"
 #include "OmniResults.h"
 #include "RelatedInfo.h"
 #include <KIO/OpenUrlJob>
@@ -329,6 +330,16 @@ public Q_SLOTS:
         else open();
     }
 
+    Q_SCRIPTABLE void showFile(const QString &file)
+    {
+        const QFileInfo info(file);
+        if (!m_fileBrowser || !info.isAbsolute() || !info.isFile() || info.isSymLink()) { open(); return; }
+        open();
+        m_fileBrowser->navigate(info.absolutePath());
+        m_fileBrowser->setSelectedPath(info.absoluteFilePath());
+        Q_EMIT revealFileRequested();
+    }
+
     Q_SCRIPTABLE void open()
     {
         m_quitAfterFiles=false;
@@ -523,6 +534,7 @@ public Q_SLOTS:
     }
 
 Q_SIGNALS:
+    void revealFileRequested();
     void relatedChanged();
     void opened();
     void contextChanged();
@@ -729,6 +741,9 @@ int main(int argc, char **argv)
     application.setDesktopFileName(
         QStringLiteral("io.github.carlsonjm.Tettegouche"));
     application.setOrganizationDomain(QStringLiteral("github.com/carlsonjm"));
+    application.setQuitOnLastWindowClosed(false); // a hidden Files job still owns this process
+    const int showFileIndex = application.arguments().indexOf(QStringLiteral("--show-file"));
+    const QString showFile = showFileIndex >= 0 ? application.arguments().value(showFileIndex + 1) : QString();
 
     const QByteArray runtime = qgetenv("XDG_RUNTIME_DIR");
     QLockFile instanceLock(QString::fromLocal8Bit(runtime)
@@ -737,7 +752,8 @@ int main(int argc, char **argv)
     if (!instanceLock.tryLock()) {
         QDBusMessage request = QDBusMessage::createMethodCall(
             QString::fromLatin1(ServiceName), QStringLiteral("/Launcher"),
-            QString::fromLatin1(ServiceName), QStringLiteral("toggle"));
+            QString::fromLatin1(ServiceName), showFile.isEmpty() ? QStringLiteral("toggle") : QStringLiteral("showFile"));
+        if (!showFile.isEmpty()) request.setArguments({showFile});
         // This forwarding process exits immediately: wait for delivery, not an
         // asynchronous call whose connection may disappear before dispatch.
         QDBusConnection::sessionBus().call(request, QDBus::Block, 1000);
@@ -771,6 +787,8 @@ int main(int argc, char **argv)
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
     controller.setFileBrowser(&fileBrowser);
+    QObject::connect(&application, &QGuiApplication::lastWindowClosed,
+                     &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
                      [&fileBrowser, &controller](const QUrl &url) {
         auto *job = new KIO::OpenUrlJob(url);
@@ -799,11 +817,16 @@ int main(int argc, char **argv)
     }
 
     QDBusConnection session = QDBusConnection::sessionBus();
+    TransferActivityBridge activities(&fileBrowser);
+    session.registerObject(QStringLiteral("/Activities"), &activities,
+                           QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals);
     session.registerObject(QStringLiteral("/Launcher"), &controller,
                            QDBusConnection::ExportScriptableSlots);
     session.registerService(QString::fromLatin1(ServiceName));
 
-    QTimer::singleShot(0, &controller, &LauncherController::open);
+    QTimer::singleShot(0, &controller, [&controller,showFile] {
+        if (showFile.isEmpty()) controller.open(); else controller.showFile(showFile);
+    });
     const int result = application.exec();
     view.setSource(QUrl());
     return result;

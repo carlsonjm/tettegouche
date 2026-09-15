@@ -121,7 +121,7 @@ FocusScope {
                     {name: "suspend", label: qsTr("Pause transfer")},
                     {name: "resume", label: qsTr("Resume")},
                     {name: "cancel", label: qsTr("Cancel")},
-                    {name: "seek", label: qsTr("Seek")},
+                    {name: "seek", label: qsTr("Forward 10 s")},
                     {name: "showInFiles", label: qsTr("Show in Files")}
                 ]
                 delegate: PlasmaComponents.Button {

@@ -20,6 +20,17 @@ find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
 find_package(Plasma 6.7 REQUIRED)
+find_package(LibNotificationManager REQUIRED)
+
+add_library(tettegouche-activities STATIC
+    src/MprisActivityProvider.cpp src/MprisActivityProvider.h
+    src/DesktopJobProvider.cpp src/DesktopJobProvider.h
+    src/IncomingFileProvider.cpp src/IncomingFileProvider.h
+    src/TetteTransferProvider.cpp src/TetteTransferProvider.h
+    src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
+target_include_directories(tettegouche-activities PUBLIC src)
+set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core PW::LibNotificationManager)
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp
@@ -42,6 +53,7 @@ qt_add_executable(tettegouche
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
     src/FileBrowser.h
+    src/TransferActivityBridge.cpp src/TransferActivityBridge.h
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
@@ -91,6 +103,7 @@ plasma_add_applet(studio.warbler.tettegouche
         assets/studio.warbler.tettegouche.svg
 )
 target_link_libraries(studio.warbler.tettegouche PRIVATE
+    tettegouche-activities
     Qt6::Core
     Qt6::DBus
     KF6::CoreAddons
@@ -99,6 +112,13 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(activity-provider-test tests/ActivityProviderTest.cpp
+        src/TransferActivityBridge.cpp src/TransferActivityBridge.h src/FileBrowser.h)
+    target_link_libraries(activity-provider-test PRIVATE tettegouche-activities KF6::KIOCore Qt6::Test Qt6::Quick)
+    add_test(NAME activity-provider-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
+        $<TARGET_FILE:activity-provider-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+    set_tests_properties(activity-provider-test PROPERTIES TIMEOUT 45
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
     qt_add_executable(file-browser-test tests/FileBrowserTest.cpp src/FileBrowser.h)
     target_include_directories(file-browser-test PRIVATE src)
     target_link_libraries(file-browser-test PRIVATE KF6::KIOCore Qt6::Test Qt6::Quick)
@@ -135,6 +155,11 @@ if(BUILD_TESTING)
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
             $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
     set_tests_properties(panel-applet-test PROPERTIES TIMEOUT 45)
+    add_test(NAME ambient-fixture-applet-test
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
+            $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} normalAndFixtureSources)
+    set_tests_properties(ambient-fixture-applet-test PROPERTIES TIMEOUT 30
+        ENVIRONMENT "TETTE_AMBIENT_FIXTURE=transfer-media")
     find_program(QMLTESTRUNNER_EXECUTABLE NAMES qmltestrunner
         HINTS /usr/lib/qt6/bin)
     if(QMLTESTRUNNER_EXECUTABLE)

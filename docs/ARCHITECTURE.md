@@ -1,5 +1,12 @@
 # Architecture
 
+Source-only A2: [Ambient provider candidate](AMBIENT-PROVIDERS-20260915.md).
+The persistent applet consumes real MPRIS/shared desktop jobs and observes local
+Downloads arrivals. FileBrowser retains KIO ownership and publishes an event-driven
+bridge from the existing launcher process; hidden outstanding operations defer
+its exit. No new daemon, Temperance owner or compositor layout is introduced.
+Installation and J's physical acceptance are pending.
+
 Accepted: [rename, move and recoverable Trash](FILES-OPERATIONS-20260914.md).
 Explicit cut clipboard paste now moves; ordinary drag remains copy-only.
 Accepted: [compact edge hierarchy](COMPACT-EDGES-20260914.md).

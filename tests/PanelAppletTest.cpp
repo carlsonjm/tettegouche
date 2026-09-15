@@ -46,6 +46,11 @@ private Q_SLOTS:
     {
         // A click must start a harmless stand-in, never the real launcher.
         QVERIFY(m_fixture.isValid());
+        QFile userDirs(m_fixture.filePath(QStringLiteral("user-dirs.dirs")));
+        QVERIFY(userDirs.open(QIODevice::WriteOnly));
+        userDirs.write("XDG_DOWNLOAD_DIR=\"" + m_fixture.path().toUtf8() + "/Downloads\"\n");
+        userDirs.close();
+        qputenv("XDG_CONFIG_HOME",m_fixture.path().toUtf8());
         m_executable = m_fixture.filePath(QStringLiteral("tettegouche"));
         const QString trueExecutable = QStandardPaths::findExecutable(QStringLiteral("true"));
         QVERIFY(!trueExecutable.isEmpty());
@@ -225,6 +230,13 @@ private Q_SLOTS:
         delete neighborApplet;
         m_face->setPosition(QPointF(30, 20));
         m_face->setSize(QSizeF(42, 42));
+    }
+
+    void normalAndFixtureSources()
+    {
+        const auto rows=m_applet->property("ambientActivities").toList();
+        if (qgetenv("TETTE_AMBIENT_FIXTURE")=="transfer-media") QCOMPARE(rows.size(),2);
+        else QVERIFY(rows.isEmpty());
     }
 
     void stockSpacerCentering_data()

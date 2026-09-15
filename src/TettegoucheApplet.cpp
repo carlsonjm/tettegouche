@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "TettegoucheApplet.h"
+#include "ActivityModel.h"
 
 #include <KConfigGroup>
 #include <KPluginFactory>
@@ -34,7 +35,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     });
 
     const QString fixture = qEnvironmentVariable("TETTE_AMBIENT_FIXTURE");
-    if (!fixture.isEmpty()) {
+    if (fixture == QStringLiteral("transfer-media") || fixture == QStringLiteral("paused")) {
         const QVariantMap transfer{
             {QStringLiteral("id"), QStringLiteral("transfer-1")},
             {QStringLiteral("generation"), 1},
@@ -67,6 +68,12 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
                  {QStringLiteral("previous"), true}, {QStringLiteral("next"), true}}},
         };
         m_ambientActivities = {transfer, media};
+    } else {
+        m_activities = ActivityModel::acquire();
+        connect(m_activities.get(), &ActivityModel::changed, this, [this] {
+            setAmbientActivities(m_activities->activities());
+        });
+        setAmbientActivities(m_activities->activities());
     }
 }
 
@@ -176,6 +183,11 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
         return;
     }
     Q_EMIT activityActionInvoked(id, generation, action);
+    if (!m_activities) return;
+    if (action == QLatin1String("showInFiles")) {
+        const auto url = m_activities->destinationForReveal(id, generation);
+        if (url.isLocalFile()) startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
+    } else m_activities->invoke(id, generation, action);
 }
 
 qint64 TettegoucheApplet::monotonicNowUs() const
@@ -186,13 +198,19 @@ qint64 TettegoucheApplet::monotonicNowUs() const
 
 void TettegoucheApplet::launch(bool useKadunce)
 {
+    startLauncher(useKadunce);
+}
+
+void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile)
+{
     if (launcherActive()) {
         if (m_process->state() == QProcess::Running) {
-            const auto request = QDBusMessage::createMethodCall(
+            auto request = QDBusMessage::createMethodCall(
                 QStringLiteral("io.github.carlsonjm.Tettegouche"),
                 QStringLiteral("/Launcher"),
                 QStringLiteral("io.github.carlsonjm.Tettegouche"),
-                QStringLiteral("toggle"));
+                showFile.isEmpty() ? QStringLiteral("toggle") : QStringLiteral("showFile"));
+            if (!showFile.isEmpty()) request.setArguments({showFile});
             QDBusConnection::sessionBus().asyncCall(request);
         }
         return;
@@ -204,8 +222,9 @@ void TettegoucheApplet::launch(bool useKadunce)
     }
 
     m_process->setProgram(executable);
-    m_process->setArguments(useKadunce ? QStringList{}
-                                       : QStringList{QStringLiteral("--standalone")});
+    QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
+    if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
+    m_process->setArguments(arguments);
     Q_EMIT invocationRequested();
     m_process->start();
 }

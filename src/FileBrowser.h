@@ -16,6 +16,8 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QVariantList>
+#include <QPointer>
+#include <QUuid>
 #include <algorithm>
 
 // Local browsing and explicit asynchronous copy/create. Each listing has its own lifetime so late replies
@@ -23,6 +25,7 @@
 class FileBrowser : public QObject
 {
     Q_OBJECT
+    friend class ActivityProviderTest;
     Q_PROPERTY(QVariantList entries READ entries NOTIFY changed)
     Q_PROPERTY(QVariantList tabs READ tabs NOTIFY changed)
     Q_PROPERTY(QVariantList places READ places NOTIFY placesChanged)
@@ -61,6 +64,26 @@ public:
         m_current = std::clamp(settings.value(QStringLiteral("Files/current"), 0).toInt(), 0, int(m_tabs.size())-1);
     }
     ~FileBrowser() override { save(); }
+    QVariantList activitySnapshot() const {
+        if (!m_operationJob || !m_transferActivity) return {};
+        QVariantMap row{{QStringLiteral("id"), m_operationId}, {QStringLiteral("generation"), 1}, {QStringLiteral("kind"), QStringLiteral("transfer")},
+            {QStringLiteral("state"), m_operationJob->isSuspended() ? QStringLiteral("suspended") : QStringLiteral("running")},
+            {QStringLiteral("source"), tr("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+            {QStringLiteral("title"), m_transferDestination.isEmpty() ? m_operationStatus : m_transferDestination.fileName()},
+            {QStringLiteral("evidence"), QStringLiteral("job")},
+            {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("cancel"), m_operationJob->capabilities().testFlag(KJob::Killable)}}}};
+        if (m_percentKnown) row[QStringLiteral("progress")] = m_operationJob->percent()/100.0;
+        if (m_operationJob->totalAmount(KJob::Bytes) > 0) {
+            row[QStringLiteral("totalBytes")] = m_operationJob->totalAmount(KJob::Bytes);
+            row[QStringLiteral("processedBytes")] = m_operationJob->processedAmount(KJob::Bytes);
+        }
+        if (!m_transferDestination.isEmpty()) row[QStringLiteral("destinationUrl")] = m_transferDestination.toString();
+        return {row};
+    }
+    void cancelActivity(const QString &id) {
+        if (m_operationJob && m_operationId == id && m_operationJob->capabilities().testFlag(KJob::Killable))
+            m_operationJob->kill(KJob::EmitResult);
+    }
     QVariantList entries() const { return m_entries; }
     QVariantList tabs() const {
         QVariantList result;
@@ -385,9 +408,36 @@ private:
     QString m_filter, m_error;
     KCoreDirLister *m_lister=nullptr;
     QVariantList m_entries, m_places;
+    QPointer<KJob> m_operationJob;
+    QString m_operationId;
+    QUrl m_transferDestination;
+    bool m_transferActivity = false, m_percentKnown = false;
     void watchOperation(KJob *job,const QString &label,bool copying=false) {
+        m_operationJob = job;
+        m_operationId = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        m_transferActivity = copying;
+        m_percentKnown = false;
+        m_transferDestination = {};
+        connect(job, &KJob::percentChanged, this, [this,job] {
+            if (m_operationJob != job) return;
+            m_percentKnown = true; Q_EMIT operationChanged();
+        });
+        connect(job, &KJob::totalAmountChanged, this, &FileBrowser::operationChanged);
+        connect(job, &KJob::processedAmountChanged, this, &FileBrowser::operationChanged);
+        connect(job, &KJob::suspended, this, &FileBrowser::operationChanged);
+        connect(job, &KJob::resumed, this, &FileBrowser::operationChanged);
+        if (auto *copy = qobject_cast<KIO::CopyJob *>(job)) {
+            const auto destination = [this,job](KIO::Job *, const QUrl &, const QUrl &to) {
+                if (m_operationJob != job) return;
+                m_transferDestination = to; Q_EMIT operationChanged();
+            };
+            connect(copy, &KIO::CopyJob::copying, this, destination);
+            connect(copy, &KIO::CopyJob::moving, this, destination);
+        }
         m_working=true; m_operationStatus=label; Q_EMIT operationChanged();
-        connect(job,&KJob::result,this,[this,copying](KJob *finished) {
+        // finished also handles quiet cancellation/destruction; result alone can orphan UI state.
+        connect(job,&KJob::finished,this,[this,copying](KJob *finished) {
+            m_operationJob = nullptr;
             m_working=false;
             m_operationStatus=finished->error() ? tr("Stopped: %1").arg(finished->errorString()) : tr("Done");
             if (finished->error() && copying) m_operationStatus += tr(" Some items may already have transferred.");

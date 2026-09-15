@@ -6,6 +6,8 @@
 #include <QList>
 #include <QPointer>
 #include <QVariantList>
+#include <memory>
+class ActivityModel;
 
 class QProcess;
 class QQuickItem;
@@ -39,9 +41,11 @@ Q_SIGNALS:
 
 private:
     void watchGeometryItem(QQuickItem *item);
+    void startLauncher(bool useKadunce, const QString &showFile = {});
 
     QProcess *m_process = nullptr;
     QVariantList m_ambientActivities;
     QList<QPointer<QQuickItem>> m_watchedGeometryItems;
     bool m_watchingContainment = false;
+    std::shared_ptr<ActivityModel> m_activities;
 };

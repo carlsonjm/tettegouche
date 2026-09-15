@@ -56,7 +56,7 @@ rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
-rg -q 'text: "Browse everything"' "${project_root}/qml/Launcher.qml"
+rg -Fq 'text: root.filesMode ? "explore files" : "browse everything"' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_PROPERTY\(bool descending' \
     "${project_root}/src/ApplicationCatalog.h"
 rg -q 'setFilterText' "${project_root}/src/ApplicationCatalog.cpp"
