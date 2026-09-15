@@ -1,7 +1,27 @@
 # Ambient Tette — live activity handoff
 
-Status: product contract approved September 15, 2026. Engineering has not
-implemented this surface. J owns visual and physical acceptance.
+Status: B1 compositor implemented and physically accepted by J on September 15,
+2026. The accepted source is frozen on main by contract commit `715626c` and
+integrated implementation commits `4317116` and `5ad0ca6` (accepted candidate
+commits `7ea93ec` and `e8f9ab3`). Production activity providers remain A2.
+
+## Accepted B1 freeze
+
+The final right-side panel order is:
+
+```text
+Tette launcher → responsive Ambient strip → task dock
+```
+
+Temperance mirrors the responsive geometry on the left side. The application
+dock remains physically centered between the two allocations. Each activity
+opens its own compact, Temperance-style popup anchored to that activity. The
+earlier combined full-screen activity view was removed before acceptance.
+
+B1 remains a fixture-backed compositor. `TETTE_AMBIENT_FIXTURE=transfer-media`
+exposes the acceptance transfer and media models; it is not a production data
+provider. Real Tette file-operation, MPRIS, and supported desktop-job providers
+and their action routing remain exclusively in A2.
 
 ## Product role
 
@@ -106,13 +126,15 @@ Engineering must inspect the current Plasma panel layout before selecting the
 mechanism. Independent anchors, symmetric allocation or another verified layout
 are acceptable; changing the accepted task-dock center position is not.
 
-Ambient sits adjacent to the existing Tette endpoint and expands into available
-right-side space. It must remain usable at tablet and monitor widths, supported
-scaling, and supported panel sizes.
+The Tette launcher forms the left edge of the right-side composition. Ambient
+fills the responsive strip between that launcher and the task dock. It must
+remain usable at tablet and monitor widths, supported scaling, and supported
+panel sizes.
 
 ## Interaction
 
-- Tap an activity to reveal its local details and source-supported actions.
+- Tap an activity to reveal that activity's compact local popup and
+  source-supported actions.
 - Keep concurrent activity cores visible while space permits.
 - Group counts open a compact local list of grouped activities.
 - Close returns directly to Ambient without opening full search or another mode.
