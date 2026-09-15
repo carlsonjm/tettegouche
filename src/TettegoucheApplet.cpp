@@ -112,7 +112,7 @@ int TettegoucheApplet::availablePanelWidth(QQuickItem *visualParent, int minimum
 
     const qreal ownLeft = ownItem->mapToScene(QPointF(0, 0)).x();
     const qreal ownRight = ownItem->mapToScene(QPointF(ownItem->width(), 0)).x();
-    qreal nearestLeftEdge = -1;
+    qreal nearestRightEdge = -1;
     for (Plasma::Applet *applet : containment()->applets()) {
         if (!applet || applet == this || applet->destroyed()) {
             continue;
@@ -127,16 +127,17 @@ int TettegoucheApplet::availablePanelWidth(QQuickItem *visualParent, int minimum
         if (!item || !item->isVisible() || item->window() != ownItem->window()) {
             continue;
         }
-        const qreal itemRight = item->mapToScene(QPointF(item->width(), 0)).x();
-        if (itemRight <= ownLeft + 1 && itemRight > nearestLeftEdge) {
-            nearestLeftEdge = itemRight;
+        const qreal itemLeft = item->mapToScene(QPointF(0, 0)).x();
+        if (itemLeft >= ownRight - 1
+            && (nearestRightEdge < 0 || itemLeft < nearestRightEdge)) {
+            nearestRightEdge = itemLeft;
         }
     }
-    if (nearestLeftEdge < 0) {
+    if (nearestRightEdge < 0) {
         return minimumWidth;
     }
     return std::max(minimumWidth,
-                    static_cast<int>(std::floor(ownRight - nearestLeftEdge - gap)));
+                    static_cast<int>(std::floor(nearestRightEdge - ownLeft - gap)));
 }
 
 void TettegoucheApplet::watchGeometryItem(QQuickItem *item)

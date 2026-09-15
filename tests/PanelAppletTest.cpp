@@ -202,32 +202,54 @@ private Q_SLOTS:
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
     }
 
-    void nearestLeftNeighborWidth()
+    void nearestRightTaskBoundaryWidth()
     {
-        auto *neighborApplet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
-        QVERIFY(neighborApplet);
-        auto *neighbor = PlasmaQuick::AppletQuickItem::itemForApplet(neighborApplet);
-        QVERIFY(neighbor);
-        neighbor->setParentItem(m_window->contentItem());
-        neighbor->setPosition(QPointF(40, 20));
-        neighbor->setSize(QSizeF(100, 42));
-        m_face->setPosition(QPointF(200, 20));
-        m_face->setSize(QSizeF(172, 42));
+        auto *spacerApplet = m_panel->createApplet(QStringLiteral("org.kde.plasma.panelspacer"));
+        auto *taskApplet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
+        QVERIFY(spacerApplet);
+        QVERIFY(taskApplet);
+        auto *spacer = PlasmaQuick::AppletQuickItem::itemForApplet(spacerApplet);
+        auto *task = PlasmaQuick::AppletQuickItem::itemForApplet(taskApplet);
+        QVERIFY(spacer);
+        QVERIFY(task);
+        spacer->setParentItem(m_window->contentItem());
+        task->setParentItem(m_window->contentItem());
+        spacer->setPosition(QPointF(100, 20));
+        spacer->setSize(QSizeF(560, 42));
+        task->setPosition(QPointF(700, 20));
+        task->setSize(QSizeF(300, 42));
+        m_face->setPosition(QPointF(16, 20));
+        m_face->setSize(QSizeF(82, 42));
         QTest::qWait(20);
 
         int available = 0;
         QVERIFY(QMetaObject::invokeMethod(m_applet, "availablePanelWidth",
             Q_RETURN_ARG(int, available), Q_ARG(QQuickItem *, m_face),
             Q_ARG(int, 42), Q_ARG(int, 6)));
-        QCOMPARE(available, 226); // own right 372 - neighbor right 140 - gap 6
+        QCOMPARE(available, 678); // task left 700 - fixed left 16 - gap 6
 
-        neighbor->setVisible(false);
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "watchPanelGeometry",
+            Q_ARG(QQuickItem *, m_face)));
+        QSignalSpy geometryChanged(m_applet, SIGNAL(panelGeometryChanged()));
+        const qreal taskCenter = task->x() + task->width() / 2.0;
+        task->setPosition(QPointF(646, 20));
+        task->setSize(QSizeF(408, 42));
+        QTRY_VERIFY(geometryChanged.count() > 0);
         QVERIFY(QMetaObject::invokeMethod(m_applet, "availablePanelWidth",
             Q_RETURN_ARG(int, available), Q_ARG(QQuickItem *, m_face),
             Q_ARG(int, 42), Q_ARG(int, 6)));
-        QCOMPARE(available, 42);
-        neighbor->setParentItem(nullptr);
-        delete neighborApplet;
+        QCOMPARE(available, 624);
+        QCOMPARE(task->x() + task->width() / 2.0, taskCenter);
+
+        task->setVisible(false);
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "availablePanelWidth",
+            Q_RETURN_ARG(int, available), Q_ARG(QQuickItem *, m_face),
+            Q_ARG(int, 42), Q_ARG(int, 6)));
+        QCOMPARE(available, 42); // The visible spacer is deliberately excluded.
+        spacer->setParentItem(nullptr);
+        task->setParentItem(nullptr);
+        delete spacerApplet;
+        delete taskApplet;
         m_face->setPosition(QPointF(30, 20));
         m_face->setSize(QSizeF(42, 42));
     }

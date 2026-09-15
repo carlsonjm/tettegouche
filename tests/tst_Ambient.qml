@@ -82,6 +82,11 @@ TestCase {
 
         const wide = createSurface(560, [transfer, media]);
         compare(wide.showSecondary, true);
+        verify(findChild(wide, "ambient-transfer-transfer-1").visible);
+        verify(findChild(wide, "ambient-media-media-1").visible);
+        verify(findChild(wide, "ambient-media-title").visible);
+        verify(findChild(wide, "ambient-media-artist").visible);
+        verify(findChild(wide, "ambient-media-time").visible);
     }
 
     function test_similar_transfers_group_only_at_core_overflow() {

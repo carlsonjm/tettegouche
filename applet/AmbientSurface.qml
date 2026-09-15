@@ -245,6 +245,7 @@ Item {
                     }
                     PlasmaComponents.Label {
                         id: mediaTitle
+                        objectName: "ambient-media-title"
                         visible: surface.showMediaTitle
                         text: mediaItem.modelData.title || mediaItem.modelData.source || qsTr("Media")
                         elide: Text.ElideRight
@@ -252,6 +253,7 @@ Item {
                     }
                     PlasmaComponents.Label {
                         id: mediaArtist
+                        objectName: "ambient-media-artist"
                         visible: surface.showSecondary && Boolean(mediaItem.modelData.artist)
                         text: mediaItem.modelData.artist || ""
                         opacity: 0.72
@@ -259,6 +261,7 @@ Item {
                         Layout.maximumWidth: 90
                     }
                     PlasmaComponents.Label {
+                        objectName: "ambient-media-time"
                         visible: surface.showSecondary && text.length > 0
                         text: surface.mediaTime(mediaItem.modelData)
                         opacity: 0.72
