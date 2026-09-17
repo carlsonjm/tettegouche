@@ -1,4 +1,4 @@
-# Swarm coordination
+# Swarm runtime coordination
 
 This file records runtime coordination for active work only. It is not project
 history.
