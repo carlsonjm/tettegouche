@@ -16,6 +16,10 @@ Read only:
 Then open a subsystem document only when the assigned work touches it. Do not
 scan `docs/archive/` during normal startup.
 
+Run `../verify.sh` for the repository's build, tests, source, package, and
+documentation checks. The documentation guard enforces archive isolation, compact
+runtime handoffs, current-state hygiene, and index coverage.
+
 ## Classification
 
 ### Canonical

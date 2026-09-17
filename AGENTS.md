@@ -16,3 +16,13 @@ archived sprint records or Git history.
 `docs/NEXT-ROADMAP.md` is the sole execution plan. Put durable architecture and
 product decisions in `docs/DECISIONS.md`, current facts in
 `docs/CURRENT_STATE.md`, and runtime coordination in `SWARM.md`.
+
+## Work packets
+
+Keep assignments compact and ordered: repository and roadmap item; required
+outcome; task-relevant contracts; acceptance checks; stop conditions; permissions
+already granted. Omit history and unrelated reading. If another worker must act,
+reduce the dependency to one `SWARM.md` handoff and delete it when resolved.
+
+Run `./verify.sh` before treating a source, packaging, test, or documentation
+change as complete.
