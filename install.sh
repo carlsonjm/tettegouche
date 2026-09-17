@@ -12,7 +12,7 @@ cmake -S "${project_root}" -B "${build_dir}" \
 cmake --build "${build_dir}" -j"$(nproc)"
 ctest --test-dir "${build_dir}" --output-on-failure
 
-# Remove the short-lived loose-QML package before installing the native applet.
+# Remove obsolete loose-QML installation paths before installing the native applet.
 rm -rf -- "${HOME}/.local/share/plasma/plasmoids/studio.warbler.tettegouche"
 rm -f "${HOME}/.local/bin/tettegouche"
 rm -f "${HOME}/.local/share/applications/io.github.carlsonjm.Tettegouche.desktop"
