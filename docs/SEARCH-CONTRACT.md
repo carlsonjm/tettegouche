@@ -1,65 +1,68 @@
-# Just type: search contract
+# Search contract
 
-Search should reveal recognizable destinations, not reward incidental strings.
-This contract is the authority for ranking changes; screenshot-specific fixes
-must become a rule tested against unrelated examples before adoption.
+Search reveals recognizable destinations rather than rewarding incidental
+strings. Screenshot-specific changes must become general rules tested against
+unrelated examples before adoption.
 
-## Current foundation
+## Eligibility and confidence
 
-1. Scope decides eligibility, not authorship. Everyday search keeps quiet
-   collections and internal files out; All files restores indexed filename matches.
-2. Confidence precedes provider preference: exact names, named intent, prefixes,
-   word matches, then descriptive context. Unrelated results are omitted.
-3. Apps, files, and aids break ties within comparable confidence. A precise
-   setting may beat an incidental app or file; an explicit filename stays strong.
-4. Aliases describe destinations, not query-specific rank overrides. Two-letter
-   aliases remain ambiguous. Longer alias prefixes express stronger intent.
-5. Punctuation and case are not meaningful obstacles. Matching uses word
-   boundaries, not arbitrary scattered letters inside unrelated names.
-6. Equivalent KDE module results already collapse to their canonical module.
-   Context children remain attached to that destination and are not extra results.
-7. No browsing or settings changes occur merely because the user types.
-   Empty eligible results retain the existing explicitly submitted web fallback.
-8. No usage learning is required. History cannot overpower relevance because
-   this foundation does not use history.
+1. Scope decides eligibility, not authorship. Everyday hides quiet collections,
+   repositories, technical/internal files, and file matches shorter than three
+   characters. All files relaxes those Tettegouche filters but does not widen
+   KDE indexing or scan content.
+2. Confidence precedes provider preference: exact name, named intent, prefix,
+   query words, descriptive context, then unrelated. Unrelated rows are omitted.
+3. Apps, files, and system aids break ties only within comparable confidence. A
+   precise setting may beat an incidental app; an explicit filename stays strong.
+4. Aliases describe destinations. Two-letter aliases remain ambiguous; longer
+   alias prefixes express stronger intent without per-query exceptions.
+5. Matching ignores punctuation and case and uses word boundaries rather than
+   arbitrary scattered letters.
+6. No browsing or settings change occurs merely because the user types. Web
+   fallback appears only after explicit submission of an empty eligible result.
+7. Ranking has no usage-learning requirement; history cannot overpower relevance.
 
-## Acceptance examples
+## Providers and execution
+
+Allowed local sources are applications/services, Baloo and recent documents,
+KDE settings, calculator, and unit conversion. Shell, session/kill actions,
+browser history, and online runners are excluded.
+
+Application results may activate an exact existing Kadunce window. Files and
+settings execute their provider or verified module action. Web dispatch sends an
+encoded URL through the registered HTTPS browser; query text is never executed.
+
+## Destination identity
+
+- Equivalent normalized local paths collapse across file providers. Same-named
+  files at different paths remain distinct; no symlink traversal or title-only
+  merging is performed.
+- Desktop application identities collapse across app rows. A `kcm_*.desktop`
+  shortcut may collapse with the same KDE module; the canonical module wins so
+  related children remain attached.
+- Context children belong to the parent destination and are not extra ranked
+  results. Selecting one opens the parent settings page after revalidating that
+  the child is still present.
+- Independent tools with similar names remain separate destinations.
+
+## Stable interaction
+
+Keyboard navigation and pointer/touch press pin the destination identity and a
+snapshot of displayed order. Late arrivals follow that snapshot; a replacement
+row for the same destination keeps its position. Execution resolves the pinned
+identity rather than trusting an old row number. If it disappears, submission
+does nothing. A new query or scope releases the lock.
+
+## Reference examples
 
 | Query | Expected relationship |
 | --- | --- |
-| wi | Winetricks before Wi-Fi; Wi-Fi before Window Manager |
-| so | Sound and other short prefixes stay ambiguous, not an unconditional boost |
-| soun | Sound intent before Soundcloud asset prefixes |
-| soundcloud | Soundcloud name beats Sound; no continuing Sound alias boost |
-| sound.png | Explicit file beats unrelated settings |
-| pow / prin / displ | Same intent rule applies without per-query exceptions |
-| browser | Relevant descriptive context is allowed, not fuzzy unrelated apps |
-| arbitrary unmatched text | No invented destination; explicit browser fallback |
+| `wi` | Winetricks before Wi-Fi; Wi-Fi before Window Manager |
+| `so` | Sound and other short prefixes remain ambiguous |
+| `soun` | Sound intent before a Soundcloud asset prefix |
+| `soundcloud` | Exact Soundcloud name beats the Sound alias |
+| `sound.png` | Explicit file beats unrelated settings |
+| unmatched text | No invented destination; explicit browser fallback |
 
-## Destination and interaction follow-up
-
-Equivalent normalized local paths collapse across file providers. Desktop app
-identities collapse across application results; a `kcm_*.desktop` shortcut can
-collapse with the same KDE module. Canonical module results win that equivalence
-so related children remain attached. Otherwise the strongest eligible
-representation wins. Same-named files at different paths remain separate; no
-filesystem symlink resolution, file opening, or title-based merging is used.
-Independent printer applications are still distinct tools, not falsely treated
-as equivalent module entrances. Broader task-family grouping remains future work.
-
-Keyboard navigation and pointer/touch press pin the destination identity and
-snapshot the displayed destination order. Late arrivals follow that snapshot;
-replacement provider rows for the same destination retain its position. The
-selected row is resolved from identity after model changes, not trusted by its
-old integer index. If the destination vanishes, submitting does nothing rather
-than opening its neighbor or invoking web fallback. A new query or scope releases
-the lock. Initial results still rank freely before interaction. Press/keyboard
-behavior requires live user validation in addition to synthetic model tests.
-
-Tests cover duplicate paths, distinct same-name files, KCM/app equivalence, late
-strong arrivals, duplicate arrivals, selected-destination removal, scope release,
-and prevention of web fallback for a missing pinned destination.
-
-Provider retrieval remains bounded by KDE's index and provider output. A shared
-ranking policy cannot rank a candidate that was never retrieved. Read-only live
-probes accompany policy fixtures to catch that difference.
+Provider retrieval remains a hard boundary: policy cannot rank a candidate that
+KDE never returns.

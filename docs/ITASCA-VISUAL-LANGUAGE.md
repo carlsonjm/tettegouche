@@ -234,7 +234,7 @@ These established visuals are product identity or behavior, not migration target
 - The suite's custom tray icon work.
 
 Lucide must not replace, redraw, simplify, or absorb these components. Preserve
-their geometry and behavior unless J explicitly opens a focused redesign.
+their geometry and behavior unless the product owner opens a focused redesign.
 
 ## Responsive composition
 

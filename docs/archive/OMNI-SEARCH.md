@@ -1,6 +1,6 @@
 # Omni search — first candidate
 
-Current ranking authority: [Search contract](SEARCH-CONTRACT.md). The shared
+Current ranking authority: [Search contract](../SEARCH-CONTRACT.md). The shared
 `SearchPolicy.h` evidence model supersedes the historical ranking descriptions
 below, including the former Wi-Fi-specific exception. All two-letter setting
 aliases now use the same ambiguous-prefix rule. All files intentionally retains

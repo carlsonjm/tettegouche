@@ -4,73 +4,61 @@
 
 # Tettegouche
 
-Just type. Tettegouche brings apps, files, settings, and web search into one
-focused search surface for KDE Plasma. Jump into an open app, find your files,
-or go straight to the settings for a connected device. When nothing local
-matches, continue in your default browser. Built for touch, keyboard, and mouse,
-it opens on demand and gets out of your way when dismissed.
+Tettegouche is a touch-first KDE Plasma launcher for applications, files,
+settings, and deliberate web search. Its panel applet also presents current
+media and transfer activity in a responsive Ambient strip.
 
-When Kadunce is running, Tettegouche reads its versioned workspace snapshot to
-identify applications that are already open and asks Kadunce to activate the
-exact existing window. Kadunce remains the sole owner of window and card state;
-Tettegouche still works as a normal launcher when that optional context is
-unavailable.
+The launcher works by itself. When a compatible Kadunce session is present, it
+uses Kadunce's versioned workspace context to activate exact existing windows
+and may temporarily occupy Card Line as a guest. Kadunce remains the only owner
+of windows, cards, stacks, focus, and output state.
 
-## Current seed
+## Current capabilities
 
-- Manual, application-first launch surface.
-- Native Plasma panel entry with right-click configuration.
-- Pull-up alphabetical application drawer with no behavioral ranking.
-- Keyboard, pointer, and touch-friendly result selection.
-- Versioned Kadunce context with exact existing-window activation.
-- Version-gated Kadunce guest card with a horizontal Card Line handoff.
-- Graceful standalone behavior without Kadunce.
-- No background service, compositor polling, or workspace mutation.
+- Ranked local search across applications, indexed filenames, KDE settings,
+  calculator, and unit conversion, with an explicit browser fallback.
+- An alphabetical installed-application drawer with no usage ranking.
+- A local Files drawer with tabs, history, breadcrumbs, filtering, sorting,
+  selection, default-app opening, copy/move, rename, folders, drag-copy, Trash,
+  and last-item recovery.
+- Read-only related context for supported settings such as Bluetooth, sound,
+  networking, displays, power, printers, storage, and default applications.
+- A responsive Ambient panel surface for MPRIS sessions, shared Plasma desktop
+  jobs, Tette-owned file operations, and observed arrivals in Downloads.
+- Keyboard, pointer, and touch interaction; Meta/panel invocation toggles the
+  launcher and exposes it above fullscreen applications.
 
-Open matches are activated through Kadunce and unmatched results use Plasma's
-normal application action. With a compatible Kadunce version, Tettegouche can
-temporarily occupy Card Line's center without joining its card model. Older or
-missing Kadunce versions always receive the standalone launcher.
+No background service, usage-learning database, compositor polling, or
+workspace mutation is introduced. Missing optional services remove only their
+associated context.
 
-At rest, users can type immediately or pull the **Browse everything** grabber
-upward. The drawer reads Plasma's installed application catalogue, excludes
-hidden entries, sorts by display name, and launches through KDE's normal
-application job. Search filters an open drawer in place; search from the resting
-card retains the compact ranked-results view.
-
-## Build and run
+## Build and install
 
 ```bash
 ./install.sh
 ```
 
-The installer builds and tests the project, then installs its native Plasma
-applet and launcher. Restart Plasma to load the new plugin. Existing Tettegouche
-panel widgets stay in place. For a first install, open panel edit mode, choose **Add Widgets**, search for
-**Tettegouche**, and add it to the panel. Right-click the widget and choose
-**Configure Tettegouche** to disable optional Kadunce Card Line integration or
-launcher motion. Run `./uninstall.sh` to remove the installed files without
-deleting this checkout.
+The installer builds and tests the project, then installs the launcher and
+native Plasma applet. Restart Plasma to load the plugin. For a first install,
+open panel edit mode, choose **Add Widgets**, search for **Tettegouche**, and add
+it to the panel. The widget configuration can disable Kadunce integration and
+launcher motion. Run `./uninstall.sh` to remove installed files without deleting
+the checkout.
 
-Tettegouche requires KDE Plasma on Wayland, Qt 6, KDE Frameworks 6,
-LayerShellQt, BluezQt, Solid, CMake, and a C++20 compiler. Bluetooth hardware is optional;
-connected-device context is omitted when unavailable.
+Requirements: KDE Plasma on Wayland, Qt 6, KDE Frameworks 6, LayerShellQt,
+BluezQt, Solid, CMake, and a C++20 compiler. Bluetooth hardware and Kadunce are
+optional. Some related-setting rows use optional read-only local tools; absence
+of a tool omits those rows.
 
-Related setting information uses existing local services and optional read-only
-tools (`pactl`, `nmcli`, `kscreen-doctor`, `powerprofilesctl`, `lpstat`, and
-`kdeconnect-cli`). Missing tools omit those child rows, not the setting itself.
-
-## Project layout
+## Repository map
 
 ```text
-src/                    native launcher and context boundary
-qml/                    on-demand launcher surface
-applet/                 native panel entry and configuration
-tests/                  context tests, Plasma panel/input tests, source checks
-install.sh              verified native Plasma installation path
-uninstall.sh            remove the installed launcher
+src/          native launcher, search, Files, integration, and activity providers
+qml/          launcher and Files presentation
+applet/       Plasma panel entry, Ambient surface, and configuration
+tests/        native, QML, private-bus, packaging, and source checks
+docs/         current state, roadmap, architecture, contracts, and opt-in archive
 ```
 
-## License
-
-Tettegouche is licensed under GPL-2.0-or-later.
+Start with [the documentation index](docs/README.md). Tettegouche is licensed
+under GPL-2.0-or-later.

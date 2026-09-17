@@ -1,155 +1,95 @@
 # Architecture
 
-Source-only A2: [Ambient provider candidate](AMBIENT-PROVIDERS-20260915.md).
-The persistent applet consumes real MPRIS/shared desktop jobs and observes local
-Downloads arrivals. FileBrowser retains KIO ownership and publishes an event-driven
-bridge from the existing launcher process; hidden outstanding operations defer
-its exit. No new daemon, Temperance owner or compositor layout is introduced.
-Installation and J's physical acceptance are pending.
+Tettegouche has two lifetimes: a persistent Plasma panel applet and an on-demand
+launcher process. The applet owns the panel entry and Ambient activity surface.
+The launcher owns search, drawers, local Files state, and the temporary
+layer-shell surface.
 
-Accepted: [rename, move and recoverable Trash](FILES-OPERATIONS-20260914.md).
-Explicit cut clipboard paste now moves; ordinary drag remains copy-only.
-Accepted: [compact edge hierarchy](COMPACT-EDGES-20260914.md).
-Remaining Files work: [Files completion roadmap](FILES-REMAINING.md).
+## Process and surface model
 
-Deferred cross-app release requirements: [Production readiness](PRODUCTION-READINESS.md).
+The public entry point is a native Plasma applet. Its launcher button is direct
+content of the root `PlasmoidItem`; it must not move into a lone
+`compactRepresentation`, which Plasma will not instantiate for this direct-content
+applet. The installed SVG is Widget Explorer identity; live panel content and
+its input target are QML items.
 
-Accepted: [Active App drawer](ACTIVE-DRAWER-20260914.md), following the
-[shared sizing contract](DRAWER-SIZING-PLAN.md). Also accepted:
-[Explore files browsing](FILES-BROWSING-20260914.md), including the startup
-correction and touch/navigation refinement. Monitor expansion is deferred.
-FileBrowser owns local tab/history/listing state; FilesPane renders it. Files
-reuses the accepted expanded guest lease without changing Kadunce. File operations
-include accepted [file opening](FILES-OPEN-20260914.md). The
-[copy/create slice](FILES-COPY-20260914.md) adds explicit asynchronous writes and
-defers process exit during a write job. Its selection corrections passed J;
-the [interaction pass](FILES-INTERACTION-20260914.md), including touch correction,
-is also accepted and frozen.
-See the slice documents for limits.
+The launcher is a single-instance process. A second invocation forwards a
+`toggle` request over D-Bus. Standalone mode uses a full-display input surface
+with a centered sheet. Kadunce guest mode keeps the layer-shell surface but
+masks input to Kadunce's negotiated guest geometry. Neither mode reserves
+workspace. Dismissal normally ends the process; an outstanding asynchronous file
+operation may keep its event loop alive after the surface hides.
 
-Mouse box selection is locally accepted (39cd67c). The combined
-[file dragging/edge scroll pass](FILES-DRAG-20260914.md) is accepted;
-it does not add move or destructive file operations.
+## Ownership boundaries
 
-Tettegouche is an on-demand launcher, not a desktop service. One process owns
-one temporary layer-shell surface and exits as soon as the user launches an
-application or dismisses the surface.
+Tettegouche owns launcher invocation and presentation, search and application
+catalogue queries, result selection, ordinary application launch, local Files
+state and operations, related-setting context, Ambient ranking/presentation,
+and interpretation of Kadunce's published integration schemas.
 
-Its public entry point is a lightweight Plasma panel applet. The applet has no
-full representation and never embeds the launcher in a panel popup; it starts
-the same native process previously exercised through the desktop entry. That
-desktop service remains installed with `NoDisplay=true` as launch metadata, not
-as a second user-facing icon. Applet configuration can disable Kadunce guest
-negotiation, in which case the process starts with `--standalone` and retains
-the otherwise identical launcher behavior.
+Kadunce exclusively owns KWin discovery, live window identity, cards, stacks,
+focus, output state, existing-window activation, guest placement, neighboring
+card motion, and the final Card Line selection. Tettegouche never performs raw
+KWin discovery or inserts its guest into Kadunce's persistent card model.
 
-The panel button is direct content of the root `PlasmoidItem`, with explicit
-root size hints and a centered white dimple. This follows Temperance's panel
-surface structure. It must not be moved into a lone `compactRepresentation`:
-Plasma treats applets without a `fullRepresentation` as direct-content applets,
-so that compact component would never be instantiated. The installed SVG is
-the widget-browser identity; the live dimple and input target are QML items.
+Source applications and KDE services own activity truth and supported actions.
+Temperance owns notifications and transient event presentation; Tettegouche does
+not duplicate that history in Ambient.
 
-The panel regression test loads the compiled plugin through Plasma in a private
-D-Bus session with temporary configuration. It checks rendered pixels, horizontal
-and vertical geometry, mouse and touch input, and keyboard/shortcut activation.
-Launches use a temporary harmless executable rather than opening the real app.
+## Kadunce integration
 
-## Ownership boundary
+At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads
+workspace-context schema version 1. Unsupported, absent, or malformed endpoints
+fall back to the standalone launcher. Context refreshes on Kadunce change signals
+and before window selection; there is no timer or heartbeat.
 
-Tettegouche owns:
+Open application matches carry a live window identifier. Tettegouche asks Kadunce
+to activate that exact window. New launches may hold the guest until Kadunce sees
+a matching window; a bounded timeout returns to search. Horizontal guest drag
+sends only motion deltas, leaving commit/cancel and real-card selection to
+Kadunce. Expanded Apps and Files drawers request the negotiated presentation
+capability and otherwise use standalone expansion.
 
-- invocation and launcher presentation;
-- installed-application queries through Plasma's application runner;
-- result selection and normal application launch actions;
-- interpretation of the published workspace-context schema;
-- requesting activation of an exact live window from that snapshot.
-- rendering and interacting with its own temporary guest-card surface.
+## Search and catalogue
 
-Kadunce owns:
+The compact search model combines an allowlisted set of KRunner providers and a
+Tettegouche-owned confidence policy. Selection is pinned by destination identity
+so late results cannot redirect an activated row. Search remains local until the
+user explicitly submits an empty eligible result set to the browser. The
+behavioral authority is [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
-- KWin window discovery and identity;
-- cards, stacks, focus, and output state;
-- activation behavior for existing windows and cards.
-- guest placement, adjacent real-card motion, and the final Card Line selection.
+The Browse drawer reads visible applications from `KApplicationTrader`, sorts by
+display name, and launches with `KIO::ApplicationLauncherJob`. It has no usage,
+recency, or recommendation layer. Existing-window matching runs before launch.
 
-At open time, Tettegouche first checks Kadunce's independent launcher-guest
-protocol. Guest mode is requested only when Kadunce reports the exact supported
-version. It then requests a `workspaceContext` snapshot and refreshes it on
-Kadunce change signals and before window selection. There is no timer,
-heartbeat, or raw KWin discovery. If either endpoint is absent, malformed, or
-unsupported, Tettegouche keeps its standalone surface and application search
-continues normally.
+## Files
 
-## Guest-card handoff
+`FileBrowser` owns local directory listing, tabs, navigation, selection,
+clipboard and KIO jobs. `FilesPane.qml` renders that state. Listings are
+asynchronous and generation-guarded; saved locations are not synchronously
+probed during launcher startup. Writes never use an overwrite flag, never invoke
+a shell, and may defer process exit. The complete behavioral and safety boundary
+is [FILES-CONTRACT.md](FILES-CONTRACT.md).
 
-Protocol 3 reserves the same centered Card Line guest footprint for Tettegouche
-without inserting it into Kadunce's persistent card model. Kadunce derives a
-slightly narrower geometry from its canonical card so both real neighbors keep
-useful visible shoulders; Tettegouche does not infer or resize that footprint.
-It renders an opaque `#141414` surface with a
-one-pixel `#333333` outline, the Card Line corner radius, and a 22-pixel content
-inset, then limits input to that card. Real application cards remain visible on
-either side and continue to belong exclusively to Kadunce.
+## Ambient activity
 
-During a horizontal launcher drag, Tettegouche sends only the current delta.
-Kadunce mirrors that motion onto the incoming real card and decides whether the
-release commits. A canceled drag springs back. A committed drag lets the real
-card reclaim center, then Tettegouche exits. A press on a visible neighboring
-card is treated as navigation rather than app activation: Kadunce consumes the
-full input sequence, animates Tettegouche away, selects that neighbor, and
-remains in Card Line. Loss of Tettegouche's unique D-Bus owner safely ends the
-lease.
+The applet constructs one shared activity model per Plasma process. It combines
+MPRIS sessions, Plasma's shared desktop-jobs model, Tette's revisioned operation
+bridge, and nonblocking filesystem observation of direct Downloads children.
+Rows preserve source authority and generation-check actions. The compositor
+reserves activity cores before revealing optional context and keeps the center
+task dock physically stable. See [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md).
 
-For a new application launch, Tettegouche asks Kadunce to hold the guest and
-shows a bounded `Opening` state. Kadunce completes the guest only after KWin
-reports a window matching the requested desktop identity or declared
-StartupWMClass, preventing the previously selected
-card from flashing into Active during process startup. A ten-second timeout
-returns the launcher to search if no window arrives.
+## Related settings
 
-## Launch behavior
+Related-setting children are read-only context keyed by stable setting IDs.
+They may open the parent settings page but never mutate a device or system state.
+Most providers are lazy per-launcher snapshots; Bluetooth is event-driven. See
+[RELATED-SETTINGS.md](RELATED-SETTINGS.md).
 
-Results that correspond to an open application carry its live `windowId`.
-Tettegouche asks Kadunce to activate that exact window; Kadunce restores it if
-minimized and routes card-backed windows through its existing card selection.
-When several windows belong to one application, the most recently activated
-window recorded during this effect lifetime wins. Without that optional ordering,
-the focused window wins, then the selected card, then the frontmost match. Results
-without a live match use Plasma's ordinary launch action.
+## Verification boundaries
 
-## Surface behavior
-
-Standalone mode uses one full-display input surface with a centered responsive
-sheet. Guest mode keeps that layer-shell surface but masks input to the geometry
-negotiated with Kadunce. Neither mode reserves workspace or renders a permanent
-trigger. A second invocation is forwarded to the existing process through a
-small single-instance D-Bus entry point.
-
-Repeated invocation now calls `toggle`: a visible launcher closes through normal
-guest-lease cleanup; an invisible launcher opens. The panel applet forwards the
-same command to a running child instead of ignoring activation. Initial panel
-invocation requests Plasma's AcceptingInput status and panel focus before the
-launcher overlay takes keyboard focus, exposing the dock without minimizing a
-fullscreen application. Status returns to Active when the child exits. J passed
-the installed fullscreen/toggle checks; no global window rules or panel layer rewrites
-are installed. Direct forwarding waits for D-Bus delivery before its process exits.
-
-Both modes use the same centered card treatment: a one-pixel `#5a5a5a`
-hairline, ten-pixel corners, and an undimmed desktop outside the surface. At
-rest, the search control is transparent with the same hairline, `Just type` on
-the left, and its action icon on the right. Physical typing engages it directly;
-an intentional tap fills the control, focuses the field, and requests the
-system input method when one is available.
-
-A quiet `Browse everything` label and horizontal grabber rest at the bottom
-edge. A tap or upward drag raises them beneath the search control while an
-alphabetical grid of visible Plasma applications grows behind them. In the open
-header, the centered label crossfades to a left-aligned copy, the grabber
-remains centered, and an A-Z/Z-A sort menu appears at right. Typing filters this
-grid in place; resting-card typing continues to use KRunner's ranked result
-view. The catalogue comes
-directly from `KApplicationTrader` and launches through
-`KIO::ApplicationLauncherJob`; it contains no recency, recommendation, or
-usage-ranking layer. Open-window matching still runs before catalogue launch,
-preserving the same no-duplicates behavior as text search.
+Native tests cover search policy, workspace schema, Files operations, related
+providers, activity providers, and icon rendering. QML and private-bus tests
+cover launcher controls, Ambient composition, panel geometry/input, and package
+integration. Disposable fixtures must not write or delete real user files.

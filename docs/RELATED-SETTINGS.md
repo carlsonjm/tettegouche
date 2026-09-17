@@ -1,59 +1,51 @@
-# Related settings — first shared-provider candidate
+# Related settings contract
 
-`RelatedInfo` supplies label/status records to a single QML child renderer.
-Stable setting IDs select providers; translated display names are not routing
-keys. Children are informational and activate their parent setting, never
-disconnect, pair, mount, switch output or invoke another state-changing action.
+Related setting rows add read-only local context to a canonical KDE settings
+destination. Stable setting IDs select providers; translated display names are
+never routing keys.
 
-Supported:
+## Supported context
 
-- Bluetooth: connected device names, event-driven updates through BluezQt.
-- Sound: output and microphone devices, muted/in-use status; monitor sources omitted.
-- Networking: active named connections, including VPNs; loopback/bridges omitted.
-- Displays: connected outputs, active mode and scale, disabled state.
-- Power: battery level/charging state; standard system power profile when supported.
-- Printers: configured printer names and idle/printing/disabled state, no job names.
-- KDE Connect: paired and reachable devices when the provider is installed.
-- Removable storage: present removable/hotplug volumes, mounted state. Solid
-  metadata only: no mount, filesystem traversal, free-space query or drive wake.
-- Default applications: browser, mail and file manager associations.
+- Bluetooth: connected device names with event-driven BluezQt updates.
+- Sound: output and microphone devices and muted/in-use status; monitor sources
+  are omitted.
+- Networking: active named connections, including VPNs; loopback and bridges are
+  omitted.
+- Displays: connected outputs, active mode/scale, and disabled state.
+- Power: battery charge state and the standard system power profile when exposed.
+- Printers: configured printer names and idle/printing/disabled state, without job
+  names.
+- KDE Connect: paired and reachable devices when its provider is installed.
+- Removable storage: present removable/hotplug volumes and mounted state from
+  Solid metadata only.
+- Default applications: browser, mail, and file-manager associations.
 - Night Light: enabled/active state and current temperature when available.
 
-Except Bluetooth, providers are lazy snapshots obtained once per launcher
-process, only when their setting appears. Reopening the launcher refreshes
-them; these are not continuous monitoring widgets. Queries do not spawn new
-polling loops. Missing services, malformed data and timed-out reads leave the
-parent functional with no children. Local helper processes use fixed arguments,
-no shell, a two-second timeout and a one-MiB output guard. D-Bus property reads
-disable service autostart and time out after 1.5 seconds.
+Bluetooth is event-driven. Other providers are lazy snapshots taken once per
+launcher process when their parent setting appears. Reopening refreshes them.
+Missing services, malformed output, and timeouts leave the parent functional
+without children.
 
-Groups are capped at three details plus a remaining-count row when more than
-four records exist. Bluetooth retains its previously accepted rendering/count
-behavior. Parent geometry expands with rows and collapses when absent.
+Local helper processes use fixed arguments without a shell, a two-second timeout,
+and a one-MiB output guard. D-Bus property reads disable service autostart and
+time out after 1.5 seconds.
 
-Deliberate detours deferred: reliable input-device classification and enabled
-states; printer default/queue counts; KDE Connect remote battery/offline detail;
-default terminal detection; richer Night Light schedule; system-wide live
-refresh for every provider; actionable device controls. Custom Z13 performance
-profiles are not assumed to equal the standard system power profile.
+## Presentation and activation
 
-Verification: seven tests pass, including parser fixtures, stable-ID routing,
-unavailable/malformed data, and grouped-row layout. Read-only probes on the test
-machine returned sound, network, display, power, printer, storage, default-app
-and Night Light rows; KDE Connect returned none. This is not a live user visual
-pass or confirmation of every possible hardware/backend combination.
-# Independent child presentation
+Groups show at most three details plus a remaining-count row when more than four
+records exist. Children are separate selectable rows after their parent in
+keyboard order. Selection retains the pinned parent destination and revalidates
+the child before activation.
 
-Children now use indented dot indicators, separate 40px selectable pills, and
-keyboard order parent → children → next result (Up reverses). The parent highlight
-is always limited to its own 62px row. Child selection retains the pinned parent
-destination and checks that the displayed child is still present before opening.
+A child opens the relevant existing settings page. It never disconnects, pairs,
+mounts, switches audio/output, manages printer jobs, changes profiles, or performs
+another device-specific action. Such controls require stable device identities
+and verified mutation APIs before they can enter this contract.
 
-Selecting a child now opens the relevant existing settings page directly, using
-the normal launcher handoff. The extra explanatory/confirmation card was removed
-after user testing. Existing System Settings instances receive KDE's CommandLine
-request with the module ID; a closed instance uses the normal process launch.
-No device-specific deep links, connect/disconnect, audio
-switching, mounting, printer jobs, or power changes are claimed or implemented.
-The current providers mostly supply display/status rather than stable actionable
-device identities; such actions need those identities and verified APIs first.
+## Current limits
+
+Input-device classification and enabled state, printer defaults/queue counts,
+KDE Connect remote battery/offline details, default-terminal detection, richer
+Night Light schedules, and continuous refresh for every provider are absent.
+Custom performance profiles are not assumed to equal the standard system power
+profile. Storage opens KDE Device Actions; it is not a disk-management surface.
