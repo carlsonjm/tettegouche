@@ -13,9 +13,14 @@
 provenance, or a failed approach. Do not reconstruct ordinary task context from
 archived sprint records or Git history.
 
-`docs/NEXT-ROADMAP.md` is the sole execution plan. Put durable architecture and
-product decisions in `docs/DECISIONS.md`, current facts in
-`docs/CURRENT_STATE.md`, and runtime coordination in `SWARM.md`.
+`docs/NEXT-ROADMAP.md` is this repository's execution plan and the source of task
+detail. Suite block order, cross-repository dependencies and open product decisions
+are owned by `ROADMAP-CC.md` in the Kadunce repository; read it when that checkout
+is present. Put durable architecture and product decisions in `docs/DECISIONS.md`,
+current facts in `docs/CURRENT_STATE.md`, and runtime coordination in `SWARM.md`.
+
+Claude Code loads `CLAUDE.md` automatically. It routes into this same startup set
+and adds no separate protocol.
 
 ## Work packets
 

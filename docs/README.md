@@ -27,8 +27,9 @@ runtime handoffs, current-state hygiene, and index coverage.
 | Document | Authority |
 | --- | --- |
 | [`AGENTS.md`](../AGENTS.md) | Agent startup and documentation routing |
+| [`CLAUDE.md`](../CLAUDE.md) | Claude Code entry point; routes into the `AGENTS.md` startup set |
 | [`CURRENT_STATE.md`](CURRENT_STATE.md) | Current implemented behavior and known limits only |
-| [`NEXT-ROADMAP.md`](NEXT-ROADMAP.md) | Sole execution plan |
+| [`NEXT-ROADMAP.md`](NEXT-ROADMAP.md) | This repository's execution plan and task detail; suite block order lives in Kadunce's `ROADMAP-CC.md` |
 | [`DECISIONS.md`](DECISIONS.md) | Durable architecture and product decisions |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Process, ownership, integration, and safety boundaries |
 | [`SEARCH-CONTRACT.md`](SEARCH-CONTRACT.md) | Search eligibility, ranking, identity, and execution |
