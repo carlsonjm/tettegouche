@@ -8,6 +8,8 @@ surface. There is no separate daemon.
 ## Launcher and integration
 
 - Panel or Meta activation toggles one single-instance launcher process.
+- A whole search can be typed on the on-screen keyboard: the keys stack above
+  the launcher, and a touch on them never closes it.
 - Standalone mode uses a centered responsive sheet. A compatible Kadunce session
   may host it as a temporary Card Line guest and expand Apps or Files into the
   negotiated Active presentation.

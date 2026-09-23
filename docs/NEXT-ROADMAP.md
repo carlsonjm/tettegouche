@@ -24,25 +24,6 @@ Exit when installed behavior matches [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md)
 and any discrepancy has either a fix with focused regression coverage or a
 documented current limitation.
 
-## 1b. The launcher closes when the keyboard is touched
-
-Typing into Tette with the virtual keyboard dismisses the launcher. A touch on
-the keyboard reads as a touch outside Tette's own surface, and the dismissal
-that follows is correct for every other surface. The keyboard is the exception:
-it exists to serve the window that has focus, so a touch on it is not a touch
-away from that window.
-
-Recorded from physical use on 21 September. Search is unusable by touch until
-this is answered, which makes it a release matter rather than polish.
-
-The input panel is a compositor fact and is identifiable without any downstream
-surface, so the fix stays inside Tettegouche and holds on an ordinary Plasma
-panel. Kadunce carries the same blind spot in its own form and is being fixed
-separately; neither fix depends on the other.
-
-Exit when a full search can be typed by touch without the launcher dismissing
-itself, and a touch genuinely outside still dismisses it.
-
 ## 2. Transfer robustness
 
 Add useful operation progress and cancellation inside Files, explicit conflict

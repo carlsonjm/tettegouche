@@ -11,6 +11,12 @@ subsystem; dates, candidate history, and acceptance transcripts live in Git and
 - The launcher remains fully useful without Kadunce, optional related-setting
   tools, Bluetooth hardware, or an active Ambient source.
 - Meta and panel invocation share toggle semantics and normal guest cleanup.
+- The launcher is a top-layer surface, not an overlay one. KWin keeps the
+  on-screen keyboard in the overlay layer, and an overlay launcher mapped after
+  it stacked above the keys, so its full-screen backdrop took every touch meant
+  for them and closed the search. Opening activates the launcher, which keeps a
+  full-screen window from covering it. Notification banners now draw over the
+  launcher rather than under it.
 
 ## Ownership
 
