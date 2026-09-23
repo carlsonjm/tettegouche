@@ -24,6 +24,17 @@ Exit when installed behavior matches [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md)
 and any discrepancy has either a fix with focused regression coverage or a
 documented current limitation.
 
+A further source follows the validation (suite plan, Block 6): an application
+whose dialog is waiting for the person. Kadunce keeps such a dialog hidden with
+its application and raises Plasma's standard attention flag on the
+application, so Ambient reads that flag from Plasma's task model and depends on
+nothing in Kadunce. The row names the application, leaves when the flag drops,
+and its one action asks Plasma to activate the application, which brings it
+forward with its dialog. Whether an application's own attention request, with
+no dialog behind it, also earns a row is decided with J first; the admission
+rule in [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) changes when the row is
+built.
+
 ## 2. Transfer robustness
 
 Add useful operation progress and cancellation inside Files, explicit conflict
