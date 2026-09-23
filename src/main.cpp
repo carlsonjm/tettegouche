@@ -79,7 +79,11 @@ void configureSurface(QQuickView *view, QScreen *screen)
     auto *surface = LayerShellQt::Window::get(view);
     surface->setScreen(screen);
     surface->setScope(QStringLiteral("tettegouche-launcher"));
-    surface->setLayer(LayerShellQt::Window::LayerOverlay);
+    // Top, not overlay: KWin keeps the on-screen keyboard in the overlay layer,
+    // and a later overlay surface stacks above it and takes every touch meant
+    // for the keys. Opening activates the launcher, which takes a full-screen
+    // window out of the layer above, so nothing covers the search either.
+    surface->setLayer(LayerShellQt::Window::LayerTop);
     LayerShellQt::Window::Anchors anchors;
     anchors.setFlag(LayerShellQt::Window::AnchorTop);
     anchors.setFlag(LayerShellQt::Window::AnchorBottom);
