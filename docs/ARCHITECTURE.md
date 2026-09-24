@@ -29,7 +29,7 @@ and interpretation of Kadunce's published integration schemas.
 
 Kadunce exclusively owns KWin discovery, live window identity, cards, stacks,
 focus, output state, existing-window activation, guest placement, neighboring
-card motion, and the final Card Line selection. Tettegouche never performs raw
+card motion, and the final Spread selection. Tettegouche never performs raw
 KWin discovery or inserts its guest into Kadunce's persistent card model.
 
 Source applications and KDE services own activity truth and supported actions.

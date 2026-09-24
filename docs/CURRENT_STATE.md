@@ -11,7 +11,7 @@ surface. There is no separate daemon.
 - A whole search can be typed on the on-screen keyboard: the keys stack above
   the launcher, and a touch on them never closes it.
 - Standalone mode uses a centered responsive sheet. A compatible Kadunce session
-  may host it as a temporary Card Line guest and expand Apps or Files into the
+  may host it as a temporary Spread guest and expand Apps or Files into the
   negotiated Active presentation.
 - Workspace-context schema version 1 and launcher-guest protocol 3 are the only
   supported Kadunce contracts. Missing or mismatched integration falls back to

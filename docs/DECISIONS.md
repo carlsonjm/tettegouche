@@ -21,7 +21,7 @@ subsystem; dates, candidate history, and acceptance transcripts live in Git and
 ## Ownership
 
 - Kadunce is the sole owner of KWin discovery, window identity, cards, stacks,
-  focus, output state, guest placement, and Card Line selection.
+  focus, output state, guest placement, and Spread selection.
 - Tettegouche owns search, catalogue, Files, launcher presentation, related
   context, and the right-side Ambient composition.
 - Temperance owns notifications and transient event history. Authoritative source
