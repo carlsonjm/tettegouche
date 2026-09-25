@@ -127,3 +127,6 @@ Run the repository checks before proposing a build:
 ## License
 
 Tettegouche is licensed under GPL-2.0-or-later.
+
+The project names and marks are not covered by that licence. See
+[TRADEMARKS.md](TRADEMARKS.md).
