@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=Files
+GenericName=File Manager
+Comment=Open folders in Tettegouche's Files
+Exec=tettegouche --folder %u
+Icon=system-file-manager
+Terminal=false
+NoDisplay=true
+MimeType=inode/directory;
+Categories=System;FileManager;
+X-KDE-Protocols=KIO
+StartupNotify=false

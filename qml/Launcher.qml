@@ -1,0 +1,1502 @@
+/*
+    SPDX-FileCopyrightText: 2026 Jared Carlson
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
+import QtQuick
+import QtQuick.Controls as QQC2
+import org.kde.kirigami as Kirigami
+
+pragma ComponentBehavior: Bound
+
+Item {
+    id: root
+
+    required property var launcherController
+    required property var searchResults
+    required property var applicationCatalog
+    property var fileBrowser: null
+    property bool filesMode: false
+    focus: true
+    readonly property color primaryText: "#f2ffffff"
+    readonly property color secondaryText: "#a8ffffff"
+    readonly property color edgeText: "#88ffffff"
+    readonly property color surfaceColor: "#141414"
+    readonly property color surfaceOutline: "#5a5a5a"
+    readonly property color controlColor: "#242424"
+    // Shuffle's corner tiers: paper for the sheet and all laid in it, notes for
+    // what floats above and closes; anything pressed is a pill.
+    readonly property int paperRadius: 8
+    readonly property int noteRadius: 12
+    readonly property int contentInset: 22
+    property bool pendingLaunch: false
+    property string selectedChildKey: ""
+    property bool childLaunchFailed: false
+
+    function childKey(child) { return JSON.stringify([child.label, child.status || ""]) }
+    function currentChildren() {
+        const row = root.searchResults.selectionPinned()
+            ? root.searchResults.selectedRow() : resultList.currentIndex
+        return row < 0 ? [] : root.launcherController.relatedItems(row)
+    }
+    function moveResultSelection(direction) {
+        const children = currentChildren()
+        let child = children.findIndex(function(item) { return root.childKey(item) === root.selectedChildKey })
+        if (direction > 0 && child + 1 < children.length) {
+            root.selectedChildKey = root.childKey(children[child + 1])
+        } else if (direction < 0 && root.selectedChildKey !== "") {
+            root.selectedChildKey = child > 0 ? root.childKey(children[child - 1]) : ""
+        } else {
+            if ((direction < 0 && resultList.currentIndex <= 0)
+                || (direction > 0 && resultList.currentIndex >= resultList.count - 1)) return
+            resultList.currentIndex = Math.max(0, Math.min(resultList.count - 1, resultList.currentIndex + direction))
+            root.selectedChildKey = ""
+            if (direction < 0) {
+                const previous = root.launcherController.relatedItems(resultList.currentIndex)
+                if (previous.length) root.selectedChildKey = root.childKey(previous[previous.length - 1])
+            }
+        }
+        root.searchResults.pinSelection(resultList.currentIndex)
+        resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+    }
+    function openChildSettings() {
+        const child = currentChildren().find(function(item) { return root.childKey(item) === root.selectedChildKey })
+        if (!child) return
+        const row = root.searchResults.selectedRow()
+        root.childLaunchFailed = !root.runResult(row)
+    }
+    property bool applicationLaunchPending: false
+    property string launchingApplication: ""
+    property real guestDrag: 0
+    property bool guestExiting: false
+    property bool guestDragged: false
+    property bool searchEngaged: false
+    property bool drawerOpen: false
+    property real drawerProgress: 0
+    property bool sortMenuOpen: false
+    property real openingText: 0
+    property real openingControls: 0
+    property real openingIcon: 0
+    property real openingShine: 0
+    // Where the on-screen keys lie over this window, as the compositor reports
+    // them; empty while they are down. The keys hold no room of their own, so
+    // the sheet keeps above them itself.
+    property rect keysRect: Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle : Qt.rect(0, 0, 0, 0)
+    readonly property bool keysUp: keysRect.width > 0 && keysRect.height > 0 && keysRect.y < height
+    // How far up from the window's bottom the sheet must keep clear, eased as
+    // the keys come and go.
+    property real keysReach: keysUp ? height - keysRect.y + 10 : 0
+    Behavior on keysReach {
+        NumberAnimation { id: keysMotion; duration: 220; easing.type: Easing.OutCubic }
+    }
+
+    SequentialAnimation {
+        id: openingSequence
+        ScriptAction { script: { root.openingText = 0; root.openingControls = 0; root.openingIcon = 0; root.openingShine = 0 } }
+        PauseAnimation { duration: 60 }
+        NumberAnimation { target: root; property: "openingControls"; to: 1; duration: 240; easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "openingIcon"; to: 1; duration: 120; easing.type: Easing.OutCubic }
+        PauseAnimation { duration: 140 }
+        ParallelAnimation {
+            NumberAnimation { target: root; property: "openingText"; to: 1; duration: 280; easing.type: Easing.OutCubic }
+            SequentialAnimation {
+                PauseAnimation { duration: 180 }
+                NumberAnimation { target: root; property: "openingShine"; to: 1; duration: 460; easing.type: Easing.InOutSine }
+            }
+        }
+    }
+
+    function setDrawerOpen(open, mode) {
+        if (open) root.filesMode = mode === "files"
+        root.guestDrag = 0
+        root.drawerOpen = open
+        root.launcherController.setDrawerExpanded(open)
+        if (!open) {
+            root.sortMenuOpen = false
+        }
+        root.applicationCatalog.filterText = open && !root.filesMode ? query.text : ""
+        if (root.fileBrowser) root.fileBrowser.filter = root.filesMode ? query.text : ""
+        root.searchResults.queryString = open ? "" : query.text
+        drawerSettle.to = open ? 1 : 0
+        drawerSettle.restart()
+        if (open) {
+            root.searchEngaged = false
+            root.forceActiveFocus()
+            // Request the shared presentation first; listing must not precede
+            // the drawer handshake or run at launcher construction time.
+            if (root.filesMode && root.fileBrowser) Qt.callLater(function() {
+                if (root.drawerOpen && root.filesMode) root.fileBrowser.open()
+            })
+        }
+    }
+
+    onGuestDragChanged: {
+        if (root.launcherController.guestMode && !root.guestExiting) {
+            root.launcherController.updateGuestDrag(root.guestDrag)
+        }
+    }
+
+    function runResult(index) {
+        if (index < 0 || index >= resultList.count) {
+            return false
+        }
+        const activation = root.launcherController.activateIfOpen(index)
+        if (activation < 0) return false
+        if (activation > 0) {
+            root.launcherController.finishLaunch()
+            return true
+        }
+        const applicationName = String(
+            root.searchResults.data(
+                root.searchResults.index(index, 0), Qt.DisplayRole))
+        const waitsForWindow =
+            root.launcherController.beginGuestApplicationLaunch(index, false)
+        if (waitsForWindow) {
+            root.applicationLaunchPending = true
+            root.launchingApplication = applicationName
+            launchTimeout.restart()
+        }
+        if (root.searchResults.run(root.searchResults.index(index, 0))) {
+            if (!waitsForWindow) {
+                root.launcherController.finishLaunch()
+            }
+            return true
+        }
+        if (waitsForWindow) {
+            launchTimeout.stop()
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+        }
+        return false
+    }
+
+    function runCatalogApplication(index, applicationName) {
+        const activation = root.launcherController.activateCatalogIfOpen(index)
+        if (activation < 0) return false
+        if (activation > 0) {
+            root.launcherController.finishLaunch()
+            return true
+        }
+        const waitsForWindow =
+            root.launcherController.beginGuestApplicationLaunch(index, true)
+        if (waitsForWindow) {
+            root.applicationLaunchPending = true
+            root.launchingApplication = applicationName
+            launchTimeout.restart()
+        }
+        if (root.applicationCatalog.launch(index)) {
+            if (!waitsForWindow) {
+                root.launcherController.finishLaunch()
+            }
+            return true
+        }
+        if (waitsForWindow) {
+            launchTimeout.stop()
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+        }
+        return false
+    }
+
+    function submit() {
+        if (root.drawerOpen && root.filesMode) {
+            // With nothing chosen, Enter searches inside the folder as its
+            // pill does; otherwise it opens what is chosen.
+            if (!root.fileBrowser) return
+            if (root.fileBrowser.searchOffered && root.fileBrowser.selectedPaths.length === 0)
+                root.fileBrowser.searchInside(root.fileBrowser.filter)
+            else
+                root.fileBrowser.openSelected()
+            return
+        }
+        if (!root.drawerOpen && root.selectedChildKey !== "") {
+            root.openChildSettings()
+        } else if (!root.drawerOpen && root.searchResults.querying) {
+            pendingLaunch = true
+        } else if (root.drawerOpen && applicationGrid.count > 0) {
+            const row = Math.max(0, applicationGrid.currentIndex)
+            runCatalogApplication(row,
+                root.applicationCatalog.applicationName(row))
+        } else if (root.searchResults.selectionPinned()) {
+            // A vanished destination must not silently turn Enter into a
+            // different app launch (or a web search).
+            runResult(root.searchResults.selectedRow())
+        } else if (resultList.count > 0) {
+            runResult(Math.max(0, resultList.currentIndex))
+        } else if (root.searchResults.querying) {
+            pendingLaunch = true
+        } else if (!root.drawerOpen && query.text.trim().length > 0) {
+            const waiting = root.launcherController.beginGuestWebLaunch()
+            if (waiting) {
+                root.applicationLaunchPending = true
+                root.launchingApplication = "Web search"
+                launchTimeout.restart()
+            }
+            if (!root.launcherController.searchWeb(query.text) && waiting) {
+                root.launcherController.cancelGuestApplicationLaunch()
+                launchTimeout.stop()
+                root.applicationLaunchPending = false
+            }
+        }
+    }
+
+    Connections {
+        target: root.fileBrowser
+        ignoreUnknownSignals: true
+        function onFolderCreated() { query.text="" }
+        function onFilterCleared() { query.text="" }
+    }
+
+    Keys.onPressed: event => {
+        if (event.key === Qt.Key_Escape) {
+            if (root.sortMenuOpen) {
+                root.sortMenuOpen = false
+                event.accepted = true
+                return
+            }
+            if (root.drawerProgress > 0.01) {
+                root.setDrawerOpen(false)
+                event.accepted = true
+                return
+            }
+            root.launcherController.close()
+            event.accepted = true
+            return
+        }
+        if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
+                && !query.activeFocus && event.text.length > 0
+                && !(event.modifiers & (Qt.ControlModifier
+                    | Qt.AltModifier | Qt.MetaModifier))) {
+            root.searchEngaged = true
+            query.forceActiveFocus()
+            query.insert(query.cursorPosition, event.text)
+            event.accepted = true
+        }
+    }
+
+    Connections {
+        target: root.launcherController
+        function onGuestBridgeLost() {
+            launchTimeout.stop()
+            launchReadyExit.stop()
+            guestExit.stop()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.guestExiting = false
+            root.guestDrag = 0
+            sheet.opacity = 1
+            sheet.scale = 1
+            query.forceActiveFocus()
+        }
+        function onOpened() {
+            launchTimeout.stop()
+            query.text = ""
+            root.pendingLaunch = false
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.searchEngaged = false
+            root.drawerOpen = false
+            root.drawerProgress = 0
+            root.sortMenuOpen = false
+            root.forceActiveFocus()
+            root.guestDrag = 0
+            root.guestExiting = false
+            root.guestDragged = false
+            sheet.opacity = 1
+            sheet.scale = 1
+            openingSequence.restart()
+        }
+        function onFilesRequested() { root.setDrawerOpen(true, "files") }
+        // Meta+G or Meta+E: that drawer opens, or closes the launcher when it
+        // is the drawer already open.
+        function onDrawerRequested(mode) {
+            const files = mode === "files"
+            if (files && !root.fileBrowser) return
+            if (root.drawerOpen && root.filesMode === files) root.launcherController.close()
+            else root.setDrawerOpen(true, files ? "files" : "apps")
+        }
+        function onGuestLaunchReady() {
+            if (!root.applicationLaunchPending) {
+                return
+            }
+            launchTimeout.stop()
+            root.guestExiting = true
+            launchReadyExit.restart()
+        }
+        function onGuestNavigationReady(slot) {
+            if (root.guestExiting) {
+                return
+            }
+            root.guestExiting = true
+            root.guestDragged = true
+            guestExit.to = slot < 0
+                ? sheet.width * 1.25 : -sheet.width * 1.25
+            guestExit.restart()
+        }
+    }
+
+    Connections {
+        target: root.searchResults
+        function onQueryingChanged() {
+            if (!root.searchResults.querying && root.pendingLaunch) {
+                root.pendingLaunch = false
+                root.submit()
+            }
+        }
+    }
+
+    Rectangle {
+        id: backdrop
+        anchors.fill: parent
+        color: "transparent"
+        visible: !root.launcherController.guestMode
+
+        TapHandler {
+            onTapped: event => {
+                const point = sheet.mapFromItem(backdrop, event.position.x, event.position.y)
+                if (!sheet.contains(point)) root.launcherController.close()
+            }
+        }
+    }
+
+    Rectangle {
+        id: sheet
+        objectName: "launcher-sheet"
+        readonly property real restHeight: root.launcherController.guestMode
+            ? root.launcherController.guestHeight
+            : root.launcherController.drawerExpanded
+                ? Math.max(1, root.launcherController.availableArea.height - 20
+                    - (root.launcherController.availableArea.y
+                        + root.launcherController.availableArea.height < root.height - 1 ? 10 : 0))
+                : Math.round(root.launcherController.availableArea.height * 0.64)
+        // With the keys up the sheet rises only as far as it must, never
+        // leaving the room Kadunce gave a guest, then shortens to fit.
+        readonly property real keysLine: root.height - root.keysReach
+        readonly property real highest: root.launcherController.guestMode
+            ? root.launcherController.guestY
+            : root.launcherController.availableArea.y
+                + Math.min(10, Math.round((root.launcherController.availableArea.height - restHeight) / 2))
+        x: root.launcherController.guestMode
+            ? root.launcherController.guestX
+            : root.launcherController.availableArea.x
+                + (root.launcherController.availableArea.width - width) / 2
+        y: Math.max(highest, Math.min(keysLine - height, root.launcherController.guestMode
+            ? root.launcherController.guestY
+            : root.launcherController.availableArea.y
+                + (root.launcherController.drawerExpanded ? 10
+                    : Math.round((root.launcherController.availableArea.height - height) / 2))))
+        width: root.launcherController.guestMode
+            ? root.launcherController.guestWidth
+            : root.launcherController.drawerExpanded
+                ? Math.max(1, root.launcherController.availableArea.width - 20)
+                : Math.round(root.launcherController.availableArea.width * 0.64)
+        height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        // The keys' own easing already moves the sheet; chasing it would lag.
+        Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        radius: root.paperRadius
+        color: root.surfaceColor
+        border.width: 1
+        border.color: root.surfaceOutline
+        clip: true
+        transform: Translate { x: root.guestDrag }
+
+        DragHandler {
+            id: guestDragHandler
+            enabled: root.launcherController.guestMode
+                && !root.drawerOpen
+                && !root.guestExiting
+                && !root.applicationLaunchPending
+            target: null
+            xAxis.enabled: true
+            yAxis.enabled: false
+            acceptedDevices: PointerDevice.Mouse
+                | PointerDevice.TouchPad
+                | PointerDevice.TouchScreen
+
+            onTranslationChanged: {
+                if (active) {
+                    root.guestDrag = translation.x
+                    if (Math.abs(translation.x) > 8) {
+                        root.guestDragged = true
+                    }
+                }
+            }
+            onActiveChanged: {
+                if (active || !root.launcherController.guestMode) {
+                    return
+                }
+                const projected = translation.x + Math.max(-140,
+                    Math.min(140, centroid.velocity.x * 0.09))
+                if (root.launcherController.finishGuestDrag(projected)) {
+                    root.guestExiting = true
+                    guestExit.to = projected < 0
+                        ? -sheet.width * 1.25 : sheet.width * 1.25
+                    guestExit.restart()
+                } else {
+                    guestReturn.restart()
+                }
+            }
+        }
+
+        TapHandler {
+            onTapped: event => event.accepted = true
+        }
+
+        Item {
+            id: content
+            anchors.fill: parent
+            anchors.margins: root.contentInset
+
+            Rectangle {
+                id: searchField
+                objectName: "search-field"
+                readonly property bool resting:
+                    query.text.length === 0
+                    && resultList.count === 0
+                    && !root.searchResults.querying
+                    && !root.applicationLaunchPending
+                    && root.drawerProgress < 0.01
+                width: resting ? Math.min(parent.width,
+                    Math.max(360, parent.width * 0.72)) : parent.width
+                height: 58
+                x: (parent.width - width) / 2
+                // Mirrored edge affordances leave an equal gap above and below search.
+                y: resting ? Math.round((parent.height - height) / 2) : root.drawerOpen ? 64 : 0
+                radius: height / 2
+                color: root.searchEngaged || query.text.length > 0
+                    ? root.controlColor : "transparent"
+                opacity: root.applicationLaunchPending ? 0 : 1
+                enabled: !root.applicationLaunchPending
+                border.width: 0
+                border.color: root.surfaceOutline
+
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: parent.width * (0.6 + 0.4 * root.openingControls)
+                    height: parent.height
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: root.surfaceOutline
+                    opacity: root.openingControls
+                }
+
+                Behavior on width {
+                    NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+                }
+                Behavior on y {
+                    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+                }
+                Behavior on opacity {
+                    NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                }
+                Behavior on color {
+                    ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
+                }
+
+                Item {
+                    id: trailingAction
+                    anchors.right: parent.right
+                    anchors.rightMargin: 9
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40
+                    height: 40
+                    opacity: root.openingIcon
+
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        width: 22
+                        height: 22
+                        source: query.text.length > 0
+                            ? "edit-clear-symbolic" : "system-search"
+                        color: root.primaryText
+                    }
+
+                    TapHandler {
+                        onTapped: {
+                            root.searchEngaged = true
+                            if (query.text.length > 0) {
+                                query.text = ""
+                            }
+                            query.forceActiveFocus()
+                            root.launcherController.showInputMethod()
+                        }
+                    }
+                }
+
+                TextInput {
+                    id: query
+                    objectName: "search-query"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 18
+                    anchors.right: trailingAction.left
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    color: root.primaryText
+                    selectionColor: "#6da9ddff"
+                    selectedTextColor: "#ffffffff"
+                    font.pixelSize: 18
+                    clip: true
+                    inputMethodHints: Qt.ImhNoPredictiveText
+
+                    onTextChanged: {
+                        root.selectedChildKey = ""
+                        root.childLaunchFailed = false
+                        if (text.length > 0) {
+                            root.searchEngaged = true
+                        }
+                        root.pendingLaunch = false
+                        root.applicationCatalog.filterText = root.drawerOpen && !root.filesMode
+                            ? text : ""
+                        if (root.fileBrowser && root.filesMode) root.fileBrowser.filter = text
+                        root.searchResults.queryString = root.drawerOpen
+                            ? "" : text
+                        resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                        resultList.settleAtBeginning()
+                        applicationGrid.currentIndex =
+                            applicationGrid.count > 0 ? 0 : -1
+                    }
+
+                    onActiveFocusChanged: {
+                        if (activeFocus) {
+                            root.searchEngaged = true
+                        }
+                    }
+
+                    Keys.onPressed: event => {
+                        if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Down
+                                && applicationGrid.count > 0) {
+                            applicationGrid.currentIndex = Math.min(
+                                applicationGrid.count - 1,
+                                Math.max(0,
+                                    applicationGrid.currentIndex + 1))
+                            event.accepted = true
+                        } else if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Up
+                                   && applicationGrid.count > 0) {
+                            applicationGrid.currentIndex = Math.max(
+                                0, applicationGrid.currentIndex - 1)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Down
+                                   && resultList.count > 0) {
+                            root.moveResultSelection(1)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Up
+                                   && resultList.count > 0) {
+                            root.moveResultSelection(-1)
+                            event.accepted = true
+                        } else if (event.key === Qt.Key_Return
+                                   || event.key === Qt.Key_Enter) {
+                            root.submit()
+                            event.accepted = true
+                        }
+                    }
+
+                    Text {
+                        id: placeholder
+                        objectName: "just-type-placeholder"
+                        anchors.fill: parent
+                        verticalAlignment: Text.AlignVCenter
+                        visible: query.text.length === 0
+                        text: "Just type"
+                        color: "#86ffffff"
+                        font.pixelSize: restingBrowseLabel.font.pixelSize
+                        opacity: root.openingText
+                        transform: Translate { y: (1 - root.openingText) * 3 }
+
+                        // A single soft light pass, clipped to copies of the
+                        // glyphs rather than a rectangle crossing the field.
+                        Repeater {
+                            model: 7
+                            delegate: Item {
+                                required property int index
+                                x: root.openingShine * (placeholder.implicitWidth + 35)
+                                    - 35 + index * 5
+                                width: 5
+                                height: placeholder.height
+                                clip: true
+                                visible: root.openingShine > 0 && root.openingShine < 1
+                                opacity: [0.08, 0.18, 0.34, 0.5, 0.34, 0.18, 0.08][index]
+                                Text {
+                                    x: -parent.x
+                                    height: parent.height
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: placeholder.text
+                                    font: placeholder.font
+                                    color: "#ffffff"
+                                }
+                            }
+                        }
+                    }
+                }
+
+                TapHandler {
+                    enabled: !root.guestDragged
+                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                    onTapped: {
+                        root.searchEngaged = true
+                        query.forceActiveFocus()
+                        root.launcherController.showInputMethod()
+                    }
+                }
+            }
+
+            Item {
+                id: resultsArea
+                y: searchField.y + searchField.height + 16
+                width: parent.width
+                height: parent.height - y
+                opacity: root.applicationLaunchPending ? 0 : 1
+                visible: query.text.length > 0 && !root.drawerOpen
+
+                Row {
+                    spacing: 20
+                    Text {
+                        objectName: "file-scope-toggle"
+                        text: root.searchResults.allFiles ? "All files ⇄" : "Everyday search ⇄"
+                        color: root.primaryText
+                        font.pixelSize: 12
+                        height: 34
+                        verticalAlignment: Text.AlignVCenter
+                        TapHandler {
+                            onTapped: {
+                                root.searchResults.allFiles = !root.searchResults.allFiles
+                                root.selectedChildKey = ""
+                                root.childLaunchFailed = false
+                                resultList.currentIndex = resultList.count > 0 ? 0 : -1
+                                resultList.settleAtBeginning()
+                            }
+                        }
+                    }
+                    Text {
+                        objectName: "quiet-folders-button"
+                        text: "Quiet folders…"
+                        color: root.secondaryText
+                        font.pixelSize: 12
+                        height: 34
+                        verticalAlignment: Text.AlignVCenter
+                        TapHandler { onTapped: { quietPaths.text = root.searchResults.quietFolders || ""; quietPopup.open() } }
+                    }
+                }
+
+                QQC2.Popup {
+                    id: quietPopup
+                    width: Math.min(480, resultsArea.width)
+                    height: 250
+                    x: (resultsArea.width - width) / 2
+                    y: 38
+                    padding: 16
+                    bottomMargin: root.keysReach
+                    modal: true
+                    background: Rectangle { color: root.surfaceColor; radius: root.paperRadius; border.color: root.surfaceOutline }
+                    contentItem: Column {
+                        spacing: 10
+                        Text { text: "Quiet folders"; color: root.primaryText; font.pixelSize: 16 }
+                        Text {
+                            text: "One full folder path per line. All files includes these again."
+                            color: root.secondaryText
+                            width: parent.width
+                            wrapMode: Text.WordWrap
+                            font.pixelSize: 12
+                        }
+                        QQC2.ScrollView {
+                            width: parent.width
+                            height: 110
+                            QQC2.TextArea { id: quietPaths; color: root.primaryText; wrapMode: TextEdit.NoWrap }
+                        }
+                        Row {
+                            spacing: 16
+                            QQC2.Button { text: "Save"; onClicked: { root.searchResults.quietFolders = quietPaths.text; quietPopup.close() } }
+                            QQC2.Button { text: "Cancel"; onClicked: quietPopup.close() }
+                        }
+                    }
+                }
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                }
+
+                ListView {
+                    id: resultList
+                    objectName: "search-result-list"
+                    anchors.fill: parent
+                    anchors.topMargin: 38
+                    clip: true
+                    spacing: 6
+                    currentIndex: count > 0 ? 0 : -1
+                    model: root.searchResults
+                    // Model insertions and changing child heights can preserve
+                    // an old scroll offset even when the first row is selected.
+                    // Let layout settle before aligning a fresh search to its
+                    // actual origin; never reset a user's lower selection.
+                    function settleAtBeginning() {
+                        Qt.callLater(function() {
+                            if (resultList.currentIndex <= 0 && !root.searchResults.selectionPinned()) {
+                                resultList.forceLayout()
+                                resultList.positionViewAtBeginning()
+                            }
+                        })
+                    }
+                    onCountChanged: settleAtBeginning()
+                    onHeightChanged: settleAtBeginning()
+
+                    Connections {
+                        target: root.searchResults
+                        function onQueryingChanged() {
+                            if (!root.searchResults.querying) resultList.settleAtBeginning()
+                        }
+                        function onSelectionChanged() {
+                            if (root.searchResults.selectionPinned())
+                                resultList.currentIndex = root.searchResults.selectedRow()
+                        }
+                    }
+
+                    delegate: Rectangle {
+                        id: resultDelegate
+                        objectName: "result-" + index
+                        required property int index
+                        required property var model
+                        readonly property var connectedDevices: {
+                            const revision = root.launcherController.relatedRevision
+                            return root.launcherController.relatedItems(index)
+                        }
+                        readonly property bool alreadyOpen:
+                            root.launcherController.contextAvailable
+                            && root.launcherController.resultIsOpen(index)
+
+                        width: resultList.width
+                        height: 62 + deviceChildren.height
+                        radius: root.paperRadius
+                        color: "transparent"
+                        Rectangle {
+                            objectName: "parent-highlight-" + resultDelegate.index
+                            width: parent.width; height: 62; radius: root.paperRadius
+                            color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === ""
+                                ? "#3dffffff" : (hover.hovered ? "#22ffffff" : "transparent")
+                        }
+
+                        Row {
+                            anchors.top: parent.top
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            height: 62
+                            anchors.leftMargin: 14
+                            anchors.rightMargin: 14
+                            spacing: 14
+
+                            Kirigami.Icon {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 32
+                                height: 32
+                                source: resultDelegate.model.decoration
+                            }
+
+                            Column {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: parent.width - 46
+                                spacing: 3
+
+                                Row {
+                                    width: parent.width
+                                    spacing: 9
+
+                                    Text {
+                                        width: Math.min(implicitWidth,
+                                            parent.width - openLabel.width
+                                            - parent.spacing)
+                                        text: resultDelegate.model.display
+                                        color: root.primaryText
+                                        font.pixelSize: 16
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        id: openLabel
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "OPEN"
+                                        visible: resultDelegate.alreadyOpen
+                                        color: "#ff71e6be"
+                                        font.pixelSize: 10
+                                        font.weight: Font.Bold
+                                    }
+                                }
+
+                                Text {
+                                    width: parent.width
+                                    text: resultDelegate.model.subtext
+                                        || resultDelegate.model.category || "Result"
+                                    color: root.secondaryText
+                                    font.pixelSize: 12
+                                    elide: Text.ElideRight
+                                }
+                            }
+                        }
+
+                        Column {
+                            id: deviceChildren
+                            x: 60
+                            y: 62
+                            width: parent.width - x - 14
+                            spacing: 4
+                            Repeater {
+                                model: resultDelegate.connectedDevices
+                                delegate: Rectangle {
+                                    id: childRow
+                                    required property var modelData
+                                    required property int index
+                                    objectName: "child-" + resultDelegate.index + "-" + index
+                                    width: deviceChildren.width
+                                    height: 40
+                                    radius: height / 2
+                                    color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === root.childKey(modelData)
+                                        ? "#3dffffff" : (childHover.hovered ? "#22ffffff" : "transparent")
+                                    Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: root.secondaryText }
+                                    Text {
+                                        x: 27; width: parent.width - x - 12; height: parent.height
+                                        text: childRow.modelData.label + ((root.childLaunchFailed && root.selectedChildKey === root.childKey(childRow.modelData))
+                                            ? " · Couldn't open settings—try again" : (childRow.modelData.status ? " · " + childRow.modelData.status : ""))
+                                        font.pixelSize: 12; color: root.secondaryText
+                                        verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
+                                    }
+                                    HoverHandler { id: childHover }
+                                    TapHandler {
+                                        enabled: !root.guestDragged && !root.applicationLaunchPending
+                                        onPressedChanged: if (pressed) {
+                                            resultList.currentIndex = resultDelegate.index
+                                            root.searchResults.pinSelection(resultDelegate.index)
+                                            root.selectedChildKey = root.childKey(childRow.modelData)
+                                        }
+                                        onTapped: root.openChildSettings()
+                                    }
+                                }
+                            }
+                        }
+                        Item {
+                        width: parent.width
+                        height: 62
+                        HoverHandler { id: hover }
+                        TapHandler {
+                            enabled: !root.guestDragged
+                                && !root.applicationLaunchPending
+                            onPressedChanged: {
+                                if (pressed) {
+                                    root.selectedChildKey = ""
+                                    resultList.currentIndex = resultDelegate.index
+                                    root.searchResults.pinSelection(resultDelegate.index)
+                                }
+                            }
+                            onTapped: {
+                                root.runResult(root.searchResults.selectedRow())
+                            }
+                        }
+                        }
+                    }
+                }
+
+                Text {
+                    anchors.centerIn: parent
+                    visible: query.text.length > 0
+                        && !root.searchResults.querying
+                        && resultList.count === 0
+                    objectName: "web-fallback"
+                    text: "Search the web for “" + query.text + "”"
+                    color: root.secondaryText
+                    font.pixelSize: 15
+                    width: parent.width - 28
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    TapHandler { onTapped: root.submit() }
+                }
+            }
+
+            Item {
+                id: drawerHandle
+                objectName: "drawer-header"
+                readonly property real sectionGap: 16
+                readonly property real restingY: parent.height + root.contentInset - 48
+                readonly property real revealDistance: Math.max(1,
+                    restingY)
+                property real dragStartProgress: 0
+                property real dragReferenceDistance: 1
+                x: 0
+                y: root.filesMode && root.drawerProgress > 0
+                    ? 0
+                    : Math.round(restingY
+                        - root.drawerProgress * revealDistance)
+                width: parent.width
+                height: 48 - 4 * root.drawerProgress
+                opacity: (query.text.length === 0 || root.drawerOpen)
+                    && !root.applicationLaunchPending ? root.openingControls : 0
+                transform: Translate { y: (1 - root.openingControls) * 10 }
+                enabled: opacity > 0.5
+                z: 4
+
+                Text {
+                    id: restingBrowseLabel
+                    objectName: "browse-label"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    y: 18 - height
+                    text: "browse everything"
+                    color: restingBrowseHover.running || !restingLabelHover.hovered
+                        ? root.edgeText : root.primaryText
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    font.pixelSize: 12
+                    font.letterSpacing: 0.25
+                    opacity: Math.max(0, 1 - root.drawerProgress * 3)
+                    enabled: opacity > 0.5
+
+                    Timer { id: restingBrowseHover; interval: 220 }
+                    HoverHandler {
+                        id: restingLabelHover
+                        onHoveredChanged: {
+                            if (hovered) restingBrowseHover.restart()
+                            else restingBrowseHover.stop()
+                        }
+                    }
+                    MouseArea {
+                        id: restingBrowseMouse
+                        anchors.fill: parent
+                        anchors.leftMargin: -12
+                        anchors.rightMargin: -12
+                        anchors.topMargin: -3
+                        anchors.bottomMargin: -3
+                        hoverEnabled: false
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.setDrawerOpen(true)
+                    }
+                }
+
+                Text {
+                    id: openBrowseLabel
+                    anchors.left: parent.left
+                    anchors.leftMargin: 18
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.filesMode ? "explore files" : "browse everything"
+                    color: openBrowseHover.running || !openBrowseMouse.containsMouse
+                        ? root.secondaryText : root.primaryText
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    font.pixelSize: 13
+                    font.letterSpacing: 0.25
+                    opacity: Math.max(0,
+                        (root.drawerProgress - 0.65) / 0.35)
+                    enabled: root.drawerOpen && opacity > 0.9
+
+                    Timer { id: openBrowseHover; interval: 220 }
+                    MouseArea {
+                        id: openBrowseMouse
+                        anchors.fill: parent
+                        anchors.leftMargin: -4
+                        anchors.rightMargin: -12
+                        anchors.topMargin: -3
+                        anchors.bottomMargin: -3
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onContainsMouseChanged: {
+                            if (containsMouse) openBrowseHover.restart()
+                            else openBrowseHover.stop()
+                        }
+                        onClicked: root.setDrawerOpen(false)
+                    }
+                }
+
+                Item {
+                    id: grabberTarget
+                    objectName: "drawer-grabber"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    // Follow the same reveal clock in both directions, including
+                    // partial pulls: edge tab below label -> centered close pill.
+                    y: 24 - 22 * root.drawerProgress
+                    width: 124 + 46 * root.drawerProgress
+                    height: 24 + 16 * root.drawerProgress
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        opacity: Math.max(0, 1 - root.drawerProgress * 3)
+                        visible: opacity > 0
+                        width: drawerDrag.active ? 48 : 42
+                        height: 4
+                        radius: 2
+                        color: drawerHover.hovered || drawerDrag.active
+                            ? root.primaryText : root.surfaceOutline
+
+                        Behavior on width {
+                            NumberAnimation {
+                                duration: 120
+                                easing.type: Easing.OutCubic
+                            }
+                        }
+                    }
+
+                    Item {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        width: parent.width; height: 24; y: 0
+                        HoverHandler { id: drawerHover }
+                    }
+                    Rectangle {
+                        objectName: "close-drawer-button"
+                        anchors.fill: parent
+                        opacity: Math.max(0, (root.drawerProgress - 0.65) / 0.35)
+                        visible: opacity > 0
+                        enabled: root.drawerOpen && opacity > 0.9
+                        radius: height / 2
+                        color: closeDrawerHover.hovered || closeDrawerTap.pressed ? "#303030" : "transparent"
+                        border.width: 1
+                        border.color: closeDrawerHover.hovered || closeDrawerTap.pressed ? root.surfaceOutline : "transparent"
+                        Behavior on color { ColorAnimation { duration: 100 } }
+                        Behavior on border.color { ColorAnimation { duration: 100 } }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: qsTr("Close drawer")
+                        Accessible.onPressAction: root.setDrawerOpen(false)
+                        Text {
+                            anchors.centerIn: parent
+                            text: qsTr("Close drawer")
+                            color: root.primaryText
+                            font.pixelSize: 13
+                        }
+                        HoverHandler { id: closeDrawerHover }
+                        TapHandler { id: closeDrawerTap; onTapped: root.setDrawerOpen(false) }
+                    }
+                }
+
+                Item {
+                id: sortButton
+                    objectName: "sort-button"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 42
+                    height: 42
+                    opacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
+                    enabled: root.drawerOpen && opacity > 0.9
+
+                    Kirigami.Icon {
+                        anchors.centerIn: parent
+                        visible: !root.filesMode
+                        width: 20
+                        height: 20
+                        source: root.applicationCatalog.descending
+                            ? "view-sort-descending-symbolic"
+                            : "view-sort-ascending-symbolic"
+                        color: root.primaryText
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root.filesMode) fileSort.open()
+                            else root.sortMenuOpen = !root.sortMenuOpen
+                        }
+                    }
+                    // Recent keeps the order of use.
+                    readonly property bool fileOrderFixed: !!root.fileBrowser && root.fileBrowser.placeKind === "recent"
+                    Text { anchors.centerIn: parent; visible: root.filesMode; text: parent.fileOrderFixed ? "Recent" : root.fileBrowser ? ["Name", "Z–A", "Newest", "Size"][root.fileBrowser.sortMode] : "Name"; color: root.primaryText; font.pixelSize: 12 }
+                    QQC2.Menu {
+                        id: fileSort
+                        bottomMargin: root.keysReach
+                        QQC2.MenuItem { text: "Name A–Z"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
+                        QQC2.MenuItem { text: "Name Z–A"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
+                        QQC2.MenuItem { text: "Newest first"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
+                        QQC2.MenuItem { text: "Largest first"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
+                        QQC2.MenuItem { text: "Show hidden files"; checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden=checked }
+                    }
+                }
+
+                DragHandler {
+                    id: drawerDrag
+                    property string gestureMode: "apps"
+                    margin: 4
+                    target: null
+                    xAxis.enabled: false
+                    yAxis.enabled: true
+                    acceptedDevices: PointerDevice.Mouse
+                        | PointerDevice.TouchPad
+                        | PointerDevice.TouchScreen
+                    onActiveChanged: {
+                        if (active) {
+                            // The compact bottom pull always opens Apps, even
+                            // when the last drawer closed was Files. Keep mode
+                            // stable for this gesture, not inherited from history.
+                            gestureMode=root.drawerOpen && root.filesMode ? "files" : "apps"
+                            if(!root.drawerOpen)root.filesMode=false
+                            root.sortMenuOpen = false
+                            drawerHandle.dragStartProgress =
+                                root.drawerProgress
+                            drawerHandle.dragReferenceDistance = drawerHandle.revealDistance
+                            drawerSettle.stop()
+                        } else {
+                            root.setDrawerOpen(root.drawerProgress > 0.34, gestureMode)
+                        }
+                    }
+                    onTranslationChanged: {
+                        if (active) {
+                            root.drawerProgress = Math.max(0, Math.min(1,
+                                drawerHandle.dragStartProgress
+                                - translation.y
+                                    / drawerHandle.dragReferenceDistance))
+                        }
+                    }
+                }
+            }
+
+            Item {
+                id: filesEntry
+                objectName: "files-entry"
+                property real pullStart: 0
+                width: parent.width; height: 48; y: -root.contentInset
+                visible: root.fileBrowser !== null && opacity > 0
+                opacity: query.text.length === 0 && !root.applicationLaunchPending
+                    ? root.openingControls * Math.max(0,1-root.drawerProgress*3) : 0
+                enabled: opacity>0.5 && !root.drawerOpen
+                transform: Translate { y: (1-root.openingControls)*10 }
+                Timer { id: filesLabelHover; interval: 220 }
+                Text {
+                    id: filesEntryLabel
+                    objectName: "files-label"
+                    anchors.horizontalCenter: parent.horizontalCenter; y: 30; text: "explore files"
+                    color: filesTextHover.hovered && !filesLabelHover.running ? root.primaryText : root.edgeText
+                    font.pixelSize: 12
+                    Behavior on color { ColorAnimation { duration: 100 } }
+                    HoverHandler { id: filesTextHover; onHoveredChanged: { if (hovered) filesLabelHover.restart(); else filesLabelHover.stop() } }
+                }
+                Item {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 124; height: 24; y: 0
+                    HoverHandler { id: filesEntryHover }
+                }
+                Rectangle { objectName: "files-edge-line"; anchors.horizontalCenter: parent.horizontalCenter; y: 10; width: filesPull.active ? 48 : 42; height: 4; radius: 2; color: filesEntryHover.hovered || filesPull.active ? root.primaryText : root.surfaceOutline; Behavior on width { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } } }
+                TapHandler { onTapped: root.setDrawerOpen(true,"files") }
+                DragHandler {
+                    id: filesPull
+                    target: null; xAxis.enabled: false
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.TouchScreen
+                    onActiveChanged: {
+                        if (active) filesEntry.pullStart = persistentTranslation.y
+                        else if (persistentTranslation.y-filesEntry.pullStart > 24) root.setDrawerOpen(true,"files")
+                    }
+                }
+            }
+            Loader {
+                id: filesLoader
+                active: false
+                asynchronous: true
+                sourceComponent: FilesPane {
+                    objectName: "files-pane"
+                    browser: root.fileBrowser
+                    compact: root.keysUp
+                    keysReach: root.keysReach
+                    carryArea: sheet
+                    onCarryOut: paths => {
+                        const at = sheet.mapToItem(null, 0, 0)
+                        root.launcherController.carryOut(paths, Qt.rect(at.x, at.y, sheet.width, sheet.height))
+                    }
+                }
+                Connections {
+                    target: root
+                    function onFilesModeChanged() { if (root.filesMode) filesLoader.active = true }
+                }
+                x: 0; y: searchField.y + searchField.height + drawerHandle.sectionGap
+                width: parent.width; height: Math.max(0,parent.height-y)
+                visible: root.filesMode && root.drawerProgress>0.01
+                opacity: root.drawerProgress
+                transform: Translate { y: -20*(1-root.drawerProgress) }
+            }
+            GridView {
+                id: applicationGrid
+                objectName: "application-grid"
+                x: 0
+                y: searchField.y + searchField.height + drawerHandle.sectionGap
+                width: parent.width
+                height: Math.max(0, parent.height - y)
+                clip: true
+                opacity: root.drawerProgress
+                visible: !root.filesMode && root.drawerProgress > 0.01
+                    && !root.applicationLaunchPending
+                model: root.applicationCatalog
+                cellWidth: width / Math.max(3,
+                    Math.min(6, Math.floor(width / 126)))
+                cellHeight: root.launcherController.drawerExpanded ? 112 : 94
+                boundsBehavior: Flickable.StopAtBounds
+                z: 3
+
+                displaced: Transition {
+                    NumberAnimation {
+                        properties: "x,y"
+                        duration: 180
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                delegate: Item {
+                    id: catalogDelegate
+                    required property int index
+                    required property var model
+                    width: applicationGrid.cellWidth
+                    height: applicationGrid.cellHeight
+
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 5
+                        radius: root.paperRadius
+                        color: catalogHover.hovered
+                            ? "#20ffffff" : "transparent"
+
+                        Kirigami.Icon {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 10
+                            width: root.launcherController.drawerExpanded ? 52 : 42
+                            height: width
+                            source: catalogDelegate.model.icon
+                        }
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.leftMargin: 7
+                            anchors.rightMargin: 7
+                            anchors.bottomMargin: 8
+                            horizontalAlignment: Text.AlignHCenter
+                            text: catalogDelegate.model.name
+                            color: root.primaryText
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
+
+                        HoverHandler { id: catalogHover }
+                        TapHandler {
+                            enabled: !root.guestDragged
+                                && !root.applicationLaunchPending
+                            onTapped: root.runCatalogApplication(
+                                catalogDelegate.index,
+                                catalogDelegate.model.name)
+                        }
+                    }
+                }
+            }
+
+            Text {
+                anchors.centerIn: applicationGrid
+                visible: root.drawerOpen && !root.filesMode && query.text.length > 0
+                    && applicationGrid.count === 0
+                text: "No applications found"
+                color: root.secondaryText
+                font.pixelSize: 15
+                z: 4
+            }
+
+            Rectangle {
+                id: sortMenu
+                objectName: "sort-menu"
+                anchors.right: parent.right
+                y: drawerHandle.y + drawerHandle.height + 4
+                width: 132
+                height: 92
+                radius: root.noteRadius
+                color: root.surfaceColor
+                border.width: 1
+                border.color: root.surfaceOutline
+                visible: opacity > 0
+                enabled: root.sortMenuOpen && root.drawerOpen
+                opacity: root.sortMenuOpen && root.drawerOpen ? 1 : 0
+                z: 8
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 120
+                        easing.type: Easing.OutCubic
+                    }
+                }
+
+                Column {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 4
+
+                    Repeater {
+                        model: [
+                            { "label": "A to Z", "descending": false },
+                            { "label": "Z to A", "descending": true }
+                        ]
+
+                        delegate: Rectangle {
+                            id: sortChoice
+                            required property var modelData
+                            width: parent.width
+                            height: 38
+                            radius: height / 2
+                            readonly property bool selected: root.applicationCatalog.descending
+                                === sortChoice.modelData.descending
+                            color: selected ? root.controlColor : "transparent"
+                            border.width: !selected && choiceHover.hovered ? 1 : 0
+                            border.color: root.surfaceOutline
+                            Behavior on color { ColorAnimation { duration: 100 } }
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: sortChoice.modelData.label
+                                color: root.primaryText
+                                font.pixelSize: 13
+                            }
+
+                            HoverHandler { id: choiceHover }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.applicationCatalog.descending =
+                                        sortChoice.modelData.descending
+                                    applicationGrid.currentIndex =
+                                        applicationGrid.count > 0 ? 0 : -1
+                                    root.sortMenuOpen = false
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 14
+                visible: root.applicationLaunchPending
+                opacity: root.applicationLaunchPending ? 1 : 0
+                z: 10
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: "Opening"
+                    color: root.secondaryText
+                    font.pixelSize: 14
+                    font.letterSpacing: 0.8
+                }
+
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(content.width * 0.72, 620)
+                    horizontalAlignment: Text.AlignHCenter
+                    text: root.launchingApplication
+                    color: root.primaryText
+                    font.pixelSize: 24
+                    font.weight: Font.DemiBold
+                    elide: Text.ElideRight
+                }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 84
+                    height: 3
+                    radius: height / 2
+                    color: "#24ffffff"
+
+                    Rectangle {
+                        id: launchProgress
+                        width: 28
+                        height: parent.height
+                        radius: height / 2
+                        color: "#d9ffffff"
+
+                        SequentialAnimation on x {
+                            running: root.applicationLaunchPending
+                            loops: Animation.Infinite
+                            NumberAnimation {
+                                from: 0
+                                to: 56
+                                duration: 560
+                                easing.type: Easing.InOutCubic
+                            }
+                            NumberAnimation {
+                                from: 56
+                                to: 0
+                                duration: 560
+                                easing.type: Easing.InOutCubic
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: launchTimeout
+        interval: 10000
+        repeat: false
+        onTriggered: {
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.guestExiting = false
+            query.forceActiveFocus()
+        }
+    }
+
+    NumberAnimation {
+        id: drawerSettle
+        target: root
+        property: "drawerProgress"
+        duration: 260
+        easing.type: Easing.OutCubic
+    }
+
+    NumberAnimation {
+        id: guestReturn
+        target: root
+        property: "guestDrag"
+        to: 0
+        duration: 210
+        easing.type: Easing.OutBack
+        onFinished: root.guestDragged = false
+    }
+
+    ParallelAnimation {
+        id: launchReadyExit
+        NumberAnimation {
+            target: sheet
+            property: "scale"
+            to: 0.96
+            duration: 190
+            easing.type: Easing.OutCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "opacity"
+            to: 0
+            duration: 190
+            easing.type: Easing.OutCubic
+        }
+        onFinished: root.launcherController.completeGuestHandoff()
+    }
+
+    ParallelAnimation {
+        id: guestExit
+        property real to: 0
+        NumberAnimation {
+            target: root
+            property: "guestDrag"
+            to: guestExit.to
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "scale"
+            to: 0.72
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        NumberAnimation {
+            target: sheet
+            property: "opacity"
+            to: 0
+            duration: 220
+            easing.type: Easing.InCubic
+        }
+        onFinished: root.launcherController.completeGuestHandoff()
+    }
+}

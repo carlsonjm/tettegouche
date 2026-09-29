@@ -1,0 +1,11 @@
+{
+  "exclude": [
+    "LICENSES/*",
+    "libdbusmenuqt/*"
+  ],
+  "private_branches": [],
+  "table": {
+    "AGENTS.md": 1
+  },
+  "attribution_pending": {}
+}
