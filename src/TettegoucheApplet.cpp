@@ -80,6 +80,9 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         connect(m_activities.get(), &ActivityModel::changed, this, [this] {
             setAmbientActivities(m_activities->activities());
         });
+        connect(m_activities.get(), &ActivityModel::revealRequested, this, [this](const QString &path) {
+            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), path);
+        });
         setAmbientActivities(m_activities->activities());
     }
 }
@@ -195,7 +198,10 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
     if (!m_activities) return;
     if (action == QLatin1String("showInFiles")) {
         const auto url = m_activities->destinationForReveal(id, generation);
-        if (url.isLocalFile()) startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
+        if (url.isLocalFile()) {
+            m_activities->revealed(id, generation);
+            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
+        }
     } else m_activities->invoke(id, generation, action, value);
 }
 

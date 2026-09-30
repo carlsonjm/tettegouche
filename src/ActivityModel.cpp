@@ -27,7 +27,8 @@ std::shared_ptr<ActivityModel> ActivityModel::acquire() {
     return model;
 }
 ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QObject *parent)
-    : QObject(parent), m_media(bus, this), m_jobs(this), m_files(downloads, this), m_tette(bus, this) {
+    : QObject(parent), m_media(bus, this), m_jobs(this), m_files(downloads, this), m_tette(bus, this),
+      m_notices(bus, downloads, this) {
     const auto update = [this] {
         if (m_refreshPending) return;
         m_refreshPending = true;
@@ -37,9 +38,14 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_jobs, &DesktopJobProvider::changed, this, update);
     connect(&m_files, &IncomingFileProvider::changed, this, update);
     connect(&m_tette, &TetteTransferProvider::changed, this, update);
+    connect(&m_notices, &FinishNotices::changed, this, update);
+    connect(&m_jobs, &DesktopJobProvider::finished, &m_notices, &FinishNotices::report);
+    connect(&m_notices, &FinishNotices::revealRequested, this, &ActivityModel::revealRequested);
     update();
 }
-void ActivityModel::refresh() { reconcile(m_tette.activities() + m_jobs.activities(), m_media.activities(), m_files.activities()); }
+void ActivityModel::refresh() {
+    reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities());
+}
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files) {
     const auto now = Ambient::nowUs();
     m_consumedFiles.removeIf([now](const auto &e) { return e.value() <= now; });
@@ -112,6 +118,11 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     if (sourceId.startsWith(QLatin1String("org.mpris.MediaPlayer2."))) m_media.invoke(sourceId,sourceGeneration,action,value);
     else if (sourceId.startsWith(QLatin1String("tette:"))) m_tette.invoke(sourceId,sourceGeneration,action);
     else if (sourceId.startsWith(QLatin1String("job:"))) m_jobs.invoke(sourceId,sourceGeneration,action);
+}
+void ActivityModel::revealed(const QString &id, int generation) {
+    const auto route = m_routes.value(id);
+    if (route.value(QStringLiteral("actionToken")).toInt() == generation)
+        m_notices.used(route.value(QStringLiteral("id")).toString());
 }
 QUrl ActivityModel::destinationForReveal(const QString &id, int generation) const {
     const auto route = m_routes.value(id);

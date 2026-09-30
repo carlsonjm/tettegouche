@@ -27,6 +27,7 @@ add_library(tettegouche-activities STATIC
     src/DesktopJobProvider.cpp src/DesktopJobProvider.h
     src/IncomingFileProvider.cpp src/IncomingFileProvider.h
     src/TetteTransferProvider.cpp src/TetteTransferProvider.h
+    src/FinishNotices.cpp src/FinishNotices.h
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)

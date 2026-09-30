@@ -29,6 +29,16 @@ TestCase {
         observedSizeBytes: 2048, evidence: "filesystem",
         capabilities: {showInFiles: true}
     })
+    readonly property var arrived: ({
+        id: "job:7", generation: 2, kind: "transfer", state: "finished",
+        source: "KDE Connect", title: "photo.png", description: "Arrived in Downloads",
+        progress: 1, evidence: "job", capabilities: {showInFiles: true}
+    })
+    readonly property var failed: ({
+        id: "job:8", generation: 2, kind: "transfer", state: "failed",
+        source: "KDE Connect", title: "Transfer failed", description: "The phone went out of reach",
+        evidence: "job", capabilities: {}
+    })
     readonly property var media: ({
         id: "media-1", generation: 8, kind: "media", state: "playing",
         source: "Spotify", icon: "spotify", title: "Houdini", artist: "Dua Lipa",
@@ -295,6 +305,35 @@ TestCase {
         mouseClick(show, show.width / 2, show.height / 2);
         compare(invoked.signalArguments[1][0], "file-1");
         compare(invoked.signalArguments[1][2], "showInFiles");
+    }
+
+    // A transfer keeps its row in the open island as its progress moves: a
+    // row made again for each update draws its ring from blank, and strobes.
+    function test_open_transfer_keeps_its_row_as_progress_moves() {
+        const surface = createSurface(405, [transfer, secondTransfer]);
+        const opened = openIsland(surface, "transfer");
+        const row = findChild(opened.contentItem, "ambient-island-transfer-transfer-1");
+        verify(row !== null);
+        for (let step = 1; step <= 3; ++step) {
+            surface.activities = [Object.assign({}, transfer, {progress: 0.68 + step * 0.05}), secondTransfer];
+            wait(0);
+            verify(findChild(opened.contentItem, "ambient-island-transfer-transfer-1") === row);
+        }
+        fuzzyCompare(row.modelData.progress, 0.83, 0.001);
+    }
+
+    // An ended transfer waiting out its minute says how it ended, and an
+    // arrival keeps Show in Files.
+    function test_ended_transfers_say_how_they_ended() {
+        const surface = createSurface(405, [arrived]);
+        compare(surface.transferDetail, "Arrived in Downloads");
+        const opened = openIsland(surface, "transfer");
+        const show = findChild(opened.contentItem, "ambient-island-show-job:7");
+        verify(show !== null && show.visible);
+        verify(!findChild(opened.contentItem, "ambient-island-cancel-job:7").visible);
+        surface.activities = [failed];
+        wait(0);
+        compare(surface.transferDetail, "The phone went out of reach");
     }
 
     function test_open_island_moves_between_kinds_and_closes_outside() {

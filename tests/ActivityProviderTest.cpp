@@ -2,6 +2,8 @@
 #include "ActivityUtils.h"
 #include "TransferActivityBridge.h"
 #include "FileBrowser.h"
+#include <notification.h>
+#include <server.h>
 #include <QTest>
 #include <QGuiApplication>
 #include <QDBusAbstractAdaptor>
@@ -61,6 +63,24 @@ public:
     int raises = 0;
 public Q_SLOTS:
     void Raise() { ++raises; }
+};
+
+// The desktop's notification server, as FinishNotices meets it.
+class FakeNotifications : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.freedesktop.Notifications")
+public:
+    struct Notice { QString application, summary, body; QStringList actions; QVariantMap hints; };
+    QList<Notice> notices;
+public Q_SLOTS:
+    uint Notify(const QString &application, uint, const QString &, const QString &summary, const QString &body,
+                const QStringList &actions, const QVariantMap &hints, int) {
+        notices.append({application, summary, body, actions, hints});
+        return uint(notices.size());
+    }
+Q_SIGNALS:
+    void ActionInvoked(uint id, const QString &action);
+    void NotificationClosed(uint id, uint reason);
 };
 
 static QDBusMessage call(const QDBusConnection &bus, const QString &service, const QString &path,
@@ -279,10 +299,128 @@ private Q_SLOTS:
         model.reconcile({}, {}, {fs}); QVERIFY(model.activities().isEmpty());
     }
 
+    // Where nothing holds the job service, Ambient holds it, and each job that
+    // ends is routed: a file that arrived in Downloads, or a failure, stays in
+    // Ambient for its minute, then is filed as a transfer notice; one used
+    // there is filed at once; a cancelled job or one writing elsewhere ends
+    // quietly.
+    void heldJobServiceRoutesEnds() {
+        QTemporaryDir downloads, elsewhere;
+        auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-notifications"));
+        FakeNotifications notifications;
+        QVERIFY(fakes.registerObject(QStringLiteral("/org/freedesktop/Notifications"),&notifications,
+                                     QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(fakes.registerService(QStringLiteral("org.freedesktop.Notifications")));
+        {
+            DesktopJobProvider provider;
+            constexpr int Linger=400;
+            FinishNotices notices(QDBusConnection::sessionBus(),downloads.path(),nullptr,Linger);
+            connect(&provider,&DesktopJobProvider::finished,&notices,&FinishNotices::report);
+            QSignalSpy reveals(&notices,&FinishNotices::revealRequested);
+            QTRY_VERIFY(provider.holding());
+            const auto end=[&](const QByteArray &command) {
+                QProcess producer;
+                producer.start(QCoreApplication::applicationFilePath(),{QStringLiteral("--job-producer-v2")});
+                QVERIFY(producer.waitForStarted());
+                QTRY_COMPARE_WITH_TIMEOUT(provider.activities().size(),1,5000);
+                producer.write(command+'\n');
+                QTRY_VERIFY_WITH_TIMEOUT(provider.activities().isEmpty(),5000);
+                producer.kill(); producer.waitForFinished();
+            };
+            const auto file=[](const QTemporaryDir &dir,const QString &name) {
+                QFile f(dir.filePath(name)); f.open(QIODevice::WriteOnly); f.write("picture"); return f.fileName();
+            };
+            const auto category=[&](int i) { return notifications.notices.at(i).hints.value(QStringLiteral("category")).toString(); };
+            // Received into Downloads, as KDE Connect reports it: in Ambient,
+            // in the job's place, with Show in Files, and filed after its minute.
+            const auto photo=file(downloads,QStringLiteral("photo.png"));
+            end("receive "+photo.toUtf8()); if (QTest::currentTestFailed()) return;
+            QTRY_COMPARE(notices.activities().size(),1);
+            auto row=notices.activities().first().toMap();
+            QVERIFY(row.value(QStringLiteral("id")).toString().startsWith(QStringLiteral("job:")));
+            QCOMPARE(row.value(QStringLiteral("state")).toString(),QStringLiteral("finished"));
+            QCOMPARE(row.value(QStringLiteral("title")).toString(),QStringLiteral("photo.png"));
+            QCOMPARE(row.value(QStringLiteral("description")).toString(),QStringLiteral("Arrived in Downloads"));
+            QVERIFY(row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("showInFiles")).toBool());
+            QCOMPARE(QUrl(row.value(QStringLiteral("destinationUrl")).toString()).toLocalFile(),photo);
+            QVERIFY(notifications.notices.isEmpty());
+            QTRY_VERIFY(notices.activities().isEmpty());
+            QTRY_COMPARE(notifications.notices.size(),1);
+            QCOMPARE(notifications.notices.first().application,QStringLiteral("Ambient Test"));
+            QCOMPARE(notifications.notices.first().summary,QStringLiteral("photo.png"));
+            QCOMPARE(notifications.notices.first().body,QStringLiteral("Arrived in Downloads"));
+            QCOMPARE(category(0),QStringLiteral("transfer.complete"));
+            QVERIFY(notifications.notices.first().actions.contains(QStringLiteral("Show in Files")));
+            QTest::qWait(50);
+            Q_EMIT notifications.ActionInvoked(1,QStringLiteral("show"));
+            QTRY_COMPARE(reveals.size(),1);
+            QCOMPARE(reveals.first().first().toString(),photo);
+            Q_EMIT notifications.NotificationClosed(1,2);
+            // A producer naming the file itself; used in Ambient, it is filed at once.
+            end("arrive "+file(downloads,QStringLiteral("song.ogg")).toUtf8()); if (QTest::currentTestFailed()) return;
+            QTRY_COMPARE(notices.activities().size(),1);
+            notices.used(notices.activities().first().toMap().value(QStringLiteral("id")).toString());
+            QVERIFY(notices.activities().isEmpty());
+            QTRY_COMPARE(notifications.notices.size(),2);
+            QCOMPARE(notifications.notices.last().summary,QStringLiteral("song.ogg"));
+            // Written elsewhere, or cancelled: quiet.
+            end("arrive "+file(elsewhere,QStringLiteral("copy.png")).toUtf8()); if (QTest::currentTestFailed()) return;
+            end("receive "+file(elsewhere,QStringLiteral("other.png")).toUtf8()); if (QTest::currentTestFailed()) return;
+            end("cancel"); if (QTest::currentTestFailed()) return;
+            QVERIFY(notices.activities().isEmpty());
+            QTest::qWait(Linger+200);
+            QCOMPARE(notifications.notices.size(),2);
+            // Failed: its minute in Ambient saying why, then filed, with nothing to show.
+            end("fail"); if (QTest::currentTestFailed()) return;
+            QTRY_COMPARE(notices.activities().size(),1);
+            row=notices.activities().first().toMap();
+            QCOMPARE(row.value(QStringLiteral("state")).toString(),QStringLiteral("failed"));
+            QCOMPARE(row.value(QStringLiteral("description")).toString(),QStringLiteral("The phone went out of reach"));
+            QVERIFY(!row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("showInFiles")).toBool());
+            QTRY_COMPARE(notifications.notices.size(),3);
+            QCOMPARE(notifications.notices.last().summary,QStringLiteral("Transfer failed"));
+            QCOMPARE(category(2),QStringLiteral("transfer.error"));
+            QVERIFY(!notifications.notices.last().actions.contains(QStringLiteral("Show in Files")));
+            Q_EMIT notifications.ActionInvoked(3,QStringLiteral("show"));
+            QTest::qWait(50);
+            QCOMPARE(reveals.size(),1);
+        }
+        fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
+        fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-notifications"));
+    }
+
+    // In the panel, the notification server runs in the same process as
+    // Ambient, so a notice is a call to itself: it must still arrive, and its
+    // action must still come back.
+    void noticeToItsOwnProcess() {
+        QTemporaryDir downloads;
+        auto &server=NotificationManager::Server::self();
+        QVERIFY(server.init());
+        uint id=0; QString summary;
+        connect(&server,&NotificationManager::Server::notificationAdded,this,[&](const NotificationManager::Notification &added) {
+            id=added.id(); summary=added.summary();
+        });
+        FinishNotices notices(QDBusConnection::sessionBus(),downloads.path(),nullptr,100);
+        QSignalSpy reveals(&notices,&FinishNotices::revealRequested);
+        QFile photo(downloads.filePath(QStringLiteral("photo.png"))); QVERIFY(photo.open(QIODevice::WriteOnly)); photo.write("x"); photo.close();
+        notices.report({{QStringLiteral("application"),QStringLiteral("Ambient Test")},{QStringLiteral("error"),0},
+                        {QStringLiteral("destinationUrl"),QUrl::fromLocalFile(photo.fileName()).toString()}});
+        QTRY_VERIFY(id!=0);
+        QCOMPARE(summary,QStringLiteral("photo.png"));
+        QTest::qWait(50);
+        server.invokeAction(id,QStringLiteral("show"),QString(),NotificationManager::Notifications::None);
+        QTRY_COMPARE(reveals.size(),1);
+        QCOMPARE(reveals.first().first().toString(),photo.fileName());
+    }
+
     void sharedDesktopJobLifecycle() {
         const auto model=NotificationManager::JobsModel::createJobsModel();
         QVERIFY(model->init()); QVERIFY(model->isValid());
         DesktopJobProvider provider;
+        // The service already has a holder in this process, as Plasma's
+        // Notifications widget would be: Ambient shares it.
+        QTest::qWait(50); QVERIFY(!provider.holding());
         QProcess producer;
         producer.start(QCoreApplication::applicationFilePath(),{QStringLiteral("--job-producer")});
         QVERIFY(producer.waitForStarted());
@@ -398,6 +536,45 @@ public Q_SLOTS:
 };
 int main(int argc,char **argv) {
     QGuiApplication app(argc,argv);
+    // A producer on the newer interface, as KDE Connect reports: it ends as
+    // the line on its input says.
+    if (app.arguments().contains(QStringLiteral("--job-producer-v2"))) {
+        QDBusConnection bus=QDBusConnection::sessionBus();
+        auto reply=call(bus,QStringLiteral("org.kde.JobViewServer"),QStringLiteral("/JobViewServer"),
+            QStringLiteral("org.kde.JobViewServerV2"),QStringLiteral("requestView"),
+            {QString(),3,QVariantMap{{QStringLiteral("application-display-name"),QStringLiteral("Ambient Test")},
+                                     {QStringLiteral("application-icon-name"),QStringLiteral("folder")}}});
+        if (reply.type()==QDBusMessage::ErrorMessage || reply.arguments().isEmpty()) return 2;
+        const auto path=qdbus_cast<QDBusObjectPath>(reply.arguments().first()).path();
+        const auto send=[&](const QString &method,const QVariantList &args) {
+            auto msg=QDBusMessage::createMethodCall(QStringLiteral("org.kde.JobViewServer"),path,QStringLiteral("org.kde.JobViewV3"),method);
+            msg.setArguments(args); bus.asyncCall(msg);
+        };
+        QSocketNotifier input(STDIN_FILENO,QSocketNotifier::Read);
+        QObject::connect(&input,&QSocketNotifier::activated,&app,[&] {
+            char buffer[4096]; const auto count=::read(STDIN_FILENO,buffer,sizeof(buffer)-1);
+            if (count<=0) return;
+            const auto line=QString::fromUtf8(buffer,count).trimmed();
+            if (line.startsWith(QStringLiteral("receive "))) {
+                // As KDE Connect reports a file it receives: the folder as the
+                // destination, the file itself as a description value.
+                const auto file=line.mid(8);
+                send(QStringLiteral("update"),{QVariantMap{{QStringLiteral("destUrl"),QUrl::fromLocalFile(QFileInfo(file).absolutePath()).toString()},
+                    {QStringLiteral("title"),QStringLiteral("Receiving file")},{QStringLiteral("totalFiles"),qulonglong(1)},
+                    {QStringLiteral("descriptionLabel1"),QStringLiteral("Source")},{QStringLiteral("descriptionValue1"),QStringLiteral("Pixel")},
+                    {QStringLiteral("descriptionLabel2"),QStringLiteral("Destination")},{QStringLiteral("descriptionValue2"),file}}});
+                send(QStringLiteral("terminate"),{uint(0),QString(),QVariantMap{}});
+            } else if (line.startsWith(QStringLiteral("arrive "))) {
+                send(QStringLiteral("update"),{QVariantMap{{QStringLiteral("destUrl"),QUrl::fromLocalFile(line.mid(7)).toString()}}});
+                send(QStringLiteral("terminate"),{uint(0),QString(),QVariantMap{}});
+            } else if (line==QStringLiteral("cancel")) {
+                send(QStringLiteral("terminate"),{uint(1),QStringLiteral("Canceled"),QVariantMap{}});
+            } else if (line==QStringLiteral("fail")) {
+                send(QStringLiteral("terminate"),{uint(100),QStringLiteral("The phone went out of reach"),QVariantMap{}});
+            }
+        });
+        return app.exec();
+    }
     if (app.arguments().contains(QStringLiteral("--job-producer"))) {
         JobProducer producer;
         auto reply=call(producer.bus,QStringLiteral("org.kde.JobViewServer"),QStringLiteral("/JobViewServer"),

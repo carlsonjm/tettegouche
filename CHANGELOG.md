@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Ambient holds the desktop's job service where no Notifications widget does,
+  so KDE Connect and other applications report their transfers. A file that
+  arrives in Downloads, or a transfer that fails, stays a minute in the island
+  saying how it ended, then is filed quietly in the notification history.
+- The open island's transfer rows keep their ring steady as progress moves.
 - Files lists an Android phone with the drives, by cable and through KDE
   Connect, and opens it like one: at the storage it shares, with no eject, and
   with a plain word on what to allow when the phone refuses. Plasma's device

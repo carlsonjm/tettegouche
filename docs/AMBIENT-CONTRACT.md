@@ -18,15 +18,16 @@ Current sources are:
 - Tette-owned KIO copy/move operations through the launcher's activity bridge;
 - filesystem evidence for new direct children in the configured Downloads folder.
 
-Static system status, completed work, ordinary notifications, and historical
-activity do not remain in Ambient. Ambient owns composition and routing; it does
+Static system status, completed work past its end's minute (§ Ends),
+ordinary notifications, and historical activity do not remain in Ambient. Ambient owns composition and routing; it does
 not own the source operation or retain a completion history.
 
 ## Lifecycle and truth
 
 - An activity appears, updates in place, and leaves with its authoritative
   source. Owner generations reject stale actions after source replacement.
-- Paused resumable media remains visible. Lost/stopped jobs leave. A hidden
+- Paused resumable media remains visible. A lost job leaves, and a stopped one
+  leaves or gives its place to its end (§ Ends). A hidden
   Tette launcher may remain alive to finish and publish an operation.
 - Source fields and actions override filesystem enrichment. Filesystem evidence
   merges only on exact destination and current file identity; there is no suffix
@@ -51,10 +52,26 @@ player's own permission to be raised.
 
 ### Plasma desktop jobs
 
-Tettegouche consumes Plasma's shared jobs model in process; it never registers a
-competing job-view server. Running and suspended jobs expose only the identity,
-progress, counts, descriptions, and controls supplied by that model. Zero
-percent without a total is unknown progress.
+Tettegouche shares Plasma's jobs model in process. Where Plasma's Notifications
+widget holds the job-view service, Ambient reads that model and never competes
+for the service; where nothing holds it, Ambient holds it, so applications'
+transfers still report, and closes each job once it has ended. Running and
+suspended jobs expose only the identity, progress, counts, descriptions, and
+controls supplied by that model. Zero percent without a total is unknown
+progress. A job's file is its destination when that is a file; a destination
+folder counts only with a description value naming a regular file directly
+inside it, as KDE Connect reports one. Descriptions' labels are never read.
+
+### Ends
+
+A job's end earns a line when it brought something new, a file arriving in
+Downloads, or failed; a cancelled job, or one writing elsewhere, ends quietly
+because the person started it and saw it run. An end that earns a line takes
+its job's place for a minute and says how it ended, an arrival with Show in
+Files. Then it is filed as a notification in the freedesktop transfer
+categories, `transfer.complete` or `transfer.error`, which the history keeps
+and Temperance's ticker does not play. One used in Ambient is filed at once.
+Filesystem evidence alone never files anything.
 
 ### Tette operations
 

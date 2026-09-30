@@ -133,6 +133,10 @@ Item {
             return qsTr("File size %1").arg(formatBytes(activity.observedSizeBytes));
         return "";
     }
+    // A transfer that has ended and waits out its minute says how it ended.
+    function ended(activity) {
+        return !!activity && (activity.state === "finished" || activity.state === "failed");
+    }
     function transferTitle(activity) {
         return activity ? activity.title || activity.source || qsTr("Transfer") : "";
     }
@@ -193,6 +197,7 @@ Item {
     readonly property string transferHeadline: transfers.length > 1
         ? qsTr("%1 transfers").arg(transfers.length) : transferTitle(firstTransfer)
     readonly property string transferDetail: transfers.length > 1 || !firstTransfer ? ""
+        : ended(firstTransfer) ? firstTransfer.description || ""
         : firstTransfer.evidence === "filesystem" ? qsTr("Incoming file") : transferBytes(firstTransfer)
     TextMetrics { id: headlineMetrics; text: surface.transferHeadline; font.pixelSize: 13; font.weight: Font.DemiBold }
     TextMetrics { id: detailMetrics; text: surface.transferDetail; font.pixelSize: 11 }

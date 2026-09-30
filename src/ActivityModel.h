@@ -1,6 +1,7 @@
 #pragma once
 #include "MprisActivityProvider.h"
 #include "DesktopJobProvider.h"
+#include "FinishNotices.h"
 #include "IncomingFileProvider.h"
 #include "TetteTransferProvider.h"
 #include <memory>
@@ -14,8 +15,12 @@ public:
     QVariantList activities() const { return m_rows; }
     void invoke(const QString &id, int generation, const QString &action, const QVariant &value = {});
     QUrl destinationForReveal(const QString &id, int generation) const;
+    // Show in Files was used on this row; an end waiting there goes no further.
+    void revealed(const QString &id, int generation);
 Q_SIGNALS:
     void changed();
+    // Show in Files was chosen on the notice of a file that arrived.
+    void revealRequested(const QString &path);
 private:
     friend class ActivityProviderTest;
     void refresh();
@@ -24,6 +29,7 @@ private:
     DesktopJobProvider m_jobs;
     IncomingFileProvider m_files;
     TetteTransferProvider m_tette;
+    FinishNotices m_notices;
     QVariantList m_rows;
     QMap<QString, QVariantMap> m_routes;
     QMap<QString, QString> m_presentations;

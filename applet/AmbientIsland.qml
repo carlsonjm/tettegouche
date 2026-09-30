@@ -562,11 +562,16 @@ Window {
                     font.pixelSize: 12
                     opacity: 0.66
                 }
+                // Counted rather than listed: each update is a new list, and a
+                // Repeater given a new list makes every row again, whose ring
+                // then draws from blank. Rows stay while the count holds.
                 Repeater {
-                    model: overlay.surface ? overlay.surface.transfers : []
+                    model: overlay.surface ? overlay.surface.transfers.length : 0
                     delegate: Column {
                         id: row
-                        required property var modelData
+                        required property int index
+                        readonly property var modelData: overlay.surface && overlay.surface.transfers[index]
+                            ? overlay.surface.transfers[index] : ({})
                         objectName: "ambient-island-transfer-" + modelData.id
                         readonly property bool suspended: modelData.state === "suspended"
                         width: content.width
@@ -594,6 +599,7 @@ Window {
                                 Label {
                                     width: parent.width
                                     text: row.suspended ? qsTr("Paused")
+                                        : overlay.surface && overlay.surface.ended(row.modelData) ? row.modelData.description || ""
                                         : row.modelData.evidence === "filesystem" ? qsTr("Incoming file · completion unknown")
                                         : overlay.surface ? overlay.surface.transferBytes(row.modelData) || overlay.surface.percentage(row.modelData) : ""
                                     color: row.suspended ? "#E3B866" : overlay.ink
