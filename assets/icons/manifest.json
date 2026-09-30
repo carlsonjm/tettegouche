@@ -23,6 +23,7 @@
     "status-unselected": "circle",
     "media-seek-backward": "rotate-ccw",
     "media-seek-forward": "rotate-cw",
-    "action-eject": "eject"
+    "action-eject": "eject",
+    "action-show-in-files": "folder-open"
   }
 }

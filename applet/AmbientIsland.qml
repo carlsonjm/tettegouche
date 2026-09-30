@@ -424,14 +424,6 @@ Window {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 8
                     GlyphButton {
-                        objectName: "ambient-island-seek-back"
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "seekBack")
-                        glyph: "rotate-ccw"
-                        label: qsTr("Back 10 seconds")
-                        onActivated: overlay.surface.invoke(overlay.activity, "seekBack")
-                    }
-                    GlyphButton {
                         anchors.verticalCenter: parent.verticalCenter
                         visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "previous")
                         glyph: "skip-back"
@@ -476,14 +468,6 @@ Window {
                         glyph: "skip-forward"
                         label: qsTr("Next")
                         onActivated: overlay.surface.invoke(overlay.activity, "next")
-                    }
-                    GlyphButton {
-                        objectName: "ambient-island-seek-forward"
-                        anchors.verticalCenter: parent.verticalCenter
-                        visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "seek")
-                        glyph: "rotate-cw"
-                        label: qsTr("Forward 10 seconds")
-                        onActivated: overlay.surface.invoke(overlay.activity, "seek")
                     }
                 }
 

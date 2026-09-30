@@ -114,7 +114,7 @@ PlasmoidItem {
             island.kind = kind;
             return;
         }
-        const from = kind === ambient.mainKind ? ambient.islandItem : ambient.bubbleItem;
+        const from = ambient.islandFor(kind);
         const side = Plasmoid.screenRect(ambient);
         const opened = islandComponent.createObject(null, {
             surface: ambient,

@@ -120,6 +120,7 @@ plasma_add_applet(studio.warbler.tettegouche
     QML_SOURCES
         applet/main.qml
         applet/AmbientSurface.qml
+        applet/IslandRoom.js
         applet/SuiteIcon.qml
         applet/AmbientIsland.qml
         applet/ConfigGeneral.qml
@@ -133,8 +134,8 @@ plasma_add_applet(studio.warbler.tettegouche
         assets/icons/lucide/skip-forward.svg
         assets/icons/lucide/download.svg
         assets/icons/lucide/x.svg
-        assets/icons/lucide/rotate-ccw.svg
-        assets/icons/lucide/rotate-cw.svg
+        assets/icons/lucide/check.svg
+        assets/icons/lucide/folder-open.svg
 )
 target_link_libraries(studio.warbler.tettegouche PRIVATE
     LayerShellQt::Interface

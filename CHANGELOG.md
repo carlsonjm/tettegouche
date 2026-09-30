@@ -5,6 +5,13 @@ provenance.
 
 ## Unreleased
 
+- Ambient shows each kind of activity as its own island, side by side: media,
+  a transfer, and a transfer's end waiting out its minute. They share the width
+  by turns, the newest first and then the most urgent, give up names before
+  anything else, keep their buttons at their end, and settle without overshoot
+  as the room changes hands. What cannot fit folds into a counted bubble. Each
+  island is flicked aside on its own, and an arrival's island offers Show in
+  Files.
 - A sideways flick sets the island aside, by finger or mouse: music until it
   plays again, a transfer until it ends. Dragged slowly, the island sheds its
   details down to play or pause and springs back if let go.
@@ -45,10 +52,9 @@ provenance.
 - Made Files touch-first: a tap opens, a touch and hold chooses several with an
   action bar, and tiles resize by pinch or Ctrl with + or −. Copies and moves run
   beside other file actions, each with its own progress, Pause and Cancel.
-- Made Ambient one clear island centred in its side of the panel, black when
-  the panel is black. The first activity keeps it and the next waits in a
-  bubble; a tap opens it in place with album art, the track's position, back
-  and forward 10 s, the other players, and each transfer's own actions.
+- Made Ambient clear, centred in its side of the panel and black when the
+  panel is black. A tap opens an island in place with album art, the track's
+  position, the other players, and each transfer's own actions.
 - Made the launcher a 44 px touch square with a 24 px dot, the size of a
   panel's status icons, starting 10 px from the square's edge.
 - Added a responsive Ambient panel surface backed by live MPRIS sessions,

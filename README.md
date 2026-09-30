@@ -66,10 +66,11 @@ Available controls come from the application or service responsible for the
 activity. Tettegouche removes an item when its source disappears and does not claim
 that an unknown operation completed successfully.
 
-The island sits centred in the room the panel gives it, clear so the panel shows
-through, and keeps its controls before titles, artists, filenames and times. A
-tap opens it in place, larger, with the media's art, position and controls or
-each transfer's own actions.
+Each kind of activity is its own island, side by side and centred in the room
+the panel gives them, clear so the panel shows through. When they share the
+room, each gives up names first and keeps its buttons at its end. A tap opens
+an island in place, larger, with the media's art, position and controls or each
+transfer's own actions; a sideways flick sets one aside.
 
 ## Related settings
 

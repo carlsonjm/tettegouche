@@ -139,16 +139,17 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click play or pause, previous or next on the island | Plays, pauses or skips the media. Previous and next show when the island has room. |
-| Tap or click × on the island | Cancels the transfer. It shows only for a single transfer its source can cancel. |
-| Tap or click the island away from its controls | Opens it in place, larger. |
-| Drag the island sideways, by finger or mouse, from anywhere on it | It follows and sheds details as a narrower band would, down to play or pause. Let go early and it springs back whole. |
-| Flick the island sideways, or drag it past play or pause | Sets aside what it shows, and the next kind takes the island: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer, filed now. |
-| With the island focused, Delete | Sets it aside. |
-| Tap or click the bubble beside the island | Opens the island on what the bubble holds. |
-| With the island or its bubble focused, Enter or Space | Opens it. |
+| Tap or click play or pause, previous or next on the media island | Plays, pauses or skips the media. Previous and next show when the island has room. |
+| Tap or click × on the transfer island | Cancels the transfer. It shows only for a single transfer its source can cancel. |
+| Tap or click the folder on an arrival's island | Opens Files at the file, selected. |
+| Tap or click an island away from its controls | Opens it in place, larger. |
+| Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
+| Flick an island sideways, or drag it past its first piece | Sets aside what it shows, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer, filed now. |
+| With an island focused, Delete | Sets it aside. |
+| Tap or click the bubble after the islands | Opens the island on what the bubble holds. |
+| With an island or the bubble focused, Enter or Space | Opens it. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |
-| In the open island, tap or click back 10 s, previous, play or pause, next or forward 10 s | Acts on the media. Each shows only when the player supports it. |
+| In the open island, tap or click previous, play or pause, or next | Acts on the media. Each shows only when the player supports it. |
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island, tap or click Show and the player's name | Brings the player forward and closes the island. It shows only when the player can be raised. |
 | In the open island, tap or click a mark along its top | Moves between the media and the transfers. |

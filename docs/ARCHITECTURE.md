@@ -111,11 +111,13 @@ The applet constructs one shared activity model per Plasma process from the
 sources [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) lists; that contract owns
 admission, source truth, width and actions.
 
-The panel shows Ambient as one island (`AmbientSurface.qml`), clear over the
-panel and the suite's black while the containment sets Plasma's
-`ContainmentPrefersOpaqueBackground` hint. Opening it maps a clear top-layer
-surface over the whole display, set up as the launcher's is, on which
-`AmbientIsland.qml` grows the island into its card; the surface takes the
+The panel shows Ambient as one island per kind of activity
+(`AmbientSurface.qml`), clear over the panel and the suite's black while the
+containment sets Plasma's `ContainmentPrefersOpaqueBackground` hint.
+`IslandRoom.js` decides, from each island's measured pieces, what each shows in
+the width it has; the surface draws that and animates the change. Opening an
+island maps a clear top-layer surface over the whole display, set up as the
+launcher's is, on which `AmbientIsland.qml` grows the island into its card; the surface takes the
 keyboard so Esc closes it, and is destroyed when it closes.
 
 `TETTE_AMBIENT_FIXTURE=transfer-media`, or `paused` for paused media, replaces

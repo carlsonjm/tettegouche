@@ -69,8 +69,14 @@ TestCase {
         wait(0);
         return surface;
     }
-    function island(surface) { return findChild(surface, "ambient-island"); }
+    // An island as drawn, and the island that carries it.
+    function island(surface, kind) { return findChild(surface, "ambient-band-" + kind); }
+    function carrier(surface, kind) { return island(surface, kind).parent; }
     function bubble(surface) { return findChild(surface, "ambient-bubble"); }
+    function shown(surface, kind) { return surface.plan.shown[kind] || []; }
+    // Where an item sits across the band.
+    function leftOf(surface, item) { return item.mapToItem(surface, 0, 0).x; }
+    function rightOf(surface, item) { return item.mapToItem(surface, item.width, 0).x; }
     function spyOn(target, signalName) {
         const spy = createTemporaryQmlObject('import QtTest; SignalSpy {}', testCase);
         spy.target = target;
@@ -82,66 +88,158 @@ TestCase {
     function test_empty_is_quiet() {
         const surface = createSurface(405, []);
         compare(surface.minimumUsefulWidth, 0);
-        verify(!island(surface).visible);
+        verify(!island(surface, "media").visible);
+        verify(!island(surface, "transfer").visible);
+        verify(!island(surface, "arrived").visible);
         verify(!bubble(surface).visible);
     }
 
     function test_music_alone_is_centred_with_its_controls() {
         const surface = createSurface(405, [media]);
         settle();
-        const shape = island(surface);
+        const shape = island(surface, "media");
         verify(shape.visible);
         compare(shape.height, 44);
-        fuzzyCompare(shape.x + shape.width / 2, surface.width / 2, 0.5);
+        fuzzyCompare(leftOf(surface, shape) + shape.width / 2, surface.width / 2, 1);
         const transport = findChild(surface, "ambient-media-transport");
-        fuzzyCompare(transport.mapToItem(surface, transport.width / 2, 0).x, surface.width / 2, 0.5);
+        fuzzyCompare(leftOf(surface, transport) + transport.width / 2, surface.width / 2, 1);
         const toggle = findChild(surface, "ambient-media-toggle");
         verify(toggle.width >= 44 && toggle.height >= 44);
         verify(findChild(surface, "ambient-media-previous").visible);
         verify(findChild(surface, "ambient-media-next").visible);
         verify(findChild(surface, "ambient-media-title").visible);
+        verify(findChild(surface, "ambient-media-artist").visible);
         verify(findChild(surface, "ambient-media-time").visible);
-        verify(shape.x >= 0 && shape.x + shape.width <= surface.width);
+        // The time and the player sit after the controls when music is alone.
+        verify(leftOf(surface, findChild(surface, "ambient-media-time")) > rightOf(surface, transport));
+        verify(leftOf(surface, shape) >= 0 && rightOf(surface, shape) <= surface.width);
     }
 
-    function test_music_gives_words_before_controls() {
+    // Music drops in its own order, the last first: play or pause stays longest,
+    // then the title, the art, and the skips.
+    function test_music_alone_drops_in_its_order() {
         const narrow = createSurface(200, [media]);
         settle();
-        verify(!findChild(narrow, "ambient-media-title").visible);
-        verify(findChild(narrow, "ambient-media-previous").visible);
-        verify(findChild(narrow, "ambient-media-next").visible);
-        verify(island(narrow).width <= narrow.width);
+        compare(shown(narrow, "media").slice(0, 2), ["toggle", "title"]);
+        verify(findChild(narrow, "ambient-media-title").visible);
+        verify(findChild(narrow, "ambient-media-toggle").visible);
+        verify(!findChild(narrow, "ambient-media-previous").visible);
+        verify(!findChild(narrow, "ambient-media-next").visible);
+        verify(island(narrow, "media").width <= narrow.width);
         const tight = createSurface(100, [media]);
         settle();
-        verify(!findChild(tight, "ambient-media-previous").visible);
+        compare(shown(tight, "media"), ["toggle"]);
         verify(findChild(tight, "ambient-media-toggle").visible);
+        verify(!findChild(tight, "ambient-media-title").visible);
+        const wide = createSurface(640, [media]);
+        settle();
+        for (const piece of ["toggle", "title", "art", "skip", "artist", "time", "duration", "player"])
+            verify(shown(wide, "media").indexOf(piece) >= 0, piece);
     }
 
-    function test_first_to_arrive_keeps_the_island() {
+    // Each kind is its own island, in the order they arrived, the whole group
+    // centred; neither passes over the other or the band's edges.
+    function test_neighbours_sit_side_by_side() {
         const surface = createSurface(405, [transfer]);
         surface.activities = [transfer, media];
         settle();
-        compare(surface.mainKind, "transfer");
-        compare(surface.bubbleKind, "media");
-        compare(surface.bubbleCount, 1);
-        verify(bubble(surface).visible);
-        verify(!findChild(bubble(surface), "ambient-bubble-count").visible);
-        const shape = island(surface), mark = bubble(surface);
-        fuzzyCompare((shape.x + mark.x + mark.width) / 2, surface.width / 2, 0.5);
+        const first = island(surface, "transfer"), second = island(surface, "media");
+        verify(first.visible && second.visible);
+        verify(rightOf(surface, first) <= leftOf(surface, second));
+        fuzzyCompare(leftOf(surface, second) - rightOf(surface, first), surface.gap, 1);
+        fuzzyCompare(leftOf(surface, first) + rightOf(surface, second), surface.width, 2);
+        verify(leftOf(surface, first) >= 0 && rightOf(surface, second) <= surface.width);
+        verify(!bubble(surface).visible);
+        // When one island's activity ends, its neighbour takes the room back.
+        const shared = second.width;
+        surface.activities = [media];
+        settle();
+        verify(!first.visible);
+        verify(second.width > shared);
+        fuzzyCompare(leftOf(surface, second) + second.width / 2, surface.width / 2, 1);
+    }
 
-        const musicFirst = createSurface(405, [media]);
-        musicFirst.activities = [transfer, media];
-        musicFirst.activities = [transfer, secondTransfer, media];
+    // Beside a neighbour, an island reads what it is, then its words, then its
+    // buttons; play or pause is last.
+    function test_buttons_come_last_beside_a_neighbour() {
+        const surface = createSurface(460, [media, transfer]);
         settle();
-        compare(musicFirst.mainKind, "media");
-        compare(musicFirst.bubbleKind, "transfer");
-        compare(musicFirst.bubbleCount, 2);
-        verify(findChild(bubble(musicFirst), "ambient-bubble-count").visible);
-        // When the island's own activity ends, the next one takes the island.
-        musicFirst.activities = [transfer, secondTransfer];
+        const shape = island(surface, "media");
+        const transport = findChild(surface, "ambient-media-transport");
+        const title = findChild(surface, "ambient-media-title");
+        verify(findChild(surface, "ambient-media-toggle").visible && title.visible);
+        verify(rightOf(surface, title) <= leftOf(surface, transport));
+        fuzzyCompare(rightOf(surface, transport), rightOf(surface, shape) - surface.inset, 1);
+        // The time, when it fits, reads before the controls.
+        const time = findChild(surface, "ambient-media-time-beside");
+        if (time.visible) verify(rightOf(surface, time) <= leftOf(surface, transport));
+        const cancel = findChild(surface, "ambient-transfer-cancel");
+        verify(cancel.visible);
+        fuzzyCompare(rightOf(surface, cancel), rightOf(surface, island(surface, "transfer")) - surface.inset, 1);
+    }
+
+    // The newest island has the room: it takes its turn first. Once urgency
+    // settles it, a transfer goes before music.
+    function test_newest_has_the_room_then_urgency() {
+        const surface = createSurface(300, [transfer]);
+        surface.activities = [transfer, media];
+        compare(surface.room, "media");
+        tryCompare(surface, "room", "", 3000);
+        // Across widths, the room never gives the newest less, and somewhere
+        // it gives it more than urgency would.
+        let more = 0;
+        for (let width = 180; width <= 480; width += 4) {
+            surface.width = width;
+            surface.room = "media";
+            const withRoom = shown(surface, "media").length;
+            surface.room = "";
+            const byUrgency = shown(surface, "media").length;
+            verify(withRoom >= byUrgency, "width " + width);
+            if (withRoom > byUrgency) ++more;
+        }
+        verify(more > 0);
+    }
+
+    // Names are the last to get room: a transfer shows its size and Cancel
+    // before where it came from, and music keeps its skips before its player.
+    function test_names_wait_for_the_rest() {
+        const surface = createSurface(460, [media, transfer]);
+        tryCompare(surface, "room", "", 3000);
         settle();
-        compare(musicFirst.mainKind, "transfer");
-        verify(!bubble(musicFirst).visible);
+        const music = shown(surface, "media");
+        if (music.indexOf("player") >= 0)
+            verify(music.indexOf("skip") >= 0 && music.indexOf("time") >= 0);
+        const moving = shown(surface, "transfer");
+        if (moving.indexOf("source") >= 0 || moving.indexOf("name") >= 0)
+            verify(moving.indexOf("bytes") >= 0 && moving.indexOf("cancel") >= 0);
+    }
+
+    // What cannot keep even its first piece folds into a counted bubble.
+    function test_what_does_not_fit_folds_into_the_bubble() {
+        const surface = createSurface(150, [media, transfer, secondTransfer]);
+        surface.activities = [media, transfer, secondTransfer, arrived];
+        settle();
+        const mark = bubble(surface);
+        verify(mark.visible);
+        verify(surface.folded.length > 0);
+        let visible = 0;
+        for (const kind of ["media", "transfer", "arrived"]) {
+            const shape = island(surface, kind);
+            if (!shape.visible) continue;
+            ++visible;
+            verify(leftOf(surface, shape) >= 0 && rightOf(surface, shape) <= surface.width);
+            verify(rightOf(surface, shape) <= leftOf(surface, mark) || leftOf(surface, shape) >= rightOf(surface, mark));
+        }
+        verify(visible >= 1);
+        verify(rightOf(surface, mark) <= surface.width);
+        if (surface.folded.indexOf("transfer") >= 0) {
+            compare(surface.bubbleCount >= 2, true);
+            verify(findChild(mark, "ambient-bubble-count").visible);
+        }
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(mark, mark.width / 2, mark.height / 2);
+        compare(opens.count, 1);
+        compare(opens.signalArguments[0][0], surface.bubbleKind === "media" ? "media" : "transfer");
     }
 
     function test_one_player_at_a_time() {
@@ -154,18 +252,21 @@ TestCase {
         compare(surface.kinds.length, 1);
         surface.chosenPlayer = "media-1";
         compare(surface.player.id, "media-1");
-        // Several players are one activity: the bubble never holds a second one.
+        // Several players are one island.
+        settle();
         verify(!bubble(surface).visible);
+        verify(!island(surface, "transfer").visible);
     }
 
     function test_clear_over_the_band_black_with_it() {
         const surface = createSurface(405, [media]);
-        const shape = island(surface);
+        const shape = island(surface, "media");
         verify(shape.color.a < 0.2);
         surface.opaque = true;
         // The band's own black, the suite's, not a darker one of its own.
         tryVerify(() => Qt.colorEqual(shape.color, "#141414"));
         compare(bubble(surface).color, shape.color);
+        compare(island(surface, "transfer").color, shape.color);
     }
 
     function test_controls_act_and_the_rest_opens() {
@@ -180,21 +281,23 @@ TestCase {
         compare(invoked.signalArguments[0][1], 8);
         compare(invoked.signalArguments[0][2], "pause");
         compare(opens.count, 0);
-        const shape = island(surface);
+        const shape = island(surface, "media");
         mouseClick(shape, 8, shape.height / 2);
         compare(opens.count, 1);
         compare(opens.signalArguments[0][0], "media");
+        compare(surface.islandFor("media"), shape);
 
         surface.activities = [media, transfer];
         settle();
-        const mark = bubble(surface);
-        mouseClick(mark, mark.width / 2, mark.height / 2);
+        const moving = island(surface, "transfer");
+        mouseClick(moving, 8, moving.height / 2);
         compare(opens.count, 2);
         compare(opens.signalArguments[1][0], "transfer");
-        // Opened elsewhere, the band's island and bubble step aside.
+        compare(surface.islandFor("transfer"), moving);
+        // Opened elsewhere, the band's islands step aside.
         surface.opened = true;
         verify(!shape.visible);
-        verify(!mark.visible);
+        verify(!moving.visible);
     }
 
     function test_transfer_alone_keeps_its_cancel() {
@@ -203,7 +306,12 @@ TestCase {
         const cancel = findChild(surface, "ambient-transfer-cancel");
         verify(cancel.visible);
         verify(cancel.width >= 44);
-        compare(findChild(surface, "ambient-transfer-progress").text, "68%");
+        // The percentage rides inside the ring.
+        const progress = findChild(surface, "ambient-transfer-progress");
+        verify(progress.visible);
+        compare(progress.text, "68");
+        compare(findChild(surface, "ambient-transfer-title").text, "Fedora.iso");
+        compare(findChild(surface, "ambient-transfer-detail").text, "3.2 GB of 4.7 GB · Files");
         const invoked = spyOn(surface, "invokeRequested");
         mouseClick(cancel, cancel.width / 2, cancel.height / 2);
         compare(invoked.signalArguments[0][2], "cancel");
@@ -211,9 +319,11 @@ TestCase {
 
     function test_unknown_filesystem_evidence_stays_honest() {
         const surface = createSurface(405, [unknownFile]);
+        settle();
         compare(surface.percentage(unknownFile), "—");
         compare(surface.transferBytes(unknownFile), "File size 2.0 KB");
-        compare(surface.transferDetail, "Incoming file");
+        compare(findChild(surface, "ambient-transfer-detail").text, "File size 2.0 KB · Incoming file");
+        verify(!findChild(surface, "ambient-transfer-progress").visible);
         verify(!findChild(surface, "ambient-transfer-cancel").visible);
     }
 
@@ -223,6 +333,49 @@ TestCase {
         compare(surface.mediaPositionUs(media), 11000000);
         const paused = Object.assign({}, media, {state: "paused"});
         compare(surface.mediaPositionUs(paused), 10000000);
+    }
+
+    // An ended transfer waiting out its minute is an island of its own: how
+    // it ended, what it was, and Show in Files for an arrival.
+    function test_an_arrival_waits_with_show_in_files() {
+        const surface = createSurface(405, [arrived]);
+        settle();
+        const shape = island(surface, "arrived");
+        verify(shape.visible);
+        verify(!island(surface, "transfer").visible);
+        compare(findChild(surface, "ambient-arrived-name").text, "photo.png");
+        compare(findChild(surface, "ambient-arrived-words").text, "Arrived in Downloads");
+        verify(!findChild(surface, "ambient-arrived-mark").failed);
+        const show = findChild(surface, "ambient-arrived-show");
+        verify(show.visible);
+        verify(rightOf(surface, show) > rightOf(surface, findChild(surface, "ambient-arrived-name")));
+        const invoked = spyOn(surface, "invokeRequested");
+        mouseClick(show, show.width / 2, show.height / 2);
+        compare(invoked.signalArguments[0][0], "job:7");
+        compare(invoked.signalArguments[0][2], "showInFiles");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(shape, 8, shape.height / 2);
+        compare(opens.signalArguments[0][0], "transfer");
+        compare(surface.islandFor("transfer"), shape);
+
+        surface.activities = [failed];
+        settle();
+        verify(findChild(surface, "ambient-arrived-mark").failed);
+        compare(findChild(surface, "ambient-arrived-words").text, "The phone went out of reach");
+        verify(!findChild(surface, "ambient-arrived-show").visible);
+    }
+
+    // A transfer that ends keeps its place in the band.
+    function test_an_ended_transfer_keeps_its_place() {
+        const surface = createSurface(460, [transfer]);
+        surface.activities = [transfer, media];
+        settle();
+        const done = Object.assign({}, transfer, {state: "finished", description: "Arrived in Downloads",
+            capabilities: {showInFiles: true}});
+        surface.activities = [done, media];
+        settle();
+        verify(!island(surface, "transfer").visible);
+        verify(rightOf(surface, island(surface, "arrived")) <= leftOf(surface, island(surface, "media")));
     }
 
     function openIsland(surface, kind) {
@@ -260,21 +413,21 @@ TestCase {
         compare(invoked.count, 1);
         compare(invoked.signalArguments[0][2], "seekTo");
         fuzzyCompare(invoked.signalArguments[0][3], 135000000, 1000000);
-        const back = findChild(opened.contentItem, "ambient-island-seek-back");
-        mouseClick(back, back.width / 2, back.height / 2);
-        compare(invoked.signalArguments[1][2], "seekBack");
+        // Back and forward ten seconds have left the island.
+        compare(findChild(opened.contentItem, "ambient-island-seek-back"), null);
+        compare(findChild(opened.contentItem, "ambient-island-seek-forward"), null);
         // The other player waits here, and plays from its own row.
         compare(surface.otherPlayers.length, 1);
         const otherToggle = findChild(opened.contentItem, "ambient-island-other-toggle-media-2");
         verify(otherToggle.visible);
         mouseClick(otherToggle, otherToggle.width / 2, otherToggle.height / 2);
-        compare(invoked.signalArguments[2][0], "media-2");
-        compare(invoked.signalArguments[2][2], "play");
+        compare(invoked.signalArguments[1][0], "media-2");
+        compare(invoked.signalArguments[1][2], "play");
         verify(opened.expanded);
         const raise = findChild(opened.contentItem, "ambient-island-raise");
         verify(raise.visible);
         mouseClick(raise, raise.width / 2, raise.height / 2);
-        compare(invoked.signalArguments[3][2], "raise");
+        compare(invoked.signalArguments[2][2], "raise");
         tryVerify(() => !opened.expanded);
     }
 
@@ -283,8 +436,6 @@ TestCase {
         const surface = createSurface(405, [plain]);
         const opened = openIsland(surface, "media");
         verify(!findChild(opened.contentItem, "ambient-island-seek").movable);
-        verify(!findChild(opened.contentItem, "ambient-island-seek-back").visible);
-        verify(!findChild(opened.contentItem, "ambient-island-seek-forward").visible);
         verify(!findChild(opened.contentItem, "ambient-island-raise").visible);
     }
 
@@ -322,27 +473,23 @@ TestCase {
         fuzzyCompare(row.modelData.progress, 0.83, 0.001);
     }
 
-    // An ended transfer waiting out its minute says how it ended, and an
-    // arrival keeps Show in Files.
-    function test_ended_transfers_say_how_they_ended() {
+    // The open island lists ended transfers with the rest, arrivals keeping
+    // Show in Files.
+    function test_open_island_lists_what_ended() {
         const surface = createSurface(405, [arrived]);
-        compare(surface.transferDetail, "Arrived in Downloads");
         const opened = openIsland(surface, "transfer");
         const show = findChild(opened.contentItem, "ambient-island-show-job:7");
         verify(show !== null && show.visible);
         verify(!findChild(opened.contentItem, "ambient-island-cancel-job:7").visible);
-        surface.activities = [failed];
-        wait(0);
-        compare(surface.transferDetail, "The phone went out of reach");
     }
 
     // A sideways drag, measured against the band, which does not move.
-    function islandCentre(surface) {
-        const shape = island(surface);
-        return {x: shape.x + shape.width / 2, y: shape.y + shape.height / 2};
+    function centreOf(surface, kind) {
+        const shape = island(surface, kind);
+        return {x: leftOf(surface, shape) + shape.width / 2, y: shape.mapToItem(surface, 0, shape.height / 2).y};
     }
-    function slowDrag(surface, dx) {
-        const at = islandCentre(surface);
+    function slowDrag(surface, kind, dx) {
+        const at = centreOf(surface, kind);
         mousePress(surface, at.x, at.y);
         const steps = Math.ceil(Math.abs(dx) / 16);
         for (let step = 1; step <= steps; ++step) {
@@ -360,28 +507,46 @@ TestCase {
         settle();
         verify(findChild(surface, "ambient-media-title").visible);
         const invoked = spyOn(surface, "invokeRequested");
-        const at = slowDrag(surface, -160);
+        const at = slowDrag(surface, "media", -160);
         verify(surface.clip); // leaves through its own edge, not over its neighbours
+        // It sheds in its own order: the skips before the title.
+        verify(!findChild(surface, "ambient-media-previous").visible);
+        verify(findChild(surface, "ambient-media-title").visible);
+        for (let step = 1; step <= 5; ++step) { mouseMove(surface, at.x - 160 - step * 16, at.y); wait(40); }
         verify(!findChild(surface, "ambient-media-title").visible);
         verify(findChild(surface, "ambient-media-toggle").visible);
-        mouseRelease(surface, at.x - 160, at.y);
-        tryCompare(surface, "peel", 0);
+        verify(Math.abs(carrier(surface, "media").peel) < carrier(surface, "media").peelAll);
+        mouseRelease(surface, at.x - 240, at.y);
+        tryCompare(carrier(surface, "media"), "peel", 0);
         compare(invoked.count, 0);
+        settle();
         verify(findChild(surface, "ambient-media-title").visible);
         tryVerify(() => !surface.clip); // at rest, its focus ring and press may reach past
     }
 
-    // Peeled past its least, it goes aside: the player it shows.
+    // Peeled past its least, the island goes aside: the player it shows, and
+    // only that; its neighbour holds its place while it is carried.
     function test_drag_past_its_least_sets_it_aside() {
-        const surface = createSurface(405, [media, transfer]);
+        const surface = createSurface(460, [media, transfer]);
         settle();
         const invoked = spyOn(surface, "invokeRequested");
-        const at = slowDrag(surface, -(surface.peelAll + 20));
-        mouseRelease(surface, at.x - surface.peelAll - 20, at.y);
+        const neighbour = island(surface, "transfer");
+        const standing = leftOf(surface, neighbour);
+        const music = carrier(surface, "media");
+        const at = slowDrag(surface, "media", -(music.peelAll + 20));
+        fuzzyCompare(leftOf(surface, neighbour), standing, 0.5);
+        mouseRelease(surface, at.x - music.peelAll - 20, at.y);
         tryCompare(invoked, "count", 1);
         compare(invoked.signalArguments[0][0], "media-1");
         compare(invoked.signalArguments[0][2], "setAside");
-        tryCompare(surface, "peel", 0);
+        tryCompare(music, "peel", 0);
+        // Gone aside, it does not come back while its activity leaves, and
+        // its neighbour takes the room.
+        verify(!island(surface, "media").visible);
+        surface.activities = [transfer];
+        settle();
+        verify(!island(surface, "media").visible);
+        fuzzyCompare(centreOf(surface, "transfer").x, surface.width / 2, 1);
     }
 
     // A quick flick by touch sets aside what the island shows: every transfer.
@@ -389,7 +554,7 @@ TestCase {
         const surface = createSurface(405, [transfer, secondTransfer]);
         settle();
         const invoked = spyOn(surface, "invokeRequested");
-        const at = islandCentre(surface);
+        const at = centreOf(surface, "transfer");
         const touch = touchEvent(surface);
         touch.press(0, surface, at.x, at.y).commit();
         wait(16);
@@ -404,6 +569,25 @@ TestCase {
         compare([invoked.signalArguments[0][0], invoked.signalArguments[1][0]].sort(), ["transfer-1", "transfer-2"]);
     }
 
+    // Flicking an arrival away files it now.
+    function test_flicking_an_arrival_files_it() {
+        const surface = createSurface(405, [media, arrived]);
+        settle();
+        const invoked = spyOn(surface, "invokeRequested");
+        const at = centreOf(surface, "arrived");
+        const touch = touchEvent(surface);
+        touch.press(0, surface, at.x, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x + 30, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x + 70, at.y).commit();
+        wait(16);
+        touch.release(0, surface, at.x + 70, at.y).commit();
+        tryCompare(invoked, "count", 1);
+        compare(invoked.signalArguments[0][0], "job:7");
+        compare(invoked.signalArguments[0][2], "setAside");
+    }
+
     // A drag that starts on play or pause is the island's: it does not press.
     function test_drag_from_a_control_does_not_press_it() {
         const surface = createSurface(405, [media]);
@@ -414,7 +598,7 @@ TestCase {
         mousePress(surface, at.x, at.y);
         for (let step = 1; step <= 4; ++step) { mouseMove(surface, at.x + step * 12, at.y); wait(40); }
         mouseRelease(surface, at.x + 48, at.y);
-        tryCompare(surface, "peel", 0);
+        tryCompare(carrier(surface, "media"), "peel", 0);
         compare(invoked.count, 0);
     }
 

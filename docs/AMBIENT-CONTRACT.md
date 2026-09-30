@@ -98,41 +98,55 @@ filesystem changes may be missed. Overflow or watch invalidation clears uncertai
 state and rearms without inventing missed work. Existing files are not admitted
 merely because the applet starts.
 
-## The island
+## The islands
 
-Ambient is one island centred in the width its panel hands it. It is clear, so
-the panel shows through it. While the panel prefers an opaque background, as
-Shuffle's band does while it is black, the island takes the suite's black,
-`#141414`, the band's own, and melts into it. It is 44 px tall in a 64 px band
-and shorter on a shorter panel. Each control reaches the island's full height
-and, where the panel allows, 44 px across.
+Each kind of activity is its own island: media, transfers under way, and ends
+waiting out their minute (§ Ends). The islands sit side by side in the order
+they arrived, an end in its transfer's place, the group centred in the width
+the panel hands Ambient. They are clear, so the panel shows through them. While
+the panel prefers an opaque background, as Shuffle's band does while it is
+black, they take the suite's black, `#141414`, the band's own, and melt into it.
+An island is 44 px tall in a 64 px band and shorter on a shorter panel. Each
+control reaches the island's full height and, where the panel allows, 44 px
+across.
 
-Media and transfers each take one place. The first kind to arrive keeps the
-island; the next waits in a round bubble beside it, which shows a count when
-it holds more than one activity. When the island's own kind ends, the next
-takes the island.
+The islands share the width by turns (`applet/IslandRoom.js`). Every island
+keeps its first piece; then each takes one more piece per turn in its own
+order, and stops at the first that does not fit. The newest island takes its
+turn first for 2.4 s; after that the more urgent goes first, a transfer's end
+before a transfer and a transfer before media. Names, such as a player or where
+a transfer comes from, wait until every island has had the rest, so they are
+the first to go; a song's title and artist are not names. What cannot keep even
+its first piece folds into a round bubble after the islands, which counts what
+it holds. As the width changes hands, islands and pieces grow and shrink
+together and settle without overshoot.
 
-Media shows one player at a time: the one that started playing last, or one
-you picked in the open island, where the others wait. Music alone keeps
-its controls at the island's centre, with art and title on one side and the
-time and player on the other. Width reveals information, not capability: the
-words go first, then previous and next, and play or pause stays. A single
-transfer shows its reported progress, name, detail, percentage and Cancel;
-several show their count.
+| Island | Its pieces, the last to go first |
+| --- | --- |
+| Media | play or pause, title (the artist rides with it), art, previous and next, time, length, player |
+| Transfer | progress ring (the percentage rides inside it), name, size, source, Cancel |
+| End | how it ended, Show in Files, name, what happened |
+
+Beside a neighbour, an island reads what it is, then its words, then its
+buttons last. Media alone keeps its controls at its centre, with art and title
+on one side and the time and player on the other, the sides alike when both
+hold something. Media shows one player at a time: the one that started playing
+last, or one you picked in the open island, where the others wait. Several
+transfers show their count, and several ends theirs.
 
 A tap away from the controls opens the island in place. It opens on a clear
 surface over the whole display, the island growing out of its place into a
 black card, and a tap outside the card or Esc closes it back into the band. The
-card holds the media's art, position, back and forward 10 s, previous, play or
-pause, next, the other players, and a button that brings the player forward
-when the player can be raised. For transfers it lists each one with its own
+card holds the media's art, position, previous, play or pause, next, the other
+players, and a button that brings the player forward when the player can be
+raised. For transfers, ended ones included, it lists each one with its own
 progress, Pause or Resume, Cancel and Show in Files, as its source supports.
 
 The panel decides the width. On an ordinary panel Ambient measures from the
 launcher dot to the next visible widget on its right in the same panel,
 ignoring spacers; with no widget there, it keeps only the island's core.
 Shuffle's band instead hands Ambient the whole of its side of the dock, so the
-island never plans for room it will not get. It never pushes a centred dock off
+islands never plan for room they will not get. It never pushes a centred dock off
 the display's centre. On a vertical panel only the launcher dot shows.
 
 ## Interaction and safety

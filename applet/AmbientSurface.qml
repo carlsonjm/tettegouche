@@ -3,14 +3,16 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import org.kde.kirigami as Kirigami
+import "IslandRoom.js" as IslandRoom
 
-// Ambient's island: one clear shape centred in the width the panel hands it,
-// holding what is going on now. Music alone sits in the middle with its
-// controls centred; the next kind of activity to arrive waits in a round
-// bubble beside it, and the bubble counts what it holds. The band shows
-// through the island, and where the band is black the island takes the same
-// black, the suite's, so it melts into it. Opening
-// the island is the applet's job; this surface only asks.
+// Ambient's band: what is going on now, one island for each kind of it,
+// centred in the width the panel hands it. The islands share the band by
+// turns (IslandRoom.js), and what cannot keep even its first piece folds into
+// a round bubble that counts what it holds. Music alone keeps its controls in
+// the middle; beside a neighbour, each island reads what it is, then its
+// words, then its buttons. The band shows through the islands, and where the
+// band is black they take the same black, the suite's, so they melt into it.
+// Opening an island is the applet's job; this surface only asks.
 Item {
     id: surface
 
@@ -19,23 +21,10 @@ Item {
     property double clockNowUs: 0
     // The band is black: a card is up, or Plasma's panel is opaque.
     property bool opaque: false
-    // The island is open in its own surface, so the closed one steps aside.
+    // An island is open in its own surface, so the closed ones step aside.
     property bool opened: false
     // A player picked inside the open island, kept while it lasts.
     property string chosenPlayer: ""
-    // How far a sideways drag has carried the island. The island sizes itself
-    // to the room left beside it, so it sheds details as a narrower band would,
-    // down to its least, then slides on with the finger and fades.
-    property real peel: 0
-    readonly property real room: Math.max(0, width - Math.abs(peel))
-    readonly property real peelAll: Math.max(48, width - minimumUsefulWidth)
-    readonly property bool peeling: islandDrag.active || peelBack.running || peelAway.running
-    property real peelVelocity: 0
-    property real peelSampleX: 0
-    property double peelSampleAt: 0
-    // Carried or flicked, the island leaves through its own edges and never
-    // passes over what sits beside Ambient, the launcher's dot among them.
-    clip: peeling
 
     signal invokeRequested(string activityId, int generation, string action, var value)
     signal openRequested(string kind)
@@ -47,36 +36,59 @@ Item {
     readonly property real reach: Math.max(pillHeight, Math.min(44, height))
     readonly property real gap: 8
     readonly property real inset: 6
+    // Art, a ring or a mark sits as far from the island's edge as its top.
+    readonly property real lead: pillHeight - 2 * inset
+    readonly property real artSize: Math.round(pillHeight * 0.68)
+    // Tall enough for a second line of words.
+    readonly property bool tall: pillHeight >= 40
+    readonly property int labelSize: tall ? 13 : 12
 
     readonly property var transfers: activities.filter(activity => activity.kind === "transfer")
     readonly property var players: activities.filter(activity => activity.kind === "media")
+    readonly property var running: transfers.filter(activity => !ended(activity))
+    readonly property var endings: transfers.filter(activity => ended(activity))
+    readonly property var firstTransfer: transfers.length > 0 ? transfers[0] : null
 
     // Arrival and playing order, kept across updates.
     property var arrivals: ({})
     property var startedPlaying: ({})
     property var lastStates: ({})
-    property var kindArrivals: ({})
+    property var bandArrivals: ({})
+    // Where each island sits, remembered while one that left fades from it.
+    property var places: ({})
     property int serial: 0
-    // What the island shows, worked out from those orders.
+    // What the band shows, worked out from those orders: its islands, and the
+    // kinds the open island moves between, music and transfers.
+    property var bandKinds: []
     property var kinds: []
     property var player: null
     property var otherPlayers: []
+    // The newest island has the room until urgency settles it.
+    property string room: ""
 
-    readonly property string mainKind: kinds.length > 0 ? kinds[0] : ""
-    readonly property bool shared: kinds.length > 1
-    readonly property string bubbleKind: shared ? kinds[kinds.length - 1] : ""
-    readonly property int bubbleCount: kinds.slice(1).reduce(
-        (count, kind) => count + (kind === "transfer" ? transfers.length : 1), 0)
-    readonly property var firstTransfer: transfers.length > 0 ? transfers[0] : null
-    // Where the island and its bubble sit, for the surface that opens from them.
-    readonly property Item islandItem: island
-    readonly property Item bubbleItem: bubble
+    readonly property bool alone: bandKinds.length === 1 && bandKinds[0] === "media"
+    readonly property var plan: IslandRoom.layout(bandKinds, room, width, measure, available, gap, pillHeight)
+    readonly property var folded: plan.folded
+    readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
+    readonly property int bubbleCount: folded.reduce((count, kind) => count
+        + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length : 1), 0)
+    // The least the band needs: each island's first piece.
+    readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
+    readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
+    // Carried or flicked, an island leaves through the band's own edges and
+    // never passes over what sits beside Ambient, the launcher's dot among them.
+    clip: peeling
 
     onActivitiesChanged: track()
     onChosenPlayerChanged: choose()
 
+    function bandKind(activity) {
+        return activity.kind === "media" ? "media" : ended(activity) ? "arrived" : "transfer";
+    }
+
     function track() {
-        const arrivalsNext = {}, startedNext = {}, statesNext = {}, kindsNext = {};
+        const arrivalsNext = {}, startedNext = {}, statesNext = {}, bandNext = {};
+        let newest = "";
         for (const activity of activities) {
             const key = String(activity.id);
             arrivalsNext[key] = key in arrivals ? arrivals[key] : ++serial;
@@ -84,19 +96,52 @@ Item {
             startedNext[key] = playing && lastStates[key] !== "playing" ? ++serial
                 : key in startedPlaying ? startedPlaying[key] : 0;
             statesNext[key] = activity.state;
-            const kind = activity.kind === "media" ? "media" : "transfer";
-            if (!(kind in kindsNext))
-                kindsNext[kind] = kind in kindArrivals ? kindArrivals[kind] : ++serial;
+            const band = bandKind(activity);
+            if (band in bandNext) continue;
+            if (band in bandArrivals) {
+                bandNext[band] = bandArrivals[band];
+                continue;
+            }
+            // What ended keeps its place beside the transfers it came from.
+            bandNext[band] = band === "arrived" && "transfer" in bandArrivals
+                ? bandArrivals.transfer + 0.5 : ++serial;
+            if (!newest || bandNext[band] > bandNext[newest]) newest = band;
         }
         arrivals = arrivalsNext;
         startedPlaying = startedNext;
         lastStates = statesNext;
-        kindArrivals = kindsNext;
-        kinds = Object.keys(kindsNext).sort((a, b) => kindsNext[a] - kindsNext[b]);
+        bandArrivals = bandNext;
+        const placesNext = Object.assign({}, places);
+        for (const band in bandNext) placesNext[band] = bandNext[band];
+        places = placesNext;
+        const bandOrder = Object.keys(bandNext).sort((a, b) => bandNext[a] - bandNext[b]);
+        if (JSON.stringify(bandOrder) !== JSON.stringify(bandKinds)) bandKinds = bandOrder;
+        const openOrder = [];
+        for (const band of bandOrder) {
+            const kind = band === "media" ? "media" : "transfer";
+            if (openOrder.indexOf(kind) < 0) openOrder.push(kind);
+        }
+        if (JSON.stringify(openOrder) !== JSON.stringify(kinds)) kinds = openOrder;
+        if (newest) {
+            room = newest;
+            roomSettles.restart();
+        } else if (room && !(room in bandNext)) {
+            room = "";
+        }
+        // An island set aside stays gone once its activity has left; one
+        // whose activity is still here comes back.
+        for (const island of [mediaIsland, transferIsland, arrivedIsland])
+            if (island.kind in bandNext) island.leaving = false;
         choose();
     }
 
-    // The player that started playing last keeps the island, unless the
+    Timer {
+        id: roomSettles
+        interval: 2400
+        onTriggered: surface.room = ""
+    }
+
+    // The player that started playing last keeps its island, unless the
     // person picked another inside it.
     function choose() {
         // Read the activities themselves: a binding derived from them may not
@@ -179,91 +224,347 @@ Item {
         onTriggered: surface.clockNowUs = Number(surface.monotonicClock())
     }
 
+    // ---------------------------------------------------------------- words
+
+    readonly property bool canToggle: capability(player, player && player.state === "playing" ? "pause" : "play")
+    readonly property string mediaTitle: player ? player.title || player.source || qsTr("Media") : ""
+    readonly property string mediaArtist: player && player.artist ? player.artist : ""
+    readonly property string mediaTime: player && player.positionUs !== undefined
+        ? formatTime(mediaPositionUs(player)) : ""
+    readonly property string mediaDuration: player && player.durationUs !== undefined
+        ? formatTime(player.durationUs) : ""
+    // The clock's width follows its digits' count, not each second.
+    readonly property string mediaTimeShape: mediaTime.replace(/[0-9]/g, "0")
+
+    readonly property var transferShown: running.length === 1 ? running[0] : null
+    readonly property string transferName: running.length > 1
+        ? qsTr("%1 transfers").arg(running.length) : transferTitle(transferShown)
+    readonly property string transferBytesText: transferBytes(transferShown)
+    readonly property string transferSource: transferShown && transferShown.source
+        && transferShown.source !== transferName ? transferShown.source : ""
+    function transferLine(bytes, source) {
+        return [bytes ? transferBytesText : "", source ? transferSource : ""]
+            .filter(text => text.length > 0).join(" · ");
+    }
+
+    readonly property var endingShown: endings.length === 1 ? endings[0] : null
+    readonly property bool endingFailed: endings.some(activity => activity.state === "failed")
+    readonly property string endingName: endings.length > 1
+        ? (endingFailed ? qsTr("%1 transfers ended") : qsTr("%1 files arrived")).arg(endings.length)
+        : transferTitle(endingShown)
+    readonly property string endingWords: endingShown ? endingShown.description || "" : ""
+
+    FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
+    FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
+    FontMetrics { id: smallMetrics; font.pixelSize: 11 }
+
     // ---------------------------------------------------------------- sizes
 
-    // Music alone: art and title on one side, the controls in the middle, the
-    // time and player on the other; each side gives way before a control does.
-    readonly property var mediaControls: ["previous", "toggle", "next"].filter(name =>
-        name === "toggle" || capability(player, name))
-    readonly property bool canToggle: capability(player, player && player.state === "playing" ? "pause" : "play")
-    readonly property real transportFull: (canToggle ? reach : 0)
-        + (capability(player, "previous") ? reach : 0) + (capability(player, "next") ? reach : 0)
-    readonly property real mediaSideRoom: Math.floor((room - 2 * inset - transportFull) / 2)
-    readonly property bool showSkips: mediaSideRoom >= 0
-    readonly property real transportWidth: showSkips ? transportFull : (canToggle ? reach : 0)
-    readonly property real mediaSide: Math.max(0, Math.min(124, mediaSideRoom))
-    readonly property bool mediaWords: mediaSide >= 84
-    readonly property real artSize: Math.round(pillHeight * 0.68)
-    readonly property real mediaFullWidth: 2 * inset + transportWidth
-        + 2 * (mediaWords ? mediaSide : mediaSide >= artSize + 8 ? artSize + 8 : 0)
-    // Music sharing the band: art, play or pause, and as much title as fits.
-    readonly property real artLead: Math.max(0, (pillHeight - artSize) / 2 - inset)
-    readonly property real mediaSmallFixed: artLead + artSize + 4 + (canToggle ? reach : 0) + 8
-    readonly property real mediaSmallTitle: Math.max(0, Math.min(84,
-        room - 2 * inset - mediaSmallFixed - gap - pillHeight))
-    readonly property bool mediaSmallWords: mediaSmallTitle >= 24
-    // Transfers first: progress, what and where, the percentage, and Cancel
-    // when the source allows it.
-    readonly property bool transferHasCancel: transfers.length === 1 && capability(firstTransfer, "cancel")
-    readonly property real transferFixed: 1 + 8 + artSize + 8 + 40
-        + (transferHasCancel ? 8 + reach : 0)
-    readonly property string transferHeadline: transfers.length > 1
-        ? qsTr("%1 transfers").arg(transfers.length) : transferTitle(firstTransfer)
-    readonly property string transferDetail: transfers.length > 1 || !firstTransfer ? ""
-        : ended(firstTransfer) ? firstTransfer.description || ""
-        : firstTransfer.evidence === "filesystem" ? qsTr("Incoming file") : transferBytes(firstTransfer)
-    TextMetrics { id: headlineMetrics; text: surface.transferHeadline; font.pixelSize: 13; font.weight: Font.DemiBold }
-    TextMetrics { id: detailMetrics; text: surface.transferDetail; font.pixelSize: 11 }
-    readonly property real transferWords: Math.max(0, Math.min(170,
-        Math.ceil(Math.max(headlineMetrics.advanceWidth, pillHeight >= 40 ? detailMetrics.advanceWidth : 0)),
-        room - 2 * inset - transferFixed - 8 - (shared ? gap + pillHeight : 0)))
-    readonly property bool transferShowsWords: transferWords >= 48
-
-    readonly property real islandWidth: {
-        if (kinds.length === 0) return pillHeight;
-        if (mainKind === "media")
-            return shared ? 2 * inset + mediaSmallFixed + (mediaSmallWords ? mediaSmallTitle : 0)
-                : mediaFullWidth;
-        return 2 * inset + transferFixed + (transferShowsWords ? 8 + transferWords : 0);
+    function textWidth(metrics, text) {
+        return text ? Math.ceil(metrics.advanceWidth(text)) : 0;
     }
-    readonly property real groupWidth: islandWidth + (shared ? gap + pillHeight : 0)
-    readonly property real islandX: Math.max(0, Math.round((width - groupWidth) / 2)) + peel
+    // One or two lines of words, as wide as the wider, with room either side.
+    function column(top, bottom, most) {
+        const widest = Math.max(top, bottom);
+        return widest > 0 ? 12 + Math.min(most, widest) : 0;
+    }
+    function mediaWords(title) {
+        return title ? column(textWidth(strongMetrics, mediaTitle),
+            available("media", "artist") ? textWidth(smallMetrics, mediaArtist) : 0, 80) : 0;
+    }
+    function mediaClock(time, duration) {
+        return column(time ? textWidth(plainMetrics, mediaTimeShape) + 2 : 0,
+            duration ? textWidth(smallMetrics, mediaDuration.replace(/[0-9]/g, "0")) + 2 : 0, 60);
+    }
+    function transferWords(name, bytes, source) {
+        return column(name ? textWidth(strongMetrics, transferName) : 0,
+            textWidth(smallMetrics, transferLine(bytes, source)), 150);
+    }
+    function endingWordsWidth(name, words) {
+        return column(name ? textWidth(strongMetrics, endingName) : 0,
+            words ? textWidth(smallMetrics, endingWords) : 0, 150);
+    }
+    function skipWidth() {
+        return reach * ((capability(player, "previous") ? 1 : 0) + (capability(player, "next") ? 1 : 0));
+    }
+    // Music alone: its controls in the middle, art and title on one side and
+    // time and player on the other, the sides alike so the controls stay put.
+    // With nothing yet on one side, it keeps no empty half.
+    function mediaStart(items) {
+        return (items.indexOf("art") >= 0 ? lead : 0) + mediaWords(items.indexOf("title") >= 0);
+    }
+    function mediaEnd(items) {
+        return mediaClock(items.indexOf("time") >= 0, items.indexOf("duration") >= 0)
+            + (items.indexOf("player") >= 0 ? lead : 0);
+    }
+    function balanced(items) {
+        return alone && mediaStart(items) > 0 && mediaEnd(items) > 0;
+    }
+    function mediaSides(items) {
+        const start = mediaStart(items), end = mediaEnd(items);
+        return balanced(items) ? 2 * Math.max(start, end) : start + end;
+    }
+
+    // An island's whole width showing `items`.
+    function measure(kind, items) {
+        const has = piece => items.indexOf(piece) >= 0;
+        if (kind === "media") {
+            const middle = (has("toggle") ? reach : 0) + (has("skip") ? skipWidth() : 0);
+            return 2 * inset + middle + mediaSides(items);
+        }
+        if (kind === "transfer")
+            return 2 * inset + (has("ring") ? lead : 0) + (has("cancel") ? reach : 0)
+                + transferWords(has("name"), has("bytes"), has("source"));
+        if (kind === "arrived")
+            return 2 * inset + (has("mark") ? lead : 0) + (has("show") ? reach : 0)
+                + endingWordsWidth(has("name"), has("words"));
+        return 0;
+    }
+
+    // What each island could show now.
+    function available(kind, piece) {
+        switch (kind + "." + piece) {
+        case "media.toggle": return canToggle;
+        case "media.title": case "media.art": case "media.player": return player !== null;
+        case "media.skip": return capability(player, "previous") || capability(player, "next");
+        case "media.artist": return tall && mediaArtist !== "";
+        case "media.time": return player !== null && player.positionUs !== undefined;
+        case "media.duration": return tall && player !== null && player.durationUs !== undefined;
+        case "transfer.ring": case "transfer.name": return running.length > 0;
+        case "transfer.percent": return transferShown !== null && known(transferShown.progress);
+        case "transfer.bytes": return tall && transferBytesText !== "";
+        case "transfer.source": return tall && transferSource !== "";
+        case "transfer.cancel": return capability(transferShown, "cancel");
+        case "arrived.mark": case "arrived.name": return endings.length > 0;
+        case "arrived.show": return endingShown !== null && endingShown.state === "finished"
+            && capability(endingShown, "showInFiles");
+        case "arrived.words": return tall && endingWords !== "";
+        }
+        return false;
+    }
+
+    // ---------------------------------------------------------------- places
+
     readonly property real islandY: Math.round((height - pillHeight) / 2)
-    // The least the island needs: its first control, and the bubble.
-    readonly property int minimumUsefulWidth: kinds.length === 0 ? 0
-        : Math.ceil(2 * inset + (mainKind === "media" ? mediaSmallFixed : transferFixed)
-            + (shared ? gap + pillHeight : 0))
 
-    // What the island shows goes aside: the player it shows, or its transfers.
-    function setAside() {
-        if (mainKind === "media") invoke(player, "setAside");
-        else for (const transfer of transfers) invoke(transfer, "setAside");
+    function islandOf(kind) {
+        return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
+            : kind === "arrived" ? arrivedIsland : null;
     }
-    // Let go: peeled to its least, or flicked the way it was carried, it goes
-    // aside; otherwise it springs back whole.
-    function releasePeel() {
-        const flicked = Math.abs(peelVelocity) > 0.6 && Math.sign(peelVelocity) === Math.sign(peel);
-        if (peel !== 0 && (Math.abs(peel) >= peelAll || flicked)) {
-            peelAway.to = Math.sign(peel) * (width + groupWidth);
-            peelAway.start();
-        } else {
-            peelBack.start();
+    // Islands sit in the order they arrived, the fold last, the whole group
+    // centred; each takes its share as it comes and goes, so its neighbours
+    // move over as it does.
+    function slotX(kind) {
+        const order = Object.keys(places).sort((a, b) => places[a] - places[b])
+            .map(islandOf).filter(island => island !== null);
+        let total = 0, at = 0, before = 0;
+        for (const island of order) {
+            const share = Math.min(1, island.presence);
+            const space = gap * Math.min(before, share);
+            if (island.kind === kind) at = total + space;
+            total += space + island.width;
+            before = Math.max(before, share);
         }
+        const space = gap * Math.min(before, bubble.presence);
+        if (kind === "fold") at = total + space;
+        total += space + bubble.slotWidth;
+        return Math.round((width - total) / 2) + at;
     }
-    NumberAnimation { id: peelBack; target: surface; property: "peel"; to: 0; duration: 240; easing.type: Easing.OutBack }
-    NumberAnimation {
-        id: peelAway
-        target: surface
-        property: "peel"
-        duration: 160
-        easing.type: Easing.InCubic
-        onFinished: {
-            surface.setAside();
-            surface.peel = 0;
-        }
+
+    // The open island shows music, or every transfer, the ended ones included.
+    function openKind(kind) {
+        return kind === "media" ? "media" : "transfer";
+    }
+    function open(kind) {
+        openRequested(openKind(kind));
+    }
+    // Where the open island grows from.
+    function islandFor(kind) {
+        const candidates = kind === "media" ? [mediaIsland] : [transferIsland, arrivedIsland];
+        for (const island of candidates)
+            if (island.present) return island.shape;
+        return bubble;
+    }
+    function spoken(kind) {
+        if (kind === "media") return qsTr("Media %1, open").arg(mediaTitle);
+        if (kind === "transfer") return qsTr("%n transfer(s), open", "", running.length);
+        return qsTr("%1, open").arg(endingName);
+    }
+    // What an island shows goes aside: the player it shows, or its transfers.
+    function setAside(kind) {
+        if (kind === "media") invoke(player, "setAside");
+        else for (const activity of kind === "transfer" ? running : endings) invoke(activity, "setAside");
     }
 
     // ---------------------------------------------------------------- pieces
+
+    // The settled feel: no overshoot, as the mock-up showed it.
+    component SettledAnimation: NumberAnimation {
+        duration: 340
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: [0.22, 0.08, 0.26, 0.92, 1, 1]
+    }
+
+    // One island. A sideways drag, by finger or mouse, anywhere on it, its
+    // controls included, carries it: it sheds its details as a narrower band
+    // would, down to its least, then slides on with the finger and fades. Its
+    // neighbours hold their places until it has gone aside.
+    component BandIsland: Item {
+        id: island
+        required property string kind
+        default property alias pieces: row.data
+        readonly property var planned: surface.plan.shown[kind] || []
+        readonly property bool present: surface.plan.shown[kind] !== undefined
+        // Set aside, it stays gone while its activity leaves.
+        property bool leaving: false
+        property real presence: present && !leaving ? 1 : 0
+        Behavior on presence { SettledAnimation {} }
+        onPresenceChanged: if (presence === 0) leaving = false
+
+        property real peel: 0
+        // Its width at rest, held while it is carried.
+        property real restWidth: 0
+        onPeelingChanged: if (!peeling) restWidth = pill.width
+        property real peelVelocity: 0
+        property real peelSampleX: 0
+        property double peelSampleAt: 0
+        readonly property bool peeling: carry.active || peelBack.running || peelAway.running
+        readonly property real least: planned.length > 0 ? surface.measure(kind, planned.slice(0, 1)) : 0
+        readonly property real peelAll: Math.max(48, restWidth - least)
+        readonly property var items: peeling && peel !== 0
+            ? IslandRoom.trim(kind, planned, restWidth - Math.abs(peel), surface.measure) : planned
+        readonly property Item shape: pill
+        function has(piece) { return items.indexOf(piece) >= 0; }
+
+        x: surface.slotX(kind)
+        y: surface.islandY
+        width: peeling ? restWidth : pill.width * presence
+        height: surface.pillHeight
+
+        // Let go: peeled to its least, or flicked the way it was carried, it
+        // goes aside; otherwise it comes back whole.
+        function release() {
+            const flicked = Math.abs(peelVelocity) > 0.6 && Math.sign(peelVelocity) === Math.sign(peel);
+            if (peel !== 0 && (Math.abs(peel) >= peelAll || flicked)) {
+                peelAway.to = Math.sign(peel) * (surface.width + restWidth);
+                peelAway.start();
+            } else {
+                peelBack.start();
+            }
+        }
+        SettledAnimation { id: peelBack; target: island; property: "peel"; to: 0; duration: 240 }
+        NumberAnimation {
+            id: peelAway
+            target: island
+            property: "peel"
+            duration: 160
+            easing.type: Easing.InCubic
+            onFinished: {
+                island.leaving = true;
+                surface.setAside(island.kind);
+                island.peel = 0;
+            }
+        }
+
+        Rectangle {
+            id: pill
+            objectName: "ambient-band-" + island.kind
+            property real lift: pillArea.pressed ? 1.03 : 1
+            Behavior on lift { NumberAnimation { duration: 120 } }
+            x: (island.width - width) / 2 + island.peel
+            width: row.width + 2 * surface.inset
+            onWidthChanged: if (!island.peeling) island.restWidth = width
+            height: surface.pillHeight
+            radius: height / 2
+            color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
+            border.width: 1
+            border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
+            opacity: (island.leaving ? 0 : Math.min(1, island.presence * 1.4))
+                * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
+            visible: opacity > 0 && !surface.opened
+            scale: (0.7 + 0.3 * Math.min(1, island.presence)) * lift
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: surface.spoken(island.kind)
+            Accessible.onPressAction: surface.open(island.kind)
+            Keys.onReturnPressed: surface.open(island.kind)
+            Keys.onEnterPressed: surface.open(island.kind)
+            Keys.onSpacePressed: surface.open(island.kind)
+            Keys.onDeletePressed: surface.setAside(island.kind)
+            Behavior on color { ColorAnimation { duration: 200 } }
+
+            // A tap away from the controls opens the island.
+            MouseArea {
+                id: pillArea
+                anchors.fill: parent
+                onClicked: surface.open(island.kind)
+            }
+            // Once it moves, the drag is the island's, not a press.
+            DragHandler {
+                id: carry
+                target: null
+                yAxis.enabled: false
+                enabled: !surface.opened && !peelAway.running
+                onActiveChanged: {
+                    if (active) {
+                        peelBack.stop();
+                        island.peelVelocity = 0;
+                        island.peelSampleX = 0;
+                        island.peelSampleAt = Date.now();
+                    } else {
+                        island.release();
+                    }
+                }
+                onActiveTranslationChanged: {
+                    if (!active) return;
+                    const now = Date.now();
+                    const dt = Math.max(1, now - island.peelSampleAt);
+                    const dx = activeTranslation.x - island.peelSampleX;
+                    // Smoothed, so the last few moves decide a flick.
+                    island.peelVelocity = 0.6 * (dx / dt) + 0.4 * island.peelVelocity;
+                    island.peelSampleX = activeTranslation.x;
+                    island.peelSampleAt = now;
+                    island.peel = activeTranslation.x;
+                }
+            }
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -3
+                radius: height / 2
+                color: "transparent"
+                border.width: 1
+                border.color: "#F8F8FF"
+                opacity: 0.5
+                visible: pill.activeFocus
+            }
+            Row {
+                id: row
+                x: surface.inset
+                height: surface.pillHeight
+            }
+        }
+    }
+
+    // A piece of an island: it takes its share of the band as it comes and
+    // goes, and while its island is carried it goes at once.
+    component Piece: Item {
+        id: piece
+        required property BandIsland island
+        property string name: ""
+        property bool shows: name === "" || island.has(name)
+        property bool when: true
+        property real size: 0
+        readonly property bool showing: when && shows && size > 0
+        // Room for words, less the space either side.
+        readonly property real inner: Math.max(0, size - 12)
+        width: showing ? size : 0
+        height: surface.pillHeight
+        visible: width > 0.5
+        clip: width < size - 0.5
+        opacity: showing ? 1 : 0
+        Behavior on width { enabled: !piece.island.peeling; SettledAnimation {} }
+        Behavior on opacity { enabled: !piece.island.peeling; NumberAnimation { duration: 200 } }
+    }
 
     // A control: the glyph rises under a finger or a press.
     component IslandButton: Item {
@@ -272,6 +573,7 @@ Item {
         property real size: 20
         property string label
         signal activated()
+        anchors.centerIn: parent
         width: surface.reach
         height: surface.reach
         activeFocusOnTab: true
@@ -309,9 +611,13 @@ Item {
 
     component Label: Text {
         color: "#F8F8FF"
-        font.pixelSize: surface.pillHeight >= 40 ? 13 : 12
+        font.pixelSize: surface.labelSize
         elide: Text.ElideRight
         maximumLineCount: 1
+    }
+    component Detail: Label {
+        opacity: 0.66
+        font.pixelSize: 11
     }
 
     // Album art, or the player's own icon when there is none.
@@ -379,316 +685,310 @@ Item {
         }
     }
 
-    // One closed layout; the island shows the one that fits what is going on.
-    component IslandLayout: Row {
-        property bool active: false
-        anchors.centerIn: parent
-        height: surface.pillHeight
-        opacity: active ? 1 : 0
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: 180 } }
-    }
-
-    // ---------------------------------------------------------------- island
-
-    Rectangle {
-        id: island
-        objectName: "ambient-island"
-        x: surface.islandX
-        y: surface.islandY
-        width: surface.islandWidth
-        height: surface.pillHeight
-        radius: height / 2
-        color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
-        border.width: 1
-        border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
-        opacity: surface.kinds.length === 0 ? 0
-            : 1 - Math.max(0, Math.min(1, (Math.abs(surface.peel) - surface.peelAll) / 80))
-        visible: opacity > 0 && !surface.opened
-        scale: islandArea.pressed ? 1.03 : 1
-        activeFocusOnTab: visible
-        Accessible.role: Accessible.Button
-        Accessible.name: surface.mainKind === "media"
-            ? qsTr("Media %1, open").arg(surface.player ? surface.player.title || surface.player.source || "" : "")
-            : qsTr("%n transfer(s), open", "", surface.transfers.length)
-        Accessible.onPressAction: surface.openRequested(surface.mainKind)
-        Keys.onReturnPressed: surface.openRequested(surface.mainKind)
-        Keys.onEnterPressed: surface.openRequested(surface.mainKind)
-        Keys.onSpacePressed: surface.openRequested(surface.mainKind)
-        Keys.onDeletePressed: surface.setAside()
-
-        Behavior on x { enabled: !surface.peeling; NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on width { enabled: !surface.peeling; NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on opacity { enabled: !surface.peeling; NumberAnimation { duration: 160 } }
-        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
-        Behavior on color { ColorAnimation { duration: 200 } }
-
-        // A tap away from the controls opens the island.
-        MouseArea {
-            id: islandArea
-            anchors.fill: parent
-            onClicked: surface.openRequested(surface.mainKind)
-        }
-        // A sideways drag, by finger or mouse, anywhere on the island, its
-        // controls included: once it moves, it is the island's, not a press.
-        DragHandler {
-            id: islandDrag
-            target: null
-            yAxis.enabled: false
-            enabled: !surface.opened && !peelAway.running
-            onActiveChanged: {
-                if (active) {
-                    peelBack.stop();
-                    surface.peelVelocity = 0;
-                    surface.peelSampleX = 0;
-                    surface.peelSampleAt = Date.now();
-                } else {
-                    surface.releasePeel();
-                }
-            }
-            onActiveTranslationChanged: {
-                if (!active) return;
-                const now = Date.now();
-                const dt = Math.max(1, now - surface.peelSampleAt);
-                const dx = activeTranslation.x - surface.peelSampleX;
-                // Smoothed, so the last few moves decide a flick.
-                surface.peelVelocity = 0.6 * (dx / dt) + 0.4 * surface.peelVelocity;
-                surface.peelSampleX = activeTranslation.x;
-                surface.peelSampleAt = now;
-                surface.peel = activeTranslation.x;
-            }
-        }
-
+    // How a transfer ended: a closed ring with a check, or with a cross.
+    component Mark: Item {
+        id: mark
+        property bool failed: false
         Rectangle {
             anchors.fill: parent
-            anchors.margins: -3
-            radius: height / 2
+            anchors.margins: 0.5
+            radius: width / 2
             color: "transparent"
-            border.width: 1
+            border.width: mark.width < 26 ? 2.5 : 3
             border.color: "#F8F8FF"
-            opacity: 0.5
-            visible: island.activeFocus
         }
+        SuiteIcon {
+            anchors.centerIn: parent
+            width: Math.round(mark.width * 0.55)
+            height: width
+            glyph: mark.failed ? "x" : "check"
+        }
+    }
 
-        // Music alone.
-        IslandLayout {
-            id: mediaFull
-            objectName: "ambient-media-full"
-            active: surface.mainKind === "media" && !surface.shared
-            Item {
-                width: surface.mediaWords ? surface.mediaSide
-                    : surface.mediaSide >= surface.artSize + 8 ? surface.artSize + 8 : 0
-                height: surface.pillHeight
-                Art {
-                    x: (surface.pillHeight - surface.artSize) / 2 - surface.inset
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: surface.artSize
-                    height: surface.artSize
-                    visible: parent.width > 0
-                    activity: surface.player
-                    corner: surface.artSize > 26 ? 8 : 6
+    // ---------------------------------------------------------------- islands
+
+    // Music. Alone, its controls sit in the middle; beside a neighbour, its
+    // time and player move before them.
+    BandIsland {
+        id: mediaIsland
+        kind: "media"
+        Piece {
+            island: mediaIsland
+            name: "art"
+            size: surface.lead
+            Art {
+                anchors.centerIn: parent
+                width: surface.artSize
+                height: surface.artSize
+                activity: surface.player
+                corner: surface.artSize > 26 ? 8 : 6
+            }
+        }
+        Piece {
+            id: mediaWordsPiece
+            island: mediaIsland
+            name: "title"
+            size: surface.mediaWords(true)
+            Column {
+                x: 6
+                width: mediaWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-media-title"
+                    width: parent.width
+                    text: surface.mediaTitle
+                    font.weight: Font.DemiBold
                 }
-                Column {
-                    x: surface.artSize + 10
-                    width: parent.width - x - 4
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: surface.mediaWords
-                    Label {
-                        objectName: "ambient-media-title"
-                        width: parent.width
-                        text: surface.player ? surface.player.title || surface.player.source || qsTr("Media") : ""
-                        font.weight: Font.DemiBold
-                    }
-                    Label {
-                        objectName: "ambient-media-artist"
-                        width: parent.width
-                        visible: surface.pillHeight >= 40 && text.length > 0
-                        text: surface.player && surface.player.artist ? surface.player.artist : ""
-                        opacity: 0.66
-                        font.pixelSize: 11
-                    }
+                Detail {
+                    objectName: "ambient-media-artist"
+                    width: parent.width
+                    visible: mediaIsland.has("artist")
+                    text: surface.mediaArtist
                 }
             }
-            Row {
-                objectName: "ambient-media-transport"
-                anchors.verticalCenter: parent.verticalCenter
+        }
+        Piece {
+            island: mediaIsland
+            when: surface.balanced(mediaIsland.items)
+            size: Math.max(0, surface.mediaEnd(mediaIsland.items) - surface.mediaStart(mediaIsland.items))
+        }
+        MediaClock { when: !surface.alone; tag: "-beside" }
+        MediaPlayerIcon { when: !surface.alone; tag: "-beside" }
+        Row {
+            objectName: "ambient-media-transport"
+            anchors.verticalCenter: parent.verticalCenter
+            Piece {
+                island: mediaIsland
+                shows: mediaIsland.has("skip") && surface.capability(surface.player, "previous")
+                size: surface.reach
                 IslandButton {
                     objectName: "ambient-media-previous"
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: surface.showSkips && surface.capability(surface.player, "previous")
                     glyph: "skip-back"
                     label: qsTr("Previous")
                     onActivated: surface.invoke(surface.player, "previous")
                 }
+            }
+            Piece {
+                island: mediaIsland
+                name: "toggle"
+                size: surface.reach
                 IslandButton {
                     objectName: "ambient-media-toggle"
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: surface.canToggle
                     glyph: surface.player && surface.player.state === "playing" ? "pause" : "play"
                     size: 22
                     label: surface.player && surface.player.state === "playing" ? qsTr("Pause") : qsTr("Play")
                     onActivated: surface.invoke(surface.player,
                         surface.player && surface.player.state === "playing" ? "pause" : "play")
                 }
+            }
+            Piece {
+                island: mediaIsland
+                shows: mediaIsland.has("skip") && surface.capability(surface.player, "next")
+                size: surface.reach
                 IslandButton {
                     objectName: "ambient-media-next"
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: surface.showSkips && surface.capability(surface.player, "next")
                     glyph: "skip-forward"
                     label: qsTr("Next")
                     onActivated: surface.invoke(surface.player, "next")
                 }
             }
-            Item {
-                width: surface.mediaWords ? surface.mediaSide
-                    : surface.mediaSide >= surface.artSize + 8 ? surface.artSize + 8 : 0
-                height: surface.pillHeight
-                Column {
-                    anchors.right: playerIcon.left
-                    anchors.rightMargin: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                    visible: surface.mediaWords && surface.player !== null
-                        && (surface.player.positionUs !== undefined || surface.player.durationUs !== undefined)
-                    Label {
-                        objectName: "ambient-media-time"
-                        anchors.right: parent.right
-                        text: surface.player && surface.player.positionUs !== undefined
-                            ? surface.formatTime(surface.mediaPositionUs(surface.player)) : "—"
-                        font.features: ({ "tnum": 1 })
-                    }
-                    Label {
-                        anchors.right: parent.right
-                        visible: surface.pillHeight >= 40 && surface.player !== null && surface.player.durationUs !== undefined
-                        text: surface.player && surface.player.durationUs !== undefined
-                            ? surface.formatTime(surface.player.durationUs) : ""
-                        opacity: 0.66
-                        font.pixelSize: 11
-                        font.features: ({ "tnum": 1 })
-                    }
-                }
-                Kirigami.Icon {
-                    id: playerIcon
-                    anchors.right: parent.right
-                    anchors.rightMargin: (surface.pillHeight - width) / 2 - surface.inset
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: surface.artSize > 26 ? 24 : 18
-                    height: width
-                    visible: parent.width > 0
-                    source: surface.player && surface.player.icon ? surface.player.icon : "audio-x-generic-symbolic"
-                }
-            }
         }
+        Piece {
+            island: mediaIsland
+            when: surface.balanced(mediaIsland.items)
+            size: Math.max(0, surface.mediaStart(mediaIsland.items) - surface.mediaEnd(mediaIsland.items))
+        }
+        MediaClock { when: surface.alone }
+        MediaPlayerIcon { when: surface.alone }
+    }
 
-        // Music sharing the band.
-        IslandLayout {
-            id: mediaSmall
-            objectName: "ambient-media-small"
-            active: surface.mainKind === "media" && surface.shared
-            spacing: 0
-            Item { width: surface.artLead; height: 1 }
-            Art {
-                anchors.verticalCenter: parent.verticalCenter
-                width: surface.artSize
-                height: surface.artSize
-                activity: surface.player
-                corner: surface.artSize > 26 ? 8 : 6
-            }
-            Item { width: 4; height: 1 }
-            IslandButton {
-                anchors.verticalCenter: parent.verticalCenter
-                visible: surface.canToggle
-                glyph: surface.player && surface.player.state === "playing" ? "pause" : "play"
-                size: 22
-                label: surface.player && surface.player.state === "playing" ? qsTr("Pause") : qsTr("Play")
-                onActivated: surface.invoke(surface.player,
-                    surface.player && surface.player.state === "playing" ? "pause" : "play")
-            }
+    component MediaClock: Piece {
+        id: clock
+        property string tag: ""
+        island: mediaIsland
+        shows: mediaIsland.has("time") || mediaIsland.has("duration")
+        size: surface.mediaClock(mediaIsland.has("time"), mediaIsland.has("duration"))
+        Column {
+            x: 6
+            width: clock.inner
+            anchors.verticalCenter: parent.verticalCenter
             Label {
-                anchors.verticalCenter: parent.verticalCenter
-                width: surface.mediaSmallTitle
-                visible: surface.mediaSmallWords
-                text: surface.player ? surface.player.title || surface.player.source || qsTr("Media") : ""
-                font.weight: Font.DemiBold
+                objectName: "ambient-media-time" + clock.tag
+                anchors.right: parent.right
+                visible: mediaIsland.has("time")
+                text: surface.mediaTime
+                font.features: ({ "tnum": 1 })
             }
-            Item { width: 8; height: 1 }
+            Detail {
+                objectName: "ambient-media-duration" + clock.tag
+                anchors.right: parent.right
+                visible: mediaIsland.has("duration")
+                text: surface.mediaDuration
+                font.features: ({ "tnum": 1 })
+            }
         }
+    }
+    component MediaPlayerIcon: Piece {
+        id: playerIcon
+        property string tag: ""
+        island: mediaIsland
+        name: "player"
+        size: surface.lead
+        Kirigami.Icon {
+            objectName: "ambient-media-player" + playerIcon.tag
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 24 : 18
+            height: width
+            source: surface.player && surface.player.icon ? surface.player.icon : "audio-x-generic-symbolic"
+        }
+    }
 
-        // Transfers first, alone or sharing the band.
-        IslandLayout {
-            id: transferLayout
-            objectName: "ambient-transfer"
-            active: surface.mainKind === "transfer"
-            spacing: 8
-            Item { width: 1; height: 1 }
+    // What is on its way: progress with its percentage inside, what and
+    // from where, and Cancel when the source allows it.
+    BandIsland {
+        id: transferIsland
+        kind: "transfer"
+        Piece {
+            island: transferIsland
+            name: "ring"
+            size: surface.lead
             Progress {
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.centerIn: parent
                 width: surface.artSize
                 height: surface.artSize
-                activity: surface.firstTransfer
+                activity: surface.running.length > 0 ? surface.running[0] : null
             }
+            Text {
+                objectName: "ambient-transfer-progress"
+                anchors.centerIn: parent
+                visible: transferIsland.has("percent")
+                text: surface.transferShown && surface.known(surface.transferShown.progress)
+                    ? Math.round(Math.max(0, Math.min(1, Number(surface.transferShown.progress))) * 100) : ""
+                color: "#F8F8FF"
+                font.pixelSize: surface.tall ? 10 : 9
+                font.weight: Font.DemiBold
+                font.features: ({ "tnum": 1 })
+            }
+        }
+        Piece {
+            id: transferWordsPiece
+            island: transferIsland
+            shows: transferIsland.has("name") || transferIsland.has("bytes") || transferIsland.has("source")
+            size: surface.transferWords(transferIsland.has("name"), transferIsland.has("bytes"),
+                transferIsland.has("source"))
             Column {
+                x: 6
+                width: transferWordsPiece.inner
                 anchors.verticalCenter: parent.verticalCenter
-                width: surface.transferWords
-                visible: surface.transferShowsWords
                 Label {
                     objectName: "ambient-transfer-title"
                     width: parent.width
-                    text: surface.transferHeadline
+                    visible: transferIsland.has("name")
+                    text: surface.transferName
                     font.weight: Font.DemiBold
                 }
-                Label {
+                Detail {
+                    objectName: "ambient-transfer-detail"
                     width: parent.width
-                    visible: surface.pillHeight >= 40 && text.length > 0
-                    text: surface.transferDetail
-                    opacity: 0.66
-                    font.pixelSize: 11
+                    visible: text.length > 0
+                    text: surface.transferLine(transferIsland.has("bytes"), transferIsland.has("source"))
                 }
             }
-            Label {
-                objectName: "ambient-transfer-progress"
-                anchors.verticalCenter: parent.verticalCenter
-                width: 40
-                horizontalAlignment: Text.AlignRight
-                text: surface.transfers.length > 1 ? "" : surface.percentage(surface.firstTransfer)
-                font.features: ({ "tnum": 1 })
-            }
+        }
+        Piece {
+            island: transferIsland
+            name: "cancel"
+            size: surface.reach
             IslandButton {
                 objectName: "ambient-transfer-cancel"
-                anchors.verticalCenter: parent.verticalCenter
-                visible: surface.transferHasCancel
                 glyph: "x"
-                label: qsTr("Cancel %1").arg(surface.transferTitle(surface.firstTransfer))
-                onActivated: surface.invoke(surface.firstTransfer, "cancel")
+                label: qsTr("Cancel %1").arg(surface.transferTitle(surface.transferShown))
+                onActivated: surface.invoke(surface.transferShown, "cancel")
             }
         }
     }
 
-    // What arrived after the island's own activity.
+    // What arrived, or failed to, waiting out its minute: how it ended, what
+    // it was, and Show in Files.
+    BandIsland {
+        id: arrivedIsland
+        kind: "arrived"
+        Piece {
+            island: arrivedIsland
+            name: "mark"
+            size: surface.lead
+            Mark {
+                objectName: "ambient-arrived-mark"
+                anchors.centerIn: parent
+                width: surface.artSize
+                height: surface.artSize
+                failed: surface.endingFailed
+            }
+        }
+        Piece {
+            id: endingWordsPiece
+            island: arrivedIsland
+            shows: arrivedIsland.has("name") || arrivedIsland.has("words")
+            size: surface.endingWordsWidth(arrivedIsland.has("name"), arrivedIsland.has("words"))
+            Column {
+                x: 6
+                width: endingWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-arrived-name"
+                    width: parent.width
+                    visible: arrivedIsland.has("name")
+                    text: surface.endingName
+                    font.weight: Font.DemiBold
+                }
+                Detail {
+                    objectName: "ambient-arrived-words"
+                    width: parent.width
+                    visible: arrivedIsland.has("words")
+                    text: surface.endingWords
+                }
+            }
+        }
+        Piece {
+            island: arrivedIsland
+            name: "show"
+            size: surface.reach
+            IslandButton {
+                objectName: "ambient-arrived-show"
+                glyph: "folder-open"
+                label: qsTr("Show %1 in Files").arg(surface.endingName)
+                onActivated: surface.invoke(surface.endingShown, "showInFiles")
+            }
+        }
+    }
+
+    // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
         objectName: "ambient-bubble"
-        readonly property bool shown: surface.shared
-        x: island.x + island.width + surface.gap
+        readonly property bool shown: surface.folded.length > 0
+        property real presence: shown ? 1 : 0
+        Behavior on presence { SettledAnimation {} }
+        readonly property real slotWidth: surface.pillHeight * presence
+        x: surface.slotX("fold") - (width - slotWidth) / 2
         y: surface.islandY
         width: surface.pillHeight
         height: surface.pillHeight
         radius: width / 2
-        color: island.color
+        color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
         border.width: 1
-        border.color: island.border.color
-        opacity: shown ? 1 : 0
+        border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
+        opacity: Math.min(1, presence * 1.4)
         visible: opacity > 0 && !surface.opened
-        scale: shown ? (bubbleArea.pressed ? 1.1 : 1) : 0.4
+        scale: (0.4 + 0.6 * Math.min(1, presence)) * (bubbleArea.pressed ? 1.1 : 1)
         activeFocusOnTab: shown
         Accessible.role: Accessible.Button
-        Accessible.name: surface.bubbleKind === "media" ? qsTr("Media, open")
-            : qsTr("%n transfer(s), open", "", surface.transfers.length)
-        Accessible.onPressAction: surface.openRequested(surface.bubbleKind)
-        Keys.onReturnPressed: surface.openRequested(surface.bubbleKind)
-        Keys.onEnterPressed: surface.openRequested(surface.bubbleKind)
-        Keys.onSpacePressed: surface.openRequested(surface.bubbleKind)
-        Behavior on opacity { NumberAnimation { duration: 160 } }
-        Behavior on scale { NumberAnimation { duration: 280; easing.type: Easing.OutBack } }
+        Accessible.name: surface.bubbleKind ? surface.spoken(surface.bubbleKind) : ""
+        Accessible.onPressAction: surface.open(surface.bubbleKind)
+        Keys.onReturnPressed: surface.open(surface.bubbleKind)
+        Keys.onEnterPressed: surface.open(surface.bubbleKind)
+        Keys.onSpacePressed: surface.open(surface.bubbleKind)
+        Behavior on color { ColorAnimation { duration: 200 } }
 
         Art {
             anchors.centerIn: parent
@@ -703,14 +1003,21 @@ Item {
             width: surface.artSize
             height: width
             visible: surface.bubbleKind === "transfer"
-            activity: surface.firstTransfer
+            activity: surface.running.length > 0 ? surface.running[0] : null
+        }
+        Mark {
+            anchors.centerIn: parent
+            width: surface.artSize
+            height: width
+            visible: surface.bubbleKind === "arrived"
+            failed: surface.endingFailed
         }
         Rectangle {
             objectName: "ambient-bubble-count"
             visible: surface.bubbleCount > 1
             x: parent.width - width * 0.8
             y: -4
-            width: surface.pillHeight >= 40 ? 18 : 15
+            width: surface.tall ? 18 : 15
             height: width
             radius: width / 2
             color: "#F8F8FF"
@@ -739,7 +1046,7 @@ Item {
             width: Math.max(parent.width, surface.reach)
             height: Math.max(parent.height, surface.reach)
             enabled: bubble.shown
-            onClicked: surface.openRequested(surface.bubbleKind)
+            onClicked: surface.open(surface.bubbleKind)
         }
     }
 }
