@@ -7,6 +7,7 @@
 #include "TetteTransferProvider.h"
 #include <memory>
 #include <QSet>
+#include <QTimer>
 
 class ActivityModel : public QObject {
     Q_OBJECT
@@ -48,6 +49,11 @@ private:
     // Media set aside, and the state it was last seen in; other sources set aside.
     QHash<QString, QString> m_asideMedia;
     QSet<QString> m_aside;
+    // Media paused leaves after a few minutes, until it plays again: when each
+    // player stopped playing, and the timer for the next to leave.
+    QHash<QString, qint64> m_pausedSince;
+    qint64 m_pausedLingerUs = 180000000;
+    QTimer m_rest;
     QVariantList m_lastTransfers, m_lastMedia, m_lastFiles, m_lastDrives;
     int m_token = 0;
     bool m_refreshPending = false;

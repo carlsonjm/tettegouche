@@ -27,7 +27,8 @@ not own the source operation or retain a completion history.
 
 - An activity appears, updates in place, and leaves with its authoritative
   source. Owner generations reject stale actions after source replacement.
-- Paused resumable media remains visible. A lost job leaves, and a stopped one
+- Paused resumable media stays three minutes, then leaves until it plays
+  again, a phone's through KDE Connect included. A lost job leaves, and a stopped one
   leaves or gives its place to its end (§ Ends). A hidden
   Tette launcher may remain alive to finish and publish an operation.
 - Source fields and actions override filesystem enrichment. Filesystem evidence

@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Paused music leaves the band after three minutes and comes back when it
+  plays again, so a player that stopped long ago, a phone's through KDE
+  Connect among them, no longer holds an island.
 - A drive or memory card plugged in that nothing has mounted gets an island for
   a minute: one tap mounts it and opens it in Files. Ignored or flicked away, it
   is filed in the notification history with Open in Files, and unplugging it

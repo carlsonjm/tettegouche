@@ -304,6 +304,34 @@ private Q_SLOTS:
     // Set aside: media stays away until it starts playing again; a transfer
     // until its source ends. An end waiting out its minute is filed now, and a
     // transfer set aside is filed as soon as it ends.
+    // Paused media stays its few minutes, then leaves until it plays again;
+    // paused again, its minutes start over.
+    void pausedMediaRests() {
+        QTemporaryDir downloads;
+        ActivityModel model(QDBusConnection::sessionBus(),downloads.path());
+        model.m_pausedLingerUs=300000;
+        QTest::qWait(20); // the model's own first look at its sources
+        QVariantMap player{{QStringLiteral("id"),QStringLiteral("org.mpris.MediaPlayer2.phone")},{QStringLiteral("generation"),1},
+            {QStringLiteral("kind"),QStringLiteral("media")},{QStringLiteral("state"),QStringLiteral("paused")},{QStringLiteral("title"),QStringLiteral("Song")}};
+        model.reconcile({},{player},{});
+        QCOMPARE(model.activities().size(),1);
+        QTest::qWait(150);
+        QCOMPARE(model.activities().size(),1);
+        QTRY_VERIFY_WITH_TIMEOUT(model.activities().isEmpty(),2000);
+        model.reconcile({},{player},{});
+        QVERIFY(model.activities().isEmpty());
+        player[QStringLiteral("state")]=QStringLiteral("playing");
+        model.reconcile({},{player},{});
+        QCOMPARE(model.activities().size(),1);
+        QTest::qWait(400);
+        model.reconcile({},{player},{});
+        QCOMPARE(model.activities().size(),1);
+        player[QStringLiteral("state")]=QStringLiteral("paused");
+        model.reconcile({},{player},{});
+        QCOMPARE(model.activities().size(),1);
+        QTRY_VERIFY_WITH_TIMEOUT(model.activities().isEmpty(),2000);
+    }
+
     void setAsideLasts() {
         QTemporaryDir downloads;
         auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-notifications-aside"));

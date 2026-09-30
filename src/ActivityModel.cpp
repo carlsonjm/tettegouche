@@ -47,6 +47,10 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
         if (m_aside.remove(id)) m_notices.used(id);
     });
     connect(&m_notices, &FinishNotices::revealRequested, this, &ActivityModel::revealRequested);
+    m_rest.setSingleShot(true);
+    connect(&m_rest, &QTimer::timeout, this, [this] {
+        reconcile(m_lastTransfers, m_lastMedia, m_lastFiles, m_lastDrives);
+    });
     update();
 }
 void ActivityModel::refresh() {
@@ -67,13 +71,23 @@ void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList 
         const auto row = v.toMap();
         const auto id = row.value(QStringLiteral("id")).toString();
         players.insert(id);
+        const auto state = row.value(QStringLiteral("state")).toString();
+        if (state == QLatin1String("playing")) m_pausedSince.remove(id);
+        else if (!m_pausedSince.contains(id)) m_pausedSince.insert(id, now);
         const auto found = m_asideMedia.find(id);
         if (found == m_asideMedia.end()) continue;
-        const auto state = row.value(QStringLiteral("state")).toString();
         if (state == QLatin1String("playing") && *found != QLatin1String("playing")) m_asideMedia.erase(found);
         else *found = state;
     }
     m_asideMedia.removeIf([&players](const auto &e) { return !players.contains(e.key()); });
+    m_pausedSince.removeIf([&players](const auto &e) { return !players.contains(e.key()); });
+    qint64 nextRest = 0;
+    for (const auto since : std::as_const(m_pausedSince)) {
+        const auto at = since + m_pausedLingerUs;
+        if (at > now) nextRest = nextRest ? qMin(nextRest, at) : at;
+    }
+    if (nextRest) m_rest.start(int(qMax<qint64>(1, (nextRest - now) / 1000)));
+    else m_rest.stop();
     m_consumedFiles.removeIf([now](const auto &e) { return e.value() <= now; });
     QSet<QString> liveSources;
     for (const auto &v : transfers) liveSources.insert(sourceKey(v.toMap()));
@@ -110,6 +124,9 @@ void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList 
         // Set aside: it keeps its place for when it returns, but is not shown.
         const auto source = route.value(QStringLiteral("id")).toString();
         if (m_aside.contains(source) || m_asideMedia.contains(source)) return;
+        // Paused past its few minutes, it rests until it plays again.
+        if (const auto paused = m_pausedSince.constFind(source); paused != m_pausedSince.cend()
+                && now - *paused >= m_pausedLingerUs) return;
         int token = 0;
         if (m_routes.contains(id) && sourceKey(m_routes.value(id)) == key)
             token = m_routes.value(id).value(QStringLiteral("actionToken")).toInt();
