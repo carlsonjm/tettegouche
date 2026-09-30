@@ -45,7 +45,20 @@ void TetteTransferProvider::apply(const QString &json) {
         auto row = value.toObject().toVariantMap();
         if (row.value(QStringLiteral("id")).toString().isEmpty() || row.value(QStringLiteral("kind")) != QLatin1String("transfer")) continue;
         row[QStringLiteral("sourceId")] = row.value(QStringLiteral("id")); row[QStringLiteral("id")] = QString(QStringLiteral("tette:") + row.value(QStringLiteral("id")).toString());
-        row[QStringLiteral("generation")] = m_generation; m_rows.append(row);
+        row[QStringLiteral("generation")] = m_generation;
+        // A failure is an end: reported once, for its minute in Ambient.
+        if (row.value(QStringLiteral("state")) == QLatin1String("failed")) {
+            const auto id = row.value(QStringLiteral("id")).toString();
+            if (m_reported.contains(id)) continue;
+            m_reported.insert(id);
+            Q_EMIT finished({{QStringLiteral("id"), id}, {QStringLiteral("generation"), m_generation},
+                {QStringLiteral("application"), tr("Files")}, {QStringLiteral("icon"), row.value(QStringLiteral("icon"))},
+                {QStringLiteral("desktopEntry"), QStringLiteral("io.github.carlsonjm.Tettegouche.Files")},
+                {QStringLiteral("summary"), row.value(QStringLiteral("title"))},
+                {QStringLiteral("errorText"), row.value(QStringLiteral("description"))}, {QStringLiteral("error"), 2}});
+            continue;
+        }
+        m_rows.append(row);
     }
     Q_EMIT changed();
 }

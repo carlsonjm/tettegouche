@@ -39,7 +39,7 @@ than repeat it.
 | Meta, once set as the widget's shortcut in Plasma | Opens or closes Search. Tettegouche does not set it; Plasma's own default for Meta opens Kickoff, Plasma's application menu. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings. |
-| Setting "Open inside Card Line when available", off | Search always opens on its own, never inside Kadunce's Spread. |
+| Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings

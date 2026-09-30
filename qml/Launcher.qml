@@ -560,6 +560,7 @@ Item {
                         resultList.settleAtBeginning()
                         applicationGrid.currentIndex =
                             applicationGrid.count > 0 ? 0 : -1
+                        applicationGrid.keyChosen = false
                     }
 
                     onActiveFocusChanged: {
@@ -571,15 +572,11 @@ Item {
                     Keys.onPressed: event => {
                         if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Down
                                 && applicationGrid.count > 0) {
-                            applicationGrid.currentIndex = Math.min(
-                                applicationGrid.count - 1,
-                                Math.max(0,
-                                    applicationGrid.currentIndex + 1))
+                            applicationGrid.step(1)
                             event.accepted = true
                         } else if (root.drawerOpen && !root.filesMode && event.key === Qt.Key_Up
                                    && applicationGrid.count > 0) {
-                            applicationGrid.currentIndex = Math.max(
-                                0, applicationGrid.currentIndex - 1)
+                            applicationGrid.step(-1)
                             event.accepted = true
                         } else if (event.key === Qt.Key_Down
                                    && resultList.count > 0) {
@@ -1222,6 +1219,20 @@ Item {
                 cellHeight: root.launcherController.drawerExpanded ? 112 : 94
                 boundsBehavior: Flickable.StopAtBounds
                 z: 3
+                // The arrow keys have chosen an application, which Enter
+                // opens: it shows, and stays in view.
+                property bool keyChosen: false
+                function choose(index) {
+                    currentIndex = index
+                    keyChosen = true
+                    positionViewAtIndex(index, GridView.Contain)
+                }
+                // The first press shows the application Enter would open;
+                // each one after moves the choice.
+                function step(direction) {
+                    const from = Math.max(0, currentIndex)
+                    choose(keyChosen ? Math.max(0, Math.min(count - 1, from + direction)) : from)
+                }
 
                 displaced: Transition {
                     NumberAnimation {
@@ -1233,8 +1244,11 @@ Item {
 
                 delegate: Item {
                     id: catalogDelegate
+                    objectName: "application-tile-" + index
                     required property int index
                     required property var model
+                    readonly property bool chosen: applicationGrid.keyChosen
+                        && applicationGrid.currentIndex === index
                     width: applicationGrid.cellWidth
                     height: applicationGrid.cellHeight
 
@@ -1242,8 +1256,11 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 5
                         radius: root.paperRadius
-                        color: catalogHover.hovered
+                        color: catalogHover.hovered || catalogDelegate.chosen
                             ? "#20ffffff" : "transparent"
+                        // The chosen application rises, as a touched one does.
+                        scale: catalogDelegate.chosen ? 1.04 : 1
+                        Behavior on scale { NumberAnimation { duration: 120 } }
 
                         Kirigami.Icon {
                             anchors.horizontalCenter: parent.horizontalCenter

@@ -35,6 +35,7 @@
 #include <QRegularExpression>
 #include <QUrlQuery>
 #include <QUuid>
+#include <QDateTime>
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -311,9 +312,19 @@ public:
         if(!m_details.isEmpty()) { m_details.clear(); Q_EMIT detailsChanged(); }
     }
     // Each copy or move, for Ambient: its own progress and the actions its job
-    // supports. Other operations are too short to be worth a row.
+    // supports, and for a few seconds each one that failed, which Ambient
+    // keeps its minute. Other operations are too short to be worth a row.
     QVariantList activitySnapshot() const {
         QVariantList rows;
+        const auto now=QDateTime::currentMSecsSinceEpoch();
+        for (const auto &failure : m_failures) {
+            if (failure.until<now) continue;
+            rows.append(QVariantMap{{QStringLiteral("id"), failure.id}, {QStringLiteral("generation"), 1},
+                {QStringLiteral("kind"), QStringLiteral("transfer")}, {QStringLiteral("state"), QStringLiteral("failed")},
+                {QStringLiteral("source"), tr("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+                {QStringLiteral("title"), failure.title}, {QStringLiteral("description"), failure.why},
+                {QStringLiteral("evidence"), QStringLiteral("job")}, {QStringLiteral("capabilities"), QVariantMap{}}});
+        }
         for (const auto &op : m_operations) {
             if (!op.job || !op.copying) continue;
             const bool suspended = op.job->isSuspended();
@@ -338,6 +349,11 @@ public:
     void cancelActivity(const QString &id) { cancelOperation(id); }
     void suspendActivity(const QString &id) { suspendOperation(id); }
     void resumeActivity(const QString &id) { resumeOperation(id); }
+    // A copy or move failed a moment ago, and Ambient may not have heard yet.
+    bool failedJustNow() const {
+        const auto now=QDateTime::currentMSecsSinceEpoch();
+        return std::any_of(m_failures.cbegin(),m_failures.cend(),[now](const Failure &f) { return f.until>=now; });
+    }
     // What is running now, for Files itself to show: each with its reported
     // progress and the actions its job supports.
     QVariantList operations() const {
@@ -1082,6 +1098,8 @@ private:
     QSet<QString> m_ejectAfter;
     // Operations run side by side; each keeps its own job and identity.
     struct Operation { QPointer<KJob> job; QString id; QString label; bool copying=false; bool percentKnown=false; QUrl destination; };
+    struct Failure { QString id, title, why; qint64 until=0; };
+    QList<Failure> m_failures;
     struct Question { QPointer<FileQuestions> asker; QPointer<KJob> job; QUrl destination; QVariantMap shown; };
     QList<Question> m_questions;
     int m_trashItems=0;
@@ -1149,6 +1167,11 @@ private:
         m_operationStatus=label; Q_EMIT operationChanged();
         // finished also handles quiet cancellation/destruction; result alone can orphan UI state.
         connect(job,&KJob::finished,this,[this,copying](KJob *finished) {
+            QString endedId, endedTitle;
+            if (const auto *op = operation(finished)) {
+                endedId = op->id;
+                endedTitle = op->destination.isEmpty() ? op->label : op->destination.fileName();
+            }
             m_operations.removeIf([finished](const Operation &op) { return op.job == finished || !op.job; });
             const bool wasAsking=!m_questions.isEmpty() && m_questions.first().job==finished;
             m_questions.removeIf([finished](const Question &q) { return q.job == finished || !q.job; });
@@ -1163,6 +1186,12 @@ private:
             m_operationStatus=!finished->error() ? tr("Done") : why.isEmpty() ? tr("Stopped.") : tr("Stopped: %1").arg(why);
             if (finished->error() && copying) m_operationStatus += tr(" Some items may already have transferred.");
             m_error=finished->error() ? m_operationStatus : QString();
+            // A copy or move that failed, not one the person stopped, is told
+            // to Ambient for a few seconds; Ambient keeps it its minute.
+            const auto now=QDateTime::currentMSecsSinceEpoch();
+            m_failures.removeIf([now](const Failure &f) { return f.until<now; });
+            if (copying && finished->error() && finished->error()!=KIO::ERR_USER_CANCELED && !endedId.isEmpty())
+                m_failures.append({endedId, endedTitle, m_operationStatus, now+10000});
             Q_EMIT changed(); // Keep full failure details visible, not elided status only.
             QSettings s;
             if (finished->error()) s.setValue(QStringLiteral("Files/lastOperationError"),m_operationStatus);

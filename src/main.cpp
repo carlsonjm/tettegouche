@@ -717,7 +717,10 @@ private:
     bool m_carrying=false;
     void finishOrDeferQuit() {
         m_quitAfterFiles=true;
-        if (!m_carrying && (!m_fileBrowser || !m_fileBrowser->working())) QGuiApplication::quit();
+        if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
+        // A copy that just failed is told to Ambient before the launcher goes.
+        if (m_fileBrowser && m_fileBrowser->failedJustNow()) QTimer::singleShot(1000, qApp, &QGuiApplication::quit);
+        else QGuiApplication::quit();
     }
     static QDBusMessage guestMethod(const QString &method)
     {

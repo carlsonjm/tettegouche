@@ -46,6 +46,11 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
         const auto id = job.value(QStringLiteral("id")).toString();
         if (m_aside.remove(id)) m_notices.used(id);
     });
+    connect(&m_tette, &TetteTransferProvider::finished, this, [this](const QVariantMap &job) {
+        m_notices.report(job);
+        const auto id = job.value(QStringLiteral("id")).toString();
+        if (m_aside.remove(id)) m_notices.used(id);
+    });
     connect(&m_notices, &FinishNotices::revealRequested, this, &ActivityModel::revealRequested);
     m_rest.setSingleShot(true);
     connect(&m_rest, &QTimer::timeout, this, [this] {

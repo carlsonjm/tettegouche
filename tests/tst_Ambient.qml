@@ -520,6 +520,26 @@ TestCase {
         compare(invoked.signalArguments[1][2], "showInFiles");
     }
 
+    // A list longer than the room above the band scrolls inside the card,
+    // which stays on the display.
+    function test_open_transfers_scroll_when_long() {
+        const many = [];
+        for (let i = 0; i < 20; ++i)
+            many.push(Object.assign({}, transfer, {id: "transfer-many-" + i, title: "File " + i}));
+        const surface = createSurface(405, many);
+        const opened = openIsland(surface, "transfer");
+        const card = findChild(opened.contentItem, "ambient-island-open");
+        const scroller = findChild(opened.contentItem, "ambient-island-scroll");
+        verify(card.y >= 0);
+        fuzzyCompare(card.y + card.height, 584, 0.5);
+        verify(scroller.interactive);
+        scroller.contentY = scroller.contentHeight - scroller.height;
+        const last = findChild(opened.contentItem, "ambient-island-transfer-transfer-many-19");
+        const bottom = last.mapToItem(card, 0, last.height).y;
+        verify(bottom <= card.height + 0.5);
+        verify(bottom > 0);
+    }
+
     // A transfer keeps its row in the open island as its progress moves: a
     // row made again for each update draws its ring from blank, and strobes.
     function test_open_transfer_keeps_its_row_as_progress_moves() {

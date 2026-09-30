@@ -644,6 +644,45 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(provider.activities().isEmpty(),5000);
     }
 
+    // A copy in Files that fails is an end: the panel hears it once, with why,
+    // and it leaves the running rows; one the person cancels ends quietly.
+    void tetteFailureIsAnEnd() {
+        QTemporaryDir dir;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QVERIFY(QDir(dir.path()).mkdir(QStringLiteral("locked")));
+        const auto locked=dir.filePath(QStringLiteral("locked"));
+        QFile source(dir.filePath(QStringLiteral("photo.png"))); QVERIFY(source.open(QIODevice::WriteOnly));
+        source.write("picture"); source.close();
+        QVERIFY(QFile::setPermissions(locked,QFile::ReadOwner|QFile::ExeOwner));
+        FileBrowser files;
+        TransferActivityBridge bridge(&files);
+        auto peer=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-tette-failure"));
+        QVERIFY(peer.registerObject(QStringLiteral("/Activities"),&bridge,QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
+        TetteTransferProvider provider(QDBusConnection::sessionBus());
+        QSignalSpy ends(&provider,&TetteTransferProvider::finished);
+        QTest::qWait(50);
+        files.navigate(dir.path()); QTRY_VERIFY(!files.busy());
+        files.copyDropped({source.fileName()},locked);
+        QTRY_VERIFY_WITH_TIMEOUT(!files.working(),5000);
+        QVERIFY(files.failedJustNow());
+        QTRY_COMPARE(ends.size(),1);
+        const auto job=ends.first().first().toMap();
+        QVERIFY(job.value(QStringLiteral("id")).toString().startsWith(QStringLiteral("tette:")));
+        QVERIFY(job.value(QStringLiteral("error")).toInt()>1);
+        QVERIFY(job.value(QStringLiteral("errorText")).toString().startsWith(QStringLiteral("Stopped")));
+        QVERIFY(provider.activities().isEmpty());
+        // Heard once, however many snapshots still carry it.
+        Q_EMIT files.operationChanged();
+        QTest::qWait(100);
+        QCOMPARE(ends.size(),1);
+        QVERIFY(QFile::setPermissions(locked,QFile::ReadOwner|QFile::WriteOwner|QFile::ExeOwner));
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+        peer.unregisterObject(QStringLiteral("/Activities"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-tette-failure"));
+    }
+
     void tetteBridgeLifecycle() {
         QTemporaryDir dir;
         QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -685,6 +724,7 @@ private Q_SLOTS:
         provider.invoke(secondRow.value(QStringLiteral("id")).toString(),secondRow.value(QStringLiteral("generation")).toInt(),QStringLiteral("cancel"));
         QTRY_COMPARE(files.operations().size(),1);
         QTRY_COMPARE(provider.activities().size(),1);
+        QVERIFY(!files.failedJustNow()); // cancelled by the person: no end to tell
         QCOMPARE(files.operations().first().toMap().value(QStringLiteral("id")).toString(),operationId);
         liveRow=provider.activities().first().toMap();
         const auto sourceId=files.activitySnapshot().first().toMap().value(QStringLiteral("id")).toString();

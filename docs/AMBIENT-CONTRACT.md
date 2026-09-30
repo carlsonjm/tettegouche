@@ -77,7 +77,8 @@ its job's place for a minute and says how it ended, an arrival with Show in
 Files. Then it is filed as a notification in the freedesktop transfer
 categories, `transfer.complete` or `transfer.error`, which the history keeps
 and Temperance's ticker does not play. One used in Ambient is filed at once.
-Filesystem evidence alone never files anything.
+A copy or move in Files ends the same way when it fails; one the person stops
+or cancels ends quietly. Filesystem evidence alone never files anything.
 
 ### Drives
 
@@ -95,7 +96,9 @@ notice is closed.
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
 of each copy or move and UUID-checked Cancel, Pause and Resume over its activity
-D-Bus interface. The applet validates
+D-Bus interface. A copy or move that failed stays in the snapshots for ten
+seconds as a failed row, which the applet reports once as an end (§ Ends); a
+hidden launcher waits a second after such a failure before it quits. The applet validates
 the source owner generation before dispatching an action.
 
 ### Incoming files

@@ -17,7 +17,7 @@ KCMUtils.SimpleKCM {
 
         QQC2.CheckBox {
             Kirigami.FormData.label: i18n("Kadunce:")
-            text: i18n("Open inside Card Line when available")
+            text: i18n("Open inside Spread when available")
             checked: cfg_useKadunce
             onToggled: cfg_useKadunce = checked
         }

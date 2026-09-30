@@ -229,7 +229,7 @@ if(BUILD_TESTING)
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Ambient.qml)
         set_tests_properties(ambient-surface-test PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
-            TIMEOUT 30)
+            TIMEOUT 60)
         add_test(NAME launcher-controls-test
             COMMAND ${QMLTESTRUNNER_EXECUTABLE}
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)

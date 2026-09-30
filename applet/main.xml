@@ -6,7 +6,7 @@
   <kcfgfile name=""/>
   <group name="General">
     <entry name="useKadunce" type="Bool">
-      <label>Allow Tettegouche to join Kadunce Card Line when available</label>
+      <label>Allow Tettegouche to open inside Kadunce's Spread when available</label>
       <default>true</default>
     </entry>
     <entry name="animateIndicator" type="Bool">
