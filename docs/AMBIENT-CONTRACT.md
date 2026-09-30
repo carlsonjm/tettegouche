@@ -36,6 +36,10 @@ not own the source operation or retain a completion history.
   only when the source supplies evidence. Unknown progress stays indeterminate.
 - Source loss, quiet filesystem state, cancellation, and disappearance must not
   be presented as successful completion.
+- The person may set an item aside, which never stops or changes its source:
+  media stays away until it starts playing again, a transfer until its source
+  ends, its end then filed without its minute, and an end is filed at once.
+  While carried or flicked, the island stays within Ambient's own bounds.
 
 ## Provider behavior
 

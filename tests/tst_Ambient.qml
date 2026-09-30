@@ -336,6 +336,88 @@ TestCase {
         compare(surface.transferDetail, "The phone went out of reach");
     }
 
+    // A sideways drag, measured against the band, which does not move.
+    function islandCentre(surface) {
+        const shape = island(surface);
+        return {x: shape.x + shape.width / 2, y: shape.y + shape.height / 2};
+    }
+    function slowDrag(surface, dx) {
+        const at = islandCentre(surface);
+        mousePress(surface, at.x, at.y);
+        const steps = Math.ceil(Math.abs(dx) / 16);
+        for (let step = 1; step <= steps; ++step) {
+            mouseMove(surface, at.x + dx * step / steps, at.y);
+            wait(40);
+        }
+        return at;
+    }
+
+    // A slow sideways drag sheds the island's details as a narrower band
+    // would, keeping play or pause; let go early and it springs back whole,
+    // with nothing set aside.
+    function test_slow_drag_sheds_then_springs_back() {
+        const surface = createSurface(405, [media]);
+        settle();
+        verify(findChild(surface, "ambient-media-title").visible);
+        const invoked = spyOn(surface, "invokeRequested");
+        const at = slowDrag(surface, -160);
+        verify(surface.clip); // leaves through its own edge, not over its neighbours
+        verify(!findChild(surface, "ambient-media-title").visible);
+        verify(findChild(surface, "ambient-media-toggle").visible);
+        mouseRelease(surface, at.x - 160, at.y);
+        tryCompare(surface, "peel", 0);
+        compare(invoked.count, 0);
+        verify(findChild(surface, "ambient-media-title").visible);
+        tryVerify(() => !surface.clip); // at rest, its focus ring and press may reach past
+    }
+
+    // Peeled past its least, it goes aside: the player it shows.
+    function test_drag_past_its_least_sets_it_aside() {
+        const surface = createSurface(405, [media, transfer]);
+        settle();
+        const invoked = spyOn(surface, "invokeRequested");
+        const at = slowDrag(surface, -(surface.peelAll + 20));
+        mouseRelease(surface, at.x - surface.peelAll - 20, at.y);
+        tryCompare(invoked, "count", 1);
+        compare(invoked.signalArguments[0][0], "media-1");
+        compare(invoked.signalArguments[0][2], "setAside");
+        tryCompare(surface, "peel", 0);
+    }
+
+    // A quick flick by touch sets aside what the island shows: every transfer.
+    function test_flick_by_touch_sets_it_aside() {
+        const surface = createSurface(405, [transfer, secondTransfer]);
+        settle();
+        const invoked = spyOn(surface, "invokeRequested");
+        const at = islandCentre(surface);
+        const touch = touchEvent(surface);
+        touch.press(0, surface, at.x, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x + 30, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x + 70, at.y).commit();
+        wait(16);
+        touch.release(0, surface, at.x + 70, at.y).commit();
+        tryCompare(invoked, "count", 2);
+        compare(invoked.signalArguments[0][2], "setAside");
+        compare(invoked.signalArguments[1][2], "setAside");
+        compare([invoked.signalArguments[0][0], invoked.signalArguments[1][0]].sort(), ["transfer-1", "transfer-2"]);
+    }
+
+    // A drag that starts on play or pause is the island's: it does not press.
+    function test_drag_from_a_control_does_not_press_it() {
+        const surface = createSurface(405, [media]);
+        settle();
+        const invoked = spyOn(surface, "invokeRequested");
+        const toggle = findChild(surface, "ambient-media-toggle");
+        const at = toggle.mapToItem(surface, toggle.width / 2, toggle.height / 2);
+        mousePress(surface, at.x, at.y);
+        for (let step = 1; step <= 4; ++step) { mouseMove(surface, at.x + step * 12, at.y); wait(40); }
+        mouseRelease(surface, at.x + 48, at.y);
+        tryCompare(surface, "peel", 0);
+        compare(invoked.count, 0);
+    }
+
     function test_open_island_moves_between_kinds_and_closes_outside() {
         const surface = createSurface(405, [media, transfer]);
         const opened = openIsland(surface, "media");

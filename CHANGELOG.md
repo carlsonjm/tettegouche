@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- A sideways flick sets the island aside, by finger or mouse: music until it
+  plays again, a transfer until it ends. Dragged slowly, the island sheds its
+  details down to play or pause and springs back if let go.
 - Ambient holds the desktop's job service where no Notifications widget does,
   so KDE Connect and other applications report their transfers. A file that
   arrives in Downloads, or a transfer that fails, stays a minute in the island

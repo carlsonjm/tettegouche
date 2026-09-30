@@ -17,6 +17,10 @@ public:
     QUrl destinationForReveal(const QString &id, int generation) const;
     // Show in Files was used on this row; an end waiting there goes no further.
     void revealed(const QString &id, int generation);
+    // The person set this row aside: media until it starts playing again,
+    // anything else until its source ends. An end waiting out its minute is
+    // filed now, and a transfer set aside is filed as soon as it ends.
+    void setAside(const QString &id, int generation);
 Q_SIGNALS:
     void changed();
     // Show in Files was chosen on the notice of a file that arrived.
@@ -36,6 +40,10 @@ private:
     QMap<QString, QSet<QString>> m_destinations;
     QMap<QString, QSet<QString>> m_claimedFiles;
     QMap<QString, qint64> m_consumedFiles;
+    // Media set aside, and the state it was last seen in; other sources set aside.
+    QHash<QString, QString> m_asideMedia;
+    QSet<QString> m_aside;
+    QVariantList m_lastTransfers, m_lastMedia, m_lastFiles;
     int m_token = 0;
     bool m_refreshPending = false;
 };

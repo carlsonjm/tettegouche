@@ -299,6 +299,84 @@ private Q_SLOTS:
         model.reconcile({}, {}, {fs}); QVERIFY(model.activities().isEmpty());
     }
 
+    // Set aside: media stays away until it starts playing again; a transfer
+    // until its source ends. An end waiting out its minute is filed now, and a
+    // transfer set aside is filed as soon as it ends.
+    void setAsideLasts() {
+        QTemporaryDir downloads;
+        auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-notifications-aside"));
+        FakeNotifications notifications;
+        QVERIFY(fakes.registerObject(QStringLiteral("/org/freedesktop/Notifications"),&notifications,
+                                     QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(fakes.registerService(QStringLiteral("org.freedesktop.Notifications")));
+        {
+            ActivityModel model(QDBusConnection::sessionBus(),downloads.path());
+            QTest::qWait(20);
+            QVariantMap player{{QStringLiteral("id"),QStringLiteral("org.mpris.MediaPlayer2.phone")},{QStringLiteral("generation"),1},
+                {QStringLiteral("kind"),QStringLiteral("media")},{QStringLiteral("state"),QStringLiteral("paused")},{QStringLiteral("title"),QStringLiteral("Song")}};
+            const QVariantMap copy{{QStringLiteral("id"),QStringLiteral("tette:1")},{QStringLiteral("generation"),1},
+                {QStringLiteral("kind"),QStringLiteral("transfer")},{QStringLiteral("state"),QStringLiteral("running")},{QStringLiteral("title"),QStringLiteral("Photos")}};
+            const auto titled=[&model](const QString &title) {
+                for (const auto &row : model.activities()) if (row.toMap().value(QStringLiteral("title"))==title) return row.toMap();
+                return QVariantMap{};
+            };
+            const auto setAside=[&model](const QVariantMap &row) {
+                model.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt(),QStringLiteral("setAside"));
+            };
+            model.reconcile({copy},{player},{});
+            QCOMPARE(model.activities().size(),2);
+            // Paused media set aside stays away while paused, and returns as it plays.
+            setAside(titled(QStringLiteral("Song")));
+            QVERIFY(titled(QStringLiteral("Song")).isEmpty());
+            model.reconcile({copy},{player},{});
+            QVERIFY(titled(QStringLiteral("Song")).isEmpty());
+            player[QStringLiteral("state")]=QStringLiteral("playing");
+            model.reconcile({copy},{player},{});
+            QVERIFY(!titled(QStringLiteral("Song")).isEmpty());
+            // Set aside while playing, it returns only when it plays again.
+            setAside(titled(QStringLiteral("Song")));
+            model.reconcile({copy},{player},{});
+            QVERIFY(titled(QStringLiteral("Song")).isEmpty());
+            player[QStringLiteral("state")]=QStringLiteral("paused");
+            model.reconcile({copy},{player},{});
+            QVERIFY(titled(QStringLiteral("Song")).isEmpty());
+            player[QStringLiteral("state")]=QStringLiteral("playing");
+            model.reconcile({copy},{player},{});
+            QVERIFY(!titled(QStringLiteral("Song")).isEmpty());
+            // A transfer stays away until its source ends; one after it shows.
+            setAside(titled(QStringLiteral("Photos")));
+            QVERIFY(titled(QStringLiteral("Photos")).isEmpty());
+            model.reconcile({copy},{player},{});
+            QVERIFY(titled(QStringLiteral("Photos")).isEmpty());
+            model.reconcile({},{player},{});
+            model.reconcile({copy},{player},{});
+            QVERIFY(!titled(QStringLiteral("Photos")).isEmpty());
+            // An end waiting out its minute, set aside, is filed now.
+            QFile photo(QDir(downloads.path()).filePath(QStringLiteral("photo.png"))); QVERIFY(photo.open(QIODevice::WriteOnly)); photo.write("x"); photo.close();
+            model.m_notices.report({{QStringLiteral("id"),QStringLiteral("job:5")},{QStringLiteral("generation"),1},{QStringLiteral("application"),QStringLiteral("Ambient Test")},
+                {QStringLiteral("error"),0},{QStringLiteral("destinationUrl"),QUrl::fromLocalFile(photo.fileName()).toString()}});
+            model.reconcile(model.m_notices.activities(),{},{});
+            QVERIFY(!titled(QStringLiteral("photo.png")).isEmpty());
+            setAside(titled(QStringLiteral("photo.png")));
+            QTRY_COMPARE(notifications.notices.size(),1);
+            QCOMPARE(notifications.notices.first().summary,QStringLiteral("photo.png"));
+            QVERIFY(model.m_notices.activities().isEmpty());
+            // A running job set aside is filed the moment it ends, with no minute.
+            const QVariantMap job{{QStringLiteral("id"),QStringLiteral("job:6")},{QStringLiteral("generation"),1},{QStringLiteral("kind"),QStringLiteral("transfer")},
+                {QStringLiteral("state"),QStringLiteral("running")},{QStringLiteral("title"),QStringLiteral("Video")}};
+            model.reconcile({job},{},{});
+            setAside(titled(QStringLiteral("Video")));
+            QVERIFY(titled(QStringLiteral("Video")).isEmpty());
+            Q_EMIT model.m_jobs.finished({{QStringLiteral("id"),QStringLiteral("job:6")},{QStringLiteral("generation"),1},{QStringLiteral("application"),QStringLiteral("Ambient Test")},
+                {QStringLiteral("error"),0},{QStringLiteral("destinationUrl"),QUrl::fromLocalFile(photo.fileName()).toString()}});
+            QTRY_COMPARE(notifications.notices.size(),2);
+            QVERIFY(model.m_notices.activities().isEmpty());
+        }
+        fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
+        fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-notifications-aside"));
+    }
+
     // Where nothing holds the job service, Ambient holds it, and each job that
     // ends is routed: a file that arrived in Downloads, or a failure, stays in
     // Ambient for its minute, then is filed as a transfer notice; one used

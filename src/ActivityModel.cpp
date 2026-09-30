@@ -39,7 +39,11 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_files, &IncomingFileProvider::changed, this, update);
     connect(&m_tette, &TetteTransferProvider::changed, this, update);
     connect(&m_notices, &FinishNotices::changed, this, update);
-    connect(&m_jobs, &DesktopJobProvider::finished, &m_notices, &FinishNotices::report);
+    connect(&m_jobs, &DesktopJobProvider::finished, this, [this](const QVariantMap &job) {
+        m_notices.report(job);
+        const auto id = job.value(QStringLiteral("id")).toString();
+        if (m_aside.remove(id)) m_notices.used(id);
+    });
     connect(&m_notices, &FinishNotices::revealRequested, this, &ActivityModel::revealRequested);
     update();
 }
@@ -47,7 +51,25 @@ void ActivityModel::refresh() {
     reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities());
 }
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files) {
+    m_lastTransfers = transfers; m_lastMedia = media; m_lastFiles = files;
     const auto now = Ambient::nowUs();
+    // Media set aside comes back when it starts playing again; whatever set
+    // aside has gone is forgotten.
+    QSet<QString> present;
+    for (const auto &v : transfers + files) present.insert(v.toMap().value(QStringLiteral("id")).toString());
+    m_aside.removeIf([&present](const QString &id) { return !present.contains(id); });
+    QSet<QString> players;
+    for (const auto &v : media) {
+        const auto row = v.toMap();
+        const auto id = row.value(QStringLiteral("id")).toString();
+        players.insert(id);
+        const auto found = m_asideMedia.find(id);
+        if (found == m_asideMedia.end()) continue;
+        const auto state = row.value(QStringLiteral("state")).toString();
+        if (state == QLatin1String("playing") && *found != QLatin1String("playing")) m_asideMedia.erase(found);
+        else *found = state;
+    }
+    m_asideMedia.removeIf([&players](const auto &e) { return !players.contains(e.key()); });
     m_consumedFiles.removeIf([now](const auto &e) { return e.value() <= now; });
     QSet<QString> liveSources;
     for (const auto &v : transfers) liveSources.insert(sourceKey(v.toMap()));
@@ -81,6 +103,9 @@ void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList 
         const auto oldId = m_presentations.value(key);
         const QString id = !oldId.isEmpty() ? oldId : !suggestedId.isEmpty() ? suggestedId : row.value(QStringLiteral("id")).toString();
         m_presentations[key] = id; retained.insert(key);
+        // Set aside: it keeps its place for when it returns, but is not shown.
+        const auto source = route.value(QStringLiteral("id")).toString();
+        if (m_aside.contains(source) || m_asideMedia.contains(source)) return;
         int token = 0;
         if (m_routes.contains(id) && sourceKey(m_routes.value(id)) == key)
             token = m_routes.value(id).value(QStringLiteral("actionToken")).toInt();
@@ -110,6 +135,7 @@ void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList 
     if (rows != m_rows) { m_rows = rows; Q_EMIT changed(); }
 }
 void ActivityModel::invoke(const QString &id, int generation, const QString &action, const QVariant &value) {
+    if (action == QLatin1String("setAside")) { setAside(id, generation); return; }
     const auto route = m_routes.value(id);
     if (route.isEmpty() || route.value(QStringLiteral("actionToken")).toInt() != generation
             || !route.value(QStringLiteral("capabilities")).toMap().value(action).toBool()) return;
@@ -118,6 +144,16 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     if (sourceId.startsWith(QLatin1String("org.mpris.MediaPlayer2."))) m_media.invoke(sourceId,sourceGeneration,action,value);
     else if (sourceId.startsWith(QLatin1String("tette:"))) m_tette.invoke(sourceId,sourceGeneration,action);
     else if (sourceId.startsWith(QLatin1String("job:"))) m_jobs.invoke(sourceId,sourceGeneration,action);
+}
+void ActivityModel::setAside(const QString &id, int generation) {
+    const auto route = m_routes.value(id);
+    if (route.isEmpty() || route.value(QStringLiteral("actionToken")).toInt() != generation) return;
+    const auto source = route.value(QStringLiteral("id")).toString();
+    const auto state = route.value(QStringLiteral("state")).toString();
+    if (route.value(QStringLiteral("kind")).toString() == QLatin1String("media")) m_asideMedia.insert(source, state);
+    else if (state == QLatin1String("finished") || state == QLatin1String("failed")) m_notices.used(source);
+    else m_aside.insert(source);
+    reconcile(m_lastTransfers, m_lastMedia, m_lastFiles);
 }
 void ActivityModel::revealed(const QString &id, int generation) {
     const auto route = m_routes.value(id);

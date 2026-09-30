@@ -142,6 +142,9 @@ than repeat it.
 | Tap or click play or pause, previous or next on the island | Plays, pauses or skips the media. Previous and next show when the island has room. |
 | Tap or click × on the island | Cancels the transfer. It shows only for a single transfer its source can cancel. |
 | Tap or click the island away from its controls | Opens it in place, larger. |
+| Drag the island sideways, by finger or mouse, from anywhere on it | It follows and sheds details as a narrower band would, down to play or pause. Let go early and it springs back whole. |
+| Flick the island sideways, or drag it past play or pause | Sets aside what it shows, and the next kind takes the island: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer, filed now. |
+| With the island focused, Delete | Sets it aside. |
 | Tap or click the bubble beside the island | Opens the island on what the bubble holds. |
 | With the island or its bubble focused, Enter or Space | Opens it. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |

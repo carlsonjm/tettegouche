@@ -23,6 +23,19 @@ Item {
     property bool opened: false
     // A player picked inside the open island, kept while it lasts.
     property string chosenPlayer: ""
+    // How far a sideways drag has carried the island. The island sizes itself
+    // to the room left beside it, so it sheds details as a narrower band would,
+    // down to its least, then slides on with the finger and fades.
+    property real peel: 0
+    readonly property real room: Math.max(0, width - Math.abs(peel))
+    readonly property real peelAll: Math.max(48, width - minimumUsefulWidth)
+    readonly property bool peeling: islandDrag.active || peelBack.running || peelAway.running
+    property real peelVelocity: 0
+    property real peelSampleX: 0
+    property double peelSampleAt: 0
+    // Carried or flicked, the island leaves through its own edges and never
+    // passes over what sits beside Ambient, the launcher's dot among them.
+    clip: peeling
 
     signal invokeRequested(string activityId, int generation, string action, var value)
     signal openRequested(string kind)
@@ -175,7 +188,7 @@ Item {
     readonly property bool canToggle: capability(player, player && player.state === "playing" ? "pause" : "play")
     readonly property real transportFull: (canToggle ? reach : 0)
         + (capability(player, "previous") ? reach : 0) + (capability(player, "next") ? reach : 0)
-    readonly property real mediaSideRoom: Math.floor((width - 2 * inset - transportFull) / 2)
+    readonly property real mediaSideRoom: Math.floor((room - 2 * inset - transportFull) / 2)
     readonly property bool showSkips: mediaSideRoom >= 0
     readonly property real transportWidth: showSkips ? transportFull : (canToggle ? reach : 0)
     readonly property real mediaSide: Math.max(0, Math.min(124, mediaSideRoom))
@@ -187,7 +200,7 @@ Item {
     readonly property real artLead: Math.max(0, (pillHeight - artSize) / 2 - inset)
     readonly property real mediaSmallFixed: artLead + artSize + 4 + (canToggle ? reach : 0) + 8
     readonly property real mediaSmallTitle: Math.max(0, Math.min(84,
-        width - 2 * inset - mediaSmallFixed - gap - pillHeight))
+        room - 2 * inset - mediaSmallFixed - gap - pillHeight))
     readonly property bool mediaSmallWords: mediaSmallTitle >= 24
     // Transfers first: progress, what and where, the percentage, and Cancel
     // when the source allows it.
@@ -203,7 +216,7 @@ Item {
     TextMetrics { id: detailMetrics; text: surface.transferDetail; font.pixelSize: 11 }
     readonly property real transferWords: Math.max(0, Math.min(170,
         Math.ceil(Math.max(headlineMetrics.advanceWidth, pillHeight >= 40 ? detailMetrics.advanceWidth : 0)),
-        width - 2 * inset - transferFixed - 8 - (shared ? gap + pillHeight : 0)))
+        room - 2 * inset - transferFixed - 8 - (shared ? gap + pillHeight : 0)))
     readonly property bool transferShowsWords: transferWords >= 48
 
     readonly property real islandWidth: {
@@ -214,12 +227,41 @@ Item {
         return 2 * inset + transferFixed + (transferShowsWords ? 8 + transferWords : 0);
     }
     readonly property real groupWidth: islandWidth + (shared ? gap + pillHeight : 0)
-    readonly property real islandX: Math.max(0, Math.round((width - groupWidth) / 2))
+    readonly property real islandX: Math.max(0, Math.round((width - groupWidth) / 2)) + peel
     readonly property real islandY: Math.round((height - pillHeight) / 2)
     // The least the island needs: its first control, and the bubble.
     readonly property int minimumUsefulWidth: kinds.length === 0 ? 0
         : Math.ceil(2 * inset + (mainKind === "media" ? mediaSmallFixed : transferFixed)
             + (shared ? gap + pillHeight : 0))
+
+    // What the island shows goes aside: the player it shows, or its transfers.
+    function setAside() {
+        if (mainKind === "media") invoke(player, "setAside");
+        else for (const transfer of transfers) invoke(transfer, "setAside");
+    }
+    // Let go: peeled to its least, or flicked the way it was carried, it goes
+    // aside; otherwise it springs back whole.
+    function releasePeel() {
+        const flicked = Math.abs(peelVelocity) > 0.6 && Math.sign(peelVelocity) === Math.sign(peel);
+        if (peel !== 0 && (Math.abs(peel) >= peelAll || flicked)) {
+            peelAway.to = Math.sign(peel) * (width + groupWidth);
+            peelAway.start();
+        } else {
+            peelBack.start();
+        }
+    }
+    NumberAnimation { id: peelBack; target: surface; property: "peel"; to: 0; duration: 240; easing.type: Easing.OutBack }
+    NumberAnimation {
+        id: peelAway
+        target: surface
+        property: "peel"
+        duration: 160
+        easing.type: Easing.InCubic
+        onFinished: {
+            surface.setAside();
+            surface.peel = 0;
+        }
+    }
 
     // ---------------------------------------------------------------- pieces
 
@@ -360,7 +402,8 @@ Item {
         color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
         border.width: 1
         border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
-        opacity: surface.kinds.length > 0 ? 1 : 0
+        opacity: surface.kinds.length === 0 ? 0
+            : 1 - Math.max(0, Math.min(1, (Math.abs(surface.peel) - surface.peelAll) / 80))
         visible: opacity > 0 && !surface.opened
         scale: islandArea.pressed ? 1.03 : 1
         activeFocusOnTab: visible
@@ -372,10 +415,11 @@ Item {
         Keys.onReturnPressed: surface.openRequested(surface.mainKind)
         Keys.onEnterPressed: surface.openRequested(surface.mainKind)
         Keys.onSpacePressed: surface.openRequested(surface.mainKind)
+        Keys.onDeletePressed: surface.setAside()
 
-        Behavior on x { NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on width { NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on opacity { NumberAnimation { duration: 160 } }
+        Behavior on x { enabled: !surface.peeling; NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on width { enabled: !surface.peeling; NumberAnimation { duration: 340; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on opacity { enabled: !surface.peeling; NumberAnimation { duration: 160 } }
         Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutBack } }
         Behavior on color { ColorAnimation { duration: 200 } }
 
@@ -384,6 +428,35 @@ Item {
             id: islandArea
             anchors.fill: parent
             onClicked: surface.openRequested(surface.mainKind)
+        }
+        // A sideways drag, by finger or mouse, anywhere on the island, its
+        // controls included: once it moves, it is the island's, not a press.
+        DragHandler {
+            id: islandDrag
+            target: null
+            yAxis.enabled: false
+            enabled: !surface.opened && !peelAway.running
+            onActiveChanged: {
+                if (active) {
+                    peelBack.stop();
+                    surface.peelVelocity = 0;
+                    surface.peelSampleX = 0;
+                    surface.peelSampleAt = Date.now();
+                } else {
+                    surface.releasePeel();
+                }
+            }
+            onActiveTranslationChanged: {
+                if (!active) return;
+                const now = Date.now();
+                const dt = Math.max(1, now - surface.peelSampleAt);
+                const dx = activeTranslation.x - surface.peelSampleX;
+                // Smoothed, so the last few moves decide a flick.
+                surface.peelVelocity = 0.6 * (dx / dt) + 0.4 * surface.peelVelocity;
+                surface.peelSampleX = activeTranslation.x;
+                surface.peelSampleAt = now;
+                surface.peel = activeTranslation.x;
+            }
         }
 
         Rectangle {
