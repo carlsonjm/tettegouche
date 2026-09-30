@@ -85,8 +85,10 @@ Item {
     onActivitiesChanged: track()
     onChosenPlayerChanged: choose()
 
+    // A kind with no island of its own here, such as a shared screen, takes
+    // no room: the layout finds no pieces for it.
     function bandKind(activity) {
-        if (activity.kind === "media" || activity.kind === "drive") return activity.kind;
+        if (activity.kind !== "transfer") return activity.kind;
         return ended(activity) ? "arrived" : "transfer";
     }
 
@@ -122,7 +124,7 @@ Item {
         if (JSON.stringify(bandOrder) !== JSON.stringify(bandKinds)) bandKinds = bandOrder;
         const openOrder = [];
         for (const band of bandOrder) {
-            if (band === "drive") continue;
+            if (band !== "media" && band !== "transfer" && band !== "arrived") continue;
             const kind = band === "media" ? "media" : "transfer";
             if (openOrder.indexOf(kind) < 0) openOrder.push(kind);
         }

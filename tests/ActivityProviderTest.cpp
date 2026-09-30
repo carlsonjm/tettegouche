@@ -11,6 +11,8 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusConnectionInterface>
+#include <QDBusMetaType>
+#include <QDBusVirtualObject>
 #include <QTemporaryDir>
 #include <QSignalSpy>
 #include <QProcess>
@@ -96,6 +98,54 @@ static QDBusMessage call(const QDBusConnection &bus, const QString &service, con
     if (!pending.isFinished()) loop.exec();
     return pending.reply();
 }
+
+// Plasma's tray, the portal's item on it and the item's menu, as the screen
+// share provider meets them.
+struct TipPixmap { int width = 0, height = 0; QByteArray data; };
+Q_DECLARE_METATYPE(TipPixmap)
+QDBusArgument &operator<<(QDBusArgument &a, const TipPixmap &p) { a.beginStructure(); a << p.width << p.height << p.data; a.endStructure(); return a; }
+const QDBusArgument &operator>>(const QDBusArgument &a, TipPixmap &p) { a.beginStructure(); a >> p.width >> p.height >> p.data; a.endStructure(); return a; }
+struct Tip { QString icon; QList<TipPixmap> pixmaps; QString title, subtitle; };
+Q_DECLARE_METATYPE(Tip)
+QDBusArgument &operator<<(QDBusArgument &a, const Tip &t) { a.beginStructure(); a << t.icon << t.pixmaps << t.title << t.subtitle; a.endStructure(); return a; }
+const QDBusArgument &operator>>(const QDBusArgument &a, Tip &t) { a.beginStructure(); a >> t.icon >> t.pixmaps >> t.title >> t.subtitle; a.endStructure(); return a; }
+struct MenuNode { int id = 0; QVariantMap properties; QList<MenuNode> children; };
+Q_DECLARE_METATYPE(MenuNode)
+QDBusArgument &operator<<(QDBusArgument &a, const MenuNode &n) {
+    a.beginStructure(); a << n.id << n.properties;
+    a.beginArray(QMetaType::fromType<QDBusVariant>());
+    for (const auto &child : n.children) a << QDBusVariant(QVariant::fromValue(child));
+    a.endArray(); a.endStructure(); return a;
+}
+const QDBusArgument &operator>>(const QDBusArgument &a, MenuNode &n) { a.beginStructure(); a >> n.id >> n.properties; a.beginArray(); while (!a.atEnd()) { QDBusVariant v; a >> v; } a.endArray(); a.endStructure(); return a; }
+class FakeTray : public QDBusVirtualObject {
+public:
+    QString id = QStringLiteral("xdg-desktop-portal-kde"), status = QStringLiteral("Active");
+    QStringList items;
+    QList<int> clicked;
+    QString introspect(const QString &) const override { return {}; }
+    bool handleMessage(const QDBusMessage &message, const QDBusConnection &connection) override {
+        const auto member = message.member();
+        if (message.path() == QLatin1String("/StatusNotifierWatcher") && member == QLatin1String("Get")) {
+            connection.send(message.createReply(QVariant::fromValue(QDBusVariant(items))));
+        } else if (message.path() == QLatin1String("/StatusNotifierItem") && member == QLatin1String("GetAll")) {
+            const Tip tip{QStringLiteral("monitor"), {}, QStringLiteral("Screen casting"), QStringLiteral("Sharing contents to Zen Browser")};
+            connection.send(message.createReply(QVariant::fromValue(QVariantMap{{QStringLiteral("Id"), id}, {QStringLiteral("Status"), status},
+                {QStringLiteral("Title"), QStringLiteral("Screen casting")}, {QStringLiteral("IconName"), QStringLiteral("zen-browser")},
+                {QStringLiteral("Menu"), QVariant::fromValue(QDBusObjectPath(QStringLiteral("/MenuBar")))},
+                {QStringLiteral("ToolTip"), QVariant::fromValue(tip)}})));
+        } else if (message.path() == QLatin1String("/MenuBar") && member == QLatin1String("GetLayout")) {
+            const MenuNode root{0, {}, {MenuNode{7, {{QStringLiteral("label"), QStringLiteral("End")}}, {}}}};
+            connection.send(message.createReply({uint(1), QVariant::fromValue(root)}));
+        } else if (message.path() == QLatin1String("/MenuBar") && member == QLatin1String("Event")) {
+            clicked.append(message.arguments().value(0).toInt());
+            connection.send(message.createReply());
+        } else {
+            return false;
+        }
+        return true;
+    }
+};
 
 class ActivityProviderTest : public QObject {
     Q_OBJECT
@@ -642,6 +692,62 @@ private Q_SLOTS:
         QVERIFY(producer.waitForStarted()); QTRY_COMPARE(provider.activities().size(),1);
         producer.kill(); QVERIFY(producer.waitForFinished());
         QTRY_VERIFY_WITH_TIMEOUT(provider.activities().isEmpty(),5000);
+    }
+
+    // A screen shared through Plasma's portal is a row naming who receives
+    // it, and Stop clicks the portal item's End; the row leaves when the item
+    // goes passive or away. Other tray items are not shares.
+    void screenShareFromPortalItem() {
+        qDBusRegisterMetaType<TipPixmap>(); qDBusRegisterMetaType<QList<TipPixmap>>();
+        qDBusRegisterMetaType<Tip>(); qDBusRegisterMetaType<MenuNode>();
+        auto peer=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-tray"));
+        FakeTray tray;
+        QVERIFY(peer.registerVirtualObject(QStringLiteral("/"),&tray,QDBusConnection::SubPath));
+        QVERIFY(peer.registerService(QStringLiteral("org.kde.StatusNotifierWatcher")));
+        const auto item=peer.baseService()+QStringLiteral("/StatusNotifierItem");
+        const auto announce=[&](const char *signal) {
+            auto message=QDBusMessage::createSignal(QStringLiteral("/StatusNotifierWatcher"),QStringLiteral("org.kde.StatusNotifierWatcher"),QString::fromLatin1(signal));
+            message.setArguments({QVariant(item)}); QVERIFY(peer.send(message));
+        };
+        {
+            ScreenShareProvider screen(QDBusConnection::sessionBus());
+            QTest::qWait(50);
+            QVERIFY(screen.activities().isEmpty());
+            tray.items={item};
+            announce("StatusNotifierItemRegistered");
+            QTRY_COMPARE(screen.activities().size(),1);
+            const auto row=screen.activities().first().toMap();
+            QCOMPARE(row.value(QStringLiteral("kind")).toString(),QStringLiteral("screen"));
+            QCOMPARE(row.value(QStringLiteral("title")).toString(),QStringLiteral("Sharing contents to Zen Browser"));
+            QCOMPARE(row.value(QStringLiteral("icon")).toString(),QStringLiteral("zen-browser"));
+            QVERIFY(row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("stop")).toBool());
+            screen.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt()+1,QStringLiteral("stop"));
+            QTest::qWait(50); QVERIFY(tray.clicked.isEmpty());
+            screen.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt(),QStringLiteral("stop"));
+            QTRY_COMPARE(tray.clicked,QList<int>{7});
+            tray.status=QStringLiteral("Passive");
+            auto changed=QDBusMessage::createSignal(QStringLiteral("/StatusNotifierItem"),QStringLiteral("org.kde.StatusNotifierItem"),QStringLiteral("NewStatus"));
+            changed.setArguments({QStringLiteral("Passive")}); QVERIFY(peer.send(changed));
+            QTRY_VERIFY(screen.activities().isEmpty());
+            tray.status=QStringLiteral("Active");
+            announce("StatusNotifierItemRegistered");
+            QTRY_COMPARE(screen.activities().size(),1);
+            announce("StatusNotifierItemUnregistered");
+            QTRY_VERIFY(screen.activities().isEmpty());
+            tray.id=QStringLiteral("some-application");
+            announce("StatusNotifierItemRegistered");
+            QTest::qWait(100);
+            QVERIFY(screen.activities().isEmpty());
+        }
+        {
+            // Already sharing when Ambient starts.
+            tray.id=QStringLiteral("xdg-desktop-portal-kde");
+            ScreenShareProvider screen(QDBusConnection::sessionBus());
+            QTRY_COMPARE(screen.activities().size(),1);
+        }
+        peer.unregisterService(QStringLiteral("org.kde.StatusNotifierWatcher"));
+        peer.unregisterObject(QStringLiteral("/"),QDBusConnection::UnregisterTree);
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-tray"));
     }
 
     void tetteBridgeLifecycle() {

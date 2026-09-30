@@ -427,6 +427,17 @@ TestCase {
         compare(invoked.signalArguments[0][2], "setAside");
     }
 
+    // A kind the band draws no island for yet takes no room and opens nothing.
+    function test_an_undrawn_kind_takes_no_room() {
+        const share = {id: "screen:x", generation: 1, kind: "screen", state: "running",
+            title: "Sharing contents to Zen Browser", capabilities: {stop: true}};
+        const surface = createSurface(405, [media, share]);
+        settle();
+        compare(surface.kinds, ["media"]);
+        verify(!island(surface, "transfer").visible);
+        fuzzyCompare(leftOf(surface, island(surface, "media")) + island(surface, "media").width / 2, surface.width / 2, 1);
+    }
+
     // A transfer that ends keeps its place in the band.
     function test_an_ended_transfer_keeps_its_place() {
         const surface = createSurface(460, [transfer]);
