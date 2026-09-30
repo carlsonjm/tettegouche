@@ -62,8 +62,8 @@ provenance.
 - Made Ambient clear, centred in its side of the panel and black when the
   panel is black. A tap opens an island in place with album art, the track's
   position, the other players, and each transfer's own actions.
-- Made the launcher a 44 px touch square with a 24 px dot, the size of a
-  panel's status icons, starting 10 px from the square's edge.
+- Made the launcher a 44 px touch square with a 20 px pearl dot centred in it,
+  a little smaller than a status icon, since a filled disc weighs more.
 - Added a responsive Ambient panel surface backed by live MPRIS sessions,
   shared Plasma desktop jobs, Tette file operations, and observed Downloads
   arrivals.

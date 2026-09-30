@@ -124,7 +124,7 @@ private Q_SLOTS:
         auto *dot = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-dimple"));
         QVERIFY(dot);
         QVERIFY(dot->isVisible());
-        QCOMPARE(dot->size(), QSizeF(24, 24));
+        QCOMPARE(dot->size(), QSizeF(20, 20));
         const QPointF localCenter(dot->width() / 2, dot->height() / 2);
         const QPointF dotCenter = dot->mapToItem(button, localCenter);
         QCOMPARE(dotCenter, QPointF(size.width() / 2.0, size.height() / 2.0));

@@ -17,8 +17,8 @@ PlasmoidItem {
     readonly property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
     readonly property bool animateIndicator: Plasmoid.configuration.animateIndicator !== false
     // The launcher is a touch square at the panel's start with its dot centred
-    // in it. The dot is the size of a panel's status icons, and starts 10 px
-    // from the square's edge.
+    // in it. A filled disc weighs more than an outlined status icon, so the dot
+    // is a little smaller than one.
     readonly property int endpointWidth: 44
     readonly property int ambientCoreWidth: ambient.minimumUsefulWidth
     property int responsiveMeasuredWidth: endpointWidth
@@ -188,10 +188,16 @@ PlasmoidItem {
             id: launcherDimple
             objectName: "tettegouche-launcher-dimple"
             anchors.centerIn: parent
-            width: 24
-            height: 24
+            width: 20
+            height: 20
             radius: width / 2
-            color: "#F8F8FF"
+            // Pearl: lit from above and a shade deeper toward its lower edge,
+            // so it reads as a piece that rises rather than a flat disc.
+            gradient: Gradient {
+                GradientStop { position: 0; color: "#FFFFFF" }
+                GradientStop { position: 0.55; color: "#F4F4FA" }
+                GradientStop { position: 1; color: "#DCDCE4" }
+            }
             scale: launcherHover.hovered ? 1.06 : 1
 
             Behavior on scale {

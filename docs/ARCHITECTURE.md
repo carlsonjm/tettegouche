@@ -134,9 +134,10 @@ Related-setting children are read-only context under a settings result, owned by
 
 ## Look
 
-- The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) dot, 24 px,
-  centred in a 44 px touch square at the panel's start, with a thin ring round
-  it while the launcher is open. No icon family replaces or redraws it.
+- The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) pearl, 20 px,
+  lit from above and a shade deeper toward its lower edge, centred in a 44 px
+  touch square at the panel's start, with a thin ring round it while the
+  launcher is open. No icon family replaces or redraws it.
 - Action glyphs come from a pinned, vendored Lucide subset
   ([THIRD_PARTY.md](../assets/icons/THIRD_PARTY.md)), drawn in Ghost White.
   Applications, files and devices keep their own icons.
