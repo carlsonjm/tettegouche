@@ -427,15 +427,45 @@ TestCase {
         compare(invoked.signalArguments[0][2], "setAside");
     }
 
-    // A kind the band draws no island for yet takes no room and opens nothing.
+    // A kind the band draws no island for takes no room and opens nothing.
     function test_an_undrawn_kind_takes_no_room() {
-        const share = {id: "screen:x", generation: 1, kind: "screen", state: "running",
-            title: "Sharing contents to Zen Browser", capabilities: {stop: true}};
-        const surface = createSurface(405, [media, share]);
+        const unknown = {id: "other:x", generation: 1, kind: "other", state: "running",
+            title: "Something", capabilities: {}};
+        const surface = createSurface(405, [media, unknown]);
         settle();
         compare(surface.kinds, ["media"]);
         verify(!island(surface, "transfer").visible);
         fuzzyCompare(leftOf(surface, island(surface, "media")) + island(surface, "media").width / 2, surface.width / 2, 1);
+    }
+
+    // A shared screen says who receives it, beside a red dot, with Stop at
+    // its end; a tap elsewhere on it opens nothing, and a flick sets it aside.
+    function test_a_shared_screen_offers_stop() {
+        const share = {id: "screen:x", generation: 4, kind: "screen", state: "running",
+            title: "Sharing contents to Zen Browser", icon: "zen-browser", capabilities: {stop: true}};
+        const beside = createSurface(460, [media, share]);
+        compare(beside.kinds, ["media"]);
+        const surface = createSurface(460, [share]);
+        settle();
+        const shape = island(surface, "screen");
+        verify(shape.visible);
+        compare(findChild(surface, "ambient-screen-who").text, "Sharing contents to Zen Browser");
+        verify(findChild(surface, "ambient-screen-dot").visible);
+        const stop = findChild(surface, "ambient-screen-stop");
+        verify(stop.visible);
+        verify(rightOf(surface, stop) > rightOf(surface, findChild(surface, "ambient-screen-who")));
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(stop, stop.width / 2, stop.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "screen:x");
+        compare(invoked.signalArguments[0][2], "stop");
+        mouseClick(shape, 10, shape.height / 2);
+        compare(opens.count, 0);
+        compare(invoked.count, 1);
+        // Narrow, it keeps Stop longest.
+        surface.width = 160;
+        verify(shown(surface, "screen").indexOf("stop") >= 0);
     }
 
     // A transfer that ends keeps its place in the band.
