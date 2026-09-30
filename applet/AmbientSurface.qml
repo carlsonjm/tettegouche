@@ -47,6 +47,7 @@ Item {
     readonly property var players: activities.filter(activity => activity.kind === "media")
     readonly property var running: transfers.filter(activity => !ended(activity))
     readonly property var endings: transfers.filter(activity => ended(activity))
+    readonly property var drives: activities.filter(activity => activity.kind === "drive")
     readonly property var firstTransfer: transfers.length > 0 ? transfers[0] : null
 
     // Arrival and playing order, kept across updates.
@@ -71,10 +72,12 @@ Item {
     readonly property var folded: plan.folded
     readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
     readonly property int bubbleCount: folded.reduce((count, kind) => count
-        + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length : 1), 0)
+        + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length
+            : kind === "drive" ? drives.length : 1), 0)
     // The least the band needs: each island's first piece.
     readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
+        || driveIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -83,7 +86,8 @@ Item {
     onChosenPlayerChanged: choose()
 
     function bandKind(activity) {
-        return activity.kind === "media" ? "media" : ended(activity) ? "arrived" : "transfer";
+        if (activity.kind === "media" || activity.kind === "drive") return activity.kind;
+        return ended(activity) ? "arrived" : "transfer";
     }
 
     function track() {
@@ -118,6 +122,7 @@ Item {
         if (JSON.stringify(bandOrder) !== JSON.stringify(bandKinds)) bandKinds = bandOrder;
         const openOrder = [];
         for (const band of bandOrder) {
+            if (band === "drive") continue;
             const kind = band === "media" ? "media" : "transfer";
             if (openOrder.indexOf(kind) < 0) openOrder.push(kind);
         }
@@ -130,7 +135,7 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -254,6 +259,13 @@ Item {
         : transferTitle(endingShown)
     readonly property string endingWords: endingShown ? endingShown.description || "" : ""
 
+    // Drives open one at a time, the newest first.
+    readonly property var driveShown: drives.length > 0 ? drives[drives.length - 1] : null
+    readonly property string driveName: driveShown ? driveShown.title || qsTr("Drive") : ""
+    readonly property string driveSize: driveShown && known(driveShown.sizeBytes) && driveShown.sizeBytes > 0
+        ? formatBytes(driveShown.sizeBytes) : ""
+    readonly property string openLabel: qsTr("Open")
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -283,6 +295,14 @@ Item {
     function endingWordsWidth(name, words) {
         return column(name ? textWidth(strongMetrics, endingName) : 0,
             words ? textWidth(smallMetrics, endingWords) : 0, 150);
+    }
+    function driveWords(name, size) {
+        return column(name ? textWidth(strongMetrics, driveName) : 0,
+            size ? textWidth(smallMetrics, driveSize) : 0, 150);
+    }
+    // A pill as wide as its word, within a finger's reach.
+    function openWidth() {
+        return Math.max(reach, textWidth(strongMetrics, openLabel) + 36);
     }
     function skipWidth() {
         return reach * ((capability(player, "previous") ? 1 : 0) + (capability(player, "next") ? 1 : 0));
@@ -318,6 +338,9 @@ Item {
         if (kind === "arrived")
             return 2 * inset + (has("mark") ? lead : 0) + (has("show") ? reach : 0)
                 + endingWordsWidth(has("name"), has("words"));
+        if (kind === "drive")
+            return 2 * inset + (has("icon") ? lead : 0) + (has("open") ? openWidth() : 0)
+                + driveWords(has("name"), has("size"));
         return 0;
     }
 
@@ -339,6 +362,9 @@ Item {
         case "arrived.show": return endingShown !== null && endingShown.state === "finished"
             && capability(endingShown, "showInFiles");
         case "arrived.words": return tall && endingWords !== "";
+        case "drive.icon": case "drive.name": return driveShown !== null;
+        case "drive.size": return tall && driveSize !== "";
+        case "drive.open": return capability(driveShown, "open");
         }
         return false;
     }
@@ -349,7 +375,7 @@ Item {
 
     function islandOf(kind) {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
-            : kind === "arrived" ? arrivedIsland : null;
+            : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -375,8 +401,10 @@ Item {
     function openKind(kind) {
         return kind === "media" ? "media" : "transfer";
     }
+    // A drive's island is one tap: Files opens the drive, mounting it first.
     function open(kind) {
-        openRequested(openKind(kind));
+        if (kind === "drive") invoke(driveShown, "open");
+        else openRequested(openKind(kind));
     }
     // Where the open island grows from.
     function islandFor(kind) {
@@ -388,12 +416,14 @@ Item {
     function spoken(kind) {
         if (kind === "media") return qsTr("Media %1, open").arg(mediaTitle);
         if (kind === "transfer") return qsTr("%n transfer(s), open", "", running.length);
+        if (kind === "drive") return qsTr("%1, open in Files").arg(driveName);
         return qsTr("%1, open").arg(endingName);
     }
-    // What an island shows goes aside: the player it shows, or its transfers.
+    // What an island shows goes aside: the player it shows, or all it holds.
     function setAside(kind) {
         if (kind === "media") invoke(player, "setAside");
-        else for (const activity of kind === "transfer" ? running : endings) invoke(activity, "setAside");
+        else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives : endings)
+            invoke(activity, "setAside");
     }
 
     // ---------------------------------------------------------------- pieces
@@ -962,6 +992,86 @@ Item {
         }
     }
 
+    // A drive plugged in that nothing has mounted: what it is, how big, and
+    // Open. The whole island is one tap: Files opens the drive.
+    BandIsland {
+        id: driveIsland
+        kind: "drive"
+        Piece {
+            island: driveIsland
+            name: "icon"
+            size: surface.lead
+            Kirigami.Icon {
+                objectName: "ambient-drive-icon"
+                anchors.centerIn: parent
+                width: surface.artSize > 26 ? 24 : 18
+                height: width
+                source: surface.driveShown && surface.driveShown.icon ? surface.driveShown.icon : "drive-removable-media"
+            }
+        }
+        Piece {
+            id: driveWordsPiece
+            island: driveIsland
+            shows: driveIsland.has("name") || driveIsland.has("size")
+            size: surface.driveWords(driveIsland.has("name"), driveIsland.has("size"))
+            Column {
+                x: 6
+                width: driveWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-drive-name"
+                    width: parent.width
+                    visible: driveIsland.has("name")
+                    text: surface.driveName
+                    font.weight: Font.DemiBold
+                }
+                Detail {
+                    objectName: "ambient-drive-size"
+                    width: parent.width
+                    visible: driveIsland.has("size")
+                    text: surface.driveSize
+                }
+            }
+        }
+        Piece {
+            id: openPiece
+            island: driveIsland
+            name: "open"
+            size: surface.openWidth()
+            Rectangle {
+                id: openPill
+                objectName: "ambient-drive-open"
+                anchors.centerIn: parent
+                width: openPiece.size - 8
+                height: Math.min(30, surface.pillHeight - 12)
+                radius: height / 2
+                color: Qt.rgba(248 / 255, 248 / 255, 1, openArea.pressed ? 0.24 : 0.14)
+                scale: openArea.pressed ? 1.06 : 1
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: qsTr("Open %1 in Files").arg(surface.driveName)
+                Accessible.onPressAction: surface.open("drive")
+                Keys.onReturnPressed: surface.open("drive")
+                Keys.onEnterPressed: surface.open("drive")
+                Keys.onSpacePressed: surface.open("drive")
+                border.width: activeFocus ? 1 : 0
+                border.color: "#F8F8FF"
+                Behavior on scale { NumberAnimation { duration: 90 } }
+                Label {
+                    anchors.centerIn: parent
+                    text: surface.openLabel
+                    font.weight: Font.DemiBold
+                }
+            }
+            // The pill takes a finger across the island's full height.
+            MouseArea {
+                id: openArea
+                anchors.fill: parent
+                onClicked: surface.open("drive")
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1011,6 +1121,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "arrived"
             failed: surface.endingFailed
+        }
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 24 : 18
+            height: width
+            visible: surface.bubbleKind === "drive"
+            source: surface.driveShown && surface.driveShown.icon ? surface.driveShown.icon : "drive-removable-media"
         }
         Rectangle {
             objectName: "ambient-bubble-count"

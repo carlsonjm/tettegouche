@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DriveRules.h"
 #include <KProtocolInfo>
 #include <Solid/Device>
 #include <Solid/DeviceNotifier>
@@ -112,10 +113,7 @@ private:
     // where KDE can browse one.
     static const Solid::Predicate &listed() {
         static const auto predicate = [] {
-            QString rule = QStringLiteral(
-                "[[[[ StorageVolume.ignored == false AND [ StorageVolume.usage == 'FileSystem' OR StorageVolume.usage == 'Encrypted' ]]"
-                " OR [ IS StorageAccess AND StorageDrive.driveType == 'Floppy' ]]"
-                " OR OpticalDisc.availableContent & 'Audio' ] OR StorageAccess.ignored == false ]");
+            QString rule = DriveRules::storageRule();
             if (KProtocolInfo::isKnownProtocol(QStringLiteral("mtp")))
                 rule = QLatin1Char('[') + rule + QStringLiteral(" OR PortableMediaPlayer.supportedProtocols == 'mtp' ]");
             return Solid::Predicate::fromString(rule);
@@ -127,11 +125,8 @@ private:
         return player && !device.is<Solid::StorageAccess>()
             && player->supportedProtocols().contains(QLatin1String("mtp"));
     }
-    // The device, or the nearest one it sits on, that has the interface.
     static Solid::Device ancestor(const Solid::Device &device, Solid::DeviceInterface::Type type) {
-        for (auto parent = device; parent.isValid(); parent = parent.parent())
-            if (parent.isDeviceInterface(type)) return parent;
-        return {};
+        return DriveRules::ancestor(device, type);
     }
     // Solid drops a device's interfaces, and every connection to them, once
     // nothing holds the device, so each one Files listens to is held.
@@ -140,31 +135,6 @@ private:
         const Solid::Device device(udi);
         watch(device);
         return device;
-    }
-    // What the person hid in Dolphin's places, by device and by group; read
-    // afresh with every change, since Dolphin writes it at any time.
-    struct Hidden { QSet<QString> devices; bool fixed = false, removable = false; };
-    static Hidden hiddenInDolphin() {
-        Hidden hidden;
-        QFile file(QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QStringLiteral("/user-places.xbel"));
-        if (!file.open(QIODevice::ReadOnly)) return hidden;
-        QXmlStreamReader xml(&file);
-        QString udi;
-        bool isHidden = false;
-        while (!xml.atEnd()) {
-            xml.readNext();
-            const auto name = xml.name();
-            if (xml.isStartElement()) {
-                if (name == QLatin1String("bookmark") || name == QLatin1String("separator")) { udi.clear(); isHidden = false; }
-                else if (name == QLatin1String("UDI")) udi = xml.readElementText();
-                else if (name == QLatin1String("IsHidden")) isHidden = xml.readElementText() == QLatin1String("true");
-                else if (name == QLatin1String("GroupState-Devices-IsHidden")) hidden.fixed = xml.readElementText() == QLatin1String("true");
-                else if (name == QLatin1String("GroupState-RemovableDevices-IsHidden")) hidden.removable = xml.readElementText() == QLatin1String("true");
-            } else if (xml.isEndElement() && (name == QLatin1String("bookmark") || name == QLatin1String("separator"))) {
-                if (isHidden && !udi.isEmpty()) hidden.devices.insert(udi);
-            }
-        }
-        return hidden;
     }
     void start() {
         if (m_started) return;
@@ -378,7 +348,7 @@ private:
     }
 
     void reload() {
-        const auto hidden = hiddenInDolphin();
+        const auto hidden = DriveRules::hiddenInDolphin();
         QList<Drive> drives;
         for (const auto &device : Solid::Device::listFromQuery(listed())) {
             if (hidden.devices.contains(device.udi())) continue;
@@ -391,10 +361,7 @@ private:
             }
             auto *access = device.as<Solid::StorageAccess>();
             if (!access || (access->isAccessible() && withinConnected(access->filePath()))) continue;
-            const auto driveDevice = ancestor(device, Solid::DeviceInterface::StorageDrive);
-            const auto *drive = driveDevice.as<Solid::StorageDrive>();
-            const bool removable = ancestor(device, Solid::DeviceInterface::OpticalDrive).isValid()
-                || (drive && (drive->isRemovable() || drive->isHotpluggable()));
+            const bool removable = DriveRules::removable(device);
             if (removable ? hidden.removable : hidden.fixed) continue;
             watch(device);
             const bool mounted = access->isAccessible();

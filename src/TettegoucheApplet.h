@@ -48,7 +48,8 @@ Q_SIGNALS:
 
 private:
     void watchGeometryItem(QQuickItem *item);
-    void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {});
+    void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
+                       const QString &drive = {});
 
     QProcess *m_process = nullptr;
     QVariantList m_ambientActivities;

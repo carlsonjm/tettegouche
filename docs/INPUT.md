@@ -142,9 +142,10 @@ than repeat it.
 | Tap or click play or pause, previous or next on the media island | Plays, pauses or skips the media. Previous and next show when the island has room. |
 | Tap or click × on the transfer island | Cancels the transfer. It shows only for a single transfer its source can cancel. |
 | Tap or click the folder on an arrival's island | Opens Files at the file, selected. |
-| Tap or click an island away from its controls | Opens it in place, larger. |
+| Tap or click a drive's island, or its Open | Files opens the drive, mounting it first. |
+| Tap or click another island away from its controls | Opens it in place, larger. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
-| Flick an island sideways, or drag it past its first piece | Sets aside what it shows, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer, filed now. |
+| Flick an island sideways, or drag it past its first piece | Sets aside what it shows, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now. |
 | With an island focused, Delete | Sets it aside. |
 | Tap or click the bubble after the islands | Opens the island on what the bubble holds. |
 | With an island or the bubble focused, Enter or Space | Opens it. |

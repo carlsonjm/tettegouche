@@ -80,6 +80,9 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         connect(m_activities.get(), &ActivityModel::changed, this, [this] {
             setAmbientActivities(m_activities->activities());
         });
+        connect(m_activities.get(), &ActivityModel::driveOpenRequested, this, [this](const QString &udi) {
+            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), {}, {}, udi);
+        });
         connect(m_activities.get(), &ActivityModel::revealRequested, this, [this](const QString &path) {
             startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), path);
         });
@@ -263,7 +266,8 @@ void TettegoucheApplet::openDrawer(const QString &drawer)
     startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), {}, drawer);
 }
 
-void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer)
+void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
+                                      const QString &drive)
 {
     if (launcherActive()) {
         if (m_process->state() == QProcess::Running) {
@@ -272,8 +276,10 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
                 QStringLiteral("/Launcher"),
                 QStringLiteral("io.github.carlsonjm.Tettegouche"),
                 !showFile.isEmpty() ? QStringLiteral("showFile")
+                    : !drive.isEmpty() ? QStringLiteral("showDrive")
                     : !drawer.isEmpty() ? QStringLiteral("openDrawer") : QStringLiteral("toggle"));
             if (!showFile.isEmpty()) request.setArguments({showFile});
+            else if (!drive.isEmpty()) request.setArguments({drive});
             else if (!drawer.isEmpty()) request.setArguments({drawer});
             QDBusConnection::sessionBus().asyncCall(request);
         }
@@ -288,6 +294,7 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     m_process->setProgram(executable);
     QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
+    else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
     else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;
     m_process->setArguments(arguments);
     Q_EMIT invocationRequested();

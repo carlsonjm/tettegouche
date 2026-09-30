@@ -17,7 +17,7 @@ direct-content applet. The installed SVG is Widget Explorer identity; live panel
 content and its input target are QML items.
 
 The launcher is a single-instance process. A second invocation forwards its
-request over D-Bus, whether a toggle, a drawer, a folder or files to show, and
+request over D-Bus, whether a toggle, a drawer, a folder, a drive or files to show, and
 exits; one that finds the running launcher already leaving takes its place.
 Standalone mode uses a full-display input surface
 with a centered sheet; while files are carried out of Files, input narrows to
@@ -115,7 +115,9 @@ The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and the suite's black while the
 containment sets Plasma's `ContainmentPrefersOpaqueBackground` hint.
 `IslandRoom.js` decides, from each island's measured pieces, what each shows in
-the width it has; the surface draws that and animates the change. Opening an
+the width it has; the surface draws that and animates the change.
+`DriveRules.h` holds KDE's rule for which storage is a drive, which Files and
+Ambient's drives share. Opening an
 island maps a clear top-layer surface over the whole display, set up as the
 launcher's is, on which `AmbientIsland.qml` grows the island into its card; the surface takes the
 keyboard so Esc closes it, and is destroyed when it closes.

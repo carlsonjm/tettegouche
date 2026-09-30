@@ -16,7 +16,8 @@ Current sources are:
 - MPRIS media sessions;
 - running or suspended jobs from Plasma's shared desktop-jobs model;
 - Tette-owned KIO copy/move operations through the launcher's activity bridge;
-- filesystem evidence for new direct children in the configured Downloads folder.
+- filesystem evidence for new direct children in the configured Downloads folder;
+- drives plugged in that nothing has mounted, from Solid (§ Drives).
 
 Static system status, completed work past its end's minute (§ Ends),
 ordinary notifications, and historical activity do not remain in Ambient. Ambient owns composition and routing; it does
@@ -77,6 +78,18 @@ categories, `transfer.complete` or `transfer.error`, which the history keeps
 and Temperance's ticker does not play. One used in Ambient is filed at once.
 Filesystem evidence alone never files anything.
 
+### Drives
+
+A drive Files lists, plugged in while Ambient runs, on removable or
+hot-pluggable media and not mounted, waits in Ambient for a minute; so does a
+memory card put in a reader. Drives already there at startup, built-in drives,
+phones, and drives the system or the person mounts never wait, and one mounted
+meanwhile leaves quietly. A tap on its island asks Files to open it, mounting it
+first, and it leaves. Ignored, or set aside, it is filed as a notification in
+the freedesktop `device.added` category with Open in Files, which the history
+keeps and Temperance's ticker does not play. Unplugged, it leaves, and its
+notice is closed.
+
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
@@ -100,8 +113,8 @@ merely because the applet starts.
 
 ## The islands
 
-Each kind of activity is its own island: media, transfers under way, and ends
-waiting out their minute (§ Ends). The islands sit side by side in the order
+Each kind of activity is its own island: media, transfers under way, ends
+waiting out their minute (§ Ends), and drives plugged in (§ Drives). The islands sit side by side in the order
 they arrived, an end in its transfer's place, the group centred in the width
 the panel hands Ambient. They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
@@ -126,6 +139,7 @@ together and settle without overshoot.
 | Media | play or pause, title (the artist rides with it), art, previous and next, time, length, player |
 | Transfer | progress ring (the percentage rides inside it), name, size, source, Cancel |
 | End | how it ended, Show in Files, name, what happened |
+| Drive | icon, size, Open, name |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title

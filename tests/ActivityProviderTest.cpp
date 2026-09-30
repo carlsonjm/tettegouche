@@ -72,7 +72,9 @@ class FakeNotifications : public QObject {
 public:
     struct Notice { QString application, summary, body; QStringList actions; QVariantMap hints; };
     QList<Notice> notices;
+    QList<uint> closed;
 public Q_SLOTS:
+    void CloseNotification(uint id) { closed.append(id); }
     uint Notify(const QString &application, uint, const QString &, const QString &summary, const QString &body,
                 const QStringList &actions, const QVariantMap &hints, int) {
         notices.append({application, summary, body, actions, hints});
@@ -466,6 +468,92 @@ private Q_SLOTS:
         fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
         fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-notifications"));
+    }
+
+    // A drive plugged in and not mounted waits its minute in Ambient with
+    // Open. Tapped, it leaves and Files is asked to open it; ignored or set
+    // aside, it is filed quietly with Open in Files; mounted elsewhere, it
+    // leaves quietly; unplugged, its filed notice closes.
+    void driveWaitsOpensAndFiles() {
+        auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-drive-notifications"));
+        FakeNotifications notifications;
+        QVERIFY(fakes.registerObject(QStringLiteral("/org/freedesktop/Notifications"),&notifications,
+                                     QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(fakes.registerService(QStringLiteral("org.freedesktop.Notifications")));
+        const DriveActivityProvider::Drive stick{QStringLiteral("/org/freedesktop/UDisks2/block_devices/sdz1"),
+            QStringLiteral("STICK"),QStringLiteral("drive-removable-media-usb-pendrive"),qint64(32000000000)};
+        const auto id=QStringLiteral("drive:")+stick.udi;
+        {
+            constexpr int Linger=300;
+            DriveActivityProvider drives(QDBusConnection::sessionBus(),nullptr,Linger,false);
+            QSignalSpy opens(&drives,&DriveActivityProvider::openRequested);
+            drives.plugged(stick);
+            QCOMPARE(drives.activities().size(),1);
+            const auto row=drives.activities().first().toMap();
+            QCOMPARE(row.value(QStringLiteral("id")).toString(),id);
+            QCOMPARE(row.value(QStringLiteral("kind")).toString(),QStringLiteral("drive"));
+            QCOMPARE(row.value(QStringLiteral("title")).toString(),QStringLiteral("STICK"));
+            QCOMPARE(row.value(QStringLiteral("sizeBytes")).toLongLong(),qint64(32000000000));
+            QVERIFY(row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("open")).toBool());
+            drives.open(id);
+            QCOMPARE(opens.size(),1);
+            QCOMPARE(opens.first().first().toString(),stick.udi);
+            QVERIFY(drives.activities().isEmpty());
+            QTest::qWait(Linger+100);
+            QVERIFY(notifications.notices.isEmpty());
+
+            drives.plugged(stick);
+            QTRY_COMPARE_WITH_TIMEOUT(notifications.notices.size(),1,2000);
+            QVERIFY(drives.activities().isEmpty());
+            const auto notice=notifications.notices.first();
+            QCOMPARE(notice.summary,QStringLiteral("STICK"));
+            QCOMPARE(notice.body,QStringLiteral("32.0 GB, plugged in"));
+            QCOMPARE(notice.hints.value(QStringLiteral("category")).toString(),QStringLiteral("device.added"));
+            QVERIFY(notice.actions.contains(QStringLiteral("open")));
+            QVERIFY(notice.actions.contains(QStringLiteral("Open in Files")));
+            QTest::qWait(50);
+            Q_EMIT notifications.ActionInvoked(1,QStringLiteral("open"));
+            QTRY_COMPARE(opens.size(),2);
+            // Expired from view, it stays in the history, its action alive.
+            Q_EMIT notifications.NotificationClosed(1,1);
+            QTest::qWait(50);
+            Q_EMIT notifications.ActionInvoked(1,QStringLiteral("default"));
+            QTRY_COMPARE(opens.size(),3);
+            drives.unplugged(stick.udi);
+            QTRY_COMPARE(notifications.closed,QList<uint>{1});
+
+            drives.plugged(stick);
+            drives.setAside(id);
+            QVERIFY(drives.activities().isEmpty());
+            QTRY_COMPARE(notifications.notices.size(),2);
+            drives.plugged(stick);
+            drives.mounted(stick.udi);
+            QVERIFY(drives.activities().isEmpty());
+            QTest::qWait(Linger+100);
+            QCOMPARE(notifications.notices.size(),2);
+            QCOMPARE(opens.size(),3);
+        }
+        {
+            // Through the model, as the panel meets it.
+            QTemporaryDir downloads;
+            ActivityModel model(QDBusConnection::sessionBus(),downloads.path());
+            QSignalSpy opens(&model,&ActivityModel::driveOpenRequested);
+            model.m_drives.plugged(stick);
+            QTRY_COMPARE(model.activities().size(),1);
+            auto row=model.activities().first().toMap();
+            model.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt(),QStringLiteral("open"));
+            QCOMPARE(opens.size(),1);
+            QCOMPARE(opens.first().first().toString(),stick.udi);
+            QTRY_VERIFY(model.activities().isEmpty());
+            model.m_drives.plugged(stick);
+            QTRY_COMPARE(model.activities().size(),1);
+            row=model.activities().first().toMap();
+            model.setAside(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt());
+            QVERIFY(model.activities().isEmpty());
+            QTRY_COMPARE(notifications.notices.size(),3);
+        }
+        fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
+        fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
     }
 
     // In the panel, the notification server runs in the same process as

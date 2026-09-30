@@ -39,6 +39,11 @@ TestCase {
         source: "KDE Connect", title: "Transfer failed", description: "The phone went out of reach",
         evidence: "job", capabilities: {}
     })
+    readonly property var drive: ({
+        id: "drive:/org/freedesktop/UDisks2/block_devices/sdz1", generation: 5, kind: "drive",
+        state: "waiting", title: "STICK", icon: "drive-removable-media-usb-pendrive",
+        sizeBytes: 32000000000, capabilities: {open: true}
+    })
     readonly property var media: ({
         id: "media-1", generation: 8, kind: "media", state: "playing",
         source: "Spotify", icon: "spotify", title: "Houdini", artist: "Dua Lipa",
@@ -363,6 +368,63 @@ TestCase {
         verify(findChild(surface, "ambient-arrived-mark").failed);
         compare(findChild(surface, "ambient-arrived-words").text, "The phone went out of reach");
         verify(!findChild(surface, "ambient-arrived-show").visible);
+    }
+
+    // A drive plugged in that nothing mounted is one tap: the island or its
+    // Open asks for the drive, never the open island.
+    function test_a_drive_waits_with_open() {
+        const surface = createSurface(405, [drive]);
+        settle();
+        const shape = island(surface, "drive");
+        verify(shape.visible);
+        compare(surface.kinds.length, 0);
+        compare(findChild(surface, "ambient-drive-name").text, "STICK");
+        compare(findChild(surface, "ambient-drive-size").text, "32.0 GB");
+        const open = findChild(surface, "ambient-drive-open");
+        verify(open.visible);
+        verify(rightOf(surface, open) > rightOf(surface, findChild(surface, "ambient-drive-name")));
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(open, open.width / 2, open.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], drive.id);
+        compare(invoked.signalArguments[0][1], 5);
+        compare(invoked.signalArguments[0][2], "open");
+        mouseClick(shape, 8, shape.height / 2);
+        compare(invoked.count, 2);
+        compare(invoked.signalArguments[1][2], "open");
+        compare(opens.count, 0);
+    }
+
+    // Beside music, a drive goes first by urgency and keeps Open at its end.
+    function test_a_drive_beside_music() {
+        const surface = createSurface(300, [drive]);
+        surface.activities = [drive, media];
+        tryCompare(surface, "room", "", 3000);
+        settle();
+        verify(island(surface, "drive").visible && island(surface, "media").visible);
+        verify(rightOf(surface, island(surface, "drive")) <= leftOf(surface, island(surface, "media")));
+        verify(shown(surface, "drive").indexOf("open") >= 0);
+        compare(surface.kinds, ["media"]);
+    }
+
+    // Flicked away, the drive is set aside: filed with Open in Files.
+    function test_flicking_a_drive_sets_it_aside() {
+        const surface = createSurface(405, [drive]);
+        settle();
+        const invoked = spyOn(surface, "invokeRequested");
+        const at = centreOf(surface, "drive");
+        const touch = touchEvent(surface);
+        touch.press(0, surface, at.x, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x - 30, at.y).commit();
+        wait(16);
+        touch.move(0, surface, at.x - 70, at.y).commit();
+        wait(16);
+        touch.release(0, surface, at.x - 70, at.y).commit();
+        tryCompare(invoked, "count", 1);
+        compare(invoked.signalArguments[0][0], drive.id);
+        compare(invoked.signalArguments[0][2], "setAside");
     }
 
     // A transfer that ends keeps its place in the band.

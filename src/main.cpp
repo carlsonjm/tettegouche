@@ -361,6 +361,14 @@ public Q_SLOTS:
         else open();
     }
 
+    // A drive plugged in, chosen in Ambient: Files opens it, mounting it first.
+    Q_SCRIPTABLE void showDrive(const QString &id)
+    {
+        if (!m_fileBrowser) { open(); return; }
+        showFiles();
+        m_fileBrowser->openDrive(id);
+    }
+
     Q_SCRIPTABLE void showFile(const QString &file)
     {
         const QFileInfo info(file);
@@ -944,6 +952,8 @@ int main(int argc, char **argv)
     // A folder another application asks to open, and the items it asks to
     // show, all given after --reveal, or whose Properties it asks for.
     const QString folder = valueAfter(QStringLiteral("--folder"));
+    // A drive by its device identifier, to open in Files.
+    const QString drive = valueAfter(QStringLiteral("--drive"));
     const QString properties = valueAfter(QStringLiteral("--properties"));
     const int revealIndex = arguments.indexOf(QStringLiteral("--reveal"));
     QStringList reveal = revealIndex >= 0 ? arguments.mid(revealIndex + 1) : QStringList();
@@ -961,6 +971,7 @@ int main(int argc, char **argv)
         QVariantList request;
         if (!showFile.isEmpty()) { method = QStringLiteral("showFile"); request = {showFile}; }
         else if (!folder.isEmpty()) { method = QStringLiteral("showFolder"); request = {folder}; }
+        else if (!drive.isEmpty()) { method = QStringLiteral("showDrive"); request = {drive}; }
         else if (!reveal.isEmpty()) { method = QStringLiteral("revealItems"); request = {reveal}; }
         else if (!properties.isEmpty()) { method = QStringLiteral("showItemProperties"); request = {QStringList{properties}}; }
         else if (!drawer.isEmpty()) { method = QStringLiteral("openDrawer"); request = {drawer}; }
@@ -1069,9 +1080,10 @@ int main(int argc, char **argv)
         QTimer::singleShot(5000, &controller, &LauncherController::leaveIfUnused);
     }
 
-    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, reveal, properties, fileManager] {
+    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager] {
         if (!showFile.isEmpty()) controller.showFile(showFile);
         else if (!folder.isEmpty()) controller.showFolder(folder);
+        else if (!drive.isEmpty()) controller.showDrive(drive);
         else if (!reveal.isEmpty()) controller.revealItems(reveal);
         else if (!properties.isEmpty()) controller.showItemProperties({properties});
         else if (!drawer.isEmpty()) controller.openDrawer(drawer);

@@ -28,10 +28,11 @@ add_library(tettegouche-activities STATIC
     src/IncomingFileProvider.cpp src/IncomingFileProvider.h
     src/TetteTransferProvider.cpp src/TetteTransferProvider.h
     src/FinishNotices.cpp src/FinishNotices.h
+    src/DriveActivityProvider.cpp src/DriveActivityProvider.h src/DriveRules.h
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core PW::LibNotificationManager)
+target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core KF6::Solid PW::LibNotificationManager)
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp

@@ -61,6 +61,7 @@ The Ambient island in the panel shows useful activity while it is happening:
 - Plasma file and desktop jobs
 - Copy and move operations started in Tettegouche
 - New files arriving in Downloads
+- A drive or memory card plugged in: one tap opens it in Files
 
 Available controls come from the application or service responsible for the
 activity. Tettegouche removes an item when its source disappears and does not claim

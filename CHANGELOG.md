@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- A drive or memory card plugged in that nothing has mounted gets an island for
+  a minute: one tap mounts it and opens it in Files. Ignored or flicked away, it
+  is filed in the notification history with Open in Files, and unplugging it
+  takes that away.
 - Ambient shows each kind of activity as its own island, side by side: media,
   a transfer, and a transfer's end waiting out its minute. They share the width
   by turns, the newest first and then the most urgent, give up names before
