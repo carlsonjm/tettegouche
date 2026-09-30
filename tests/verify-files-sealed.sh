@@ -82,3 +82,23 @@ XML
     echo '</machine>'
 } > "${hardware}"
 SOLID_FAKEHW="${hardware}" TETTE_FAKE_STICK="${stick}" "${test_binary}" drives
+
+# Phones: one by cable on the stand-in hardware, and one through a stand-in
+# KDE Connect the test serves itself.
+phones="${HOME}/phones.xml"
+phone_mount="${HOME}/phone"
+mkdir -p -- "${phone_mount}"
+cat > "${phones}" <<'XML'
+<machine>
+  <device udi="/org/kde/solid/fakehw/computer"><property key="name">Computer</property></device>
+  <device udi="/org/kde/solid/fakehw/phone">
+    <property key="name">PHONE</property>
+    <property key="description">PHONE</property>
+    <property key="interfaces">PortableMediaPlayer</property>
+    <property key="parent">/org/kde/solid/fakehw/computer</property>
+    <property key="supportedProtocols">mtp</property>
+  </device>
+XML
+volume phone_share SHARE true "${phone_mount}" false computer >> "${phones}"
+echo '</machine>' >> "${phones}"
+SOLID_FAKEHW="${phones}" TETTE_FAKE_PHONE_MOUNT="${phone_mount}" "${test_binary}" phones

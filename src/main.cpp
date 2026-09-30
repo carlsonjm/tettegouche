@@ -374,27 +374,31 @@ public Q_SLOTS:
     // manager: a local folder opens in Files.
     Q_SCRIPTABLE void showFolder(const QString &location) { showFolders({location}); }
     // The first folder opens in the tab shown and each other in a tab of its
-    // own. Recent opens Files' Recent; places Files does not browse, such as
-    // Trash or a network share, go on to Dolphin.
+    // own. Recent opens Files' Recent, and a phone plugged in opens as its drive
+    // does when nothing else was asked for; places Files does not browse, such
+    // as Trash or a network share, go on to Dolphin.
     Q_SCRIPTABLE void showFolders(const QStringList &locations)
     {
-        QStringList folders;
+        QStringList folders, phones;
         QList<QUrl> elsewhere;
         bool recent = false;
         for (const auto &location : locations) {
             const QUrl url = QUrl::fromUserInput(location, QString(), QUrl::AssumeLocalFile);
+            const auto phone = m_fileBrowser ? m_fileBrowser->phoneForAddress(url) : QString();
             if (url.isLocalFile()) folders.append(QDir::cleanPath(QFileInfo(url.toLocalFile()).absoluteFilePath()));
             else if (url.scheme() == QLatin1String("recentlyused")) recent = true;
+            else if (!phone.isEmpty()) phones.append(phone);
             else if (url.isValid()) elsewhere.append(url);
         }
         if (!elsewhere.isEmpty()) handOn(elsewhere);
-        if (!m_fileBrowser || (folders.isEmpty() && !recent)) return;
+        if (!m_fileBrowser || (folders.isEmpty() && !recent && phones.isEmpty())) return;
         showFiles();
         if (recent) m_fileBrowser->navigate(FileBrowser::recentLocation());
         for (int i = 0; i < folders.size(); ++i) {
             if (i == 0 && !recent) m_fileBrowser->navigate(folders[i]);
             else m_fileBrowser->openTab(folders[i]);
         }
+        if (folders.isEmpty() && !recent) m_fileBrowser->openDrive(phones.first());
     }
     // Items shown chosen in their folder, as "Show in folder" asks; any outside
     // the first one's folder are left out.

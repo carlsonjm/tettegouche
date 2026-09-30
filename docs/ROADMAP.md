@@ -4,9 +4,6 @@ What is planned for Tettegouche, and what is not.
 
 ## Next
 
-- **Phones.** An Android phone, by cable and through KDE Connect, browsed in
-  Files like a drive; a Pixel 7 Pro is the test device. iPhone support has not
-  been verified. A location that is offline or slow never delays the launcher.
 - **New Ambient rows.** An application waiting on a dialog gets a row that
   names it, and tapping the row brings the application and its dialog forward.
   Sharing or recording the screen gets a row that names who is doing it, with

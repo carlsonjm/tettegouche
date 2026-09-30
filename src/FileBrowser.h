@@ -136,11 +136,13 @@ public:
         m_driveOpening=id; m_error.clear(); Q_EMIT changed();
         m_devices->open(id);
     }
+    // The phone plugged in that a KDE address names, or nothing.
+    QString phoneForAddress(const QUrl &url) { return m_devices ? m_devices->phoneForAddress(url) : QString(); }
     // Makes a plugged-in drive safe to pull out. A copy or move Files is making
     // to or from it finishes first, and the drive ejects after it.
     Q_INVOKABLE void ejectDrive(const QString &id) {
         const auto drive=findDrive(id);
-        if(drive.id.isEmpty() || !drive.removable || !drive.mounted || drive.busy() || m_ejectAfter.contains(id))return;
+        if(drive.id.isEmpty() || !drive.removable || drive.phone || !drive.mounted || drive.busy() || m_ejectAfter.contains(id))return;
         if(touches(drive.path)) { m_ejectAfter.insert(id); rebuildPlaces(); return; }
         m_devices->remove(id);
     }
@@ -895,7 +897,7 @@ private:
                 const auto note=waiting ? tr("Ejects when done") : drive.ejecting ? tr("Ejecting…") : opening ? tr("Opening…") : QString();
                 rows.append(QVariantMap{{QStringLiteral("label"),drive.label},{QStringLiteral("path"),drive.path},{QStringLiteral("icon"),drive.icon},
                     {QStringLiteral("section"),QStringLiteral("drives")},{QStringLiteral("drive"),drive.id},{QStringLiteral("mounted"),drive.mounted},
-                    {QStringLiteral("canEject"),drive.removable && drive.mounted},
+                    {QStringLiteral("canEject"),drive.removable && !drive.phone && drive.mounted},
                     {QStringLiteral("busy"),!note.isEmpty()},{QStringLiteral("note"),note}});
             }
             places.removeIf([&drivePaths](const QVariant &place) {

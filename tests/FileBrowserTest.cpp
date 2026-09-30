@@ -18,6 +18,55 @@
 #include <QTimer>
 #include <QSignalSpy>
 
+// kio-fuse and KDE Connect as Files meets them on the bus, serving folders of
+// the test's own.
+class FakeFuse : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.kde.KIOFuse.VFS")
+public:
+    QString folder;
+    QStringList asked;
+public Q_SLOTS:
+    QString mountUrl(const QString &url) { asked.append(url); return folder; }
+};
+class FakeConnectDaemon : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.kde.kdeconnect.daemon")
+public:
+    QStringList reachable;
+public Q_SLOTS:
+    QStringList devices(bool, bool) { return reachable; }
+Q_SIGNALS:
+    void deviceVisibilityChanged(const QString &id, bool isVisible);
+};
+class FakeConnectDevice : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.kde.kdeconnect.device")
+    Q_PROPERTY(QString name READ name)
+public:
+    QString name() const { return QStringLiteral("Pixel"); }
+};
+class FakeConnectFiles : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "org.kde.kdeconnect.device.sftp")
+public:
+    QString folder, error;
+    bool up = false;
+public Q_SLOTS:
+    QString mountPoint() { return folder; }
+    bool isMounted() { return up; }
+    bool mountAndWait() { up = error.isEmpty(); if (up) Q_EMIT mounted(); return up; }
+    QVariantMap getDirectories() {
+        if (!up) return {};
+        return {{folder + QStringLiteral("/storage/emulated/0/DCIM/Camera"), QStringLiteral("Camera pictures")},
+                {folder + QStringLiteral("/storage/emulated/0"), QStringLiteral("Internal shared storage")}};
+    }
+    QString getMountError() { return error; }
+Q_SIGNALS:
+    void mounted();
+    void unmounted();
+};
+
 class FileBrowserTest : public QObject {
     Q_OBJECT
     // Thumbnails KDE makes during these tests go to a throwaway cache.
@@ -755,6 +804,82 @@ private Q_SLOTS:
         // Plugged back in, it returns.
         hardware(QStringLiteral("plug"));
         QTRY_COMPARE(drives(browser),QStringList({QStringLiteral("ROOTFS"),QStringLiteral("STICK")}));
+    }
+    // Phones beside the drives: one by cable, on Solid's stand-in hardware and
+    // a stand-in kio-fuse, and one through a stand-in KDE Connect.
+    void phones() {
+        if(qEnvironmentVariableIsEmpty("SOLID_FAKEHW"))QSKIP("Run by tests/verify-files-sealed.sh on Solid's stand-in hardware");
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        // KDE Connect's mount is also a network share on the stand-in hardware.
+        const QString cabled=dir.filePath(QStringLiteral("cabled")), wireless=qEnvironmentVariable("TETTE_FAKE_PHONE_MOUNT"),
+            storage=wireless+QStringLiteral("/storage/emulated/0"), tools=dir.filePath(QStringLiteral("bin")), phone=QStringLiteral("/org/kde/solid/fakehw/phone");
+        for(const auto &p:{cabled,storage,tools})QVERIFY(QDir().mkpath(p));
+        const auto place=[](const FileBrowser &browser,const QString &label) {
+            for(const auto &p:browser.places()) if(p.toMap().value(QStringLiteral("label"))==label)return p.toMap();
+            return QVariantMap{};
+        };
+        const auto listed=[&place](const FileBrowser &browser,const QString &label) { return !place(browser,label).isEmpty(); };
+        auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fakes"));
+        FakeFuse fuse; fuse.folder=cabled;
+        QVERIFY(fakes.registerObject(QStringLiteral("/org/kde/KIOFuse"),&fuse,QDBusConnection::ExportAllSlots));
+        QVERIFY(fakes.registerService(QStringLiteral("org.kde.KIOFuse")));
+        FileDevices devices; FileBrowser browser; browser.setDevices(&devices);
+        browser.navigate(QDir::homePath()); browser.open(); QTRY_VERIFY(!browser.busy());
+
+        // By cable: with the plugged-in drives, opened through kio-fuse, never ejected.
+        QTRY_VERIFY(listed(browser,QStringLiteral("PHONE")));
+        QVERIFY(listed(browser,QStringLiteral("SHARE"))); // a mount alone is a share like any other
+        QVERIFY(!place(browser,QStringLiteral("PHONE")).value(QStringLiteral("mounted")).toBool());
+        QCOMPARE(browser.phoneForAddress(QUrl(QStringLiteral("mtp:udi=")+phone+QStringLiteral("/"))),phone);
+        QVERIFY(browser.phoneForAddress(QUrl(QStringLiteral("mtp:udi=/org/kde/solid/fakehw/other"))).isEmpty());
+        browser.openDrive(phone);
+        QTRY_COMPARE(browser.path(),cabled);
+        QCOMPARE(fuse.asked,QStringList({QStringLiteral("mtp:udi=")+phone}));
+        QVERIFY(place(browser,QStringLiteral("PHONE")).value(QStringLiteral("mounted")).toBool());
+        QVERIFY(!place(browser,QStringLiteral("PHONE")).value(QStringLiteral("canEject")).toBool());
+        // Unplugged, the tab showing it goes Home and it leaves the list.
+        auto unplug=QDBusMessage::createMethodCall(QDBusConnection::sessionBus().baseService(),QStringLiteral("/org/kde/solid/fakehw"),QString(),QStringLiteral("unplug"));
+        unplug.setArguments({phone});
+        QVERIFY(QDBusConnection::sessionBus().call(unplug).type()!=QDBusMessage::ErrorMessage);
+        QTRY_COMPARE(browser.path(),QDir::homePath());
+        QTRY_VERIFY(!listed(browser,QStringLiteral("PHONE")));
+
+        // Through KDE Connect: listed once its daemon runs and the phone shares its files.
+        FakeConnectDaemon daemon; daemon.reachable={QStringLiteral("abc")};
+        FakeConnectDevice connected; FakeConnectFiles files; files.folder=wireless;
+        QVERIFY(fakes.registerObject(QStringLiteral("/modules/kdeconnect"),&daemon,QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(fakes.registerObject(QStringLiteral("/modules/kdeconnect/devices/abc"),&connected,QDBusConnection::ExportAllProperties));
+        QVERIFY(fakes.registerObject(QStringLiteral("/modules/kdeconnect/devices/abc/sftp"),&files,QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
+        QVERIFY(fakes.registerService(QStringLiteral("org.kde.kdeconnect")));
+        QTRY_VERIFY(listed(browser,QStringLiteral("Pixel")));
+        // Listed once: the network share KDE Connect mounts it on leaves the drives.
+        QTRY_VERIFY(!listed(browser,QStringLiteral("SHARE")));
+        const QString id=QStringLiteral("kdeconnect:abc");
+        // Without sshfs on this computer, Files says what it needs.
+        const auto path=qgetenv("PATH");
+        qputenv("PATH",tools.toLocal8Bit());
+        browser.openDrive(id);
+        QTRY_COMPARE(browser.error(),QStringLiteral("Files needs sshfs to open “Pixel” over Wi-Fi."));
+        { QFile sshfs(QDir(tools).filePath(QStringLiteral("sshfs"))); QVERIFY(sshfs.open(QIODevice::WriteOnly)); sshfs.setPermissions(QFile::ReadOwner|QFile::ExeOwner); }
+        // A phone that has not let KDE Connect reach its files says so.
+        files.error=QStringLiteral("Permissions missing: filesystem access");
+        browser.openDrive(id);
+        QTRY_COMPARE(browser.error(),QStringLiteral("Allow KDE Connect on “Pixel” to reach its files, then open it again."));
+        QCOMPARE(browser.path(),QDir::homePath());
+        // Allowed, it opens at the storage it shares, not the mount above it,
+        // which the phone does not let be read.
+        files.error.clear();
+        browser.openDrive(id);
+        QTRY_COMPARE(browser.path(),storage);
+        QVERIFY(browser.error().isEmpty());
+        QTRY_VERIFY(place(browser,QStringLiteral("Pixel")).value(QStringLiteral("mounted")).toBool());
+        QVERIFY(!place(browser,QStringLiteral("Pixel")).value(QStringLiteral("canEject")).toBool());
+        qputenv("PATH",path);
+        // Taken out of reach, KDE Connect unmounts it: the tab goes Home.
+        files.up=false; Q_EMIT files.unmounted();
+        QTRY_COMPARE(browser.path(),QDir::homePath());
+        daemon.reachable.clear(); Q_EMIT daemon.deviceVisibilityChanged(QStringLiteral("abc"),false);
+        QTRY_VERIFY(!listed(browser,QStringLiteral("Pixel")));
     }
     // Files answers for folders of every kind: KDE hands it any address, a
     // local one as a path, not a download of the folder.

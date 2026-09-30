@@ -46,9 +46,9 @@ you would rather look than search.
 tabs, history, breadcrumbs, filtering, sorting, selection, and hidden-file display.
 
 You can open, copy, move, rename, and delete files; create folders; drag files
-between folders and to or from other applications; open and eject drives; and
-recover the last item Tettegouche sent to Trash. File work continues safely if
-you close Search while an operation is running.
+between folders and to or from other applications; open drives and phones, and
+eject drives; and recover the last item Tettegouche sent to Trash. File work
+continues safely if you close Search while an operation is running.
 
 Tettegouche currently focuses on local files; what Files does not yet do is
 listed in [docs/FILES-CONTRACT.md](docs/FILES-CONTRACT.md).

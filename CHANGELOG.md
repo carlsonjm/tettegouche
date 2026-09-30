@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- Files lists an Android phone with the drives, by cable and through KDE
+  Connect, and opens it like one: at the storage it shares, with no eject, and
+  with a plain word on what to allow when the phone refuses. Plasma's device
+  pop-up opens a plugged-in phone in Files.
 - Corners follow the suite's three tiers: the launcher's sheet and all it holds
   at 8 px, menus and the open island at 12 px, and Files' buttons as pills.
 - Files lists drives under its places as they are plugged in, opens one with a

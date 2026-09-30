@@ -34,6 +34,15 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
   optical disc ejected. A file action Files runs inside it holds the eject until
   the last one finishes. A drive that unmounts or leaves takes every tab showing
   or searching it Home.
+- An Android phone is listed with the plugged-in drives: by cable while it
+  shares its files, and through KDE Connect while it is paired, in reach and
+  sharing them. One by cable opens through kio-fuse, which shows KDE's address
+  for it as a folder; one through KDE Connect opens at the storage it shares,
+  inside the folder KDE Connect mounts it on with sshfs, and that mount is not
+  listed again as a network share. A phone has no eject: unplugging it or
+  taking it out of reach takes every tab showing it Home. A phone that refuses
+  says what to allow on it, and a missing kio-fuse or sshfs is named. KDE
+  Connect is asked only while it runs, and never waited on.
 - Tabs are bounded at 20. Path, history, scroll, sort, filter, hidden state, and
   selection are local to the applicable process/tab state. Saved tab folders and
   Recent may persist, a search as its folder, but history and selection do not.
@@ -65,8 +74,9 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 - A local folder opens in Files, the first in the tab shown and each other in a
   tab of its own; Recent opens Files' Recent. Files asked to be shown open chosen
   in their folder, less any outside the first one's; asked for Properties, the
-  first one's open. An address Files does not browse, such as Trash, a network
-  share or a phone, goes on to Dolphin, and Files says so when Dolphin is absent.
+  first one's open. A plugged-in phone's address opens it as its row does. An
+  address Files does not browse, such as Trash or a network share, goes on to
+  Dolphin, and Files says so when Dolphin is absent.
 - An open Dolphin window holds `org.freedesktop.FileManager1` and answers "Show
   in folder" while it runs.
 
@@ -149,5 +159,5 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 
 ## Current boundary
 
-There is no content search, phone or network location browsing, split view,
-full Trash browser, or general undo.
+There is no content search, network location browsing, split view, full Trash
+browser, or general undo. An iPhone is not verified.

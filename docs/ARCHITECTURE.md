@@ -100,7 +100,7 @@ recency, or recommendation layer. Existing-window matching runs before launch.
 `FileBrowser` owns listing folders, Recent and searches inside folders, tabs,
 navigation, selection, clipboard, Properties and KIO jobs, and answers what
 KIO asks during a copy through `FileQuestions`; `FilesPane.qml` renders that
-state. `FileDevices` lists drives from Solid, and mounts and ejects them. The launcher gives it thumbnails through `FileThumbnails`,
+state. `FileDevices` lists drives from Solid, mounting and ejecting them, and phones, by cable through kio-fuse and through KDE Connect. The launcher gives it thumbnails through `FileThumbnails`,
 an image provider over KDE's previews, and a file's own details through
 `FileDetails`, over KDE's metadata readers. Their behavior and
 safety boundary is owned by [FILES-CONTRACT.md](FILES-CONTRACT.md).
