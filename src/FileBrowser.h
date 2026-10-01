@@ -63,6 +63,9 @@ class FileBrowser : public QObject
     Q_PROPERTY(bool searching READ searching NOTIFY changed)
     Q_PROPERTY(bool searchOffered READ searchOffered NOTIFY changed)
     Q_PROPERTY(QString error READ error NOTIFY changed)
+    Q_PROPERTY(bool listingFailed READ listingFailed NOTIFY changed)
+    Q_PROPERTY(bool canWrite READ canWrite NOTIFY changed)
+    Q_PROPERTY(QString homePath READ homePath CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY changed)
     Q_PROPERTY(bool opening READ opening NOTIFY changed)
     Q_PROPERTY(bool canBack READ canBack NOTIFY changed)
@@ -508,6 +511,16 @@ public:
         return !term.isEmpty() && kindOf(path()) != Kind::Recent && term != searchText();
     }
     QString error() const { return m_error; }
+    // The place shown could not be listed: Files says why where its files
+    // would be, and offers the way back.
+    bool listingFailed() const { return m_listingFailed; }
+    // New folders and pastes are offered only where they can land.
+    bool canWrite() const {
+        if (kindOf(path()) != Kind::Folder || m_listingFailed) return false;
+        const QFileInfo info(path());
+        return !info.exists() || info.isWritable();
+    }
+    QString homePath() const { return QDir::homePath(); }
     bool busy() const { return m_busy; }
     bool opening() const { return m_opening; }
     Q_INVOKABLE void openSelected() {
@@ -854,7 +867,7 @@ public:
         // A search's results arrive while it runs and can be used at once, so
         // it is searching rather than busy.
         const auto kind=kindOf(path());
-        m_lister->setShowHiddenFiles(m_hidden); m_entries.clear(); m_error.clear();
+        m_lister->setShowHiddenFiles(m_hidden); m_entries.clear(); m_error.clear(); m_listingFailed=false;
         m_busy=kind!=Kind::Search; m_searching=kind==Kind::Search; m_askRecentAgain=kind==Kind::Recent;
         connect(m_lister,&KCoreDirLister::itemsAdded,this,[this]{rebuild();});
         connect(m_lister,&KCoreDirLister::itemsDeleted,this,[this]{rebuild();});
@@ -865,7 +878,7 @@ public:
             // and can skip the file after it; asked again, it answers whole.
             if(m_askRecentAgain) { m_askRecentAgain=false; m_lister->updateDirectory(m_lister->url()); }
         });
-        connect(m_lister,&KCoreDirLister::jobError,this,[this](KIO::Job *job){m_busy=false;m_searching=false;m_error=job->errorString();Q_EMIT changed();});
+        connect(m_lister,&KCoreDirLister::jobError,this,[this](KIO::Job *job){m_busy=false;m_searching=false;m_listingFailed=true;m_error=listingError(job);Q_EMIT changed();});
         // Recent and a search are asked afresh; KDE watches only folders.
         Q_EMIT changed(); m_lister->openUrl(listingUrl(), kind==Kind::Folder ? KCoreDirLister::NoFlags : KCoreDirLister::Reload);
     }
@@ -1089,6 +1102,22 @@ private:
     bool m_revealProperties=false;
     QString m_operationStatus;
     QString m_filter, m_error;
+    bool m_listingFailed=false;
+    // Why a place could not be listed, said plainly; KIO's own words otherwise.
+    QString listingError(KIO::Job *job) const {
+        const auto p = path();
+        const auto name = QFileInfo(p).fileName().isEmpty() ? p : QFileInfo(p).fileName();
+        switch (job->error()) {
+        case KIO::ERR_ACCESS_DENIED:
+        case KIO::ERR_CANNOT_ENTER_DIRECTORY:
+        case KIO::ERR_CANNOT_OPEN_FOR_READING:
+            return tr("You don't have permission to open “%1”.").arg(name);
+        case KIO::ERR_DOES_NOT_EXIST:
+            return tr("“%1” isn't there any more.").arg(name);
+        default:
+            return job->errorString();
+        }
+    }
     KCoreDirLister *m_lister=nullptr;
     QVariantList m_entries, m_places;
     QPointer<FileDevices> m_devices;

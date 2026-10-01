@@ -288,6 +288,10 @@ TestCase {
         property string path: "/home/test"
         property string placeKind: "folder"
         readonly property bool inFolder: placeKind === "folder"
+        property bool listingFailed: false
+        readonly property bool canWrite: inFolder && !listingFailed && !readOnly
+        property bool readOnly: false
+        readonly property string homePath: "/home/test"
         property string folder: placeKind === "recent" ? "" : "/home/test"
         property string searchText: ""
         property bool searching: false
@@ -1105,6 +1109,48 @@ TestCase {
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
+    // A place that cannot be opened says why where its files would be and
+    // offers the way back; it, and a folder that cannot be written, offer no
+    // new folder; a filter that matches nothing says so.
+    function test_filesCannotOpen() {
+        launcher.fileBrowser = filesMock
+        const savedEntries = filesMock.entries
+        filesMock.placeKind = "folder"
+        filesMock.selectedPath = ""
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        const newFolder = findChild(launcher, "new-folder")
+        verify(newFolder.visible)
+        filesMock.readOnly = true
+        verify(!newFolder.visible)
+        filesMock.readOnly = false
+        filesMock.entries = []
+        filesMock.listingFailed = true
+        filesMock.error = "You don't have permission to open “root”."
+        const empty = findChild(launcher, "files-empty")
+        compare(empty.text, "You don't have permission to open “root”.")
+        verify(!newFolder.visible)
+        const back = findChild(launcher, "files-way-back")
+        verify(back.visible)
+        compare(back.text, "Home")
+        filesMock.navigated = []
+        // The test runner's synthetic click does not reach a tap handler over
+        // the grid; the pill's own action does, and a pointer's real click
+        // was checked in a sealed session.
+        back.activate()
+        compare(filesMock.navigated, ["/home/test"])
+        filesMock.listingFailed = false
+        filesMock.error = ""
+        verify(!back.visible)
+        filesMock.filter = "zebra"
+        compare(empty.text, "Nothing here matches “zebra”")
+        filesMock.filter = ""
+        compare(empty.text, "No files here")
+        filesMock.entries = savedEntries
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
     // Files' order opens under its button and stays inside the sheet; a
     // line sets the order, and the hidden-files line shows what it holds.
     function test_filesSortMenu() {

@@ -214,12 +214,12 @@ Item {
         SheetMenuItem {
             objectName: "context-paste"
             text: actions.targetDirectory ? "Paste into “"+actions.targetPath.split("/").pop()+"”" : "Paste here"
-            visible: (!actions.targetPath.length && pane.browser && pane.browser.inFolder) || actions.targetDirectory
+            visible: (!actions.targetPath.length && pane.browser && pane.browser.canWrite) || actions.targetDirectory
             enabled: pane.browser && pane.browser.canPaste && !pane.browser.busy
             onTriggered: { if(actions.targetDirectory) pane.browser.pasteInto(actions.targetPath); else pane.browser.paste() }
         }
         SheetMenuItem { text: "Select all"; onTriggered: pane.browser.selectAll() }
-        SheetMenuItem { text: "New folder"; visible: !actions.targetPath.length && pane.browser && pane.browser.inFolder; onTriggered: pane.newFolderForm() }
+        SheetMenuItem { text: "New folder"; visible: !actions.targetPath.length && pane.browser && pane.browser.canWrite; onTriggered: pane.newFolderForm() }
         SheetMenuItem { objectName: "context-properties"; text: "Properties"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
     // The one permanent delete Files offers, said plainly before it happens.
@@ -691,8 +691,8 @@ Item {
                             }
                         }
                     }
-                    PillAction { objectName: "paste-here"; text: "Paste"; visible: pane.browser && pane.browser.canPaste && pane.browser.inFolder; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
-                    PillAction { objectName: "new-folder"; text: "New folder"; visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.inFolder; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
+                    PillAction { objectName: "paste-here"; text: "Paste"; visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
+                    PillAction { objectName: "new-folder"; text: "New folder"; visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
                     // With files chosen, their own menu; otherwise the folder's.
                     PillAction {
                         id: moreActions
@@ -767,7 +767,7 @@ Item {
                 PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? "Rename" : "Create"; onClicked: pane.submitName() }
                 PillAction { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
             }
-            Text { Layout.fillWidth: true; visible: text.length>0; text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
+            Text { Layout.fillWidth: true; visible: text.length>0 && !(pane.browser && pane.browser.listingFailed); text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
             GridView {
                 id: files
                 objectName: "files-grid"
@@ -1056,11 +1056,49 @@ Item {
                         onTapped: { pane.browser.selectRange(modelData.path,true); files.forceActiveFocus() }
                     }
                 }
-                Text {
-                    objectName: "files-empty"
-                    anchors.centerIn: parent; visible: files.count===0; color: "#A8FFFFFF"
-                    text: !pane.browser ? "" : pane.browser.searching ? "Searching…" : pane.browser.busy ? "Loading…" : pane.browser.error ? ""
-                        : pane.browser.placeKind === "search" ? "Nothing found" : pane.browser.placeKind === "recent" ? "Nothing used recently" : "No files here"
+                // Nothing to show says why; a place that could not be opened
+                // says so plainly and offers the way back.
+                Column {
+                    // Over the grid, not in its scrolling content, so it
+                    // stays centred and its pill takes its own taps.
+                    parent: files
+                    z: 20
+                    anchors.centerIn: parent
+                    width: Math.min(files.width - 48, 420)
+                    visible: files.count===0
+                    spacing: 14
+                    Text {
+                        objectName: "files-empty"
+                        width: parent.width
+                        horizontalAlignment: Text.AlignHCenter
+                        wrapMode: Text.Wrap
+                        color: "#A8FFFFFF"
+                        readonly property string typed: pane.browser ? pane.browser.filter.trim() : ""
+                        text: !pane.browser ? "" : pane.browser.listingFailed ? pane.browser.error
+                            : pane.browser.searching ? "Searching…" : pane.browser.busy ? "Loading…" : pane.browser.error ? ""
+                            : typed.length && pane.browser.placeKind === "folder" ? "Nothing here matches “" + typed + "”"
+                            : pane.browser.placeKind === "search" ? "Nothing found" : pane.browser.placeKind === "recent" ? "Nothing used recently" : "No files here"
+                    }
+                    // Inside the grid a button's press is held by the grid, as
+                    // a tile's tap is not, so the way back takes taps as a tile
+                    // does.
+                    Rectangle {
+                        id: wayBack
+                        objectName: "files-way-back"
+                        readonly property string text: pane.browser && pane.browser.canBack ? "Back" : "Home"
+                        function activate() { pane.browser.canBack ? pane.browser.back() : pane.browser.navigate(pane.browser.homePath) }
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        visible: !!pane.browser && pane.browser.listingFailed
+                        width: wayBackLabel.implicitWidth + 32; height: 30
+                        radius: height / 2
+                        color: wayBackTap.pressed ? "#4A4A4A" : wayBackHover.hovered ? "#333333" : "#242424"
+                        Accessible.role: Accessible.Button
+                        Accessible.name: text
+                        Accessible.onPressAction: activate()
+                        Text { id: wayBackLabel; anchors.centerIn: parent; text: wayBack.text; color: "#F8F8FF" }
+                        HoverHandler { id: wayBackHover; acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus }
+                        TapHandler { id: wayBackTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: wayBack.activate() }
+                    }
                 }
             }
             RowLayout {

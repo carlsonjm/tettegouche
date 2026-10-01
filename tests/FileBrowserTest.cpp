@@ -12,6 +12,7 @@
 #include <QQuickItem>
 #include <QTest>
 #include <QTemporaryDir>
+#include <QScopeGuard>
 #include <QFile>
 #include <QQuickView>
 #include <QElapsedTimer>
@@ -954,6 +955,48 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(root.filePath(QStringLiteral("Archive/plan.txt"))),10000);
         QFile plan(root.filePath(QStringLiteral("Archive/plan.txt"))); QVERIFY(plan.open(QIODevice::ReadOnly)); QCOMPARE(plan.readAll(),QByteArray("two"));
     }
+    // A place that cannot be opened says why in plain words and is not
+    // offered new folders or pastes; nor is a folder that cannot be written.
+    void placesThatCannotBeOpened() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QCoreApplication::setOrganizationName(QStringLiteral("TetteTests"));
+        QCoreApplication::setApplicationName(QStringLiteral("Files"));
+        QDir root(dir.path());
+        QVERIFY(root.mkdir(QStringLiteral("locked")));
+        QVERIFY(root.mkdir(QStringLiteral("read-only")));
+        QVERIFY(root.mkdir(QStringLiteral("open")));
+        const QString locked=dir.filePath(QStringLiteral("locked"));
+        const QString readOnly=dir.filePath(QStringLiteral("read-only"));
+        QVERIFY(QFile::setPermissions(locked, QFileDevice::Permissions{}));
+        QVERIFY(QFile::setPermissions(readOnly, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        const auto restore = qScopeGuard([&] {
+            QFile::setPermissions(locked, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+            QFile::setPermissions(readOnly, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        });
+        FileBrowser browser;
+        browser.open();
+        browser.navigate(dir.filePath(QStringLiteral("open")));
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+        QVERIFY(!browser.listingFailed());
+        QVERIFY(browser.canWrite());
+        browser.navigate(locked);
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+        QVERIFY(browser.listingFailed());
+        QVERIFY(!browser.canWrite());
+        QCOMPARE(browser.error(), QStringLiteral("You don't have permission to open “locked”."));
+        browser.navigate(readOnly);
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+        QVERIFY(!browser.listingFailed());
+        QVERIFY(!browser.canWrite());
+        browser.navigate(dir.filePath(QStringLiteral("gone")));
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+        QVERIFY(browser.listingFailed());
+        QCOMPARE(browser.error(), QStringLiteral("“gone” isn't there any more."));
+    }
+
     void browsing() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());

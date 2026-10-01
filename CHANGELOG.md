@@ -11,6 +11,9 @@ provenance.
   button a circle with a vertical ellipsis, and the order a pill naming it.
   Move to Trash and Empty Trash ask in Files' own look and name the action.
   A finger lifts the file or place under it.
+- A place Files cannot open says why in plain words where its files would be,
+  with Back; New folder and Paste show only where they can land; a filter that
+  matches nothing says so.
 - A copy or move in Files that fails keeps its place in the band for a minute,
   saying why, then is filed in the notification history, as other failed
   transfers are. A long list of transfers scrolls in the open island.
