@@ -3,6 +3,7 @@
 #include "LauncherKeys.h"
 
 #include <KGlobalAccel>
+#include <KLocalizedString>
 #include <QAction>
 
 namespace
@@ -35,9 +36,9 @@ std::shared_ptr<LauncherKeys> LauncherKeys::acquire()
 LauncherKeys::LauncherKeys()
 {
     m_apps = drawerAction(this, QStringLiteral("open-apps-drawer"),
-                          tr("Open Browse everything"), QKeySequence(Qt::META | Qt::Key_G));
+                          i18n("Open Browse everything"), QKeySequence(Qt::META | Qt::Key_G));
     m_files = drawerAction(this, QStringLiteral("open-files-drawer"),
-                           tr("Open Files"), QKeySequence(Qt::META | Qt::Key_E));
+                           i18n("Open Files"), QKeySequence(Qt::META | Qt::Key_E));
     connect(m_apps, &QAction::triggered, this, [this] { press(QStringLiteral("apps")); });
     connect(m_files, &QAction::triggered, this, [this] { press(QStringLiteral("files")); });
 }

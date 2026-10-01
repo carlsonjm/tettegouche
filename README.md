@@ -114,6 +114,7 @@ Uninstalling removes the installed files without deleting this source folder.
 - Qt 6.10 and KDE Frameworks 6.26, or newer
 - LayerShellQt 6.7, BluezQt, and Solid
 - CMake and a C++20 compiler
+- gettext, for translations and the checks on them
 
 Bluetooth hardware and Kadunce are optional. Some related-setting results use
 optional local system tools; those results are simply omitted when a tool is not

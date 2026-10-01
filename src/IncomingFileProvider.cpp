@@ -1,5 +1,6 @@
 #include "IncomingFileProvider.h"
 #include "ActivityUtils.h"
+#include <KLocalizedString>
 #include <QFileInfo>
 #include <QDir>
 #include <sys/inotify.h>
@@ -123,7 +124,7 @@ QVariantList IncomingFileProvider::activities() const {
     QVariantList rows;
     for (const auto &e : m_entries) {
         rows.append(QVariantMap{{QStringLiteral("id"), e.id}, {QStringLiteral("generation"), 1}, {QStringLiteral("kind"), QStringLiteral("transfer")},
-            {QStringLiteral("state"), QStringLiteral("running")}, {QStringLiteral("source"), tr("Incoming file")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+            {QStringLiteral("state"), QStringLiteral("running")}, {QStringLiteral("source"), i18n("Incoming file")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
             {QStringLiteral("title"), e.name}, {QStringLiteral("observedSizeBytes"), e.size}, {QStringLiteral("evidence"), QStringLiteral("filesystem")},
             {QStringLiteral("arrivalState"), e.settling ? QStringLiteral("settling") : QStringLiteral("changing")},
             {QStringLiteral("destinationUrl"), QUrl::fromLocalFile(QDir(m_directory).filePath(e.name)).toString()},

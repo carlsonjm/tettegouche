@@ -50,13 +50,13 @@ rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
-rg -q 'text: "Just type"' "${project_root}/qml/Launcher.qml"
+rg -Fq 'text: words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/main.cpp"
 rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
-rg -Fq 'text: root.filesMode ? "explore files" : "browse everything"' "${project_root}/qml/Launcher.qml"
+rg -Fq 'text: root.filesMode ? words.i18n("explore files") : words.i18n("browse everything")' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_PROPERTY\(bool descending' \
     "${project_root}/src/ApplicationCatalog.h"
 rg -q 'setFilterText' "${project_root}/src/ApplicationCatalog.cpp"

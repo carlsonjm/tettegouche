@@ -13,6 +13,7 @@
 #include "RelatedInfo.h"
 #include <KIO/ApplicationLauncherJob>
 #include <KIO/OpenUrlJob>
+#include <KLocalizedString>
 
 #include <KRunner/ResultsModel>
 #include "RunnerIdentity.h"
@@ -187,18 +188,18 @@ public:
         const auto match = m_results->getQueryMatch(m_results->index(row, 0));
         const auto key = RelatedInfo::keyForSetting(match.id());
         const QHash<QString, QString> labels = {
-            {QStringLiteral("bluetooth"), tr("Open Bluetooth settings")},
-            {QStringLiteral("audio"), tr("Open Sound settings")},
-            {QStringLiteral("network"), tr("Open Network settings")},
-            {QStringLiteral("display"), tr("Open Display settings")},
-            {QStringLiteral("power"), tr("Open Power settings")},
-            {QStringLiteral("printers"), tr("Open Printer settings")},
-            {QStringLiteral("storage"), tr("Open Device Actions")},
-            {QStringLiteral("defaults"), tr("Open Default Applications")},
-            {QStringLiteral("nightlight"), tr("Open Night Light settings")},
-            {QStringLiteral("connect"), tr("Open KDE Connect")}};
+            {QStringLiteral("bluetooth"), i18n("Open Bluetooth settings")},
+            {QStringLiteral("audio"), i18n("Open Sound settings")},
+            {QStringLiteral("network"), i18n("Open Network settings")},
+            {QStringLiteral("display"), i18n("Open Display settings")},
+            {QStringLiteral("power"), i18n("Open Power settings")},
+            {QStringLiteral("printers"), i18n("Open Printer settings")},
+            {QStringLiteral("storage"), i18n("Open Device Actions")},
+            {QStringLiteral("defaults"), i18n("Open Default Applications")},
+            {QStringLiteral("nightlight"), i18n("Open Night Light settings")},
+            {QStringLiteral("connect"), i18n("Open KDE Connect")}};
         if (runnerApplicationId(match) == QStringLiteral("org.kde.kdeconnect.app.desktop"))
-            return tr("Open KDE Connect");
+            return i18n("Open KDE Connect");
         return labels.value(key);
     }
     Q_INVOKABLE QVariantList relatedItems(int row) {
@@ -703,7 +704,7 @@ private:
         if (!dolphin) {
             if (!m_fileBrowser) return;
             showFiles();
-            m_fileBrowser->setStatus(tr("Files cannot open %1, and Dolphin is not installed.").arg(urls.first().toDisplayString()));
+            m_fileBrowser->setStatus(i18n("Files cannot open %1, and Dolphin is not installed.", urls.first().toDisplayString()));
             return;
         }
         auto *job = new KIO::ApplicationLauncherJob(dolphin);
@@ -940,6 +941,8 @@ int main(int argc, char **argv)
     }
 
     QGuiApplication application(argc, argv);
+    // The launcher's words, in C++ and in QML through KI18n, come from this catalog.
+    KLocalizedString::setApplicationDomain(QByteArrayLiteral("tettegouche"));
     application.setApplicationName(QStringLiteral("tettegouche"));
     application.setDesktopFileName(
         QStringLiteral("io.github.carlsonjm.Tettegouche"));

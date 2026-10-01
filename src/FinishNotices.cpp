@@ -1,5 +1,6 @@
 #include "FinishNotices.h"
 #include "ActivityUtils.h"
+#include <KLocalizedString>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDir>
@@ -30,13 +31,13 @@ void FinishNotices::report(const QVariantMap &job) {
             {}, {}, {}, job.value(QStringLiteral("generation")).toInt()};
     if (error != 0 && error != Cancelled) {
         end.failed = true;
-        end.title = tr("Transfer failed");
+        end.title = i18n("Transfer failed");
         end.body = job.value(QStringLiteral("errorText")).toString();
         if (end.body.isEmpty()) end.body = job.value(QStringLiteral("summary")).toString();
     } else if (error == 0 && !path.isEmpty() && QFileInfo(path).absolutePath() == m_downloads) {
         end.path = path;
         end.title = QFileInfo(path).fileName();
-        end.body = tr("Arrived in Downloads");
+        end.body = i18n("Arrived in Downloads");
     } else {
         return;
     }
@@ -93,7 +94,7 @@ void FinishNotices::expire() {
 
 void FinishNotices::notify(const End &end) {
     const QStringList actions = end.path.isEmpty() ? QStringList()
-        : QStringList{QStringLiteral("default"), QString(), QStringLiteral("show"), tr("Show in Files")};
+        : QStringList{QStringLiteral("default"), QString(), QStringLiteral("show"), i18n("Show in Files")};
     // The freedesktop categories for a transfer's end.
     QVariantMap hints{{QStringLiteral("category"), end.failed ? QStringLiteral("transfer.error") : QStringLiteral("transfer.complete")}};
     if (!end.desktopEntry.isEmpty()) hints.insert(QStringLiteral("desktop-entry"), end.desktopEntry);

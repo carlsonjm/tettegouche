@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import org.kde.ki18n
 import QtQuick.Window
 import org.kde.kirigami as Kirigami
 
@@ -11,6 +12,12 @@ import org.kde.kirigami as Kirigami
 // draws it and asks the surface below to act.
 Window {
     id: overlay
+    // Its words come from the panel widget's catalog, the one Plasma gives
+    // the widget, so they translate in the panel and in tests alike.
+    KI18nContext {
+        id: words
+        translationDomain: "plasma_applet_studio.warbler.tettegouche"
+    }
 
     // The closed island this one grew from, which holds the activities.
     property var surface: null
@@ -23,7 +30,7 @@ Window {
     property bool expanded: false
     signal closed()
 
-    title: qsTr("Ambient")
+    title: words.i18n("Ambient")
     color: "transparent"
     flags: Qt.FramelessWindowHint
 
@@ -291,7 +298,7 @@ Window {
                             height: 40
                             activeFocusOnTab: true
                             Accessible.role: Accessible.PageTab
-                            Accessible.name: modelData === "media" ? qsTr("Media") : qsTr("Transfers")
+                            Accessible.name: modelData === "media" ? words.i18n("Media") : words.i18n("Transfers")
                             Keys.onReturnPressed: overlay.kind = modelData
                             Keys.onSpacePressed: overlay.kind = modelData
                             Item {
@@ -338,7 +345,7 @@ Window {
                             spacing: 2
                             Label {
                                 width: parent.width
-                                text: overlay.activity ? overlay.activity.title || overlay.activity.source || qsTr("Media") : ""
+                                text: overlay.activity ? overlay.activity.title || overlay.activity.source || words.i18n("Media") : ""
                                 font.pixelSize: 17
                                 font.weight: Font.DemiBold
                             }
@@ -381,7 +388,7 @@ Window {
                         width: parent.width
                         height: 40
                         Accessible.role: Accessible.Slider
-                        Accessible.name: qsTr("Position")
+                        Accessible.name: words.i18n("Position")
                         Rectangle {
                             y: 12
                             width: parent.width
@@ -441,7 +448,7 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "previous")
                             glyph: "skip-back"
-                            label: qsTr("Previous")
+                            label: words.i18n("Previous")
                             onActivated: overlay.surface.invoke(overlay.activity, "previous")
                         }
                         Rectangle {
@@ -459,7 +466,7 @@ Window {
                             scale: toggleArea.pressed ? 1.1 : 1
                             activeFocusOnTab: visible
                             Accessible.role: Accessible.Button
-                            Accessible.name: playing ? qsTr("Pause") : qsTr("Play")
+                            Accessible.name: playing ? words.i18n("Pause") : words.i18n("Play")
                             Accessible.onPressAction: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
                             Keys.onReturnPressed: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
                             Keys.onSpacePressed: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
@@ -480,7 +487,7 @@ Window {
                             anchors.verticalCenter: parent.verticalCenter
                             visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "next")
                             glyph: "skip-forward"
-                            label: qsTr("Next")
+                            label: words.i18n("Next")
                             onActivated: overlay.surface.invoke(overlay.activity, "next")
                         }
                     }
@@ -495,7 +502,7 @@ Window {
                             height: 40
                             activeFocusOnTab: true
                             Accessible.role: Accessible.Button
-                            Accessible.name: qsTr("Show %1 here").arg(modelData.source || modelData.title || "")
+                            Accessible.name: words.i18n("Show %1 here", modelData.source || modelData.title || "")
                             Keys.onReturnPressed: overlay.surface.chosenPlayer = String(modelData.id)
                             Keys.onSpacePressed: overlay.surface.chosenPlayer = String(modelData.id)
                             readonly property bool playing: modelData.state === "playing"
@@ -513,7 +520,7 @@ Window {
                                     anchors.verticalCenter: parent.verticalCenter
                                     width: content.width - 30 - 44
                                     text: [other.modelData.source, other.modelData.title,
-                                        other.playing ? qsTr("playing") : qsTr("paused")]
+                                        other.playing ? words.i18n("playing") : words.i18n("paused")]
                                         .filter(Boolean).join(" · ")
                                     font.pixelSize: 12
                                     opacity: 0.66
@@ -529,8 +536,8 @@ Window {
                                     && overlay.surface.capability(other.modelData, other.playing ? "pause" : "play")
                                 glyph: other.playing ? "pause" : "play"
                                 size: 18
-                                label: (other.playing ? qsTr("Pause %1") : qsTr("Play %1"))
-                                    .arg(other.modelData.source || other.modelData.title || "")
+                                label: other.playing ? words.i18n("Pause %1", other.modelData.source || other.modelData.title || "")
+                                    : words.i18n("Play %1", other.modelData.source || other.modelData.title || "")
                                 onActivated: overlay.surface.invoke(other.modelData, other.playing ? "pause" : "play")
                             }
                         }
@@ -540,7 +547,7 @@ Window {
                         objectName: "ambient-island-raise"
                         anchors.right: parent.right
                         visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "raise")
-                        label: qsTr("Show %1").arg(overlay.activity ? overlay.activity.source || qsTr("player") : "")
+                        label: words.i18n("Show %1", overlay.activity ? overlay.activity.source || words.i18n("player") : "")
                         onActivated: {
                             overlay.surface.invoke(overlay.activity, "raise");
                             overlay.dismiss();
@@ -556,7 +563,7 @@ Window {
                     spacing: 6
                     Label {
                         text: overlay.surface && overlay.surface.transfers.length > 1
-                            ? qsTr("%1 transfers").arg(overlay.surface.transfers.length) : qsTr("Transfer")
+                            ? words.i18np("1 transfer", "%1 transfers", overlay.surface.transfers.length) : words.i18n("Transfer")
                         font.pixelSize: 12
                         opacity: 0.66
                     }
@@ -596,9 +603,9 @@ Window {
                                     }
                                     Label {
                                         width: parent.width
-                                        text: row.suspended ? qsTr("Paused")
+                                        text: row.suspended ? words.i18n("Paused")
                                             : overlay.surface && overlay.surface.ended(row.modelData) ? row.modelData.description || ""
-                                            : row.modelData.evidence === "filesystem" ? qsTr("Incoming file · completion unknown")
+                                            : row.modelData.evidence === "filesystem" ? words.i18n("Incoming file · completion unknown")
                                             : overlay.surface ? overlay.surface.transferBytes(row.modelData) || overlay.surface.percentage(row.modelData) : ""
                                         color: row.suspended ? "#E3B866" : overlay.ink
                                         opacity: row.suspended ? 1 : 0.66
@@ -610,7 +617,7 @@ Window {
                                     anchors.verticalCenter: parent.verticalCenter
                                     visible: overlay.surface !== null && overlay.surface.capability(row.modelData, row.suspended ? "resume" : "suspend")
                                     glyph: row.suspended ? "play" : "pause"
-                                    label: row.suspended ? qsTr("Resume") : qsTr("Pause transfer")
+                                    label: row.suspended ? words.i18n("Resume") : words.i18n("Pause transfer")
                                     onActivated: overlay.surface.invoke(row.modelData, row.suspended ? "resume" : "suspend")
                                 }
                                 GlyphButton {
@@ -619,7 +626,7 @@ Window {
                                     anchors.verticalCenter: parent.verticalCenter
                                     visible: overlay.surface !== null && overlay.surface.capability(row.modelData, "cancel")
                                     glyph: "x"
-                                    label: qsTr("Cancel %1").arg(overlay.surface ? overlay.surface.transferTitle(row.modelData) : "")
+                                    label: words.i18n("Cancel %1", overlay.surface ? overlay.surface.transferTitle(row.modelData) : "")
                                     onActivated: overlay.surface.invoke(row.modelData, "cancel")
                                 }
                             }
@@ -627,7 +634,7 @@ Window {
                                 objectName: "ambient-island-show-" + row.modelData.id
                                 anchors.right: parent.right
                                 visible: overlay.surface !== null && overlay.surface.capability(row.modelData, "showInFiles")
-                                label: qsTr("Show in Files")
+                                label: words.i18n("Show in Files")
                                 onActivated: {
                                     overlay.surface.invoke(row.modelData, "showInFiles");
                                     overlay.dismiss();

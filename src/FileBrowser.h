@@ -11,6 +11,7 @@
 #include <KIO/ListJob>
 #include <KFileItem>
 #include <KFormat>
+#include <KLocalizedString>
 #include <KUrlMimeData>
 #include <KIO/DirectorySizeJob>
 #include <KIO/Job>
@@ -25,6 +26,8 @@
 #include <QDir>
 #include <QMimeDatabase>
 #include <QThreadPool>
+#include <QElapsedTimer>
+#include <QTimer>
 #include <QFile>
 #include <QFileInfo>
 #include <QSettings>
@@ -101,6 +104,8 @@ public:
     // A file's own details, as labelled rows, read off the GUI thread.
     using DetailReader = std::function<QVariantList(const QString &path, const QString &mimeType)>;
     explicit FileBrowser(QObject *parent = nullptr) : QObject(parent) {
+        m_showArrived.setSingleShot(true);
+        connect(&m_showArrived, &QTimer::timeout, this, &FileBrowser::rebuild);
         QSettings settings;
         m_operationStatus = settings.value(QStringLiteral("Files/lastOperationError")).toString();
         settings.remove(QStringLiteral("Files/lastOperationError"));
@@ -131,7 +136,7 @@ public:
             m_error=message; rebuildPlaces(); Q_EMIT changed();
         });
         connect(devices,&FileDevices::removed,this,[this](const QString &,const QString &label) {
-            m_operationStatus=tr("“%1” can be unplugged.").arg(label); Q_EMIT operationChanged();
+            m_operationStatus=i18n("“%1” can be unplugged.", label); Q_EMIT operationChanged();
         });
     }
     // Opens a drive from the places, mounting it first if it is not.
@@ -170,14 +175,14 @@ public:
             const auto time=item.time(which);
             return time.isValid() ? format.formatRelativeDateTime(time,QLocale::ShortFormat) : QString();
         };
-        row(tr("Kind"),item.isDir() ? tr("Folder") : QMimeDatabase().mimeTypeForName(mimeType).comment());
-        if(item.isDir()) { row(tr("Size"),tr("Counting…"),QStringLiteral("size")); row(tr("Contains"),tr("Counting…"),QStringLiteral("contains")); }
-        else row(tr("Size"),item.size()<1024 ? QLocale().formattedDataSize(item.size())
-                 : tr("%1 (%2 bytes)").arg(QLocale().formattedDataSize(item.size()),QLocale().toString(item.size())));
-        row(tr("Where"),QFileInfo(p).path());
-        row(tr("Modified"),when(KFileItem::ModificationTime));
-        row(tr("Created"),when(KFileItem::CreationTime));
-        row(tr("Last opened"),when(KFileItem::AccessTime));
+        row(i18n("Kind"),item.isDir() ? i18n("Folder") : QMimeDatabase().mimeTypeForName(mimeType).comment());
+        if(item.isDir()) { row(i18n("Size"),i18n("Counting…"),QStringLiteral("size")); row(i18n("Contains"),i18n("Counting…"),QStringLiteral("contains")); }
+        else row(i18n("Size"),item.size()<1024 ? QLocale().formattedDataSize(item.size())
+                 : i18n("%1 (%2 bytes)", QLocale().formattedDataSize(item.size()), QLocale().toString(item.size())));
+        row(i18n("Where"),QFileInfo(p).path());
+        row(i18n("Modified"),when(KFileItem::ModificationTime));
+        row(i18n("Created"),when(KFileItem::CreationTime));
+        row(i18n("Last opened"),when(KFileItem::AccessTime));
         m_details=QVariantMap{{QStringLiteral("path"),p},{QStringLiteral("name"),item.text()},{QStringLiteral("icon"),item.iconName()},
             {QStringLiteral("thumbnail"),!item.isDir() && m_thumbnailSource ? m_thumbnailSource(p,mimeType,item.time(KFileItem::ModificationTime).toSecsSinceEpoch()) : QString()},
             {QStringLiteral("rows"),rows}};
@@ -189,10 +194,10 @@ public:
             connect(job,&KJob::result,this,[this,job,generation] {
                 if(generation!=m_detailsGeneration)return;
                 m_sizeJob=nullptr;
-                if(job->error()) { setDetail(QStringLiteral("size"),tr("Unknown")); setDetail(QStringLiteral("contains"),tr("Unknown")); return; }
-                const auto count=[](quint64 n,const QString &one,const QString &many){ return n==1 ? one : many.arg(QLocale().toString(n)); };
+                if(job->error()) { setDetail(QStringLiteral("size"),i18n("Unknown")); setDetail(QStringLiteral("contains"),i18n("Unknown")); return; }
                 setDetail(QStringLiteral("size"),QLocale().formattedDataSize(job->totalSize()));
-                setDetail(QStringLiteral("contains"),tr("%1 and %2").arg(count(job->totalFiles(),tr("1 file"),tr("%1 files")),count(job->totalSubdirs(),tr("1 folder"),tr("%1 folders"))));
+                setDetail(QStringLiteral("contains"),i18nc("what a folder holds: files, folders","%1 and %2",
+                    i18np("1 file","%1 files",job->totalFiles()),i18np("1 folder","%1 folders",job->totalSubdirs())));
             });
         } else if(m_detailReader) {
             const auto reader=m_detailReader;
@@ -279,13 +284,13 @@ public:
         // One item becomes its own name as a zip; several, Archive.zip.
         const QStringList arguments=QStringList{QStringLiteral("--batch"),QStringLiteral("--add"),QStringLiteral("--changetofirstpath"),
             QStringLiteral("--autofilename"),QStringLiteral("zip")}+selectedPaths();
-        startArk(arguments,QFileInfo(selectedPaths().first()).path(),tr("Compressing with Ark…"));
+        startArk(arguments,QFileInfo(selectedPaths().first()).path(),i18n("Compressing with Ark…"));
     }
     Q_INVOKABLE void extractSelected() {
         if(!canExtract())return;
         // Beside the archive, in a folder of its own when it holds several.
         for(const auto &p:selectedPaths())
-            startArk({QStringLiteral("--batch"),QStringLiteral("--autodestination"),QStringLiteral("--autosubfolder"),p},QFileInfo(p).path(),tr("Extracting with Ark…"));
+            startArk({QStringLiteral("--batch"),QStringLiteral("--autodestination"),QStringLiteral("--autosubfolder"),p},QFileInfo(p).path(),i18n("Extracting with Ark…"));
     }
     // What Trash holds, asked when the folder's menu opens.
     int trashItems() const { return m_trashItems; }
@@ -309,7 +314,7 @@ public:
             QSettings().remove(QStringLiteral("Files/restoreTrash"));
             m_trashItems=0; m_trashSize.clear(); Q_EMIT trashChanged();
         });
-        watchOperation(job,tr("Emptying Trash…"));
+        watchOperation(job,i18n("Emptying Trash…"));
     }
     Q_INVOKABLE void stopDescribing() {
         ++m_detailsGeneration;
@@ -326,7 +331,7 @@ public:
             if (failure.until<now) continue;
             rows.append(QVariantMap{{QStringLiteral("id"), failure.id}, {QStringLiteral("generation"), 1},
                 {QStringLiteral("kind"), QStringLiteral("transfer")}, {QStringLiteral("state"), QStringLiteral("failed")},
-                {QStringLiteral("source"), tr("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+                {QStringLiteral("source"), i18n("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
                 {QStringLiteral("title"), failure.title}, {QStringLiteral("description"), failure.why},
                 {QStringLiteral("evidence"), QStringLiteral("job")}, {QStringLiteral("capabilities"), QVariantMap{}}});
         }
@@ -336,7 +341,7 @@ public:
             const bool suspendable = op.job->capabilities().testFlag(KJob::Suspendable);
             QVariantMap row{{QStringLiteral("id"), op.id}, {QStringLiteral("generation"), 1}, {QStringLiteral("kind"), QStringLiteral("transfer")},
                 {QStringLiteral("state"), suspended ? QStringLiteral("suspended") : QStringLiteral("running")},
-                {QStringLiteral("source"), tr("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+                {QStringLiteral("source"), i18n("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
                 {QStringLiteral("title"), op.destination.isEmpty() ? op.label : op.destination.fileName()},
                 {QStringLiteral("evidence"), QStringLiteral("job")},
                 {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("cancel"), op.job->capabilities().testFlag(KJob::Killable)},
@@ -454,11 +459,11 @@ public:
             if (!p.isEmpty()) result.append(QVariantMap{{QStringLiteral("label"), label}, {QStringLiteral("path"), p}, {QStringLiteral("icon"), icon},
                 {QStringLiteral("section"), section}});
         };
-        add(tr("Recent"), recentLocation(), QStringLiteral("document-open-recent"));
-        add(tr("Home"), QDir::homePath(), QStringLiteral("user-home"));
-        add(tr("Documents"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), QStringLiteral("folder-documents"));
-        add(tr("Downloads"), QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), QStringLiteral("folder-download"));
-        add(tr("Pictures"), QStandardPaths::writableLocation(QStandardPaths::PicturesLocation), QStringLiteral("folder-pictures"));
+        add(i18n("Recent"), recentLocation(), QStringLiteral("document-open-recent"));
+        add(i18n("Home"), QDir::homePath(), QStringLiteral("user-home"));
+        add(i18n("Documents"), QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation), QStringLiteral("folder-documents"));
+        add(i18n("Downloads"), QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), QStringLiteral("folder-download"));
+        add(i18n("Pictures"), QStandardPaths::writableLocation(QStandardPaths::PicturesLocation), QStringLiteral("folder-pictures"));
         // Linux mount metadata only: never stat/statvfs mounted filesystems.
         // A disconnected network/FUSE volume can block those calls indefinitely.
         section = QStringLiteral("drives");
@@ -481,7 +486,7 @@ public:
         const auto p = path();
         switch (kindOf(p)) {
         case Kind::Recent:
-            return {QVariantMap{{QStringLiteral("label"), tr("Recent")}, {QStringLiteral("path"), p}}};
+            return {QVariantMap{{QStringLiteral("label"), i18n("Recent")}, {QStringLiteral("path"), p}}};
         case Kind::Search: {
             // The folder searched, then the search itself.
             auto result = folderCrumbs(searchFolderOf(p));
@@ -539,7 +544,7 @@ public:
         const auto url = QUrl::fromLocalFile(selectedPath());
         const auto item = listedItem(selectedPath());
         if (item.isNull()) {
-            m_error = tr("This file is no longer available. Refresh the folder.");
+            m_error = i18n("This file is no longer available. Refresh the folder.");
             Q_EMIT changed(); return;
         }
         if (item.isDir()) {
@@ -635,11 +640,11 @@ public:
         QList<QUrl> urls;
         for (const auto &p:selectedPaths()) {
             const auto url=QUrl::fromLocalFile(p);
-            if (listedItem(p).isNull()) { m_error=tr("Selection changed. Refresh and select again."); Q_EMIT changed(); return; }
+            if (listedItem(p).isNull()) { m_error=i18n("Selection changed. Refresh and select again."); Q_EMIT changed(); return; }
             urls.append(url);
         }
         auto *mime=new QMimeData; mime->setUrls(urls); QGuiApplication::clipboard()->setMimeData(mime);
-        m_operationStatus=tr("Copied %1 item(s) to clipboard").arg(urls.size()); Q_EMIT operationChanged();
+        m_operationStatus=i18np("Copied 1 item to clipboard","Copied %1 items to clipboard",urls.size()); Q_EMIT operationChanged();
     }
     Q_INVOKABLE void paste() {
         if (inFolder()) pasteInto(path());
@@ -654,7 +659,7 @@ public:
         cut->setUrls(mime->urls());
         cut->setData(QStringLiteral("application/x-kde-cutselection"),QByteArray("1"));
         QGuiApplication::clipboard()->setMimeData(cut);
-        m_operationStatus=tr("Cut %1 item(s) — paste to move").arg(selectedPaths().size()); Q_EMIT operationChanged();
+        m_operationStatus=i18np("Cut 1 item — paste to move","Cut %1 items — paste to move",selectedPaths().size()); Q_EMIT operationChanged();
     }
     Q_INVOKABLE void renameSelected(const QString &name) {
         if(m_busy || m_opening || selectedPaths().size()!=1 || !m_lister)return;
@@ -669,7 +674,7 @@ public:
         job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
         const auto originalPath=path();
         connect(job,&KJob::result,this,[this,destination,originalPath](KJob *j){ if(!j->error() && path()==originalPath)setSelectedPath(destination.toLocalFile()); });
-        watchOperation(job,tr("Renaming…"));
+        watchOperation(job,i18n("Renaming…"));
     }
     bool canRestoreTrash() const { return !QSettings().value(QStringLiteral("Files/restoreTrash")).toStringList().isEmpty(); }
     Q_INVOKABLE void trashSelected() {
@@ -684,7 +689,7 @@ public:
             if(!entries.contains(to.toString()))entries.append(to.toString());
             s.setValue(QStringLiteral("Files/restoreTrash"),entries);
         });
-        watchOperation(job,tr("Moving to Trash…"),true);
+        watchOperation(job,i18n("Moving to Trash…"),true);
     }
     Q_INVOKABLE void restoreTrash() {
         if(m_restoring || m_busy || m_opening)return;
@@ -714,7 +719,7 @@ public:
                 m_restoring=false;
                 if(s->error()){
                     forget();
-                    m_operationStatus=tr("That item is no longer in Trash.");
+                    m_operationStatus=i18n("That item is no longer in Trash.");
                     m_error.clear();
                     QSettings().remove(QStringLiteral("Files/lastOperationError"));
                     Q_EMIT changed();
@@ -722,7 +727,7 @@ public:
                 Q_EMIT operationChanged();
             });
         });
-        watchOperation(job,tr("Restoring from Trash…"));
+        watchOperation(job,i18n("Restoring from Trash…"));
     }
     Q_INVOKABLE void copyDropped(const QStringList &paths, const QString &destination) {
         if (m_busy || m_opening || !m_lister || paths.isEmpty()) return;
@@ -743,7 +748,7 @@ public:
         // Internal drop is an explicit copy, independent of the clipboard.
         auto *job=KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
         askAboutNames(job); job->setUiDelegateExtension(nullptr);
-        watchOperation(job,tr("Copying…"),true);
+        watchOperation(job,i18n("Copying…"),true);
     }
     // What another application receives when listed files are carried out of
     // Files: their addresses. Null if any is no longer listed.
@@ -780,7 +785,7 @@ public:
         if (sources.isEmpty()) return;
         auto *job=KIO::copy(sources,QUrl::fromLocalFile(destination),KIO::HideProgressInfo);
         askAboutNames(job); job->setUiDelegateExtension(nullptr);
-        watchOperation(job,tr("Copying…"),true);
+        watchOperation(job,i18n("Copying…"),true);
     }
     Q_INVOKABLE void pasteInto(const QString &destination) {
         if (m_busy || m_opening || !canPaste()) return;
@@ -788,7 +793,7 @@ public:
         if (destination==path() && !inFolder()) return;
         if (destination!=path()) {
             const auto item=listedItem(destination);
-            if (item.isNull() || !item.isDir()) { m_error=tr("Destination is no longer available."); Q_EMIT changed(); return; }
+            if (item.isNull() || !item.isDir()) { m_error=i18n("Destination is no longer available."); Q_EMIT changed(); return; }
         }
         // Honor the native KDE cut marker only for explicit clipboard paste.
         // No Overwrite flag: a name already taken asks the person first.
@@ -801,12 +806,12 @@ public:
             const auto *mime=QGuiApplication::clipboard()->mimeData();
             if(!j->error() && mime && mime->urls()==sources && mime->data(QStringLiteral("application/x-kde-cutselection"))==QByteArray("1"))QGuiApplication::clipboard()->clear();
         });
-        watchOperation(job,moving ? tr("Moving…") : tr("Copying…"),true);
+        watchOperation(job,moving ? i18n("Moving…") : i18n("Copying…"),true);
     }
     Q_INVOKABLE void newFolder(const QString &name) {
         if (m_busy || m_opening || !inFolder()) return;
         if (name.isEmpty() || name==QStringLiteral(".") || name==QStringLiteral("..") || name.contains(QLatin1Char('/')) || name.contains(QChar::Null)) {
-            m_operationStatus=tr("Enter a folder name without a slash."); Q_EMIT operationChanged(); return;
+            m_operationStatus=i18n("Enter a folder name without a slash."); Q_EMIT operationChanged(); return;
         }
         const QString destination=QDir(path()).filePath(name);
         const auto generation=m_listingGeneration;
@@ -821,7 +826,7 @@ public:
                 Q_EMIT folderCreated();
             }
         });
-        watchOperation(job,tr("Creating folder…"));
+        watchOperation(job,i18n("Creating folder…"));
     }
     void setScroll(double v) { m_tabs[m_current].scroll=std::max(0.0,v); }
     void setFilter(const QString &v) { if(m_filter==v)return; m_filter=v; rebuild(); }
@@ -837,7 +842,7 @@ public:
     Q_INVOKABLE void navigate(const QString &p) {
         if(p==path())return;
         if(p==recentLocation()) { go(p); return; }
-        if(!QDir::isAbsolutePath(p)) { m_error=tr("Enter an absolute local folder path."); Q_EMIT changed(); return; }
+        if(!QDir::isAbsolutePath(p)) { m_error=i18n("Enter an absolute local folder path."); Q_EMIT changed(); return; }
         go(QDir::cleanPath(p));
     }
     // Looks for names containing the text in this folder and every folder
@@ -875,17 +880,18 @@ public:
         ++m_listingGeneration;
         Q_EMIT selectionChanged();
         if(m_lister){disconnect(m_lister,nullptr,this,nullptr); m_lister->stop(); m_lister->deleteLater();}
-        m_lister=new KCoreDirLister(this); m_lister->setAutoErrorHandlingEnabled(false);
+        m_lister=new KCoreDirLister(this); m_lister->setAutoErrorHandlingEnabled(false); m_lister->setDelayedMimeTypes(true);
         // A search's results arrive while it runs and can be used at once, so
         // it is searching rather than busy.
         const auto kind=kindOf(path());
         m_lister->setShowHiddenFiles(m_hidden); m_entries.clear(); m_error.clear(); m_listingFailed=false;
         m_busy=kind!=Kind::Search; m_searching=kind==Kind::Search; m_askRecentAgain=kind==Kind::Recent;
-        connect(m_lister,&KCoreDirLister::itemsAdded,this,[this]{rebuild();});
-        connect(m_lister,&KCoreDirLister::itemsDeleted,this,[this]{rebuild();});
-        connect(m_lister,&KCoreDirLister::refreshItems,this,[this]{rebuild();});
+        m_showArrived.stop();
+        connect(m_lister,&KCoreDirLister::itemsAdded,this,[this]{showArrived();});
+        connect(m_lister,&KCoreDirLister::itemsDeleted,this,[this]{showArrived();});
+        connect(m_lister,&KCoreDirLister::refreshItems,this,[this]{showArrived();});
         connect(m_lister,qOverload<>(&KCoreDirLister::completed),this,[this]{
-            m_busy=false; m_searching=false; rebuild();
+            m_busy=false; m_searching=false; m_showArrived.stop(); rebuild();
             // KDE's Recent drops a file that no longer exists while it answers,
             // and can skip the file after it; asked again, it answers whole.
             if(m_askRecentAgain) { m_askRecentAgain=false; m_lister->updateDirectory(m_lister->url()); }
@@ -935,7 +941,7 @@ private:
                 // hides the status line while it runs.
                 const bool waiting=m_ejectAfter.contains(drive.id);
                 const bool opening=drive.opening || drive.id==m_driveOpening;
-                const auto note=waiting ? tr("Ejects when done") : drive.ejecting ? tr("Ejecting…") : opening ? tr("Opening…") : QString();
+                const auto note=waiting ? i18n("Ejects when done") : drive.ejecting ? i18n("Ejecting…") : opening ? i18n("Opening…") : QString();
                 rows.append(QVariantMap{{QStringLiteral("label"),drive.label},{QStringLiteral("path"),drive.path},{QStringLiteral("icon"),drive.icon},
                     {QStringLiteral("section"),QStringLiteral("drives")},{QStringLiteral("drive"),drive.id},{QStringLiteral("mounted"),drive.mounted},
                     {QStringLiteral("canEject"),drive.removable && !drive.phone && drive.mounted},
@@ -1027,11 +1033,11 @@ private:
     }
     QString locationLabel(const QString &location) const {
         switch (kindOf(location)) {
-        case Kind::Recent: return tr("Recent");
+        case Kind::Recent: return i18n("Recent");
         case Kind::Search: return QStringLiteral("“%1”").arg(searchTermOf(location));
         case Kind::Folder: break;
         }
-        return location == QDir::homePath() ? tr("Home") : QDir(location).dirName();
+        return location == QDir::homePath() ? i18n("Home") : QDir(location).dirName();
     }
     static QVariantList folderCrumbs(const QString &folder) {
         QVariantList result{QVariantMap{{QStringLiteral("label"), QStringLiteral("/")}, {QStringLiteral("path"), QStringLiteral("/")}}};
@@ -1078,11 +1084,18 @@ private:
         for (const auto &item : items) if (localPathOf(item) == p) return item;
         return {};
     }
+    // A listed file's type comes from its name, as Dolphin first takes it;
+    // only a name that says nothing has the file's start read. Reading every
+    // file's start held a large folder, or a phone's, for seconds.
+    static QString typeOf(const KFileItem &f) {
+        const auto named=f.currentMimeType();
+        return named.isValid() && !named.isDefault() ? named.name() : f.mimetype();
+    }
     // Where a file in Recent or a search lives: under Home without it, or in full.
     static QString folderLabel(const QString &filePath) {
         const auto parent = QFileInfo(filePath).path();
         const auto home = QDir::homePath();
-        if (parent == home) return tr("Home");
+        if (parent == home) return i18n("Home");
         if (parent.startsWith(home + QLatin1Char('/'))) return parent.mid(home.size() + 1);
         return parent;
     }
@@ -1135,14 +1148,26 @@ private:
         case KIO::ERR_ACCESS_DENIED:
         case KIO::ERR_CANNOT_ENTER_DIRECTORY:
         case KIO::ERR_CANNOT_OPEN_FOR_READING:
-            return tr("You don't have permission to open “%1”.").arg(name);
+            return i18n("You don't have permission to open “%1”.", name);
         case KIO::ERR_DOES_NOT_EXIST:
-            return tr("“%1” isn't there any more.").arg(name);
+            return i18n("“%1” isn't there any more.", name);
         default:
             return job->errorString();
         }
     }
     KCoreDirLister *m_lister=nullptr;
+    // A folder arrives in batches, in no order. It is shown once it is whole,
+    // sorted once, so nothing shown moves. One slow to list shows what it has
+    // after half a second and fills in once a second until whole, or less
+    // often while a fill-in takes long, so drawing never holds up the listing;
+    // a search shows its first finds at once. A change to a folder already
+    // whole shows at once.
+    QTimer m_showArrived;
+    qint64 m_rebuildMs=0;
+    void showArrived() {
+        if((!m_busy && !m_searching) || (m_searching && m_entries.isEmpty())) { m_showArrived.stop(); rebuild(); return; }
+        if(!m_showArrived.isActive()) m_showArrived.start(m_entries.isEmpty() ? 500 : std::max<qint64>(1000, 3*m_rebuildMs));
+    }
     QVariantList m_entries, m_places;
     QPointer<FileDevices> m_devices;
     QByteArray m_mounts;
@@ -1163,7 +1188,7 @@ private:
             {QStringLiteral("icon"),service->icon()},{QStringLiteral("isDefault"),isDefault}};
     }
     void startArk(const QStringList &arguments,const QString &workingDirectory,const QString &status) {
-        if(!QProcess::startDetached(arkPath(),arguments,workingDirectory)) { m_error=tr("Ark could not be started."); Q_EMIT changed(); return; }
+        if(!QProcess::startDetached(arkPath(),arguments,workingDirectory)) { m_error=i18n("Ark could not be started."); Q_EMIT changed(); return; }
         m_operationStatus=status; Q_EMIT operationChanged();
     }
     // A copy or move asks about a name already taken instead of stopping.
@@ -1176,12 +1201,12 @@ private:
         const KFormat format;
         const auto describe=[&format](KIO::filesize_t size,const QDateTime &when) {
             const auto amount=QLocale().formattedDataSize(size);
-            return when.isValid() ? tr("%1, modified %2").arg(amount,format.formatRelativeDateTime(when,QLocale::ShortFormat)) : amount;
+            return when.isValid() ? i18n("%1, modified %2", amount, format.formatRelativeDateTime(when,QLocale::ShortFormat)) : amount;
         };
         const bool folder=taken.options.testFlag(KIO::RenameDialog_DestIsDirectory);
         const auto parent=taken.destination.adjusted(QUrl::RemoveFilename|QUrl::StripTrailingSlash).toLocalFile();
         const QVariantMap shown{{QStringLiteral("name"),taken.destination.fileName()},
-            {QStringLiteral("folder"),parent==QDir::homePath() ? tr("Home") : parent==QStringLiteral("/") ? parent : QFileInfo(parent).fileName()},
+            {QStringLiteral("folder"),parent==QDir::homePath() ? i18n("Home") : parent==QStringLiteral("/") ? parent : QFileInfo(parent).fileName()},
             {QStringLiteral("isFolder"),folder},
             {QStringLiteral("several"),taken.options.testFlag(KIO::RenameDialog_MultipleItems)},
             {QStringLiteral("canReplace"),taken.options.testFlag(KIO::RenameDialog_Overwrite) && !taken.options.testFlag(KIO::RenameDialog_OverwriteItself)},
@@ -1238,11 +1263,11 @@ private:
             // copy ends saying what was left behind, as a failure does.
             const QStringList skipped=asker && !finished->error() ? asker->skipped() : QStringList();
             m_operationStatus=!finished->error()
-                ? (skipped.isEmpty() ? tr("Done")
-                    : tr("Done, except %1 that could not be read: %2")
-                        .arg(skipped.size()==1 ? tr("one item") : tr("%1 items").arg(skipped.size()), skipped.first()))
-                : why.isEmpty() ? tr("Stopped.") : tr("Stopped: %1").arg(why);
-            if (finished->error() && copying) m_operationStatus += tr(" Some items may already have transferred.");
+                ? (skipped.isEmpty() ? i18n("Done")
+                    : i18np("Done, except one item that could not be read: %2","Done, except %1 items that could not be read: %2",
+                        skipped.size(),skipped.first()))
+                : why.isEmpty() ? i18n("Stopped.") : i18n("Stopped: %1", why);
+            if (finished->error() && copying) m_operationStatus += i18n(" Some items may already have transferred.");
             m_error=finished->error() || !skipped.isEmpty() ? m_operationStatus : QString();
             // A copy or move that failed, not one the person stopped, or that
             // left files behind, is told to Ambient for a few seconds; Ambient
@@ -1270,6 +1295,7 @@ private:
         QSettings s; s.setValue(QStringLiteral("Files/paths"),paths); s.setValue(QStringLiteral("Files/current"),m_current);
     }
     void rebuild() {
+        QElapsedTimer took; took.start();
         auto items=m_lister ? m_lister->items() : KFileItemList{};
         const auto kind=kindOf(path());
         QCollator collator; collator.setNumericMode(true); collator.setCaseSensitivity(Qt::CaseInsensitive);
@@ -1288,9 +1314,10 @@ private:
             if(local.isEmpty() || !f.text().contains(m_filter,Qt::CaseInsensitive))continue;
             m_entries.append(QVariantMap{{QStringLiteral("name"),f.text()},{QStringLiteral("path"),local},
                 {QStringLiteral("directory"),f.isDir()},{QStringLiteral("icon"),f.iconName()},
-                {QStringLiteral("thumbnail"),!f.isDir() && m_thumbnailSource ? m_thumbnailSource(local,f.mimetype(),f.time(KFileItem::ModificationTime).toSecsSinceEpoch()) : QString()},
-                {QStringLiteral("detail"),kind!=Kind::Folder ? folderLabel(local) : f.isDir()?tr("Folder"):QLocale().formattedDataSize(f.size())}});
+                {QStringLiteral("thumbnail"),!f.isDir() && m_thumbnailSource ? m_thumbnailSource(local,typeOf(f),f.time(KFileItem::ModificationTime).toSecsSinceEpoch()) : QString()},
+                {QStringLiteral("detail"),kind!=Kind::Folder ? folderLabel(local) : f.isDir()?i18n("Folder"):QLocale().formattedDataSize(f.size())}});
         }
+        m_rebuildMs=took.elapsed();
         Q_EMIT changed();
     }
 };

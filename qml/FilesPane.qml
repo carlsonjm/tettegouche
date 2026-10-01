@@ -1,10 +1,16 @@
 import QtQuick
+import org.kde.ki18n
 import QtQuick.Controls as C
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
 Item {
     id: pane
+    // Its words come from the launcher's catalog.
+    KI18nContext {
+        id: words
+        translationDomain: "tettegouche"
+    }
     required property var browser
     // Shuffle's paper corner, for all Files lays in its sheet; anything pressed
     // is a pill.
@@ -35,11 +41,11 @@ Item {
     // While anything runs, its own row says so; the status line is for what
     // has just finished.
     readonly property string operationStatusText: {
-        if (showOperationSuccess) return qsTr("Done");
+        if (showOperationSuccess) return words.i18n("Done");
         if (browser && browser.working) return "";
         // Results keep arriving while a search runs.
-        if (browser && browser.searching && browser.entries.length > 0) return qsTr("Searching…");
-        return rawOperationStatus === qsTr("Done") ? "" : rawOperationStatus;
+        if (browser && browser.searching && browser.entries.length > 0) return words.i18n("Searching…");
+        return rawOperationStatus === words.i18n("Done") ? "" : rawOperationStatus;
     }
     // Tiles in four sizes, from a pinch, Ctrl with + or −, or Ctrl and the wheel.
     readonly property var tileLevels: [
@@ -90,7 +96,7 @@ Item {
         onTriggered: pane.showOperationSuccess = false
     }
     onRawOperationStatusChanged: {
-        if (rawOperationStatus === qsTr("Done")) {
+        if (rawOperationStatus === words.i18n("Done")) {
             showOperationSuccess = true;
             successHold.restart();
         } else {
@@ -208,48 +214,45 @@ Item {
         onAboutToShow: if (pane.browser && !targetPath.length) pane.browser.checkTrash()
         property string targetPath: ""
         property bool targetDirectory: false
-        SheetMenuItem { text: "Open"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
-        SheetMenuItem { objectName: "context-new-tab"; text: "Open in new tab"; visible: actions.targetPath.length>0 && actions.targetDirectory; onTriggered: pane.browser.openTab(actions.targetPath) }
+        SheetMenuItem { text: words.i18n("Open"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
+        SheetMenuItem { objectName: "context-new-tab"; text: words.i18n("Open in new tab"); visible: actions.targetPath.length>0 && actions.targetDirectory; onTriggered: pane.browser.openTab(actions.targetPath) }
         SheetMenuItem {
             objectName: "context-show-in-folder"
-            text: "Show in folder"
+            text: words.i18n("Show in folder")
             visible: actions.targetPath.length>0 && !!pane.browser && (pane.browser.placeKind === "recent" || pane.browser.placeKind === "search")
             onTriggered: pane.browser.showInFolder(actions.targetPath)
         }
-        SheetMenuItem { text: "Copy"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
-        SheetMenuItem { text: "Cut"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
-        SheetMenuItem { text: "Rename"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
-        SheetMenuItem { objectName: "context-open-with"; text: "Open with…"; visible: actions.targetPath.length>0 && !actions.targetDirectory; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
-        SheetMenuItem { text: "Move to Trash"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
-        SheetMenuItem { objectName: "context-compress"; text: "Compress"; visible: actions.targetPath.length>0; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
-        SheetMenuItem { objectName: "context-extract"; text: "Extract here"; visible: actions.targetPath.length>0 && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
-        SheetMenuItem { text: "Restore last trashed item"; enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
-        SheetMenuItem { objectName: "context-empty-trash"; text: "Empty Trash…"; visible: !actions.targetPath.length; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
+        SheetMenuItem { text: words.i18n("Copy"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
+        SheetMenuItem { text: words.i18n("Cut"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
+        SheetMenuItem { text: words.i18n("Rename"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
+        SheetMenuItem { objectName: "context-open-with"; text: words.i18n("Open with…"); visible: actions.targetPath.length>0 && !actions.targetDirectory; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
+        SheetMenuItem { text: words.i18n("Move to Trash"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
+        SheetMenuItem { objectName: "context-compress"; text: words.i18n("Compress"); visible: actions.targetPath.length>0; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
+        SheetMenuItem { objectName: "context-extract"; text: words.i18n("Extract here"); visible: actions.targetPath.length>0 && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
+        SheetMenuItem { text: words.i18n("Restore last trashed item"); enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
+        SheetMenuItem { objectName: "context-empty-trash"; text: words.i18n("Empty Trash…"); visible: !actions.targetPath.length; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
         SheetMenuItem {
             objectName: "context-paste"
-            text: actions.targetDirectory ? "Paste into “"+actions.targetPath.split("/").pop()+"”" : "Paste here"
+            text: actions.targetDirectory ? words.i18n("Paste into “%1”", actions.targetPath.split("/").pop()) : words.i18n("Paste here")
             visible: (!actions.targetPath.length && pane.browser && pane.browser.canWrite) || actions.targetDirectory
             enabled: pane.browser && pane.browser.canPaste && !pane.browser.busy
             onTriggered: { if(actions.targetDirectory) pane.browser.pasteInto(actions.targetPath); else pane.browser.paste() }
         }
-        SheetMenuItem { text: "Select all"; onTriggered: pane.browser.selectAll() }
-        SheetMenuItem { text: "New folder"; visible: !actions.targetPath.length && pane.browser && pane.browser.canWrite; onTriggered: pane.newFolderForm() }
-        SheetMenuItem { objectName: "context-properties"; text: "Properties"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
+        SheetMenuItem { text: words.i18n("Select all"); onTriggered: pane.browser.selectAll() }
+        SheetMenuItem { text: words.i18n("New folder"); visible: !actions.targetPath.length && pane.browser && pane.browser.canWrite; onTriggered: pane.newFolderForm() }
+        SheetMenuItem { objectName: "context-properties"; text: words.i18n("Properties"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
     // The one permanent delete Files offers, said plainly before it happens.
     SheetConfirm {
         id: emptyTrashConfirm
         objectName: "empty-trash-confirm"
-        title: "Empty Trash?"
-        action: "Empty Trash"
-        Text {
-            objectName: "empty-trash-summary"
-            readonly property int items: pane.browser ? pane.browser.trashItems : 0
-            readonly property string size: pane.browser ? pane.browser.trashSize : ""
-            width: emptyTrashConfirm.availableWidth
-            text: (items === 1 ? "1 item" : items + " items") + (size.length ? ", " + size + "," : "") + " will be deleted for good. This can't be undone."
-            color: "#A8F8F8FF"; font.pixelSize: 14; wrapMode: Text.Wrap
-        }
+        title: words.i18n("Empty Trash?")
+        action: words.i18n("Empty Trash")
+        readonly property int items: pane.browser ? pane.browser.trashItems : 0
+        readonly property string size: pane.browser ? pane.browser.trashSize : ""
+        body: size.length
+            ? words.i18np("1 item, %2, will be deleted for good. This can't be undone.", "%1 items, %2, will be deleted for good. This can't be undone.", items, size)
+            : words.i18np("1 item will be deleted for good. This can't be undone.", "%1 items will be deleted for good. This can't be undone.", items)
         onAccepted: pane.browser.emptyTrash()
     }
     // A name already taken where files arrive: nothing is replaced unless the
@@ -277,36 +280,36 @@ Item {
             Text {
                 objectName: "name-taken-title"
                 Layout.fillWidth: true
-                text: "“" + (nameTakenSheet.question.name || "") + "” is already in " + (nameTakenSheet.question.folder || "")
+                text: words.i18nc("a name, then the folder it is in", "“%1” is already in %2", nameTakenSheet.question.name || "", nameTakenSheet.question.folder || "")
                 color: "#F8F8FF"; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
             }
             Text {
                 Layout.fillWidth: true
                 visible: !!nameTakenSheet.question.isFolder
-                text: "Merge puts what arrives into the folder that is there. A file already in it asks again."
+                text: words.i18n("Merge puts what arrives into the folder that is there. A file already in it asks again.")
                 color: "#A8FFFFFF"; font.pixelSize: 13; wrapMode: Text.Wrap
             }
             GridLayout {
                 visible: !nameTakenSheet.question.isFolder
                 columns: 2; columnSpacing: 16; rowSpacing: 6
-                Text { text: "Already there"; color: "#A8FFFFFF"; font.pixelSize: 13 }
+                Text { text: words.i18n("Already there"); color: "#A8FFFFFF"; font.pixelSize: 13 }
                 Text { objectName: "name-taken-existing"; Layout.fillWidth: true; text: nameTakenSheet.question.existing || ""; color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
-                Text { text: "Arriving"; color: "#A8FFFFFF"; font.pixelSize: 13 }
+                Text { text: words.i18n("Arriving"); color: "#A8FFFFFF"; font.pixelSize: 13 }
                 Text { objectName: "name-taken-arriving"; Layout.fillWidth: true; text: nameTakenSheet.question.arriving || ""; color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
             }
             RowLayout {
                 visible: !!nameTakenSheet.question.several
                 spacing: 10
                 C.Switch { id: sameForRest; objectName: "name-taken-rest" }
-                Text { text: "Do the same for the rest"; color: "#F8F8FF"; font.pixelSize: 13 }
+                Text { text: words.i18n("Do the same for the rest"); color: "#F8F8FF"; font.pixelSize: 13 }
             }
             RowLayout {
                 Layout.alignment: Qt.AlignRight
                 spacing: 8
-                PillAction { objectName: "name-taken-stop"; text: "Stop"; onClicked: nameTakenSheet.reply("stop") }
-                PillAction { objectName: "name-taken-skip"; text: "Skip"; visible: !!nameTakenSheet.question.canSkip; onClicked: nameTakenSheet.reply("skip") }
-                PillAction { objectName: "name-taken-keep"; text: "Keep both"; visible: !!nameTakenSheet.question.canKeepBoth; onClicked: nameTakenSheet.reply("keep") }
-                PillAction { objectName: "name-taken-replace"; text: nameTakenSheet.question.isFolder ? "Merge" : "Replace"; visible: !!nameTakenSheet.question.canReplace; onClicked: nameTakenSheet.reply("replace") }
+                PillAction { objectName: "name-taken-stop"; text: words.i18n("Stop"); onClicked: nameTakenSheet.reply("stop") }
+                PillAction { objectName: "name-taken-skip"; text: words.i18n("Skip"); visible: !!nameTakenSheet.question.canSkip; onClicked: nameTakenSheet.reply("skip") }
+                PillAction { objectName: "name-taken-keep"; text: words.i18n("Keep both"); visible: !!nameTakenSheet.question.canKeepBoth; onClicked: nameTakenSheet.reply("keep") }
+                PillAction { objectName: "name-taken-replace"; text: nameTakenSheet.question.isFolder ? words.i18n("Merge") : words.i18n("Replace"); visible: !!nameTakenSheet.question.canReplace; onClicked: nameTakenSheet.reply("replace") }
             }
         }
     }
@@ -330,8 +333,8 @@ Item {
             Text {
                 objectName: "open-with-title"
                 Layout.fillWidth: true
-                text: openWithSheet.choices.hasDefault === false ? "Choose an application for “" + (openWithSheet.choices.name || "") + "”"
-                    : "Open “" + (openWithSheet.choices.name || "") + "” with"
+                text: openWithSheet.choices.hasDefault === false ? words.i18n("Choose an application for “%1”", openWithSheet.choices.name || "")
+                    : words.i18nc("a file name; the applications follow", "Open “%1” with", openWithSheet.choices.name || "")
                 color: "#F8F8FF"; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
             }
             C.TextField {
@@ -339,7 +342,7 @@ Item {
                 objectName: "open-with-filter"
                 Layout.fillWidth: true
                 visible: openWithSheet.showingAll
-                placeholderText: "Filter applications"
+                placeholderText: words.i18n("Filter applications")
             }
             ListView {
                 objectName: "open-with-list"
@@ -358,7 +361,7 @@ Item {
                         x: 12; spacing: 12; anchors.verticalCenter: parent.verticalCenter
                         Kirigami.Icon { source: modelData.icon; width: 28; height: 28; anchors.verticalCenter: parent.verticalCenter }
                         Text { text: modelData.name; color: "#F8F8FF"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
-                        Text { visible: modelData.isDefault; text: "Default"; color: "#A8FFFFFF"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        Text { visible: modelData.isDefault; text: words.i18n("Default"); color: "#A8FFFFFF"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
                     }
                     HoverHandler { id: pickHover }
                     TapHandler {
@@ -373,15 +376,15 @@ Item {
             PillAction {
                 objectName: "open-with-all"
                 visible: !openWithSheet.showingAll
-                text: "Show all applications"
+                text: words.i18n("Show all applications")
                 onClicked: { openWithSheet.everything = pane.browser.allApplications(); openWithSheet.showingAll = true; applicationFilter.forceActiveFocus() }
             }
             RowLayout {
                 spacing: 10
                 C.Switch { id: alwaysUse; objectName: "open-with-always" }
-                Text { Layout.fillWidth: true; text: "Always use it for " + (openWithSheet.choices.kind || "this kind of file"); color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
+                Text { Layout.fillWidth: true; text: openWithSheet.choices.kind ? words.i18nc("a kind of file, as “PNG image”", "Always use it for %1", openWithSheet.choices.kind) : words.i18n("Always use it for this kind of file"); color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
             }
-            PillAction { objectName: "open-with-cancel"; Layout.alignment: Qt.AlignRight; text: "Cancel"; onClicked: openWithSheet.close() }
+            PillAction { objectName: "open-with-cancel"; Layout.alignment: Qt.AlignRight; text: words.i18n("Cancel"); onClicked: openWithSheet.close() }
         }
     }
     // A file's or folder's details: what is known at once, then a folder's
@@ -439,7 +442,7 @@ Item {
                     }
                 }
             }
-            PillAction { objectName: "properties-close"; Layout.alignment: Qt.AlignRight; text: "Close"; onClicked: propertiesSheet.close() }
+            PillAction { objectName: "properties-close"; Layout.alignment: Qt.AlignRight; text: words.i18n("Close"); onClicked: propertiesSheet.close() }
         }
     }
     SheetConfirm {
@@ -448,14 +451,10 @@ Item {
         readonly property int items: pane.selectedPaths.length
         readonly property string firstName: items ? pane.selectedPaths[0].split("/").pop() : ""
         // A long name keeps its start and end, so the question stays short.
-        title: items === 1 ? "Move “" + (firstName.length > 40 ? firstName.slice(0, 20) + "…" + firstName.slice(-16) : firstName) + "” to the Trash?"
-            : "Move " + items + " items to the Trash?"
-        action: "Move to Trash"
-        Text {
-            width: trashConfirm.availableWidth
-            text: "Restore last trashed item, in Files' menu, brings them back one at a time."
-            color: "#A8F8F8FF"; font.pixelSize: 14; wrapMode: Text.Wrap
-        }
+        title: items === 1 ? words.i18n("Move “%1” to the Trash?", firstName.length > 40 ? firstName.slice(0, 20) + "…" + firstName.slice(-16) : firstName)
+            : words.i18np("Move 1 item to the Trash?", "Move %1 items to the Trash?", items)
+        action: words.i18n("Move to Trash")
+        body: words.i18n("Restore last trashed item, in Files' menu, brings them back one at a time.")
         onAccepted: pane.browser.trashSelected()
     }
     // While Files asks a question, only Files darkens behind it.
@@ -590,7 +589,7 @@ Item {
                         visible: place.ejectable
                         anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter
                         width: 42
-                        text: qsTr("Eject %1").arg(place.modelData.label)
+                        text: words.i18n("Eject %1", place.modelData.label)
                         glyph: "eject"
                         onClicked: pane.browser.ejectDrive(place.modelData.drive)
                     }
@@ -616,10 +615,10 @@ Item {
                         Rectangle { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: parent.width-24; height: 2; radius: 1; color: pane.browser.currentTab===index ? "#888888" : "transparent" }
                         Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: "#F8F8FF"; elide: Text.ElideRight }
                         TapHandler { onTapped: pane.browser.selectTab(index) }
-                        Action { anchors.right: parent.right; width: 42; text: qsTr("Close tab"); glyph: "x"; enabled: pane.browser.tabs.length>1; onClicked: pane.browser.closeTab(index) }
+                        Action { anchors.right: parent.right; width: 42; text: words.i18n("Close tab"); glyph: "x"; enabled: pane.browser.tabs.length>1; onClicked: pane.browser.closeTab(index) }
                     }
                 }
-                Action { text: qsTr("New tab"); glyph: "plus"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
+                Action { text: words.i18n("New tab"); glyph: "plus"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
             }
             GridLayout {
                 Layout.fillWidth: true
@@ -628,8 +627,8 @@ Item {
                     objectName: "files-navigation"
                     Layout.row: 0; Layout.column: 0; Layout.columnSpan: pane.compact ? 1 : 2
                     Layout.fillWidth: true
-                    Action { text: qsTr("Back"); glyph: "arrow-left"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
-                    Action { text: qsTr("Forward"); glyph: "arrow-right"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
+                    Action { text: words.i18n("Back"); glyph: "arrow-left"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
+                    Action { text: words.i18n("Forward"); glyph: "arrow-right"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
                     Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: "#333333" }
                     ListView {
                         Layout.fillWidth: true; Layout.preferredHeight: 42
@@ -646,8 +645,8 @@ Item {
                             }
                         }
                     }
-                    PillAction { objectName: "path-toggle"; text: "Path"; onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.folder; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
-                    Action { text: qsTr("Refresh"); glyph: "refresh-cw"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
+                    PillAction { objectName: "path-toggle"; text: words.i18n("Path"); onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.folder; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
+                    Action { text: words.i18n("Refresh"); glyph: "refresh-cw"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
                 }
                 Rectangle {
                     objectName: "file-navigation-divider"
@@ -662,7 +661,7 @@ Item {
                     Keys.onEscapePressed: visible=false
                     Layout.row: 2; Layout.column: 0; Layout.columnSpan: 2
                     Layout.fillWidth: true; visible: false
-                    placeholderText: "Absolute folder path"
+                    placeholderText: words.i18n("Absolute folder path")
                     onAccepted: { pane.browser.navigate(text); visible=false }
                 }
                 RowLayout {
@@ -672,15 +671,15 @@ Item {
                     Layout.fillWidth: !pane.compact
                     // With text typed and nothing chosen, the folder and
                     // everything inside it can be searched for that text.
-                    PillAction { objectName: "stop-search"; text: "Stop searching"; visible: !!pane.browser && pane.browser.searching; onClicked: pane.browser.stopSearch() }
-                    PillAction { objectName: "search-inside"; text: "Search inside folders"; visible: pane.browser && pane.browser.searchOffered && !(pane.selectedPaths && pane.selectedPaths.length>0); onClicked: pane.browser.searchInside(pane.browser.filter) }
+                    PillAction { objectName: "stop-search"; text: words.i18n("Stop searching"); visible: !!pane.browser && pane.browser.searching; onClicked: pane.browser.stopSearch() }
+                    PillAction { objectName: "search-inside"; text: words.i18n("Search inside folders"); visible: pane.browser && pane.browser.searchOffered && !(pane.selectedPaths && pane.selectedPaths.length>0); onClicked: pane.browser.searchInside(pane.browser.filter) }
                     // While files are chosen, what can be done with them.
-                    PillAction { objectName: "done-selecting"; text: "Done selecting"; visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
-                    PillAction { objectName: "selection-copy"; text: "Copy"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
-                    PillAction { objectName: "selection-cut"; text: "Cut"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.cutSelected() }
-                    PillAction { objectName: "selection-rename"; text: "Rename"; visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.renameForm() }
-                    PillAction { objectName: "selection-properties"; text: "Properties"; visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.showProperties(pane.selectedPaths[0]) }
-                    PillAction { objectName: "selection-trash"; text: "Move to Trash"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
+                    PillAction { objectName: "done-selecting"; text: words.i18n("Done selecting"); visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
+                    PillAction { objectName: "selection-copy"; text: words.i18n("Copy"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
+                    PillAction { objectName: "selection-cut"; text: words.i18n("Cut"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.cutSelected() }
+                    PillAction { objectName: "selection-rename"; text: words.i18n("Rename"); visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.renameForm() }
+                    PillAction { objectName: "selection-properties"; text: words.i18n("Properties"); visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.showProperties(pane.selectedPaths[0]) }
+                    PillAction { objectName: "selection-trash"; text: words.i18n("Move to Trash"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
                     Item {
                         objectName: "file-operation-status"
                         Layout.fillWidth: true; Layout.minimumWidth: 0
@@ -706,13 +705,13 @@ Item {
                             }
                         }
                     }
-                    PillAction { objectName: "paste-here"; text: "Paste"; visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
-                    PillAction { objectName: "new-folder"; text: "New folder"; visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
+                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
+                    PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
                     // With files chosen, their own menu; otherwise the folder's.
                     PillAction {
                         id: moreActions
                         objectName: "more-actions"
-                        text: pane.selectedPaths && pane.selectedPaths.length ? qsTr("More actions") : qsTr("Folder actions")
+                        text: pane.selectedPaths && pane.selectedPaths.length ? words.i18n("More actions") : words.i18n("Folder actions")
                         glyph: "ellipsis-vertical"; Accessible.name: text
                         Layout.preferredWidth: 42
                         onClicked: {
@@ -736,8 +735,8 @@ Item {
                     spacing: 10
                     Text {
                         Layout.preferredWidth: 220
-                        text: !operationRow.operation ? "" : operationRow.operation.suspended ? "Paused · "+(operationRow.operation.title || operationRow.operation.label)
-                            : operationRow.operation.title ? operationRow.operation.label+" "+operationRow.operation.title : operationRow.operation.label
+                        text: !operationRow.operation ? "" : operationRow.operation.suspended ? words.i18n("Paused · %1", operationRow.operation.title || operationRow.operation.label)
+                            : operationRow.operation.title ? words.i18nc("what is being done, as “Copying…”, then to what", "%1 %2", operationRow.operation.label, operationRow.operation.title) : operationRow.operation.label
                         color: operationRow.operation && operationRow.operation.suspended ? "#E3B866" : "#F8F8FF"
                         elide: Text.ElideMiddle
                     }
@@ -761,7 +760,7 @@ Item {
                         objectName: "operation-pause-"+operationRow.modelData
                         Layout.preferredWidth: 42
                         visible: operationRow.operation !== null && operationRow.operation.canSuspend
-                        text: operationRow.operation && operationRow.operation.suspended ? qsTr("Resume") : qsTr("Pause")
+                        text: operationRow.operation && operationRow.operation.suspended ? words.i18n("Resume") : words.i18n("Pause")
                         glyph: operationRow.operation && operationRow.operation.suspended ? "play" : "pause"
                         onClicked: operationRow.operation.suspended ? pane.browser.resumeOperation(operationRow.modelData)
                             : pane.browser.suspendOperation(operationRow.modelData)
@@ -770,7 +769,7 @@ Item {
                         objectName: "operation-cancel-"+operationRow.modelData
                         Layout.preferredWidth: 42
                         visible: operationRow.operation !== null && operationRow.operation.canCancel
-                        text: qsTr("Cancel")
+                        text: words.i18n("Cancel")
                         glyph: "x"
                         onClicked: pane.browser.cancelOperation(operationRow.modelData)
                     }
@@ -778,9 +777,9 @@ Item {
             }
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
-                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePath.length ? "New name" : "Folder name"; Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: pane.submitName() }
-                PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? "Rename" : "Create"; onClicked: pane.submitName() }
-                PillAction { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
+                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePath.length ? words.i18n("New name") : words.i18n("Folder name"); Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: pane.submitName() }
+                PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? words.i18n("Rename") : words.i18n("Create"); onClicked: pane.submitName() }
+                PillAction { objectName: "cancel-folder"; text: words.i18n("Cancel"); onClicked: pane.creatingFolder=false }
             }
             Text { Layout.fillWidth: true; visible: text.length>0 && !(pane.browser && pane.browser.listingFailed); text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
             GridView {
@@ -1115,9 +1114,9 @@ Item {
                         color: "#A8FFFFFF"
                         readonly property string typed: pane.browser ? pane.browser.filter.trim() : ""
                         text: !pane.browser ? "" : pane.browser.listingFailed ? pane.browser.error
-                            : pane.browser.searching ? "Searching…" : pane.browser.busy ? "Loading…" : pane.browser.error ? ""
-                            : typed.length && pane.browser.placeKind === "folder" ? "Nothing here matches “" + typed + "”"
-                            : pane.browser.placeKind === "search" ? "Nothing found" : pane.browser.placeKind === "recent" ? "Nothing used recently" : "No files here"
+                            : pane.browser.searching ? words.i18n("Searching…") : pane.browser.busy ? words.i18n("Loading…") : pane.browser.error ? ""
+                            : typed.length && pane.browser.placeKind === "folder" ? words.i18n("Nothing here matches “%1”", typed)
+                            : pane.browser.placeKind === "search" ? words.i18n("Nothing found") : pane.browser.placeKind === "recent" ? words.i18n("Nothing used recently") : words.i18n("No files here")
                     }
                     // Inside the grid a button's press is held by the grid, as
                     // a tile's tap is not, so the way back takes taps as a tile
@@ -1125,7 +1124,7 @@ Item {
                     Rectangle {
                         id: wayBack
                         objectName: "files-way-back"
-                        readonly property string text: pane.browser && pane.browser.canBack ? "Back" : "Home"
+                        readonly property string text: pane.browser && pane.browser.canBack ? words.i18n("Back") : words.i18n("Home")
                         function activate() { pane.browser.canBack ? pane.browser.back() : pane.browser.navigate(pane.browser.homePath) }
                         anchors.horizontalCenter: parent.horizontalCenter
                         visible: !!pane.browser && pane.browser.listingFailed
@@ -1145,10 +1144,10 @@ Item {
                 objectName: "files-open-row"
                 Layout.fillWidth: true
                 visible: !pane.compact
-                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? pane.selectedPaths.length+" selected" : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : "Select a file to open"; elide: Text.ElideMiddle; color: "#A8FFFFFF"; font.pixelSize: 12 }
+                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? words.i18np("1 selected", "%1 selected", pane.selectedPaths.length) : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : words.i18n("Select a file to open"); elide: Text.ElideMiddle; color: "#A8FFFFFF"; font.pixelSize: 12 }
                 PillAction {
                     objectName: "open-file"
-                    text: pane.browser && pane.browser.opening ? "Opening…" : "Open"
+                    text: pane.browser && pane.browser.opening ? words.i18n("Opening…") : words.i18n("Open")
                     enabled: pane.selectedPath.length>0 && !pane.browser.busy && !pane.browser.opening
                     onClicked: pane.browser.openSelected()
                 }
@@ -1193,7 +1192,7 @@ Item {
         color: "#242424"; border.color: "#5A5A5A"
         readonly property int count: pane.incoming ? pane.incomingCount : pane.dragPaths.length
         readonly property string target: pane.incoming ? pane.incomingTarget : pane.dropFolder
-        Text { id: dragLabel; anchors.centerIn: parent; color: "#F8F8FF"; text: parent.target.length ? "Copy "+parent.count+" to “"+parent.target.split("/").pop()+"”" : "Copy "+parent.count+" · choose a folder" }
+        Text { id: dragLabel; anchors.centerIn: parent; color: "#F8F8FF"; text: parent.target.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, parent.target.split("/").pop()) : words.i18np("Copy 1 · choose a folder", "Copy %1 · choose a folder", parent.count) }
     }
     Shortcut { sequence: "Ctrl+T"; enabled: pane.visible; onActivated: pane.browser.addTab() }
     Shortcut { sequences: ["Alt+Return", "Alt+Enter"]; enabled: pane.visible && pane.selectedPaths.length===1; onActivated: pane.showProperties(pane.selectedPaths[0]) }

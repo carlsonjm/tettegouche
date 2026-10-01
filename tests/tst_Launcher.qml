@@ -1310,7 +1310,7 @@ TestCase {
         menu.close()
         const confirm = findChild(launcher, "empty-trash-confirm")
         tryCompare(confirm, "opened", true)
-        compare(findChild(launcher, "empty-trash-summary").text, "3 items, 12 MiB, will be deleted for good. This can't be undone.")
+        compare(findChild(launcher, "empty-trash-confirm-body").text, "3 items, 12 MiB, will be deleted for good. This can't be undone.")
         confirm.accept()
         compare(filesMock.empties, 1)
         tryCompare(confirm, "opened", false)

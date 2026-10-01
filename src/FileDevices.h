@@ -2,6 +2,7 @@
 
 #include "DriveRules.h"
 #include <KProtocolInfo>
+#include <KLocalizedString>
 #include <Solid/Device>
 #include <Solid/DeviceNotifier>
 #include <Solid/OpticalDrive>
@@ -179,14 +180,14 @@ private:
         auto *access = device.as<Solid::StorageAccess>();
         if (error == Solid::NoError && access && access->isAccessible()) Q_EMIT opened(id, access->filePath());
         else if (error == Solid::NoError) m_opening.insert(id); // mounted, not yet reported
-        else if (error != Solid::UserCanceled) Q_EMIT failed(id, tr("“%1” could not be opened.%2").arg(device.description(), reason(data)));
+        else if (error != Solid::UserCanceled) Q_EMIT failed(id, i18n("“%1” could not be opened.%2", device.description(), reason(data)));
         reload();
     }
     void finishRemoving(const QString &id, Solid::ErrorType error, const QVariant &data) {
         if (!m_removing.remove(id)) return;
         const auto label = m_labels.take(id);
         if (error == Solid::NoError) Q_EMIT removed(id, label);
-        else if (error != Solid::UserCanceled) Q_EMIT failed(id, tr("“%1” could not be ejected.%2").arg(label, reason(data)));
+        else if (error != Solid::UserCanceled) Q_EMIT failed(id, i18n("“%1” could not be ejected.%2", label, reason(data)));
         reload();
     }
 
@@ -218,8 +219,8 @@ private:
             reload();
             if (!path.isEmpty()) Q_EMIT opened(udi, path);
             else if (reply.errorName() == QLatin1String("org.freedesktop.DBus.Error.ServiceUnknown"))
-                Q_EMIT failed(udi, tr("Files needs kio-fuse to open “%1” by cable.").arg(name));
-            else Q_EMIT failed(udi, tr("“%1” could not be opened. Unlock it, and let this computer reach its files.").arg(name));
+                Q_EMIT failed(udi, i18n("Files needs kio-fuse to open “%1” by cable.", name));
+            else Q_EMIT failed(udi, i18n("“%1” could not be opened. Unlock it, and let this computer reach its files.", name));
         });
     }
 
@@ -317,7 +318,7 @@ private:
         if (phone.mounted) { Q_EMIT opened(id, opensAt(phone)); return; }
         // KDE Connect mounts a phone's files with sshfs, which it leaves optional.
         if (QStandardPaths::findExecutable(QStringLiteral("sshfs")).isEmpty()) {
-            Q_EMIT failed(id, tr("Files needs sshfs to open “%1” over Wi-Fi.").arg(phone.name));
+            Q_EMIT failed(id, i18n("Files needs sshfs to open “%1” over Wi-Fi.", phone.name));
             return;
         }
         m_opening.insert(id); reload();
@@ -341,8 +342,8 @@ private:
                 const auto text = error.arguments().value(0).toString();
                 // The phone refuses until KDE Connect there may reach its files.
                 if (text.contains(QLatin1String("ermission")))
-                    Q_EMIT failed(id, tr("Allow KDE Connect on “%1” to reach its files, then open it again.").arg(phone.name));
-                else Q_EMIT failed(id, tr("“%1” could not be opened.%2").arg(phone.name, reason(text)));
+                    Q_EMIT failed(id, i18n("Allow KDE Connect on “%1” to reach its files, then open it again.", phone.name));
+                else Q_EMIT failed(id, i18n("“%1” could not be opened.%2", phone.name, reason(text)));
             });
         });
     }

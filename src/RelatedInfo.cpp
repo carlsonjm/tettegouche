@@ -1,5 +1,6 @@
 #include "RelatedInfo.h"
 #include <KApplicationTrader>
+#include <KLocalizedString>
 #include <KService>
 #include <Solid/Device>
 #include <Solid/StorageAccess>
@@ -49,7 +50,7 @@ QString RelatedInfo::keyForSetting(const QString &id) {
 QVariantList RelatedInfo::items(const QString &key) {
     if (key == QStringLiteral("bluetooth")) {
         QVariantList rows;
-        for (const auto &name : m_bluetooth.connectedDevices()) rows.append(row(name, tr("Connected")));
+        for (const auto &name : m_bluetooth.connectedDevices()) rows.append(row(name, i18n("Connected")));
         return rows;
     }
     if (!key.isEmpty() && !m_requested.contains(key)) {
@@ -65,7 +66,7 @@ void RelatedInfo::publish(const QString &key, QVariantList rows) {
     if (rows.size() > 4) {
         const auto extra = rows.size() - 3;
         rows = rows.mid(0, 3);
-        rows.append(row(tr("%1 more in settings").arg(extra), {}));
+        rows.append(row(i18n("%1 more in settings", extra), {}));
     }
     m_rows[key] = rows;
     Q_EMIT changed();
@@ -121,8 +122,8 @@ QVariantList RelatedInfo::audioRows(const QByteArray &json, const QString &kind)
         const auto name = object.value(QStringLiteral("description")).toString();
         if (name.isEmpty()) continue;
         QString status = kind;
-        if (object.value(QStringLiteral("mute")).toBool()) status += tr(" · Muted");
-        else if (object.value(QStringLiteral("state")).toString() == QStringLiteral("RUNNING")) status += tr(" · In use");
+        if (object.value(QStringLiteral("mute")).toBool()) status += i18n(" · Muted");
+        else if (object.value(QStringLiteral("state")).toString() == QStringLiteral("RUNNING")) status += i18n(" · In use");
         rows.append(row(name, status));
     }
     return rows;
@@ -133,14 +134,14 @@ QVariantList RelatedInfo::displayRows(const QByteArray &json) {
     for (const auto &value : QJsonDocument::fromJson(json).object().value(QStringLiteral("outputs")).toArray()) {
         const auto output = value.toObject();
         if (!output.value(QStringLiteral("connected")).toBool()) continue;
-        QString status = tr("Disabled");
+        QString status = i18n("Disabled");
         if (output.value(QStringLiteral("enabled")).toBool()) {
-            status = tr("Enabled");
+            status = i18n("Enabled");
             for (const auto &modeValue : output.value(QStringLiteral("modes")).toArray()) {
                 const auto mode = modeValue.toObject();
                 if (mode.value(QStringLiteral("id")) != output.value(QStringLiteral("currentModeId"))) continue;
                 status = mode.value(QStringLiteral("name")).toString();
-                status += tr(" · %1% scale").arg(qRound(output.value(QStringLiteral("scale")).toDouble(1) * 100));
+                status += i18n(" · %1% scale", qRound(output.value(QStringLiteral("scale")).toDouble(1) * 100));
             }
         }
         rows.append(row(output.value(QStringLiteral("name")).toString(), status));
@@ -157,7 +158,7 @@ QVariantList RelatedInfo::networkRows(const QByteArray &text) {
         const auto type = parts.takeLast();
         if (type == QStringLiteral("loopback") || type == QStringLiteral("bridge")) continue;
         rows.append(row(parts.join(QLatin1Char(':')), type == QStringLiteral("vpn")
-            ? tr("VPN · Active") : tr("Connected")));
+            ? i18n("VPN · Active") : i18n("Connected")));
     }
     return rows;
 }
@@ -172,7 +173,7 @@ void RelatedInfo::request(const QString &key) {
         for (const auto &kind : {QStringLiteral("sinks"), QStringLiteral("sources")}) {
             process(key + kind, QStringLiteral("pactl"), {QStringLiteral("--format=json"), QStringLiteral("list"), kind},
                 [this, key, kind](const QByteArray &data) {
-                    const auto rows = audioRows(data, kind == QStringLiteral("sinks") ? tr("Output") : tr("Microphone"));
+                    const auto rows = audioRows(data, kind == QStringLiteral("sinks") ? i18n("Output") : i18n("Microphone"));
                     m_rows[key + kind] = rows;
                     publish(key, m_rows.value(key + QStringLiteral("sinks")) + m_rows.value(key + QStringLiteral("sources")));
                     return rows;
@@ -182,9 +183,9 @@ void RelatedInfo::request(const QString &key) {
         properties(key + QStringLiteral("battery"), QStringLiteral("org.freedesktop.UPower"), QStringLiteral("/org/freedesktop/UPower/devices/DisplayDevice"),
             QStringLiteral("org.freedesktop.UPower.Device"), true, [this, key](const QVariantMap &p) {
                 QVariantList rows;
-                if (p.value(QStringLiteral("IsPresent")).toBool()) rows.append(row(tr("Battery"),
-                    tr("%1% · %2").arg(qRound(p.value(QStringLiteral("Percentage")).toDouble()))
-                    .arg(p.value(QStringLiteral("State")).toInt() == 1 ? tr("Charging") : tr("Not charging"))));
+                if (p.value(QStringLiteral("IsPresent")).toBool()) rows.append(row(i18n("Battery"),
+                    i18nc("battery charge and state", "%1% · %2", qRound(p.value(QStringLiteral("Percentage")).toDouble()),
+                        p.value(QStringLiteral("State")).toInt() == 1 ? i18n("Charging") : i18n("Not charging"))));
                 m_rows[key + QStringLiteral("battery")] = rows;
                 publish(key, rows + m_rows.value(key + QStringLiteral("profile")));
                 return rows;
@@ -193,7 +194,7 @@ void RelatedInfo::request(const QString &key) {
             [this, key](const QByteArray &data) {
                 QVariantList rows;
                 const auto profile = QString::fromUtf8(data).trimmed();
-                if (!profile.isEmpty()) rows.append(row(tr("System power profile"), profile));
+                if (!profile.isEmpty()) rows.append(row(i18n("System power profile"), profile));
                 m_rows[key + QStringLiteral("profile")] = rows;
                 publish(key, m_rows.value(key + QStringLiteral("battery")) + rows);
                 return rows;
@@ -202,13 +203,13 @@ void RelatedInfo::request(const QString &key) {
         properties(key, QStringLiteral("org.kde.KWin"), QStringLiteral("/org/kde/KWin/NightLight"),
             QStringLiteral("org.kde.KWin.NightLight"), false, [](const QVariantMap &p) {
                 if (!p.value(QStringLiteral("available")).toBool()) return QVariantList{};
-                return QVariantList{row(tr("Night Light"), !p.value(QStringLiteral("enabled")).toBool() ? tr("Disabled")
-                    : p.value(QStringLiteral("running")).toBool() ? tr("Active · %1 K").arg(p.value(QStringLiteral("currentTemperature")).toUInt()) : tr("Enabled · Not active"))};
+                return QVariantList{row(i18n("Night Light"), !p.value(QStringLiteral("enabled")).toBool() ? i18n("Disabled")
+                    : p.value(QStringLiteral("running")).toBool() ? i18n("Active · %1 K", p.value(QStringLiteral("currentTemperature")).toUInt()) : i18n("Enabled · Not active"))};
             });
     } else if (key == QStringLiteral("connect")) {
         process(key, QStringLiteral("kdeconnect-cli"), {QStringLiteral("--list-available"), QStringLiteral("--name-only")}, [](const QByteArray &data) {
             QVariantList rows;
-            for (const auto &name : QString::fromUtf8(data).split(QLatin1Char('\n'), Qt::SkipEmptyParts)) rows.append(row(name, tr("Reachable")));
+            for (const auto &name : QString::fromUtf8(data).split(QLatin1Char('\n'), Qt::SkipEmptyParts)) rows.append(row(name, i18n("Reachable")));
             return rows;
         });
     } else if (key == QStringLiteral("printers")) {
@@ -217,8 +218,8 @@ void RelatedInfo::request(const QString &key) {
             for (const auto &line : QString::fromUtf8(data).split(QLatin1Char('\n'))) {
                 if (!line.startsWith(QStringLiteral("printer "))) continue;
                 const auto name = line.section(QLatin1Char(' '), 1, 1);
-                rows.append(row(name, line.contains(QStringLiteral("disabled")) ? tr("Disabled")
-                    : line.contains(QStringLiteral("now printing")) ? tr("Printing") : tr("Idle")));
+                rows.append(row(name, line.contains(QStringLiteral("disabled")) ? i18n("Disabled")
+                    : line.contains(QStringLiteral("now printing")) ? i18n("Printing") : i18n("Idle")));
             }
             return rows;
         });
@@ -226,8 +227,8 @@ void RelatedInfo::request(const QString &key) {
         QVariantList rows;
         for (const auto &mime : {QStringLiteral("x-scheme-handler/https"), QStringLiteral("x-scheme-handler/mailto"), QStringLiteral("inode/directory")}) {
             const auto service = KApplicationTrader::preferredService(mime);
-            if (service) rows.append(row(service->name(), mime.endsWith(QStringLiteral("https")) ? tr("Browser")
-                : mime.endsWith(QStringLiteral("mailto")) ? tr("Mail") : tr("File manager")));
+            if (service) rows.append(row(service->name(), mime.endsWith(QStringLiteral("https")) ? i18n("Browser")
+                : mime.endsWith(QStringLiteral("mailto")) ? i18n("Mail") : i18n("File manager")));
         }
         publish(key, rows);
     } else if (key == QStringLiteral("storage")) {
@@ -240,7 +241,7 @@ void RelatedInfo::request(const QString &key) {
             const auto *access = device.as<Solid::StorageAccess>();
             if (!drive || !volume || (!drive->isRemovable() && !drive->isHotpluggable())) continue;
             rows.append(row(volume->label().isEmpty() ? device.description() : volume->label(),
-                access && access->isAccessible() ? tr("Mounted") : tr("Not mounted")));
+                access && access->isAccessible() ? i18n("Mounted") : i18n("Not mounted")));
         }
         publish(key, rows);
     }

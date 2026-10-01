@@ -1,5 +1,6 @@
 #include "MprisActivityProvider.h"
 #include "ActivityUtils.h"
+#include <KLocalizedString>
 #include <QFile>
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
@@ -47,7 +48,7 @@ public:
         const auto meta = Ambient::map(player.value(QStringLiteral("Metadata")));
         QVariantMap row{{QStringLiteral("id"), name}, {QStringLiteral("generation"), generation}, {QStringLiteral("kind"), QStringLiteral("media")},
             {QStringLiteral("state"), status == QLatin1String("Playing") ? QStringLiteral("playing") : QStringLiteral("paused")},
-            {QStringLiteral("source"), root.value(QStringLiteral("Identity"), QStringLiteral("Media"))},
+            {QStringLiteral("source"), root.value(QStringLiteral("Identity"), i18n("Media"))},
             {QStringLiteral("icon"), root.value(QStringLiteral("DesktopEntry"), QStringLiteral("audio-x-generic-symbolic"))},
             {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("play"), control && player.value(QStringLiteral("CanPlay")).toBool()},
                 {QStringLiteral("pause"), control && player.value(QStringLiteral("CanPause")).toBool()},

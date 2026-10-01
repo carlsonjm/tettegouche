@@ -10,6 +10,11 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 - `KCoreDirLister` performs asynchronous listing. Navigation disconnects
   the previous lister, and generation/state checks prevent stale replies from
   replacing a newer location.
+- A folder arrives in batches, in no order, and is shown once it is whole,
+  sorted once, so nothing shown moves. One slow to list, a phone's or a
+  share's, shows what it has after half a second and fills in once a second,
+  or less often while filling in takes long. A listed file's type comes from
+  its name; only a name that says nothing has the file's start read.
 - A place is a local folder, Recent (`recentlyused:/`) or a search of a folder
   and everything inside it (`filenamesearch:`). Items in Recent and a search are
   known by the local file they stand for, and every action applies to that file.

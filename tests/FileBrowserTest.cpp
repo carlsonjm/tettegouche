@@ -4,6 +4,8 @@
 #include <KApplicationTrader>
 #include <KIO/DesktopExecParser>
 #include <KService>
+#include <KLocalizedString>
+#include <QQmlComponent>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QImage>
@@ -546,12 +548,15 @@ private Q_SLOTS:
         { QFile f(root.filePath(QStringLiteral("notes.txt"))); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("text"); }
         QVERIFY(QFile::copy(QStringLiteral(FIXTURES_DIR "/tone.ogg"),root.filePath(QStringLiteral("tone.ogg"))));
         QVERIFY(QFile::copy(QStringLiteral(FIXTURES_DIR "/clip.mp4"),root.filePath(QStringLiteral("clip.mp4"))));
+        // A name that says nothing has its contents read for its type.
+        QVERIFY(wide.save(root.filePath(QStringLiteral("scan")),"PNG"));
         QVERIFY(root.mkdir(QStringLiteral("folder")));
         FileBrowser browser; useThumbnails(browser);
         browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
         QVERIFY(entryNamed(browser,QStringLiteral("photo.jpg")).value(QStringLiteral("thumbnail")).toString().startsWith(QStringLiteral("image://thumbnail/")));
         QVERIFY(!entryNamed(browser,odd).value(QStringLiteral("thumbnail")).toString().isEmpty());
         QVERIFY(!entryNamed(browser,QStringLiteral("clip.mp4")).value(QStringLiteral("thumbnail")).toString().isEmpty());
+        QVERIFY(!entryNamed(browser,QStringLiteral("scan")).value(QStringLiteral("thumbnail")).toString().isEmpty());
         QVERIFY(entryNamed(browser,QStringLiteral("notes.txt")).value(QStringLiteral("thumbnail")).toString().isEmpty());
         // Ogg sound shares its container with video, and still keeps its icon.
         QVERIFY(entryNamed(browser,QStringLiteral("tone.ogg")).value(QStringLiteral("thumbnail")).toString().isEmpty());
@@ -1067,6 +1072,80 @@ private Q_SLOTS:
         QCOMPARE(browser.error(), QStringLiteral("“gone” isn't there any more."));
     }
 
+
+    // Run by tests/verify-words.sh with test catalogs that mark every phrase
+    // "xx…xx": every word Files draws comes from the launcher's catalog, and
+    // the panel widget's catalog answers by the name its QML asks for.
+    void wordsComeFromTheCatalogs() {
+        if(!qEnvironmentVariableIsSet("TETTE_WORDS_SEALED"))QSKIP("Run by tests/verify-words.sh with marking test catalogs");
+        const auto marked=[](const QString &s){ return s.startsWith(QStringLiteral("xx")) && s.endsWith(QStringLiteral("xx")); };
+        QVERIFY2(marked(i18n("Home")),qPrintable(i18n("Home")));
+        const char *widget="plasma_applet_studio.warbler.tettegouche";
+        QVERIFY2(marked(i18nd(widget,"Open in Files")),qPrintable(i18nd(widget,"Open in Files")));
+        QQmlEngine engine; QQmlComponent asks(&engine);
+        asks.setData(QByteArrayLiteral("import QtQml\nimport org.kde.ki18n\nKI18nContext {\n"
+            "translationDomain: \"plasma_applet_studio.warbler.tettegouche\"\nproperty string said: i18n(\"Open in Files\")\n}"),QUrl());
+        std::unique_ptr<QObject> context(asks.create());
+        QVERIFY2(context,qPrintable(asks.errorString()));
+        QVERIFY2(marked(context->property("said").toString()),qPrintable(context->property("said").toString()));
+
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QDir root(dir.path()); QVERIFY(root.mkdir(QStringLiteral("Folder")));
+        { QFile f(root.filePath(QStringLiteral("note.txt"))); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("test"); }
+        FileBrowser browser; QQuickView view; showPane(view,browser);
+        QCOMPARE(view.status(),QQuickView::Ready);
+        browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
+        QTRY_VERIFY(findItem(view.rootObject(),QStringLiteral("files-scroll")));
+        // What may show unmarked: what is on disk, by name or size, and drives.
+        QStringList named=dir.path().split(QLatin1Char('/'),Qt::SkipEmptyParts);
+        named<<QStringLiteral("Folder")<<QStringLiteral("note.txt")<<QLocale().formattedDataSize(4)<<dir.path();
+        for(const auto &place:browser.places()) named<<place.toMap().value(QStringLiteral("label")).toString();
+        int checked=0; QStringList unmarked;
+        for(auto *object:view.rootObject()->findChildren<QObject*>()) {
+            for(const char *property:{"text","placeholderText","title","action"}) {
+                const auto value=object->property(property);
+                if(value.typeId()!=QMetaType::QString)continue;
+                const auto text=value.toString();
+                if(!text.contains(QRegularExpression(QStringLiteral("[A-Za-z]{2,}"))))continue;
+                ++checked;
+                if(!marked(text) && !named.contains(text))unmarked<<QStringLiteral("%1.%2: %3").arg(QString::fromLatin1(object->metaObject()->className()),QString::fromLatin1(property),text);
+            }
+        }
+        unmarked.removeDuplicates();
+        qInfo()<<checked<<"words checked";
+        QVERIFY(checked>50);
+        QVERIFY2(unmarked.isEmpty(),qPrintable(unmarked.join(QLatin1Char('\n'))));
+    }
+    // A large folder arrives in batches, in no order. Files shows it once,
+    // whole and sorted, so nothing shown moves.
+    void largeFolderShowsOnceWhole() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QDir root(dir.path()); QVERIFY(root.mkdir(QStringLiteral("big")));
+        const int count=3000;
+        // Made in a scattered order, as a camera folder fills.
+        for(int i=0;i<count;++i) {
+            QFile f(dir.path()+QStringLiteral("/big/IMG_%1.jpg").arg((i*1999)%count,4,10,QLatin1Char('0')));
+            QVERIFY(f.open(QIODevice::WriteOnly));
+        }
+        FileBrowser browser; useThumbnails(browser);
+        browser.navigate(dir.path());
+        QTRY_VERIFY(!browser.busy());
+        QList<int> shown;
+        connect(&browser,&FileBrowser::changed,this,[&]{ if(!browser.entries().isEmpty())shown.append(browser.entries().size()); });
+        QElapsedTimer clock; clock.start();
+        browser.navigate(root.filePath(QStringLiteral("big")));
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),10000);
+        qInfo()<<count<<"files shown in"<<clock.elapsed()<<"ms";
+        QVERIFY(!shown.isEmpty());
+        QCOMPARE(shown.first(),count);
+        const auto entries=browser.entries();
+        QCOMPARE(entries.first().toMap().value(QStringLiteral("name")).toString(),QStringLiteral("IMG_0000.jpg"));
+        QCOMPARE(entries.last().toMap().value(QStringLiteral("name")).toString(),QStringLiteral("IMG_2999.jpg"));
+    }
     void browsing() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());

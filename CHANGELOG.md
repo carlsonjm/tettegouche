@@ -5,6 +5,13 @@ provenance.
 
 ## Unreleased
 
+- A large folder opens whole and in order: it no longer arrives in batches
+  that reshuffle what is shown, and thousands of files open in a moment rather
+  than seconds. A folder slow to list, on a phone or a share, shows what it
+  has after half a second and fills in as it comes.
+- Every word Tettegouche shows can be translated. The launcher, Files, the
+  panel widget and Ambient ask KDE's translation catalogs, sizes and numbers
+  follow the language, and counts take its plural forms.
 - Files' menus open inside Files, under the button or beside the finger, in
   its own look with lines a finger can hit; choosing a line no longer also
   taps what lies under it. Its buttons are the suite's grey pills, the actions

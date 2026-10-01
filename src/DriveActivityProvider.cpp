@@ -1,6 +1,7 @@
 #include "DriveActivityProvider.h"
 #include "ActivityUtils.h"
 #include "DriveRules.h"
+#include <KLocalizedString>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QLocale>
@@ -129,13 +130,13 @@ void DriveActivityProvider::expire() {
 
 void DriveActivityProvider::file(const Drive &drive) {
     const auto size = sizeText(drive.sizeBytes);
-    const auto body = size.isEmpty() ? tr("Plugged in") : tr("%1, plugged in").arg(size);
-    const QStringList actions{QStringLiteral("default"), QString(), QStringLiteral("open"), tr("Open in Files")};
+    const auto body = size.isEmpty() ? i18n("Plugged in") : i18n("%1, plugged in", size);
+    const QStringList actions{QStringLiteral("default"), QString(), QStringLiteral("open"), i18n("Open in Files")};
     // The freedesktop category for a device plugged in.
     const QVariantMap hints{{QStringLiteral("category"), QStringLiteral("device.added")},
         {QStringLiteral("desktop-entry"), QStringLiteral("io.github.carlsonjm.Tettegouche.Files")}};
     auto call = QDBusMessage::createMethodCall(Service, Path, Service, QStringLiteral("Notify"));
-    call.setArguments({tr("Files"), uint(0), drive.icon, drive.label, body, actions, hints, -1});
+    call.setArguments({i18n("Files"), uint(0), drive.icon, drive.label, body, actions, hints, -1});
     auto *watcher = new QDBusPendingCallWatcher(m_bus.asyncCall(call), this);
     const auto udi = drive.udi;
     connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, udi] {

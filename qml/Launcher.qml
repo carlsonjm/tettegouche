@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
 
@@ -11,6 +12,11 @@ pragma ComponentBehavior: Bound
 
 Item {
     id: root
+    // Its words come from the launcher's catalog.
+    KI18nContext {
+        id: words
+        translationDomain: "tettegouche"
+    }
 
     required property var launcherController
     required property var searchResults
@@ -231,7 +237,7 @@ Item {
             const waiting = root.launcherController.beginGuestWebLaunch()
             if (waiting) {
                 root.applicationLaunchPending = true
-                root.launchingApplication = "Web search"
+                root.launchingApplication = words.i18n("Web search")
                 launchTimeout.restart()
             }
             if (!root.launcherController.searchWeb(query.text) && waiting) {
@@ -620,7 +626,7 @@ Item {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         visible: query.text.length === 0
-                        text: "Just type"
+                        text: words.i18n("Just type")
                         color: "#86ffffff"
                         font.pixelSize: restingBrowseLabel.font.pixelSize
                         opacity: root.openingText
@@ -675,7 +681,7 @@ Item {
                     spacing: 20
                     Text {
                         objectName: "file-scope-toggle"
-                        text: root.searchResults.allFiles ? "All files ⇄" : "Everyday search ⇄"
+                        text: root.searchResults.allFiles ? words.i18n("All files ⇄") : words.i18n("Everyday search ⇄")
                         color: root.primaryText
                         font.pixelSize: 12
                         height: 34
@@ -692,7 +698,7 @@ Item {
                     }
                     Text {
                         objectName: "quiet-folders-button"
-                        text: "Quiet folders…"
+                        text: words.i18n("Quiet folders…")
                         color: root.secondaryText
                         font.pixelSize: 12
                         height: 34
@@ -713,9 +719,9 @@ Item {
                     background: Rectangle { color: root.surfaceColor; radius: root.paperRadius; border.color: root.surfaceOutline }
                     contentItem: Column {
                         spacing: 10
-                        Text { text: "Quiet folders"; color: root.primaryText; font.pixelSize: 16 }
+                        Text { text: words.i18n("Quiet folders"); color: root.primaryText; font.pixelSize: 16 }
                         Text {
-                            text: "One full folder path per line. All files includes these again."
+                            text: words.i18n("One full folder path per line. All files includes these again.")
                             color: root.secondaryText
                             width: parent.width
                             wrapMode: Text.WordWrap
@@ -728,8 +734,8 @@ Item {
                         }
                         Row {
                             spacing: 16
-                            QQC2.Button { text: "Save"; onClicked: { root.searchResults.quietFolders = quietPaths.text; quietPopup.close() } }
-                            QQC2.Button { text: "Cancel"; onClicked: quietPopup.close() }
+                            QQC2.Button { text: words.i18n("Save"); onClicked: { root.searchResults.quietFolders = quietPaths.text; quietPopup.close() } }
+                            QQC2.Button { text: words.i18n("Cancel"); onClicked: quietPopup.close() }
                         }
                     }
                 }
@@ -835,7 +841,7 @@ Item {
                                     Text {
                                         id: openLabel
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "OPEN"
+                                        text: words.i18n("OPEN")
                                         visible: resultDelegate.alreadyOpen
                                         color: "#ff71e6be"
                                         font.pixelSize: 10
@@ -846,7 +852,7 @@ Item {
                                 Text {
                                     width: parent.width
                                     text: resultDelegate.model.subtext
-                                        || resultDelegate.model.category || "Result"
+                                        || resultDelegate.model.category || words.i18n("Result")
                                     color: root.secondaryText
                                     font.pixelSize: 12
                                     elide: Text.ElideRight
@@ -875,8 +881,10 @@ Item {
                                     Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: root.secondaryText }
                                     Text {
                                         x: 27; width: parent.width - x - 12; height: parent.height
-                                        text: childRow.modelData.label + ((root.childLaunchFailed && root.selectedChildKey === root.childKey(childRow.modelData))
-                                            ? " · Couldn't open settings—try again" : (childRow.modelData.status ? " · " + childRow.modelData.status : ""))
+                                        text: root.childLaunchFailed && root.selectedChildKey === root.childKey(childRow.modelData)
+                                            ? words.i18nc("a setting, then why it did not open", "%1 · Couldn't open settings—try again", childRow.modelData.label)
+                                            : childRow.modelData.status ? words.i18nc("a setting, then its state", "%1 · %2", childRow.modelData.label, childRow.modelData.status)
+                                            : childRow.modelData.label
                                         font.pixelSize: 12; color: root.secondaryText
                                         verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
                                     }
@@ -921,7 +929,7 @@ Item {
                         && !root.searchResults.querying
                         && resultList.count === 0
                     objectName: "web-fallback"
-                    text: "Search the web for “" + query.text + "”"
+                    text: words.i18n("Search the web for “%1”", query.text)
                     color: root.secondaryText
                     font.pixelSize: 15
                     width: parent.width - 28
@@ -958,7 +966,7 @@ Item {
                     objectName: "browse-label"
                     anchors.horizontalCenter: parent.horizontalCenter
                     y: 18 - height
-                    text: "browse everything"
+                    text: words.i18n("browse everything")
                     color: restingBrowseHover.running || !restingLabelHover.hovered
                         ? root.edgeText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
@@ -993,7 +1001,7 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 18
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.filesMode ? "explore files" : "browse everything"
+                    text: root.filesMode ? words.i18n("explore files") : words.i18n("browse everything")
                     color: openBrowseHover.running || !openBrowseMouse.containsMouse
                         ? root.secondaryText : root.primaryText
                     Behavior on color { ColorAnimation { duration: 100 } }
@@ -1067,11 +1075,11 @@ Item {
                         Behavior on color { ColorAnimation { duration: 100 } }
                         Behavior on border.color { ColorAnimation { duration: 100 } }
                         Accessible.role: Accessible.Button
-                        Accessible.name: qsTr("Close drawer")
+                        Accessible.name: words.i18n("Close drawer")
                         Accessible.onPressAction: root.setDrawerOpen(false)
                         Text {
                             anchors.centerIn: parent
-                            text: qsTr("Close drawer")
+                            text: words.i18n("Close drawer")
                             color: root.primaryText
                             font.pixelSize: 13
                         }
@@ -1117,7 +1125,7 @@ Item {
                             id: sortLabel
                             anchors.verticalCenter: parent.verticalCenter
                             x: 14
-                            text: sortButton.fileOrderFixed ? "Recent" : root.fileBrowser ? ["Name A–Z", "Name Z–A", "Newest", "Largest"][root.fileBrowser.sortMode] : "Name A–Z"
+                            text: sortButton.fileOrderFixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][root.fileBrowser ? root.fileBrowser.sortMode : 0]
                             color: root.primaryText
                             font.pixelSize: 13
                         }
@@ -1152,11 +1160,11 @@ Item {
                         bottomMargin: root.keysReach
                         keysReach: root.keysReach
                         readonly property int mode: root.fileBrowser ? root.fileBrowser.sortMode : 0
-                        SheetMenuItem { text: "Name A–Z"; checkable: true; checked: fileSort.mode === 0; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
-                        SheetMenuItem { text: "Name Z–A"; checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
-                        SheetMenuItem { text: "Newest first"; checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
-                        SheetMenuItem { text: "Largest first"; checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
-                        SheetMenuItem { objectName: "files-show-hidden"; text: "Show hidden files"; checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden = !root.fileBrowser.hidden }
+                        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: fileSort.mode === 0; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
+                        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
+                        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
+                        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
+                        SheetMenuItem { objectName: "files-show-hidden"; text: words.i18n("Show hidden files"); checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden = !root.fileBrowser.hidden }
                     }
                 }
 
@@ -1211,7 +1219,7 @@ Item {
                 Text {
                     id: filesEntryLabel
                     objectName: "files-label"
-                    anchors.horizontalCenter: parent.horizontalCenter; y: 30; text: "explore files"
+                    anchors.horizontalCenter: parent.horizontalCenter; y: 30; text: words.i18n("explore files")
                     color: filesTextHover.hovered && !filesLabelHover.running ? root.primaryText : root.edgeText
                     font.pixelSize: 12
                     Behavior on color { ColorAnimation { duration: 100 } }
@@ -1361,7 +1369,7 @@ Item {
                 anchors.centerIn: applicationGrid
                 visible: root.drawerOpen && !root.filesMode && query.text.length > 0
                     && applicationGrid.count === 0
-                text: "No applications found"
+                text: words.i18n("No applications found")
                 color: root.secondaryText
                 font.pixelSize: 15
                 z: 4
@@ -1397,8 +1405,8 @@ Item {
 
                     Repeater {
                         model: [
-                            { "label": "A to Z", "descending": false },
-                            { "label": "Z to A", "descending": true }
+                            { "label": words.i18n("A to Z"), "descending": false },
+                            { "label": words.i18n("Z to A"), "descending": true }
                         ]
 
                         delegate: Rectangle {
@@ -1447,7 +1455,7 @@ Item {
 
                 Text {
                     anchors.horizontalCenter: parent.horizontalCenter
-                    text: "Opening"
+                    text: words.i18n("Opening")
                     color: root.secondaryText
                     font.pixelSize: 14
                     font.letterSpacing: 0.8

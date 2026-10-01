@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons FileMetaData GlobalAccel KIO Runner Service BluezQt Solid)
+find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -32,7 +32,9 @@ add_library(tettegouche-activities STATIC
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core KF6::Solid PW::LibNotificationManager)
+target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core KF6::I18n KF6::Solid PW::LibNotificationManager)
+# Ambient's words are the panel widget's, in the catalog Plasma gives it.
+target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp
@@ -47,7 +49,8 @@ add_library(tettegouche-related STATIC
     src/RelatedInfo.cpp
 )
 target_include_directories(tettegouche-related PUBLIC src)
-target_link_libraries(tettegouche-related PUBLIC Qt6::DBus KF6::BluezQt KF6::Solid KF6::Service)
+target_link_libraries(tettegouche-related PUBLIC Qt6::DBus KF6::BluezQt KF6::I18n KF6::Solid KF6::Service)
+target_compile_definitions(tettegouche-related PRIVATE TRANSLATION_DOMAIN="tettegouche")
 
 qt_add_executable(tettegouche
     src/main.cpp
@@ -90,6 +93,8 @@ target_link_libraries(tettegouche PRIVATE
     Qt6::Quick
     KF6::CoreAddons
     KF6::FileMetaData
+    KF6::I18n
+    KF6::I18nQml
     KF6::KIOGui
     KF6::Runner
     KF6::Service
@@ -100,7 +105,11 @@ target_link_libraries(tettegouche PRIVATE
     LayerShellQt::Interface
 )
 
+target_compile_definitions(tettegouche PRIVATE TRANSLATION_DOMAIN="tettegouche")
 install(TARGETS tettegouche RUNTIME DESTINATION ${KDE_INSTALL_BINDIR})
+# Translations, one catalog for the launcher and one for the panel widget, as
+# po/<language>/<catalog>.po; tools/extract-messages.sh makes their templates.
+ki18n_install(po)
 install(PROGRAMS io.github.carlsonjm.Tettegouche.desktop io.github.carlsonjm.Tettegouche.Files.desktop
         DESTINATION ${KDE_INSTALL_APPDIR})
 # Offered, not switched on: answering "Show in folder" is the product's choice,
@@ -148,9 +157,11 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     Qt6::DBus
     KF6::CoreAddons
     KF6::GlobalAccel
+    KF6::I18n
     Plasma::Plasma
     Plasma::PlasmaQuick
 )
+target_compile_definitions(studio.warbler.tettegouche PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
 
 if(BUILD_TESTING)
     qt_add_executable(activity-provider-test tests/ActivityProviderTest.cpp
@@ -163,8 +174,8 @@ if(BUILD_TESTING)
     qt_add_executable(file-browser-test tests/FileBrowserTest.cpp src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
         src/FileDetails.cpp src/FileDetails.h src/FileThumbnails.cpp src/FileThumbnails.h)
     target_include_directories(file-browser-test PRIVATE src)
-    target_link_libraries(file-browser-test PRIVATE KF6::KIOCore KF6::KIOGui KF6::FileMetaData KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
-    target_compile_definitions(file-browser-test PRIVATE FILES_PANE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}/qml/FilesPane.qml"
+    target_link_libraries(file-browser-test PRIVATE KF6::I18n KF6::KIOCore KF6::KIOGui KF6::FileMetaData KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
+    target_compile_definitions(file-browser-test PRIVATE TRANSLATION_DOMAIN="tettegouche" FILES_PANE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}/qml/FilesPane.qml"
         FILES_DESKTOP="${CMAKE_CURRENT_SOURCE_DIR}/io.github.carlsonjm.Tettegouche.Files.desktop"
         FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
     # A private bus that starts no desktop service: on an ordinary one, Recent
@@ -174,6 +185,8 @@ if(BUILD_TESTING)
     set_tests_properties(file-browser-test PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
     add_test(NAME files-recent-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent.sh $<TARGET_FILE:file-browser-test>)
     set_tests_properties(files-recent-test PROPERTIES TIMEOUT 150 SKIP_RETURN_CODE 77)
+    add_test(NAME words-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-words.sh $<TARGET_FILE:file-browser-test>)
+    set_tests_properties(words-test PROPERTIES TIMEOUT 60)
     add_test(NAME files-sealed-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-files-sealed.sh $<TARGET_FILE:file-browser-test>)
     set_tests_properties(files-sealed-test PROPERTIES TIMEOUT 150)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
@@ -211,7 +224,8 @@ if(BUILD_TESTING)
     qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp src/LauncherKeys.cpp src/LauncherKeys.h)
     target_include_directories(panel-applet-test PRIVATE src)
     target_link_libraries(panel-applet-test PRIVATE
-        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::Package KF6::GlobalAccel)
+        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::Package KF6::GlobalAccel KF6::I18n)
+    target_compile_definitions(panel-applet-test PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
     add_dependencies(panel-applet-test studio.warbler.tettegouche)
     add_test(NAME panel-applet-test
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh

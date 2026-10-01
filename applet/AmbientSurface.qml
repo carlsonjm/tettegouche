@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import org.kde.ki18n
 import org.kde.kirigami as Kirigami
 import "IslandRoom.js" as IslandRoom
 
@@ -15,6 +16,12 @@ import "IslandRoom.js" as IslandRoom
 // Opening an island is the applet's job; this surface only asks.
 Item {
     id: surface
+    // Its words come from the panel widget's catalog, the one Plasma gives
+    // the widget, so they translate in the panel and in tests alike.
+    KI18nContext {
+        id: words
+        translationDomain: "plasma_applet_studio.warbler.tettegouche"
+    }
 
     property var activities: []
     property var monotonicClock: () => 0
@@ -183,17 +190,18 @@ Item {
     function formatBytes(bytes) {
         if (!known(bytes)) return "";
         const value = Number(bytes);
-        if (value >= 1000000000) return (value / 1000000000).toFixed(1) + " GB";
-        if (value >= 1000000) return (value / 1000000).toFixed(1) + " MB";
-        if (value >= 1000) return (value / 1000).toFixed(1) + " KB";
-        return value + " B";
+        const amount = scale => Qt.locale().toString(value / scale, "f", 1);
+        if (value >= 1000000000) return words.i18nc("gigabytes", "%1 GB", amount(1000000000));
+        if (value >= 1000000) return words.i18nc("megabytes", "%1 MB", amount(1000000));
+        if (value >= 1000) return words.i18nc("kilobytes", "%1 KB", amount(1000));
+        return words.i18nc("bytes", "%1 B", Qt.locale().toString(value, "f", 0));
     }
     function transferBytes(activity) {
         if (!activity) return "";
         if (known(activity.processedBytes) && known(activity.totalBytes))
-            return formatBytes(activity.processedBytes) + " of " + formatBytes(activity.totalBytes);
+            return words.i18nc("bytes done of all", "%1 of %2", formatBytes(activity.processedBytes), formatBytes(activity.totalBytes));
         if (known(activity.observedSizeBytes))
-            return qsTr("File size %1").arg(formatBytes(activity.observedSizeBytes));
+            return words.i18n("File size %1", formatBytes(activity.observedSizeBytes));
         return "";
     }
     // A transfer that has ended and waits out its minute says how it ended.
@@ -201,7 +209,7 @@ Item {
         return !!activity && (activity.state === "finished" || activity.state === "failed");
     }
     function transferTitle(activity) {
-        return activity ? activity.title || activity.source || qsTr("Transfer") : "";
+        return activity ? activity.title || activity.source || words.i18n("Transfer") : "";
     }
     function mediaPositionUs(activity) {
         if (!activity) return 0;
@@ -232,7 +240,7 @@ Item {
     // ---------------------------------------------------------------- words
 
     readonly property bool canToggle: capability(player, player && player.state === "playing" ? "pause" : "play")
-    readonly property string mediaTitle: player ? player.title || player.source || qsTr("Media") : ""
+    readonly property string mediaTitle: player ? player.title || player.source || words.i18n("Media") : ""
     readonly property string mediaArtist: player && player.artist ? player.artist : ""
     readonly property string mediaTime: player && player.positionUs !== undefined
         ? formatTime(mediaPositionUs(player)) : ""
@@ -243,7 +251,7 @@ Item {
 
     readonly property var transferShown: running.length === 1 ? running[0] : null
     readonly property string transferName: running.length > 1
-        ? qsTr("%1 transfers").arg(running.length) : transferTitle(transferShown)
+        ? words.i18np("1 transfer", "%1 transfers", running.length) : transferTitle(transferShown)
     readonly property string transferBytesText: transferBytes(transferShown)
     readonly property string transferSource: transferShown && transferShown.source
         && transferShown.source !== transferName ? transferShown.source : ""
@@ -255,16 +263,16 @@ Item {
     readonly property var endingShown: endings.length === 1 ? endings[0] : null
     readonly property bool endingFailed: endings.some(activity => activity.state === "failed")
     readonly property string endingName: endings.length > 1
-        ? (endingFailed ? qsTr("%1 transfers ended") : qsTr("%1 files arrived")).arg(endings.length)
+        ? (endingFailed ? words.i18np("1 transfer ended", "%1 transfers ended", endings.length) : words.i18np("1 file arrived", "%1 files arrived", endings.length))
         : transferTitle(endingShown)
     readonly property string endingWords: endingShown ? endingShown.description || "" : ""
 
     // Drives open one at a time, the newest first.
     readonly property var driveShown: drives.length > 0 ? drives[drives.length - 1] : null
-    readonly property string driveName: driveShown ? driveShown.title || qsTr("Drive") : ""
+    readonly property string driveName: driveShown ? driveShown.title || words.i18n("Drive") : ""
     readonly property string driveSize: driveShown && known(driveShown.sizeBytes) && driveShown.sizeBytes > 0
         ? formatBytes(driveShown.sizeBytes) : ""
-    readonly property string openLabel: qsTr("Open")
+    readonly property string openLabel: words.i18n("Open")
 
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
@@ -414,10 +422,10 @@ Item {
         return bubble;
     }
     function spoken(kind) {
-        if (kind === "media") return qsTr("Media %1, open").arg(mediaTitle);
-        if (kind === "transfer") return qsTr("%n transfer(s), open", "", running.length);
-        if (kind === "drive") return qsTr("%1, open in Files").arg(driveName);
-        return qsTr("%1, open").arg(endingName);
+        if (kind === "media") return words.i18n("Media %1, open", mediaTitle);
+        if (kind === "transfer") return words.i18np("1 transfer, open", "%1 transfers, open", running.length);
+        if (kind === "drive") return words.i18n("%1, open in Files", driveName);
+        return words.i18n("%1, open", endingName);
     }
     // What an island shows goes aside: the player it shows, or all it holds.
     function setAside(kind) {
@@ -794,7 +802,7 @@ Item {
                 IslandButton {
                     objectName: "ambient-media-previous"
                     glyph: "skip-back"
-                    label: qsTr("Previous")
+                    label: words.i18n("Previous")
                     onActivated: surface.invoke(surface.player, "previous")
                 }
             }
@@ -806,7 +814,7 @@ Item {
                     objectName: "ambient-media-toggle"
                     glyph: surface.player && surface.player.state === "playing" ? "pause" : "play"
                     size: 22
-                    label: surface.player && surface.player.state === "playing" ? qsTr("Pause") : qsTr("Play")
+                    label: surface.player && surface.player.state === "playing" ? words.i18n("Pause") : words.i18n("Play")
                     onActivated: surface.invoke(surface.player,
                         surface.player && surface.player.state === "playing" ? "pause" : "play")
                 }
@@ -818,7 +826,7 @@ Item {
                 IslandButton {
                     objectName: "ambient-media-next"
                     glyph: "skip-forward"
-                    label: qsTr("Next")
+                    label: words.i18n("Next")
                     onActivated: surface.invoke(surface.player, "next")
                 }
             }
@@ -932,7 +940,7 @@ Item {
             IslandButton {
                 objectName: "ambient-transfer-cancel"
                 glyph: "x"
-                label: qsTr("Cancel %1").arg(surface.transferTitle(surface.transferShown))
+                label: words.i18n("Cancel %1", surface.transferTitle(surface.transferShown))
                 onActivated: surface.invoke(surface.transferShown, "cancel")
             }
         }
@@ -986,7 +994,7 @@ Item {
             IslandButton {
                 objectName: "ambient-arrived-show"
                 glyph: "folder-open"
-                label: qsTr("Show %1 in Files").arg(surface.endingName)
+                label: words.i18n("Show %1 in Files", surface.endingName)
                 onActivated: surface.invoke(surface.endingShown, "showInFiles")
             }
         }
@@ -1049,7 +1057,7 @@ Item {
                 scale: openArea.pressed ? 1.06 : 1
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
-                Accessible.name: qsTr("Open %1 in Files").arg(surface.driveName)
+                Accessible.name: words.i18n("Open %1 in Files", surface.driveName)
                 Accessible.onPressAction: surface.open("drive")
                 Keys.onReturnPressed: surface.open("drive")
                 Keys.onEnterPressed: surface.open("drive")

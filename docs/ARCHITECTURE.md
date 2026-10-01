@@ -132,6 +132,16 @@ absent when no activity qualifies.
 Related-setting children are read-only context under a settings result, owned by
 [RELATED-SETTINGS.md](RELATED-SETTINGS.md).
 
+## Words
+
+Every word Tettegouche shows comes from one of two KI18n catalogs:
+`tettegouche` for the launcher, and `plasma_applet_studio.warbler.tettegouche`,
+the one Plasma gives the panel widget, for the widget and Ambient. QML asks
+through a `KI18nContext` naming its catalog, so tests load the same words.
+`tools/extract-messages.sh` writes the catalogs' templates; a translation is
+`po/<language>/<catalog>.po`, which the build installs. Sizes, numbers and
+counts follow the language.
+
 ## Look
 
 - The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) pearl, 20 px,
@@ -160,7 +170,9 @@ Related-setting children are read-only context under a settings result, owned by
 Native tests cover search policy, workspace schema, Files operations, related
 providers, activity providers, and icon rendering. QML and private-bus tests
 cover launcher controls, Ambient composition, panel geometry/input, and package
-integration. Disposable fixtures must not write or delete real user files.
+integration. A words test draws Files with test catalogs that mark every
+phrase, and fails on any word not asked of a catalog. Disposable fixtures must
+not write or delete real user files.
 
 ## Known issues
 

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 import QtQuick
+import org.kde.ki18n
 import QtQuick.Controls as C
 import QtQuick.Layouts
 
@@ -10,28 +11,51 @@ import QtQuick.Layouts
 // reaches what it lands on.
 C.Dialog {
     id: confirm
+    // Its words come from the launcher's catalog.
+    KI18nContext {
+        id: words
+        translationDomain: "tettegouche"
+    }
     // The verb on the pill that goes ahead: "Move to Trash", not "OK".
     property string action: ""
+    // What going ahead does, said under the question.
+    property string body: ""
     modal: true
     dim: false
     focus: true
     anchors.centerIn: parent
     width: Math.min(440, parent ? parent.width - 48 : 440)
-    leftPadding: 22; rightPadding: 22; topPadding: 4; bottomPadding: 18
+    leftPadding: 22; rightPadding: 22; topPadding: 20; bottomPadding: 18
     C.Overlay.modal: Item {}
 
-    header: Text {
-        text: confirm.title
-        leftPadding: 22; rightPadding: 22; topPadding: 20; bottomPadding: 8
-        color: "#F8F8FF"
-        font.pixelSize: 17
-        font.weight: Font.DemiBold
-        wrapMode: Text.Wrap
+    // The question and what it does are the dialog's own content, which it
+    // sizes to the width it has, so long words wrap without their height
+    // feeding back into that width.
+    header: null
+    contentItem: Column {
+        spacing: 12
+        Text {
+            width: parent.width
+            text: confirm.title
+            color: "#F8F8FF"
+            font.pixelSize: 17
+            font.weight: Font.DemiBold
+            wrapMode: Text.Wrap
+        }
+        Text {
+            objectName: confirm.objectName + "-body"
+            width: parent.width
+            visible: text.length > 0
+            text: confirm.body
+            color: "#A8F8F8FF"
+            font.pixelSize: 14
+            wrapMode: Text.Wrap
+        }
     }
     footer: RowLayout {
         spacing: 8
         Item { Layout.fillWidth: true }
-        ConfirmPill { objectName: "confirm-cancel"; text: qsTr("Cancel"); focus: true; onClicked: confirm.reject() }
+        ConfirmPill { objectName: "confirm-cancel"; text: words.i18n("Cancel"); focus: true; onClicked: confirm.reject() }
         ConfirmPill { objectName: "confirm-action"; text: confirm.action; strong: true; onClicked: confirm.accept() }
         Item { implicitWidth: 14 }
     }

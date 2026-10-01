@@ -1,4 +1,5 @@
 #include "TetteTransferProvider.h"
+#include <KLocalizedString>
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
@@ -52,7 +53,7 @@ void TetteTransferProvider::apply(const QString &json) {
             if (m_reported.contains(id)) continue;
             m_reported.insert(id);
             Q_EMIT finished({{QStringLiteral("id"), id}, {QStringLiteral("generation"), m_generation},
-                {QStringLiteral("application"), tr("Files")}, {QStringLiteral("icon"), row.value(QStringLiteral("icon"))},
+                {QStringLiteral("application"), i18n("Files")}, {QStringLiteral("icon"), row.value(QStringLiteral("icon"))},
                 {QStringLiteral("desktopEntry"), QStringLiteral("io.github.carlsonjm.Tettegouche.Files")},
                 {QStringLiteral("summary"), row.value(QStringLiteral("title"))},
                 {QStringLiteral("errorText"), row.value(QStringLiteral("description"))}, {QStringLiteral("error"), 2}});
