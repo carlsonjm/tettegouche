@@ -5,6 +5,12 @@ provenance.
 
 ## Unreleased
 
+- Files' menus open inside Files, under the button or beside the finger, in
+  its own look with lines a finger can hit; choosing a line no longer also
+  taps what lies under it. Its buttons are the suite's grey pills, the actions
+  button a circle with a vertical ellipsis, and the order a pill naming it.
+  Move to Trash and Empty Trash ask in Files' own look and name the action.
+  A finger lifts the file or place under it.
 - A copy or move in Files that fails keeps its place in the band for a minute,
   saying why, then is filed in the notification history, as other failed
   transfers are. A long list of transfers scrolls in the open island.

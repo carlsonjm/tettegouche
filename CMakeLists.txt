@@ -62,6 +62,10 @@ qt_add_executable(tettegouche
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml qml/FilesPane.qml qml/SuiteIcon.qml
+        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml
+        assets/icons/lucide/ellipsis-vertical.svg
+        assets/icons/lucide/chevron-down.svg
+        assets/icons/lucide/square.svg
         assets/icons/lucide/skip-back.svg
         assets/icons/lucide/play.svg
         assets/icons/lucide/pause.svg
@@ -72,7 +76,6 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/arrow-left.svg
         assets/icons/lucide/arrow-right.svg
         assets/icons/lucide/refresh-cw.svg
-        assets/icons/lucide/ellipsis.svg
         assets/icons/lucide/check.svg
         assets/icons/lucide/circle.svg
         assets/icons/lucide/eject.svg

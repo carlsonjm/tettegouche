@@ -1105,6 +1105,37 @@ TestCase {
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
+    // Files' order opens under its button and stays inside the sheet; a
+    // line sets the order, and the hidden-files line shows what it holds.
+    function test_filesSortMenu() {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        filesMock.sortMode = 0
+        filesMock.hidden = false
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const sort = findChild(launcher, "sort-button")
+        const menu = findChild(launcher, "files-sort-menu")
+        mouseClick(sort, sort.width / 2, sort.height / 2)
+        tryCompare(menu, "opened", true)
+        const sheet = menu.parent
+        verify(menu.x >= 0 && menu.x + menu.width <= sheet.width)
+        verify(menu.y > sort.mapToItem(sheet, 0, sort.height).y - 1)
+        const hidden = findChild(launcher, "files-show-hidden")
+        verify(!hidden.checked)
+        mouseClick(hidden, hidden.width / 2, hidden.height / 2)
+        compare(filesMock.hidden, true)
+        tryCompare(menu, "opened", false)
+        mouseClick(sort, sort.width / 2, sort.height / 2)
+        tryCompare(menu, "opened", true)
+        verify(hidden.checked)
+        menu.close()
+        filesMock.hidden = false
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
     function test_filesMenusAndEmptyTrash() {
         launcher.fileBrowser = filesMock
         filesMock.selectedPath = ""
@@ -1119,6 +1150,13 @@ TestCase {
         const checks = filesMock.trashChecks
         mouseClick(more, more.width / 2, more.height / 2)
         tryCompare(menu, "opened", true)
+        // Opened from the actions button at the sheet's right edge, the menu
+        // stays inside Files, its right edge level with the button's.
+        const filesPane = findChild(launcher, "files-pane")
+        verify(menu.x >= 0 && menu.x + menu.width <= filesPane.width)
+        verify(menu.y >= 0 && menu.y + menu.height <= filesPane.height)
+        const moreAt = more.mapToItem(filesPane, more.width, more.height)
+        verify(Math.abs(menu.x + menu.width - moreAt.x) < 1 || menu.x + menu.width >= filesPane.width - 9)
         verify(filesMock.trashChecks > checks)
         const empty = findChild(launcher, "context-empty-trash")
         verify(empty.visible && empty.enabled)

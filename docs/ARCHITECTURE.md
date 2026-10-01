@@ -141,6 +141,10 @@ Related-setting children are read-only context under a settings result, owned by
 - Action glyphs come from a pinned, vendored Lucide subset
   ([THIRD_PARTY.md](../assets/icons/THIRD_PARTY.md)), drawn in Ghost White.
   Applications, files and devices keep their own icons.
+- Menus and questions are drawn inside the sheet they open in, never past its
+  edge, in the sheet's colours with lines a finger can hit; a question names
+  its action ("Move to Trash") and darkens only the sheet. Pressed controls
+  are the suite's grey pill or, for a glyph alone, a circle.
 - A pill-shaped control acts; a rounded box holds information. Corners follow
   the suite's three tiers: 8 px for the launcher's sheet and all laid in it,
   12 px for menus and the open island, which float above and close, and pills

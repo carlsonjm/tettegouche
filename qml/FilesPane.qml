@@ -179,57 +179,62 @@ Item {
         else browser.newFolder(folderName.text)
         creatingFolder=false; renamePath=""
     }
-    function showActions(path, directory, point) {
+    // The menu for path (a file or folder, or "" for the folder shown). A
+    // click opens it at the pointer; a hold on empty space opens it beside the
+    // finger, so no line starts under it; the actions button opens it under
+    // itself. A hold on a file chooses it, with no menu.
+    function prepareActions(path, directory) {
         if (path.length && selectedPaths.indexOf(path)<0) browser.selectedPath=path
         if (!path.length) clearSelection()
         actions.targetPath=path
         actions.targetDirectory=directory
-        actions.x=point.x; actions.y=point.y; actions.open()
     }
-    C.Menu {
+    function showActions(path, directory, point) { prepareActions(path, directory); actions.openAt(point.x, point.y) }
+    function showActionsNear(path, directory, point) { prepareActions(path, directory); actions.openNear(point.x, point.y) }
+    function showActionsUnder(path, directory, item) { prepareActions(path, directory); actions.openUnder(item) }
+    SheetMenu {
         id: actions
         objectName: "file-context-menu"
+        bounds: pane
         bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
         onAboutToShow: if (pane.browser && !targetPath.length) pane.browser.checkTrash()
         property string targetPath: ""
         property bool targetDirectory: false
-        C.MenuItem { text: "Open"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
-        C.MenuItem { text: "Copy"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
-        C.MenuItem { text: "Cut"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
-        C.MenuItem { text: "Rename"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
-        C.MenuItem { objectName: "context-open-with"; text: "Open with…"; visible: actions.targetPath.length>0 && !actions.targetDirectory; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
-        C.MenuItem { text: "Move to trash"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
-        C.MenuItem { objectName: "context-compress"; text: "Compress"; visible: actions.targetPath.length>0; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
-        C.MenuItem { objectName: "context-extract"; text: "Extract here"; visible: actions.targetPath.length>0 && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
-        C.MenuItem { text: "Restore last trashed item"; enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
-        C.MenuItem { objectName: "context-empty-trash"; text: "Empty Trash…"; visible: !actions.targetPath.length; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
-        C.MenuItem {
+        SheetMenuItem { text: "Open"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
+        SheetMenuItem { text: "Copy"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
+        SheetMenuItem { text: "Cut"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
+        SheetMenuItem { text: "Rename"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
+        SheetMenuItem { objectName: "context-open-with"; text: "Open with…"; visible: actions.targetPath.length>0 && !actions.targetDirectory; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
+        SheetMenuItem { text: "Move to Trash"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
+        SheetMenuItem { objectName: "context-compress"; text: "Compress"; visible: actions.targetPath.length>0; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
+        SheetMenuItem { objectName: "context-extract"; text: "Extract here"; visible: actions.targetPath.length>0 && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
+        SheetMenuItem { text: "Restore last trashed item"; enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
+        SheetMenuItem { objectName: "context-empty-trash"; text: "Empty Trash…"; visible: !actions.targetPath.length; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
+        SheetMenuItem {
             objectName: "context-paste"
             text: actions.targetDirectory ? "Paste into “"+actions.targetPath.split("/").pop()+"”" : "Paste here"
             visible: (!actions.targetPath.length && pane.browser && pane.browser.inFolder) || actions.targetDirectory
             enabled: pane.browser && pane.browser.canPaste && !pane.browser.busy
             onTriggered: { if(actions.targetDirectory) pane.browser.pasteInto(actions.targetPath); else pane.browser.paste() }
         }
-        C.MenuItem { text: "Select all"; onTriggered: pane.browser.selectAll() }
-        C.MenuItem { text: "New folder"; visible: !actions.targetPath.length && pane.browser && pane.browser.inFolder; onTriggered: pane.newFolderForm() }
-        C.MenuItem { objectName: "context-properties"; text: "Properties"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
+        SheetMenuItem { text: "Select all"; onTriggered: pane.browser.selectAll() }
+        SheetMenuItem { text: "New folder"; visible: !actions.targetPath.length && pane.browser && pane.browser.inFolder; onTriggered: pane.newFolderForm() }
+        SheetMenuItem { objectName: "context-properties"; text: "Properties"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
     // The one permanent delete Files offers, said plainly before it happens.
-    C.Dialog {
+    SheetConfirm {
         id: emptyTrashConfirm
         objectName: "empty-trash-confirm"
         title: "Empty Trash?"
-        modal: true; anchors.centerIn: parent
-        width: Math.min(460, pane.width - 48)
-        standardButtons: C.Dialog.Ok | C.Dialog.Cancel
-        onOpened: standardButton(C.Dialog.Ok).text = "Empty Trash"
+        action: "Empty Trash"
         Text {
             objectName: "empty-trash-summary"
             readonly property int items: pane.browser ? pane.browser.trashItems : 0
             readonly property string size: pane.browser ? pane.browser.trashSize : ""
             width: emptyTrashConfirm.availableWidth
             text: (items === 1 ? "1 item" : items + " items") + (size.length ? ", " + size + "," : "") + " will be deleted for good. This can't be undone."
-            color: "#F8F8FF"; wrapMode: Text.Wrap
+            color: "#A8F8F8FF"; font.pixelSize: 14; wrapMode: Text.Wrap
         }
         onAccepted: pane.browser.emptyTrash()
     }
@@ -423,19 +428,41 @@ Item {
             PillAction { objectName: "properties-close"; Layout.alignment: Qt.AlignRight; text: "Close"; onClicked: propertiesSheet.close() }
         }
     }
-    C.Dialog {
+    SheetConfirm {
         id: trashConfirm
         objectName: "trash-confirm"
-        title: "Move to trash?"
-        modal: true; anchors.centerIn: parent
-        standardButtons: C.Dialog.Ok | C.Dialog.Cancel
-        Text { text: pane.selectedPaths.length+" item(s). Restore last trashed item brings them back, one at a time."; color: "#F8F8FF" }
+        readonly property int items: pane.selectedPaths.length
+        readonly property string firstName: items ? pane.selectedPaths[0].split("/").pop() : ""
+        // A long name keeps its start and end, so the question stays short.
+        title: items === 1 ? "Move “" + (firstName.length > 40 ? firstName.slice(0, 20) + "…" + firstName.slice(-16) : firstName) + "” to the Trash?"
+            : "Move " + items + " items to the Trash?"
+        action: "Move to Trash"
+        Text {
+            width: trashConfirm.availableWidth
+            text: "Restore last trashed item, in Files' menu, brings them back one at a time."
+            color: "#A8F8F8FF"; font.pixelSize: 14; wrapMode: Text.Wrap
+        }
         onAccepted: pane.browser.trashSelected()
     }
+    // While Files asks a question, only Files darkens behind it.
+    Rectangle {
+        anchors.fill: parent
+        z: 40
+        color: "#99000000"
+        radius: pane.paperRadius
+        visible: opacity > 0
+        opacity: trashConfirm.visible || emptyTrashConfirm.visible ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 120 } }
+    }
     component Action: C.Button {
+        id: action
         property string glyph: ""
         implicitHeight: 42
         hoverEnabled: true
+        // A glyph alone says what it does under a resting pointer.
+        C.ToolTip.visible: glyph.length > 0 && hovered && text.length > 0
+        C.ToolTip.text: text
+        C.ToolTip.delay: 600
         background: Rectangle {
             // Pressed, so a pill, or a circle for a glyph alone.
             radius: height / 2
@@ -469,14 +496,19 @@ Item {
             }
         }
     }
+    // The suite's grey pill, 30 high inside its 42 touch, with no outline:
+    // lighter under the pointer, lighter again pressed. A glyph alone makes
+    // it a circle.
     component PillAction: Action {
-        leftPadding: 16; rightPadding: 16
+        leftPadding: glyph.length ? 11 : 16; rightPadding: glyph.length ? 11 : 16
         background: Rectangle {
-            y: 5; height: parent.height-10
-            radius: height/2
-            color: parent.down ? Qt.rgba(1, 1, 1, 0.16)
-                : parent.hovered || parent.visualFocus ? Qt.rgba(1, 1, 1, 0.12) : "#242424"
-            border.color: parent.activeFocus ? "#F8F8FF" : "#5A5A5A"
+            y: 6; height: parent.height - 12
+            x: parent.glyph.length ? (parent.width - height) / 2 : 0
+            width: parent.glyph.length ? height : parent.width
+            radius: height / 2
+            color: parent.down ? "#4A4A4A" : parent.hovered ? "#333333" : "#242424"
+            border.width: parent.visualFocus ? 1 : 0
+            border.color: "#F8F8FF"
             Behavior on color {
                 enabled: Kirigami.Units.shortDuration > 0
                 ColorAnimation { duration: Kirigami.Units.shortDuration }
@@ -509,9 +541,12 @@ Item {
                 Item {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 54
+                    PointHandler { id: placeFinger; acceptedDevices: PointerDevice.TouchScreen }
+                    scale: placeFinger.active ? 1.04 : 1
+                    Behavior on scale { NumberAnimation { duration: placeFinger.active ? 160 : 120; easing.type: Easing.OutCubic } }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 3; radius: pane.paperRadius
-                        color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? Qt.rgba(1, 1, 1, 0.24) : "transparent"
+                        color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? "#2C2C2C" : "transparent"
                     }
                     Row {
                         anchors.verticalCenter: parent.verticalCenter; x: 12; spacing: 12
@@ -597,7 +632,7 @@ Item {
                             }
                         }
                     }
-                    Action { text: "Path"; onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.folder; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
+                    PillAction { objectName: "path-toggle"; text: "Path"; onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.folder; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
                     Action { text: qsTr("Refresh"); glyph: "refresh-cw"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
                 }
                 Rectangle {
@@ -630,7 +665,7 @@ Item {
                     PillAction { objectName: "selection-cut"; text: "Cut"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.cutSelected() }
                     PillAction { objectName: "selection-rename"; text: "Rename"; visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.renameForm() }
                     PillAction { objectName: "selection-properties"; text: "Properties"; visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.showProperties(pane.selectedPaths[0]) }
-                    PillAction { objectName: "selection-trash"; text: "Move to trash"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
+                    PillAction { objectName: "selection-trash"; text: "Move to Trash"; visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
                     Item {
                         objectName: "file-operation-status"
                         Layout.fillWidth: true; Layout.minimumWidth: 0
@@ -660,13 +695,15 @@ Item {
                     PillAction { objectName: "new-folder"; text: "New folder"; visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.inFolder; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
                     // With files chosen, their own menu; otherwise the folder's.
                     PillAction {
+                        id: moreActions
                         objectName: "more-actions"
                         text: pane.selectedPaths && pane.selectedPaths.length ? qsTr("More actions") : qsTr("Folder actions")
-                        glyph: "ellipsis"; Accessible.name: text
+                        glyph: "ellipsis-vertical"; Accessible.name: text
+                        Layout.preferredWidth: 42
                         onClicked: {
                             const first = pane.selectedPaths.length ? pane.selectedPaths[0] : ""
                             const entry = first ? pane.browser.entries.find(e => e.path === first) : null
-                            pane.showActions(first, entry ? entry.directory : false, mapToItem(pane, 0, height))
+                            pane.showActionsUnder(first, entry ? entry.directory : false, moreActions)
                         }
                     }
                 }
@@ -727,8 +764,8 @@ Item {
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
                 C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePath.length ? "New name" : "Folder name"; Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: pane.submitName() }
-                Action { text: pane.renamePath.length ? "Rename" : "Create"; onClicked: pane.submitName() }
-                Action { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
+                PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? "Rename" : "Create"; onClicked: pane.submitName() }
+                PillAction { objectName: "cancel-folder"; text: "Cancel"; onClicked: pane.creatingFolder=false }
             }
             Text { Layout.fillWidth: true; visible: text.length>0; text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
             GridView {
@@ -886,7 +923,7 @@ Item {
                     }
                     onLongPressed: {
                         if (files.indexAt(point.position.x+files.contentX,point.position.y+files.contentY)<0)
-                            pane.showActions("",false,files.mapToItem(pane,point.position.x,point.position.y))
+                            pane.showActionsNear("",false,files.mapToItem(pane,point.position.x,point.position.y))
                     }
                 }
                 TapHandler {
@@ -902,8 +939,14 @@ Item {
                     required property var modelData
                     objectName: "file-entry-"+modelData.name
                     readonly property bool selected: pane.selectedPaths ? pane.selectedPaths.indexOf(modelData.path)>=0 : false
+                    // A finger on a file lifts it, as a touched piece lifts
+                    // across the suite.
+                    PointHandler { id: tileFinger; acceptedDevices: PointerDevice.TouchScreen }
+                    scale: tileFinger.active ? 1.05 : 1
+                    z: tileFinger.active ? 1 : 0
+                    Behavior on scale { NumberAnimation { duration: tileFinger.active ? 160 : 120; easing.type: Easing.OutCubic } }
                     width: files.cellWidth; height: files.cellHeight
-                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: parent.selected ? Qt.rgba(1, 1, 1, 0.24) : "transparent"; border.color: parent.selected ? "#5A5A5A" : "transparent" }
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: parent.selected ? "#333333" : "transparent" }
                     Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: "#30444444"; border.color: "#F8F8FF"; border.width: 2; visible: (pane.draggingFiles || pane.incoming) && pane.dropFolder===modelData.path }
                     Rectangle { anchors.fill: parent; anchors.margins: 2; radius: pane.paperRadius + 2; color: "transparent"; border.color: "#F8F8FF"; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
                     SuiteIcon {
@@ -1025,7 +1068,7 @@ Item {
                 Layout.fillWidth: true
                 visible: !pane.compact
                 Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? pane.selectedPaths.length+" selected" : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : "Select a file to open"; elide: Text.ElideMiddle; color: "#A8FFFFFF"; font.pixelSize: 12 }
-                Action {
+                PillAction {
                     objectName: "open-file"
                     text: pane.browser && pane.browser.opening ? "Opening…" : "Open"
                     enabled: pane.selectedPath.length>0 && !pane.browser.busy && !pane.browser.opening

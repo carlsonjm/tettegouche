@@ -96,15 +96,15 @@ than repeat it.
 | Tap a file | Opens it in its usual application and closes Search; a folder opens in place. A file no application claims offers Open with instead. While choosing several, adds or removes it. |
 | Touch and hold a file | Selects it and starts choosing several, with a circle on each file. The bar above the files offers what to do with them. |
 | Tap empty space | Clears the selection. |
-| Touch and hold empty space | Opens the folder's action menu. |
+| Touch and hold empty space | Opens the folder's action menu beside the finger. |
 | Tap or click "Done selecting" | Stops choosing several and clears the selection. |
-| Tap or click Copy, Cut, Rename or Move to trash in the bar | Acts on the chosen files, as the keys and the action menu do. Rename shows for one file. |
+| Tap or click Copy, Cut, Rename or Move to Trash in the bar | Acts on the chosen files, as the keys and the action menu do. Rename shows for one file. |
 | Arrow keys, Home or End | Move the selection one file, one row, or to the first or last file. |
 | Shift with an arrow, Home or End | Extends the selection. |
 | Ctrl with an arrow | Moves the focus outline without changing the selection. |
 | Ctrl+Shift with an arrow | Adds the range to the selection. |
 | Enter, or tap or click Open | Opens the selected file, as a double-click does. With nothing selected and text typed, Enter searches inside folders. |
-| Right-click a file, or tap or click ⋯ with files chosen | Their action menu: Open, Open with, Copy, Cut, Rename, Move to trash, Compress, Extract here for archives, Restore last trashed item, Select all, Properties, and for a folder, Paste into it. |
+| Right-click a file, or tap or click ⋯ with files chosen | Their action menu: Open, Open with, Copy, Cut, Rename, Move to Trash, Compress, Extract here for archives, Restore last trashed item, Select all, Properties, and for a folder, Paste into it. |
 | Choose Open with | Lists the applications for the file's kind, the default first; Show all applications lists every one, with a filter. "Always use it" makes the pick KDE's default for that kind. A tap opens the file and closes Search. |
 | Choose Compress | Ark makes a zip beside the first: one item keeps its name, several make Archive.zip. Its progress shows in Ambient. |
 | Choose Extract here | Ark unpacks each archive beside itself, in a folder of its own when it holds several items. Its progress shows in Ambient. |
@@ -117,7 +117,7 @@ than repeat it.
 | Paste or drop onto a name already taken | Asks: Replace, Skip, Keep both or Stop; a folder offers Merge instead of Replace. With several arriving, "Do the same for the rest" answers once for all. Esc stops. Nothing is replaced without Replace. |
 | Ctrl+A, or Select all | Selects everything in the folder. |
 | F2, or Rename | Shows a field to rename the one selected item, its name selected and its extension left. Enter or Rename renames it; Esc or Cancel leaves it. |
-| Delete, or Move to trash | Asks first; OK moves the selection to Trash. Nothing is deleted permanently. |
+| Delete, or Move to Trash | Asks first, naming the file or how many; Move to Trash moves them. Nothing is deleted permanently. |
 | Restore last trashed item | Brings back the last item Tettegouche moved to Trash. |
 | Tap or click New folder | Shows a name field. Enter or Create makes the folder; Esc or Cancel leaves it. |
 | Drag a file with the mouse, or touch and hold it and then drag | Carries the selection, labelled with the folder under it; dropped on a folder, it is copied there. Near the top or bottom edge the list scrolls. Dropped anywhere else inside Files, nothing happens. |

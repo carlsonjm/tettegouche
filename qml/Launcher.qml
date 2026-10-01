@@ -1068,7 +1068,9 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 42
+                    // In Files the order is a grey pill naming it, as the
+                    // suite's header controls are.
+                    width: root.filesMode ? Math.max(42, sortLabel.implicitWidth + 46) : 42
                     height: 42
                     opacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
                     enabled: root.drawerOpen && opacity > 0.9
@@ -1084,25 +1086,59 @@ Item {
                         color: root.primaryText
                     }
 
+                    Rectangle {
+                        visible: root.filesMode
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        height: 30
+                        radius: height / 2
+                        color: sortPress.pressed || fileSort.visible ? "#4A4A4A"
+                            : sortHover.hovered ? "#333333" : root.controlColor
+                        Behavior on color { ColorAnimation { duration: 90 } }
+                        Text {
+                            id: sortLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: 14
+                            text: sortButton.fileOrderFixed ? "Recent" : root.fileBrowser ? ["Name A–Z", "Name Z–A", "Newest", "Largest"][root.fileBrowser.sortMode] : "Name A–Z"
+                            color: root.primaryText
+                            font.pixelSize: 13
+                        }
+                        SuiteIcon {
+                            glyph: "chevron-down"
+                            width: 14; height: 14
+                            anchors.right: parent.right
+                            anchors.rightMargin: 12
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
+                    HoverHandler {
+                        id: sortHover
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                    }
                     MouseArea {
+                        id: sortPress
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (root.filesMode) fileSort.open()
+                            if (root.filesMode) fileSort.openUnder(sortButton)
                             else root.sortMenuOpen = !root.sortMenuOpen
                         }
                     }
                     // Recent keeps the order of use.
                     readonly property bool fileOrderFixed: !!root.fileBrowser && root.fileBrowser.placeKind === "recent"
-                    Text { anchors.centerIn: parent; visible: root.filesMode; text: parent.fileOrderFixed ? "Recent" : root.fileBrowser ? ["Name", "Z–A", "Newest", "Size"][root.fileBrowser.sortMode] : "Name"; color: root.primaryText; font.pixelSize: 12 }
-                    QQC2.Menu {
+                    // Files' order, kept inside the sheet under the button.
+                    SheetMenu {
                         id: fileSort
+                        objectName: "files-sort-menu"
+                        bounds: sheet
                         bottomMargin: root.keysReach
-                        QQC2.MenuItem { text: "Name A–Z"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
-                        QQC2.MenuItem { text: "Name Z–A"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
-                        QQC2.MenuItem { text: "Newest first"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
-                        QQC2.MenuItem { text: "Largest first"; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
-                        QQC2.MenuItem { text: "Show hidden files"; checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden=checked }
+                        keysReach: root.keysReach
+                        readonly property int mode: root.fileBrowser ? root.fileBrowser.sortMode : 0
+                        SheetMenuItem { text: "Name A–Z"; checkable: true; checked: fileSort.mode === 0; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
+                        SheetMenuItem { text: "Name Z–A"; checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
+                        SheetMenuItem { text: "Newest first"; checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
+                        SheetMenuItem { text: "Largest first"; checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
+                        SheetMenuItem { objectName: "files-show-hidden"; text: "Show hidden files"; checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden = !root.fileBrowser.hidden }
                     }
                 }
 
