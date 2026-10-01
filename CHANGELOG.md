@@ -14,6 +14,9 @@ provenance.
 - A place Files cannot open says why in plain words where its files would be,
   with Back; New folder and Paste show only where they can land; a filter that
   matches nothing says so.
+- A folder's menu offers Open in new tab; a file in Recent or a search offers
+  Show in folder. A running search can be stopped, keeping what it found, and
+  a long folder has a handle at its right edge to drag.
 - A copy of several files that meets one it cannot read skips it and carries
   the rest, then says what was left behind, in Files and in the band.
 - A copy or move in Files that fails keeps its place in the band for a minute,

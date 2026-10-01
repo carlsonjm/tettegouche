@@ -420,6 +420,13 @@ public:
         // there is a file to bring into view.
         if (shown) Q_EMIT changed();
     }
+    // A file from Recent or a search, chosen in the folder that holds it.
+    Q_INVOKABLE void showInFolder(const QString &p) { if (QDir::isAbsolutePath(p)) reveal({p}); }
+    // A search still looking stops; what it found so far stays.
+    Q_INVOKABLE void stopSearch() {
+        if (!m_searching || !m_lister) return;
+        m_lister->stop(); m_searching=false; Q_EMIT changed();
+    }
     // A folder in a tab of its own, or in the tab shown once there are 20.
     Q_INVOKABLE void openTab(const QString &p) {
         if (!QDir::isAbsolutePath(p)) return;

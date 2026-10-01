@@ -379,6 +379,12 @@ TestCase {
         property bool revealProperties: false
         property var navigated: []
         function navigate(path) { navigated = navigated.concat([path]) }
+        property var tabsOpened: []
+        function openTab(path) { tabsOpened = tabsOpened.concat([path]) }
+        property string shownInFolder: ""
+        function showInFolder(path) { shownInFolder = path }
+        property int searchStops: 0
+        function stopSearch() { searching = false; searchStops++ }
         property var drivesOpened: []
         property var drivesEjected: []
         function openDrive(id) { drivesOpened = drivesOpened.concat([id]) }
@@ -1147,6 +1153,48 @@ TestCase {
         filesMock.filter = ""
         compare(empty.text, "No files here")
         filesMock.entries = savedEntries
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // A folder opens in a new tab from its menu; a file from Recent or a
+    // search is shown in its folder; a search still looking can be stopped.
+    function test_filesNewTabShowInFolderAndStop() {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        filesMock.selectedPath = ""
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        const menu = findChild(launcher, "file-context-menu")
+        const pane = findChild(launcher, "files-pane")
+        pane.showActions("/home/test/Projects", true, Qt.point(40, 40))
+        tryCompare(menu, "opened", true)
+        const newTab = findChild(launcher, "context-new-tab")
+        verify(newTab.visible)
+        verify(!findChild(launcher, "context-show-in-folder").visible)
+        filesMock.tabsOpened = []
+        newTab.choose()
+        compare(filesMock.tabsOpened, ["/home/test/Projects"])
+        tryCompare(menu, "opened", false)
+        filesMock.placeKind = "recent"
+        pane.showActions("/home/test/Notes.txt", false, Qt.point(40, 40))
+        tryCompare(menu, "opened", true)
+        verify(!findChild(launcher, "context-new-tab").visible)
+        const show = findChild(launcher, "context-show-in-folder")
+        verify(show.visible)
+        show.choose()
+        compare(filesMock.shownInFolder, "/home/test/Notes.txt")
+        filesMock.placeKind = "search"
+        filesMock.searching = true
+        const stop = findChild(launcher, "stop-search")
+        verify(stop.visible)
+        tryVerify(() => stop.width > 0 && stop.x >= 0)
+        wait(50)
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        compare(filesMock.searchStops, 1)
+        verify(!stop.visible)
+        filesMock.placeKind = "folder"
+        filesMock.selectedPath = ""
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }

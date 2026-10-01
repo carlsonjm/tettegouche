@@ -72,7 +72,7 @@ than repeat it.
 | --- | --- |
 | Tap or click "explore files" in Search, or pull down from it | Opens Files. |
 | Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. |
-| With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder. Hidden files are searched only while shown. |
+| With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder; Stop searching keeps what it has found. Hidden files are searched only while shown. |
 | Tap or click a place | Opens that folder. |
 | Tap or click Recent | Shows the 30 files and folders used most recently, newest first, each with the folder it is in. The sort stays the order of use. |
 | Tap a folder in Recent or in a search's results | Opens it in place and clears the typed text. |
@@ -82,6 +82,9 @@ than repeat it.
 | Tap or click Path, or Ctrl+L | Shows a field for a folder's full path. Enter goes there; Esc hides the field. |
 | Tap or click Refresh | Reloads the folder. |
 | Tap or click +, or Ctrl+T | Opens a new tab on the current folder. |
+| Open in new tab, from a folder's menu | Opens that folder in a tab of its own. |
+| Show in folder, from a file's menu in Recent or a search | Opens the folder that holds it, with the file chosen. |
+| Drag the handle at the right edge of a long folder | Scrolls through it at once. |
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |

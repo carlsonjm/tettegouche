@@ -202,6 +202,13 @@ Item {
         property string targetPath: ""
         property bool targetDirectory: false
         SheetMenuItem { text: "Open"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
+        SheetMenuItem { objectName: "context-new-tab"; text: "Open in new tab"; visible: actions.targetPath.length>0 && actions.targetDirectory; onTriggered: pane.browser.openTab(actions.targetPath) }
+        SheetMenuItem {
+            objectName: "context-show-in-folder"
+            text: "Show in folder"
+            visible: actions.targetPath.length>0 && !!pane.browser && (pane.browser.placeKind === "recent" || pane.browser.placeKind === "search")
+            onTriggered: pane.browser.showInFolder(actions.targetPath)
+        }
         SheetMenuItem { text: "Copy"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
         SheetMenuItem { text: "Cut"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
         SheetMenuItem { text: "Rename"; visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
@@ -658,6 +665,7 @@ Item {
                     Layout.fillWidth: !pane.compact
                     // With text typed and nothing chosen, the folder and
                     // everything inside it can be searched for that text.
+                    PillAction { objectName: "stop-search"; text: "Stop searching"; visible: !!pane.browser && pane.browser.searching; onClicked: pane.browser.stopSearch() }
                     PillAction { objectName: "search-inside"; text: "Search inside folders"; visible: pane.browser && pane.browser.searchOffered && !(pane.selectedPaths && pane.selectedPaths.length>0); onClicked: pane.browser.searchInside(pane.browser.filter) }
                     // While files are chosen, what can be done with them.
                     PillAction { objectName: "done-selecting"; text: "Done selecting"; visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
@@ -772,6 +780,31 @@ Item {
                 id: files
                 objectName: "files-grid"
                 interactive: !pane.draggingFiles
+                // A handle on the right edge for a long folder: slim at rest,
+                // wide enough for a finger to take, broader while held.
+                C.ScrollBar.vertical: C.ScrollBar {
+                    id: filesScroll
+                    objectName: "files-scroll"
+                    z: 30
+                    policy: files.contentHeight > files.height + 1 ? C.ScrollBar.AlwaysOn : C.ScrollBar.AlwaysOff
+                    minimumSize: 0.08
+                    hoverEnabled: true
+                    width: 22
+                    padding: 4
+                    contentItem: Item {
+                        implicitWidth: 14
+                        Rectangle {
+                            anchors.right: parent.right
+                            width: filesScroll.pressed ? 10 : filesScroll.hovered ? 8 : 6
+                            height: parent.height
+                            radius: width / 2
+                            color: filesScroll.pressed ? "#8A8A8A" : filesScroll.hovered ? "#6A6A6A" : "#4A4A4A"
+                            Behavior on width { NumberAnimation { duration: 90 } }
+                            Behavior on color { ColorAnimation { duration: 90 } }
+                        }
+                    }
+                    background: Item {}
+                }
                 Timer {
                     interval: 16
                     running: pane.draggingFiles || pane.incoming || box.boxing
