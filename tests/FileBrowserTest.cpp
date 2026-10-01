@@ -955,6 +955,45 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(QFile::exists(root.filePath(QStringLiteral("Archive/plan.txt"))),10000);
         QFile plan(root.filePath(QStringLiteral("Archive/plan.txt"))); QVERIFY(plan.open(QIODevice::ReadOnly)); QCOMPARE(plan.readAll(),QByteArray("two"));
     }
+    // A copy of several that meets a file it cannot read skips it, carries
+    // the rest, and ends saying what was left behind, to Files and to Ambient.
+    void unreadableFileIsSkipped() {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QCoreApplication::setOrganizationName(QStringLiteral("TetteTests"));
+        QCoreApplication::setApplicationName(QStringLiteral("Files"));
+        QDir root(dir.path());
+        QVERIFY(root.mkdir(QStringLiteral("source")));
+        QVERIFY(root.mkdir(QStringLiteral("destination")));
+        const QString source=root.filePath(QStringLiteral("source"));
+        const QString dest=root.filePath(QStringLiteral("destination"));
+        for (const auto &name:{QStringLiteral("a.txt"),QStringLiteral("b.txt"),QStringLiteral("c.txt")}) {
+            QFile file(QDir(source).filePath(name)); QVERIFY(file.open(QIODevice::WriteOnly)); file.write("data");
+        }
+        const QString unreadable=QDir(source).filePath(QStringLiteral("b.txt"));
+        QVERIFY(QFile::setPermissions(unreadable, QFileDevice::Permissions{}));
+        const auto restore = qScopeGuard([&] { QFile::setPermissions(unreadable, QFileDevice::ReadOwner | QFileDevice::WriteOwner); });
+        FileBrowser browser; browser.navigate(source); QTRY_VERIFY(!browser.busy());
+        browser.selectAll();
+        QCOMPARE(browser.selectedPaths().size(),3);
+        browser.copySelected();
+        browser.navigate(dest); QTRY_VERIFY(!browser.busy());
+        browser.paste();
+        QTRY_VERIFY_WITH_TIMEOUT(!browser.working(),5000);
+        QVERIFY(QFile::exists(QDir(dest).filePath(QStringLiteral("a.txt"))));
+        QVERIFY(QFile::exists(QDir(dest).filePath(QStringLiteral("c.txt"))));
+        QVERIFY(!QFile::exists(QDir(dest).filePath(QStringLiteral("b.txt"))));
+        QVERIFY2(browser.operationStatus().startsWith(QStringLiteral("Done, except one item that could not be read: ")),
+                 qPrintable(browser.operationStatus()));
+        QVERIFY(browser.error().contains(QStringLiteral("b.txt")));
+        bool told=false;
+        for (const auto &row : browser.activitySnapshot())
+            if (row.toMap().value(QStringLiteral("state")) == QStringLiteral("failed")) told=true;
+        QVERIFY(told);
+    }
+
     // A place that cannot be opened says why in plain words and is not
     // offered new folders or pastes; nor is a folder that cannot be written.
     void placesThatCannotBeOpened() {

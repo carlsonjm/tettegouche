@@ -109,7 +109,7 @@ than repeat it.
 | Choose Compress | Ark makes a zip beside the first: one item keeps its name, several make Archive.zip. Its progress shows in Ambient. |
 | Choose Extract here | Ark unpacks each archive beside itself, in a folder of its own when it holds several items. Its progress shows in Ambient. |
 | With one file or folder chosen, tap or click Properties in the bar or the menu, or press Alt+Enter | Shows its kind, size, folder and dates. A folder's total size and what it holds follow once counted; a photo adds its dimensions, date taken and camera, a song its title, artist, album and length, a video its dimensions and length. Close or Esc puts it away. |
-| Right-click empty space, or tap or click ⋯ with nothing chosen | The folder's action menu: Paste here, Select all, New folder, Restore last trashed item, Empty Trash. Recent and a search offer no Paste here or New folder. |
+| Right-click empty space, or tap or click ⋯ with nothing chosen | The folder's action menu: Paste here, Select all, New folder, Restore last trashed item, Empty Trash. Recent, a search and a folder that cannot be written offer no Paste here or New folder. |
 | Choose Empty Trash | Asks first, giving how many items and how much space; Empty Trash removes everything in Trash for good. |
 | Ctrl+C, or tap or click Copy | Copies the selection. |
 | Ctrl+X, or Cut | Cuts the selection. |

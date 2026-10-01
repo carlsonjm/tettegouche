@@ -1208,18 +1208,25 @@ private:
             // A job stopped at a question says why: the error KIO asked about,
             // or nothing more when the person chose to stop.
             QString why=finished->errorString();
-            if(finished->error()==KIO::ERR_USER_CANCELED) {
-                const auto *asker=finished->uiDelegate() ? finished->uiDelegate()->findChild<FileQuestions *>() : nullptr;
-                why=asker ? asker->stoppedBy() : QString();
-            }
-            m_operationStatus=!finished->error() ? tr("Done") : why.isEmpty() ? tr("Stopped.") : tr("Stopped: %1").arg(why);
+            const auto *asker=finished->uiDelegate() ? finished->uiDelegate()->findChild<FileQuestions *>() : nullptr;
+            if(finished->error()==KIO::ERR_USER_CANCELED) why=asker ? asker->stoppedBy() : QString();
+            // Files it could not read were skipped and the rest carried: the
+            // copy ends saying what was left behind, as a failure does.
+            const QStringList skipped=asker && !finished->error() ? asker->skipped() : QStringList();
+            m_operationStatus=!finished->error()
+                ? (skipped.isEmpty() ? tr("Done")
+                    : tr("Done, except %1 that could not be read: %2")
+                        .arg(skipped.size()==1 ? tr("one item") : tr("%1 items").arg(skipped.size()), skipped.first()))
+                : why.isEmpty() ? tr("Stopped.") : tr("Stopped: %1").arg(why);
             if (finished->error() && copying) m_operationStatus += tr(" Some items may already have transferred.");
-            m_error=finished->error() ? m_operationStatus : QString();
-            // A copy or move that failed, not one the person stopped, is told
-            // to Ambient for a few seconds; Ambient keeps it its minute.
+            m_error=finished->error() || !skipped.isEmpty() ? m_operationStatus : QString();
+            // A copy or move that failed, not one the person stopped, or that
+            // left files behind, is told to Ambient for a few seconds; Ambient
+            // keeps it its minute.
             const auto now=QDateTime::currentMSecsSinceEpoch();
             m_failures.removeIf([now](const Failure &f) { return f.until<now; });
-            if (copying && finished->error() && finished->error()!=KIO::ERR_USER_CANCELED && !endedId.isEmpty())
+            if (copying && !endedId.isEmpty()
+                    && ((finished->error() && finished->error()!=KIO::ERR_USER_CANCELED) || !skipped.isEmpty()))
                 m_failures.append({endedId, endedTitle, m_operationStatus, now+10000});
             Q_EMIT changed(); // Keep full failure details visible, not elided status only.
             QSettings s;

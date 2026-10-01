@@ -119,9 +119,11 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 - No job receives an overwrite flag. A name already taken asks you, one
   question at a time: Replace, Skip, Keep both under KDE's suggested name, or
   Stop, with a choice for the rest; a folder merges instead of being replaced.
-  Nothing is replaced without Replace. Any other error stops the job with its
-  message; already-completed items may remain and partial completion must be
-  stated.
+  Nothing is replaced without Replace. In a copy or move of several, a file
+  that cannot be read is skipped and the rest go on; the job ends saying what
+  was left behind, to Files and to Ambient. Any other error, or an unreadable
+  file alone, stops the job with its message; already-completed items may
+  remain and partial completion must be stated.
 - Empty Trash, from the folder's menu after a confirmation giving the count and
   size, is the one permanent delete, and forgets the restore records.
 - Compress and Extract are Ark's own batch jobs, which Plasma tracks, so Ambient

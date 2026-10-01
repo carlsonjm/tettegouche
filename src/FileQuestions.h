@@ -9,9 +9,10 @@
 #include <functional>
 
 // What KIO asks while Files copies or moves. A name already taken goes to
-// Files, which shows the person the choice. Anything else is answered no, so
-// an error stops the job as it did before KIO could ask, and the error is kept
-// for Files to report.
+// Files, which shows the person the choice. A file that cannot be read in a
+// copy of several is skipped, and the rest go on; Files says at the end what
+// was left behind. Anything else is answered no, so an error stops the job as
+// it did before KIO could ask, and the error is kept for Files to report.
 class FileQuestions : public KIO::AskUserActionInterface
 {
     Q_OBJECT
@@ -35,6 +36,8 @@ public:
 
     // The last error KIO asked about, which stopped the job.
     QString stoppedBy() const { return m_stoppedBy; }
+    // What KIO could not carry and Files skipped, in KIO's words.
+    QStringList skipped() const { return m_skipped; }
 
     // Answers KIO after the question, never inside it.
     void answerNameTaken(KIO::RenameDialog_Result result, const QUrl &newUrl, KJob *job)
@@ -59,11 +62,14 @@ public:
         m_onNameTaken(this, {job, source, destination, options, sourceSize, destinationSize, sourceModified, destinationModified});
     }
 
-    void askUserSkip(KJob *job, KIO::SkipDialog_Options, const QString &errorText) override
+    void askUserSkip(KJob *job, KIO::SkipDialog_Options options, const QString &errorText) override
     {
-        m_stoppedBy = errorText;
-        QTimer::singleShot(0, this, [this, job] {
-            Q_EMIT askUserSkipResult(KIO::Result_Cancel, job);
+        // Skipping the one file there is would carry nothing; that stops.
+        const bool several = options & KIO::SkipDialog_MultipleItems;
+        if (several) m_skipped.append(errorText);
+        else m_stoppedBy = errorText;
+        QTimer::singleShot(0, this, [this, job, several] {
+            Q_EMIT askUserSkipResult(several ? KIO::Result_Skip : KIO::Result_Cancel, job);
         });
     }
 
@@ -101,4 +107,5 @@ public:
 private:
     std::function<void(FileQuestions *, const NameTaken &)> m_onNameTaken;
     QString m_stoppedBy;
+    QStringList m_skipped;
 };

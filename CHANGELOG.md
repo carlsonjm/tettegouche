@@ -14,6 +14,8 @@ provenance.
 - A place Files cannot open says why in plain words where its files would be,
   with Back; New folder and Paste show only where they can land; a filter that
   matches nothing says so.
+- A copy of several files that meets one it cannot read skips it and carries
+  the rest, then says what was left behind, in Files and in the band.
 - A copy or move in Files that fails keeps its place in the band for a minute,
   saying why, then is filed in the notification history, as other failed
   transfers are. A long list of transfers scrolls in the open island.
