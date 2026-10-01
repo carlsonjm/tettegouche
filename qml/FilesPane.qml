@@ -162,6 +162,13 @@ Item {
     readonly property string selectedPath: browser ? browser.selectedPath : ""
     readonly property var selectedPaths: browser ? browser.selectedPaths : []
     function clearSelection() { browser.selecting=false; browser.selectedPath="" }
+    // The keys come into the files from the filter: the first file is the
+    // one they are on, unless they were already on one.
+    function focusFiles() {
+        if (!browser || !browser.entries.length) return
+        if (!browser.focusedPath.length) browser.focusedPath = browser.entries[0].path
+        files.forceActiveFocus()
+    }
     function newFolderForm() { renamePath=""; folderName.text=""; creatingFolder=true; folderName.forceActiveFocus() }
     function renameForm() {
         if(selectedPaths.length!==1)return

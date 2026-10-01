@@ -57,8 +57,8 @@ than repeat it.
 | Tap or click "browse everything" in Search | Opens Browse everything. |
 | Pull up the handle under "browse everything" | The drawer follows your finger or the pointer. Let go and it opens if pulled far enough, or falls back. |
 | Type | Narrows the applications to those whose names match. |
-| Down or Up | Moves to the next or previous application. The move is not drawn on screen. |
-| Enter | Opens the selected application: the first one, unless Down or Up moved it. |
+| Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
+| Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
 | Tap or click "Close drawer", or the "browse everything" title | Returns to search. |
@@ -72,6 +72,7 @@ than repeat it.
 | --- | --- |
 | Tap or click "explore files" in Search, or pull down from it | Opens Files. |
 | Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. |
+| Down, from what is typed | Moves the keys into the files, on the first one. |
 | With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder; Stop searching keeps what it has found. Hidden files are searched only while shown. |
 | Tap or click a place | Opens that folder. |
 | Tap or click Recent | Shows the 30 files and folders used most recently, newest first, each with the folder it is in. The sort stays the order of use. |

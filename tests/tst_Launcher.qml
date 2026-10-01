@@ -35,6 +35,8 @@ TestCase {
         property int activationResult: 1
         function activateIfOpen(row) { activatedRow = row; return activationResult }
         function beginGuestApplicationLaunch(row, catalog) { return false }
+        property int catalogActivated: -1
+        function activateCatalogIfOpen(row) { catalogActivated = row; return 1 }
         function finishLaunch() { closes++ }
         property int webSearches: 0
         property bool bluetoothResult: false
@@ -84,6 +86,7 @@ TestCase {
         id: catalog
         property string filterText: ""
         property bool descending: false
+        function applicationName(row) { return row >= 0 && row < count ? get(row).name : "" }
     }
     App.Launcher {
         id: launcher
@@ -92,6 +95,54 @@ TestCase {
         searchResults: results
         applicationCatalog: catalog
     }
+    // The arrow keys choose an application in Browse everything, which Enter
+    // opens: the chosen one rises and stays in view as the choice moves on.
+    // The arrow keys choose an application in Browse everything, typed into
+    // or not: the first press shows the one Enter would open, Left and Right
+    // step by one, Up and Down by a row, and the choice stays in view.
+    function test_browseShowsTheKeyChoice() {
+        controller.opened()
+        for (let i = 0; i < 40; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        const grid = findChild(launcher, "application-grid")
+        const query = findChild(launcher, "search-query")
+        const columns = Math.max(1, Math.floor(grid.width / grid.cellWidth))
+        query.forceActiveFocus()
+        verify(!findChild(grid, "application-tile-0").chosen)
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 0)
+        verify(findChild(grid, "application-tile-0").chosen)
+        const rows = Math.min(4, Math.floor(39 / columns))
+        for (let i = 0; i < rows; ++i) keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, rows * columns)
+        const tile = findChild(grid, "application-tile-" + rows * columns)
+        verify(tile && tile.chosen)
+        const top = tile.mapToItem(grid, 0, 0).y
+        verify(top >= -0.5 && top + tile.height <= grid.height + 0.5)
+        keyClick(Qt.Key_Up)
+        verify(findChild(grid, "application-tile-" + (rows - 1) * columns).chosen)
+        verify(!tile.chosen)
+        // Typing starts the choice over, unshown.
+        query.text = "App"
+        verify(!findChild(grid, "application-tile-0").chosen)
+        query.text = ""
+        // With nothing typed and the keys not in the box, as when the drawer
+        // has just opened, the arrows still choose, and Enter opens.
+        launcher.forceActiveFocus()
+        verify(!query.activeFocus)
+        keyClick(Qt.Key_Right)
+        verify(findChild(grid, "application-tile-0").chosen)
+        keyClick(Qt.Key_Right)
+        compare(grid.currentIndex, 1)
+        controller.catalogActivated = -1
+        keyClick(Qt.Key_Return)
+        compare(controller.catalogActivated, 1)
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
     function test_browseAndSort_data() {
         return [{ tag: "standalone", guest: false }, { tag: "card-line", guest: true }]
     }

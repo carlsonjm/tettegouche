@@ -14,6 +14,9 @@ provenance.
 - A place Files cannot open says why in plain words where its files would be,
   with Back; New folder and Paste show only where they can land; a filter that
   matches nothing says so.
+- In Browse everything the arrow keys choose an application, shown lifted and
+  kept in view, whether or not anything is typed; Up and Down move a row, and
+  Enter opens it. In Files, Down from what is typed moves into the files.
 - A folder's menu offers Open in new tab; a file in Recent or a search offers
   Show in folder. A running search can be stopped, keeping what it found, and
   a long folder has a handle at its right edge to drag.
