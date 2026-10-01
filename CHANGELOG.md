@@ -17,6 +17,10 @@ provenance.
 - In Browse everything the arrow keys choose an application, shown lifted and
   kept in view, whether or not anything is typed; Up and Down move a row, and
   Enter opens it. In Files, Down from what is typed moves into the files.
+- What Files opens is now told to KDE's activity service, as Dolphin's opens
+  were, so it comes back in Recent, here and across Plasma. The browser tests
+  run on a private bus that starts no desktop service, so they no longer start
+  KDE's activity service on the person's own record.
 - A folder's menu offers Open in new tab; a file in Recent or a search offers
   Show in folder. A running search can be stopped, keeping what it found, and
   a long folder has a handle at its right edge to drag.

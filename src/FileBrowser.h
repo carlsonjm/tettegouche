@@ -36,6 +36,8 @@
 #include <QUrlQuery>
 #include <QUuid>
 #include <QDateTime>
+#include <QDBusConnection>
+#include <QDBusMessage>
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -255,7 +257,7 @@ public:
         const auto service=KService::serviceByStorageId(applicationId);
         if(item.isNull() || item.isDir() || !service)return;
         if(always)KApplicationTrader::setPreferredService(item.mimetype(),service);
-        m_error.clear(); m_opening=true; Q_EMIT changed();
+        m_error.clear(); m_opening=true; m_openingUrl=QUrl::fromLocalFile(p); Q_EMIT changed();
         Q_EMIT openWithRequested(QUrl::fromLocalFile(p),applicationId);
     }
     // Compress and Extract are Ark's own batch jobs, which Plasma tracks, so
@@ -545,6 +547,7 @@ public:
             // A folder found in Recent or a search opens as itself, not
             // narrowed by the text that found it.
             if (!inFolder() && !m_filter.isEmpty()) { m_filter.clear(); Q_EMIT filterCleared(); }
+            noteUsed(url);
             navigate(url.toLocalFile()); return;
         }
         // A file no application claims asks which one to use.
@@ -552,10 +555,12 @@ public:
             m_error.clear(); Q_EMIT changed();
             Q_EMIT applicationChoiceNeeded(selectedPath()); return;
         }
-        m_error.clear(); m_opening = true; Q_EMIT changed();
+        m_error.clear(); m_opening = true; m_openingUrl = url; Q_EMIT changed();
         Q_EMIT openRequested(url);
     }
     void finishOpen(const QString &error) {
+        if (error.isEmpty() && m_openingUrl.isValid()) noteUsed(m_openingUrl);
+        m_openingUrl.clear();
         m_opening = false; m_error = error; Q_EMIT changed();
     }
     bool canBack() const { return m_tabs[m_current].index > 0; }
@@ -1110,6 +1115,18 @@ private:
     QString m_operationStatus;
     QString m_filter, m_error;
     bool m_listingFailed=false;
+    QUrl m_openingUrl;
+    // What Files opens is told to KDE's activity service, as Dolphin tells it,
+    // so it shows in Recent here and across Plasma. Plasma's own privacy
+    // setting decides whether it is kept.
+    static void noteUsed(const QUrl &url) {
+        auto use = QDBusMessage::createMethodCall(QStringLiteral("org.kde.ActivityManager"),
+            QStringLiteral("/ActivityManager/Resources"), QStringLiteral("org.kde.ActivityManager.Resources"),
+            QStringLiteral("RegisterResourceEvent"));
+        // The application, no window, the file, and Accessed.
+        use.setArguments({QStringLiteral("io.github.carlsonjm.Tettegouche.Files"), 0u, url.toString(), 0u});
+        QDBusConnection::sessionBus().asyncCall(use);
+    }
     // Why a place could not be listed, said plainly; KIO's own words otherwise.
     QString listingError(KIO::Job *job) const {
         const auto p = path();

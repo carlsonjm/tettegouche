@@ -167,10 +167,13 @@ if(BUILD_TESTING)
     target_compile_definitions(file-browser-test PRIVATE FILES_PANE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}/qml/FilesPane.qml"
         FILES_DESKTOP="${CMAKE_CURRENT_SOURCE_DIR}/io.github.carlsonjm.Tettegouche.Files.desktop"
         FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")
-    add_test(NAME file-browser-test COMMAND dbus-run-session -- $<TARGET_FILE:file-browser-test>)
+    # A private bus that starts no desktop service: on an ordinary one, Recent
+    # started KDE's activity service on the person's own record.
+    add_test(NAME file-browser-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:file-browser-test>)
     set_tests_properties(file-browser-test PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
     add_test(NAME files-recent-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent.sh $<TARGET_FILE:file-browser-test>)
-    set_tests_properties(files-recent-test PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
+    set_tests_properties(files-recent-test PROPERTIES TIMEOUT 150 SKIP_RETURN_CODE 77)
     add_test(NAME files-sealed-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-files-sealed.sh $<TARGET_FILE:file-browser-test>)
     set_tests_properties(files-sealed-test PROPERTIES TIMEOUT 150)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)

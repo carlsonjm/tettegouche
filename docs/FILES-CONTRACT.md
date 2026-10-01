@@ -15,6 +15,9 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
   known by the local file they stand for, and every action applies to that file.
   Nothing is created or pasted into Recent or a search, and both are listed
   afresh, since KDE watches only folders.
+- Files tells KDE's activity service each file and folder it opens, as Dolphin
+  does, so they come back in Recent here and across Plasma; Plasma's privacy
+  setting decides whether they are kept.
 - Recent is KDE's record for the current activity, newest first. KDE's first
   answer can skip the file after one that no longer exists, so Files asks twice.
 - A search is explicit, runs KDE's filename search, which walks folders itself

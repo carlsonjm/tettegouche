@@ -439,6 +439,37 @@ private Q_SLOTS:
     // Recent from KDE's own activity service. tests/verify-recent.sh runs this
     // on a private bus with a throwaway home, after recording which files were
     // used; the paths come newest first.
+    // What Files opens is told to KDE's activity service, so it comes back
+    // first in Recent. Run only by tests/verify-recent.sh, on a sealed bus.
+    void filesOpenedAreRecent() {
+        if(qEnvironmentVariable("TETTE_RECENT_SEALED")!=QStringLiteral("1"))
+            QSKIP("Run by tests/verify-recent.sh against a sealed activity service");
+        QTemporaryDir settings; QVERIFY(settings.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
+        // A folder: the sealed home has no application claiming a file, and
+        // a folder Files opens itself, through the same telling.
+        const QString opened=QDir::home().filePath(QStringLiteral("opened-in-files"));
+        QVERIFY(QDir::home().mkpath(QStringLiteral("opened-in-files")));
+        FileBrowser browser;
+        browser.navigate(QDir::homePath()); browser.refresh(); QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+        // The service stamps uses by the second; this one comes after the
+        // others the sealed run has already made.
+        QTest::qWait(2500);
+        browser.setSelectedPath(opened); browser.openSelected();
+        QCOMPARE(browser.path(),opened);
+        browser.navigate(FileBrowser::recentLocation());
+        QElapsedTimer waited; waited.start();
+        QString first;
+        while(waited.elapsed()<45000) {
+            QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),5000);
+            if(!browser.entries().isEmpty()) first=browser.entries().first().toMap().value(QStringLiteral("path")).toString();
+            if(first==opened) break;
+            QTest::qWait(1500); browser.refresh();
+        }
+        QCOMPARE(first,opened);
+    }
+
     void recentPlace() {
         const auto expected=qEnvironmentVariable("TETTE_RECENT_FILES").split(QLatin1Char('\n'),Qt::SkipEmptyParts);
         if(expected.size()<3)QSKIP("Run by tests/verify-recent.sh against a sealed activity service");

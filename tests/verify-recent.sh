@@ -106,3 +106,5 @@ fi
 # Recent while the test reads it.
 sleep 3
 TETTE_RECENT_FILES="$(printf '%s\n' "${report}" "${photos}" "${budget}" "${notes}")" "${test_binary}" recentPlace
+# A file Files itself opens comes back first.
+TETTE_RECENT_SEALED=1 "${test_binary}" filesOpenedAreRecent
