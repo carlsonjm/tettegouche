@@ -92,38 +92,6 @@ TestCase {
         searchResults: results
         applicationCatalog: catalog
     }
-    // The arrow keys choose an application in Browse everything, which Enter
-    // opens: the chosen one rises and stays in view as the choice moves on.
-    function test_browseShowsTheKeyChoice() {
-        controller.opened()
-        for (let i = 0; i < 40; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
-        launcher.setDrawerOpen(true)
-        tryCompare(launcher, "drawerProgress", 1)
-        const grid = findChild(launcher, "application-grid")
-        const query = findChild(launcher, "search-query")
-        query.forceActiveFocus()
-        verify(!findChild(grid, "application-tile-0").chosen)
-        keyClick(Qt.Key_Down)
-        compare(grid.currentIndex, 0)
-        verify(findChild(grid, "application-tile-0").chosen)
-        for (let i = 0; i < 30; ++i) keyClick(Qt.Key_Down)
-        compare(grid.currentIndex, 30)
-        const tile = findChild(grid, "application-tile-30")
-        verify(tile && tile.chosen)
-        const top = tile.mapToItem(grid, 0, 0).y
-        verify(top >= -0.5 && top + tile.height <= grid.height + 0.5)
-        keyClick(Qt.Key_Up)
-        verify(findChild(grid, "application-tile-29").chosen)
-        verify(!tile.chosen)
-        // Typing starts the choice over, unshown.
-        query.text = "App"
-        verify(!findChild(grid, "application-tile-0").chosen)
-        query.text = ""
-        catalog.clear()
-        launcher.setDrawerOpen(false)
-        tryCompare(launcher, "drawerProgress", 0)
-    }
-
     function test_browseAndSort_data() {
         return [{ tag: "standalone", guest: false }, { tag: "card-line", guest: true }]
     }

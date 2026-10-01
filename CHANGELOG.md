@@ -7,8 +7,7 @@ provenance.
 
 - A copy or move in Files that fails keeps its place in the band for a minute,
   saying why, then is filed in the notification history, as other failed
-  transfers are. Browse everything shows the application the arrow keys chose
-  and keeps it in view. A long list of transfers scrolls in the open island.
+  transfers are. A long list of transfers scrolls in the open island.
   The setting to open inside Kadunce uses its name, Spread.
 - Paused music leaves the band after three minutes and comes back when it
   plays again, so a player that stopped long ago, a phone's through KDE
