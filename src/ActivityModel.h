@@ -3,6 +3,7 @@
 #include "DesktopJobProvider.h"
 #include "DriveActivityProvider.h"
 #include "FinishNotices.h"
+#include "ScreenShareProvider.h"
 #include "IncomingFileProvider.h"
 #include "TetteTransferProvider.h"
 #include <memory>
@@ -40,6 +41,7 @@ private:
     TetteTransferProvider m_tette;
     FinishNotices m_notices;
     DriveActivityProvider m_drives;
+    ScreenShareProvider m_screen;
     QVariantList m_rows;
     QMap<QString, QVariantMap> m_routes;
     QMap<QString, QString> m_presentations;

@@ -31,6 +31,9 @@ var PIECES = {
     arrived: [
         { id: "mark" }, { id: "show" }, { id: "name", name: true }, { id: "words" },
     ],
+    screen: [
+        { id: "stop" }, { id: "dot" }, { id: "who", name: true },
+    ],
     drive: [
         { id: "icon" }, { id: "size" }, { id: "open" }, { id: "name", name: true },
     ],

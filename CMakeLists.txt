@@ -29,6 +29,7 @@ add_library(tettegouche-activities STATIC
     src/TetteTransferProvider.cpp src/TetteTransferProvider.h
     src/FinishNotices.cpp src/FinishNotices.h
     src/DriveActivityProvider.cpp src/DriveActivityProvider.h src/DriveRules.h
+    src/ScreenShareProvider.cpp src/ScreenShareProvider.h
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)

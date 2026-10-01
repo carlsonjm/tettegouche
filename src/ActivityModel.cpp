@@ -28,7 +28,7 @@ std::shared_ptr<ActivityModel> ActivityModel::acquire() {
 }
 ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QObject *parent)
     : QObject(parent), m_media(bus, this), m_jobs(this), m_files(downloads, this), m_tette(bus, this),
-      m_notices(bus, downloads, this), m_drives(bus, this) {
+      m_notices(bus, downloads, this), m_drives(bus, this), m_screen(bus, this) {
     const auto update = [this] {
         if (m_refreshPending) return;
         m_refreshPending = true;
@@ -40,6 +40,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_tette, &TetteTransferProvider::changed, this, update);
     connect(&m_notices, &FinishNotices::changed, this, update);
     connect(&m_drives, &DriveActivityProvider::changed, this, update);
+    connect(&m_screen, &ScreenShareProvider::changed, this, update);
     connect(&m_drives, &DriveActivityProvider::openRequested, this, &ActivityModel::driveOpenRequested);
     connect(&m_jobs, &DesktopJobProvider::finished, this, [this](const QVariantMap &job) {
         m_notices.report(job);
@@ -60,7 +61,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
 }
 void ActivityModel::refresh() {
     reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities(),
-              m_drives.activities());
+              m_drives.activities() + m_screen.activities());
 }
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files,
                               const QVariantList &drives) {
@@ -69,7 +70,7 @@ void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList 
     // Media set aside comes back when it starts playing again; whatever set
     // aside has gone is forgotten.
     QSet<QString> present;
-    for (const auto &v : transfers + files) present.insert(v.toMap().value(QStringLiteral("id")).toString());
+    for (const auto &v : transfers + files + drives) present.insert(v.toMap().value(QStringLiteral("id")).toString());
     m_aside.removeIf([&present](const QString &id) { return !present.contains(id); });
     QSet<QString> players;
     for (const auto &v : media) {
@@ -172,6 +173,7 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     else if (sourceId.startsWith(QLatin1String("tette:"))) m_tette.invoke(sourceId,sourceGeneration,action);
     else if (sourceId.startsWith(QLatin1String("job:"))) m_jobs.invoke(sourceId,sourceGeneration,action);
     else if (sourceId.startsWith(QLatin1String("drive:")) && action == QLatin1String("open")) m_drives.open(sourceId);
+    else if (sourceId.startsWith(QLatin1String("screen:"))) m_screen.invoke(sourceId, sourceGeneration, action);
 }
 void ActivityModel::setAside(const QString &id, int generation) {
     const auto route = m_routes.value(id);
@@ -182,7 +184,7 @@ void ActivityModel::setAside(const QString &id, int generation) {
     if (kind == QLatin1String("media")) m_asideMedia.insert(source, state);
     else if (kind == QLatin1String("drive")) {
         m_drives.setAside(source);
-        reconcile(m_lastTransfers, m_lastMedia, m_lastFiles, m_drives.activities());
+        reconcile(m_lastTransfers, m_lastMedia, m_lastFiles, m_drives.activities() + m_screen.activities());
         return;
     }
     else if (state == QLatin1String("finished") || state == QLatin1String("failed")) m_notices.used(source);

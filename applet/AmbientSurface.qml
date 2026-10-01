@@ -80,11 +80,11 @@ Item {
     readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
     readonly property int bubbleCount: folded.reduce((count, kind) => count
         + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length
-            : kind === "drive" ? drives.length : 1), 0)
+            : kind === "drive" ? drives.length : kind === "screen" ? screens.length : 1), 0)
     // The least the band needs: each island's first piece.
     readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
-        || driveIsland.peeling
+        || driveIsland.peeling || screenIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -92,8 +92,10 @@ Item {
     onActivitiesChanged: track()
     onChosenPlayerChanged: choose()
 
+    // A kind with no island of its own here, such as a shared screen, takes
+    // no room: the layout finds no pieces for it.
     function bandKind(activity) {
-        if (activity.kind === "media" || activity.kind === "drive") return activity.kind;
+        if (activity.kind !== "transfer") return activity.kind;
         return ended(activity) ? "arrived" : "transfer";
     }
 
@@ -129,7 +131,7 @@ Item {
         if (JSON.stringify(bandOrder) !== JSON.stringify(bandKinds)) bandKinds = bandOrder;
         const openOrder = [];
         for (const band of bandOrder) {
-            if (band === "drive") continue;
+            if (band !== "media" && band !== "transfer" && band !== "arrived") continue;
             const kind = band === "media" ? "media" : "transfer";
             if (openOrder.indexOf(kind) < 0) openOrder.push(kind);
         }
@@ -142,7 +144,7 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -274,6 +276,13 @@ Item {
         ? formatBytes(driveShown.sizeBytes) : ""
     readonly property string openLabel: words.i18n("Open")
 
+    // The screen being shared or recorded: who receives it, and Stop.
+    readonly property var screens: activities.filter(activity => activity.kind === "screen")
+    readonly property var screenShown: screens.length > 0 ? screens[screens.length - 1] : null
+    readonly property string screenWho: screenShown ? screenShown.title || words.i18n("Sharing your screen") : ""
+    readonly property string stopLabel: words.i18n("Stop")
+    readonly property real dotWidth: 28
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -309,8 +318,15 @@ Item {
             size ? textWidth(smallMetrics, driveSize) : 0, 150);
     }
     // A pill as wide as its word, within a finger's reach.
+    function pillWidth(label) {
+        return Math.max(reach, textWidth(strongMetrics, label) + 36);
+    }
     function openWidth() {
-        return Math.max(reach, textWidth(strongMetrics, openLabel) + 36);
+        return pillWidth(openLabel);
+    }
+    // Who receives the screen, on one line.
+    function screenWords(who) {
+        return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
     }
     function skipWidth() {
         return reach * ((capability(player, "previous") ? 1 : 0) + (capability(player, "next") ? 1 : 0));
@@ -349,6 +365,9 @@ Item {
         if (kind === "drive")
             return 2 * inset + (has("icon") ? lead : 0) + (has("open") ? openWidth() : 0)
                 + driveWords(has("name"), has("size"));
+        if (kind === "screen")
+            return 2 * inset + (has("dot") ? dotWidth : 0) + screenWords(has("who"))
+                + (has("stop") ? pillWidth(stopLabel) : 0);
         return 0;
     }
 
@@ -373,6 +392,9 @@ Item {
         case "drive.icon": case "drive.name": return driveShown !== null;
         case "drive.size": return tall && driveSize !== "";
         case "drive.open": return capability(driveShown, "open");
+        case "screen.dot": return screenShown !== null;
+        case "screen.who": return screenWho !== "";
+        case "screen.stop": return capability(screenShown, "stop");
         }
         return false;
     }
@@ -383,7 +405,8 @@ Item {
 
     function islandOf(kind) {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
-            : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland : null;
+            : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
+            : kind === "screen" ? screenIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -410,9 +433,10 @@ Item {
         return kind === "media" ? "media" : "transfer";
     }
     // A drive's island is one tap: Files opens the drive, mounting it first.
+    // A shared screen's island only tells, and stops: a tap opens nothing.
     function open(kind) {
         if (kind === "drive") invoke(driveShown, "open");
-        else openRequested(openKind(kind));
+        else if (kind !== "screen") openRequested(openKind(kind));
     }
     // Where the open island grows from.
     function islandFor(kind) {
@@ -424,13 +448,15 @@ Item {
     function spoken(kind) {
         if (kind === "media") return words.i18n("Media %1, open", mediaTitle);
         if (kind === "transfer") return words.i18np("1 transfer, open", "%1 transfers, open", running.length);
+        if (kind === "screen") return screenWho;
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
         return words.i18n("%1, open", endingName);
     }
     // What an island shows goes aside: the player it shows, or all it holds.
     function setAside(kind) {
         if (kind === "media") invoke(player, "setAside");
-        else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives : endings)
+        else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives
+                : kind === "screen" ? screens : endings)
             invoke(activity, "setAside");
     }
 
@@ -450,6 +476,8 @@ Item {
     component BandIsland: Item {
         id: island
         required property string kind
+        // A tap opens it; one that only tells takes no tap.
+        property bool opens: true
         default property alias pieces: row.data
         readonly property var planned: surface.plan.shown[kind] || []
         readonly property bool present: surface.plan.shown[kind] !== undefined
@@ -522,7 +550,7 @@ Item {
             visible: opacity > 0 && !surface.opened
             scale: (0.7 + 0.3 * Math.min(1, island.presence)) * lift
             activeFocusOnTab: visible
-            Accessible.role: Accessible.Button
+            Accessible.role: island.opens ? Accessible.Button : Accessible.StaticText
             Accessible.name: surface.spoken(island.kind)
             Accessible.onPressAction: surface.open(island.kind)
             Keys.onReturnPressed: surface.open(island.kind)
@@ -535,6 +563,7 @@ Item {
             MouseArea {
                 id: pillArea
                 anchors.fill: parent
+                enabled: island.opens
                 onClicked: surface.open(island.kind)
             }
             // Once it moves, the drag is the island's, not a press.
@@ -1076,6 +1105,75 @@ Item {
                 id: openArea
                 anchors.fill: parent
                 onClicked: surface.open("drive")
+            }
+        }
+    }
+
+    // The screen being shared or recorded: a red dot, who receives it, and
+    // Stop, which ends the share as the portal's own End does.
+    BandIsland {
+        id: screenIsland
+        kind: "screen"
+        opens: false
+        Piece {
+            island: screenIsland
+            name: "dot"
+            size: surface.dotWidth
+            Rectangle {
+                objectName: "ambient-screen-dot"
+                anchors.centerIn: parent
+                width: 10
+                height: 10
+                radius: 5
+                color: "#FF5A4F"
+            }
+        }
+        Piece {
+            id: screenWhoPiece
+            island: screenIsland
+            name: "who"
+            size: surface.screenWords(true)
+            Label {
+                objectName: "ambient-screen-who"
+                x: 6
+                width: screenWhoPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                text: surface.screenWho
+            }
+        }
+        Piece {
+            id: stopPiece
+            island: screenIsland
+            name: "stop"
+            size: surface.pillWidth(surface.stopLabel)
+            Rectangle {
+                objectName: "ambient-screen-stop"
+                anchors.centerIn: parent
+                width: stopPiece.size - 8
+                height: Math.min(30, surface.pillHeight - 12)
+                radius: height / 2
+                color: Qt.rgba(248 / 255, 248 / 255, 1, stopArea.pressed ? 0.24 : 0.14)
+                scale: stopArea.pressed ? 1.06 : 1
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Stop: %1", surface.screenWho)
+                Accessible.onPressAction: surface.invoke(surface.screenShown, "stop")
+                Keys.onReturnPressed: surface.invoke(surface.screenShown, "stop")
+                Keys.onEnterPressed: surface.invoke(surface.screenShown, "stop")
+                Keys.onSpacePressed: surface.invoke(surface.screenShown, "stop")
+                border.width: activeFocus ? 1 : 0
+                border.color: "#F8F8FF"
+                Behavior on scale { NumberAnimation { duration: 90 } }
+                Label {
+                    anchors.centerIn: parent
+                    text: surface.stopLabel
+                    font.weight: Font.DemiBold
+                }
+            }
+            MouseArea {
+                id: stopArea
+                anchors.fill: parent
+                onClicked: surface.invoke(surface.screenShown, "stop")
             }
         }
     }
