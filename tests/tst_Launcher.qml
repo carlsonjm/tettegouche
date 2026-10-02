@@ -86,7 +86,20 @@ TestCase {
         id: catalog
         property string filterText: ""
         property bool descending: false
+        property bool showHidden: false
+        property bool softwareReady: false
+        property bool softwareAsked: false
+        property var hiddenSet: ({})
+        property var ran: []
+        property int uninstalled: -1
         function applicationName(row) { return row >= 0 && row < count ? get(row).name : "" }
+        function actions(row) { return row === 1 ? [{index: 0, name: "New Window", icon: ""}, {index: 2, name: "New Private Window", icon: ""}] : [] }
+        function runAction(row, action) { ran = [row, action]; return true }
+        function isHidden(row) { return !!hiddenSet[row] }
+        function setHidden(row, hidden) { const next = Object.assign({}, hiddenSet); next[row] = hidden; hiddenSet = next }
+        function prepareSoftware() { softwareAsked = true }
+        function canUninstall(row) { return softwareReady && row === 1 }
+        function uninstall(row) { uninstalled = row; return true }
     }
     App.Launcher {
         id: launcher
@@ -139,6 +152,67 @@ TestCase {
         keyClick(Qt.Key_Return)
         compare(controller.catalogActivated, 1)
         catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Holding an application, or right-clicking it, opens its sheet: its own
+    // actions, which start afresh, Hide, and Uninstall once the software
+    // catalog can show it.
+    function test_applicationSheet() {
+        controller.opened()
+        for (let i = 0; i < 6; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(600)
+        const grid = findChild(launcher, "application-grid")
+        const sheet = findChild(launcher, "application-sheet")
+        const tile = findChild(grid, "application-tile-1")
+        verify(!sheet.opened)
+        const touch = touchEvent(launcher)
+        touch.press(0, tile, tile.width / 2, tile.height / 2).commit()
+        wait(700)
+        touch.release(0, tile, tile.width / 2, tile.height / 2).commit()
+        tryCompare(sheet, "opened", true)
+        verify(catalog.softwareAsked)
+        compare(controller.catalogActivated, -1)
+        const hide = findChild(launcher, "application-sheet-hide")
+        const uninstall = findChild(launcher, "application-sheet-uninstall")
+        compare(hide.text, "Hide")
+        verify(!uninstall.visible)
+        catalog.softwareReady = true
+        verify(uninstall.visible)
+        // Its own actions come first, each by its own index.
+        const lines = []
+        for (const line of sheet.contentItem.children) if (line.isSheetMenuItem && line.visible) lines.push(line.text)
+        compare(lines, ["New Window", "New Private Window", "Hide", "Uninstall…"])
+        let privateWindow = null
+        for (const line of sheet.contentItem.children) if (line.text === "New Private Window") privateWindow = line
+        const closes = controller.closes
+        mouseClick(privateWindow, privateWindow.width / 2, privateWindow.height / 2)
+        compare(catalog.ran, [1, 2])
+        compare(controller.closes, closes + 1)
+        tryCompare(sheet, "opened", false)
+
+        // A right-click opens it too; Hide hides, and the sheet then offers Unhide.
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        mouseClick(hide, hide.width / 2, hide.height / 2)
+        verify(catalog.isHidden(1))
+        tryCompare(sheet, "opened", false)
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        compare(hide.text, "Unhide")
+        mouseClick(uninstall, uninstall.width / 2, uninstall.height / 2)
+        compare(catalog.uninstalled, 1)
+        tryCompare(sheet, "opened", false)
+
+        catalog.clear()
+        catalog.hiddenSet = ({})
+        catalog.softwareReady = false
+        catalog.softwareAsked = false
+        catalog.ran = []
+        catalog.uninstalled = -1
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }

@@ -60,6 +60,7 @@ than repeat it.
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
+| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Hide, which takes it out of Browse everything while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
 | Tap or click "Close drawer", or the "browse everything" title | Returns to search. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |

@@ -177,6 +177,24 @@ Item {
         return false
     }
 
+    // One of an application's own actions, such as a new private window: a
+    // fresh start, never its open window brought forward.
+    function runCatalogAction(index, action) {
+        if (!root.applicationCatalog.runAction(index, action)) return false
+        root.launcherController.finishLaunch()
+        return true
+    }
+
+    // An application's sheet, opened from its tile at a point on it.
+    function showApplicationSheet(index, tile, point) {
+        root.applicationCatalog.prepareSoftware()
+        applicationSheet.row = index
+        applicationSheet.actions = root.applicationCatalog.actions(index)
+        applicationSheet.hidden = root.applicationCatalog.isHidden(index)
+        const at = tile.mapToItem(sheet, point.x, point.y)
+        applicationSheet.openNear(at.x, at.y)
+    }
+
     function runCatalogApplication(index, applicationName) {
         const activation = root.launcherController.activateCatalogIfOpen(index)
         if (activation < 0) return false
@@ -1321,11 +1339,14 @@ Item {
                     height: applicationGrid.cellHeight
 
                     Rectangle {
+                        id: catalogTile
                         anchors.fill: parent
                         anchors.margins: 5
                         radius: root.paperRadius
                         color: catalogHover.hovered || catalogDelegate.chosen
                             ? "#20ffffff" : "transparent"
+                        // A hidden application, shown by the eye, is dimmed.
+                        opacity: catalogDelegate.model.hidden ? 0.45 : 1
                         // The chosen application rises, as a touched one does.
                         scale: catalogDelegate.chosen ? 1.04 : 1
                         Behavior on scale { NumberAnimation { duration: 120 } }
@@ -1357,10 +1378,59 @@ Item {
                         TapHandler {
                             enabled: !root.guestDragged
                                 && !root.applicationLaunchPending
+                            longPressThreshold: 0.5
                             onTapped: root.runCatalogApplication(
                                 catalogDelegate.index,
                                 catalogDelegate.model.name)
+                            onLongPressed: root.showApplicationSheet(
+                                catalogDelegate.index, catalogTile, point.position)
                         }
+                        TapHandler {
+                            enabled: !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            acceptedButtons: Qt.RightButton
+                            onTapped: eventPoint => root.showApplicationSheet(
+                                catalogDelegate.index, catalogTile, eventPoint.position)
+                        }
+                    }
+                }
+            }
+
+            // An application's sheet: its own actions, then Hide or Unhide,
+            // and Uninstall where the software centre can show it.
+            SheetMenu {
+                id: applicationSheet
+                objectName: "application-sheet"
+                bounds: sheet
+                bottomMargin: root.keysReach
+                keysReach: root.keysReach
+                property int row: -1
+                property var actions: []
+                property bool hidden: false
+                Repeater {
+                    model: applicationSheet.actions
+                    // Made after the menu, so each line is given its menu here.
+                    delegate: SheetMenuItem {
+                        required property var modelData
+                        menu: applicationSheet
+                        width: parent ? parent.width : implicitWidth
+                        text: modelData.name
+                        onTriggered: root.runCatalogAction(applicationSheet.row, modelData.index)
+                    }
+                }
+                SheetMenuItem {
+                    objectName: "application-sheet-hide"
+                    text: applicationSheet.hidden ? words.i18n("Unhide") : words.i18n("Hide")
+                    onTriggered: root.applicationCatalog.setHidden(applicationSheet.row, !applicationSheet.hidden)
+                }
+                SheetMenuItem {
+                    objectName: "application-sheet-uninstall"
+                    text: words.i18n("Uninstall…")
+                    visible: root.applicationCatalog.softwareReady
+                        && root.applicationCatalog.canUninstall(applicationSheet.row)
+                    onTriggered: {
+                        if (root.applicationCatalog.uninstall(applicationSheet.row))
+                            root.launcherController.finishLaunch()
                     }
                 }
             }

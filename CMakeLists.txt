@@ -84,6 +84,8 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/check.svg
         assets/icons/lucide/circle.svg
         assets/icons/lucide/eject.svg
+        assets/icons/lucide/eye.svg
+        assets/icons/lucide/eye-off.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
