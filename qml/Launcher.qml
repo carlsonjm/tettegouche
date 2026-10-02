@@ -477,18 +477,23 @@ Item {
             Rectangle {
                 id: searchField
                 objectName: "search-field"
-                readonly property bool resting:
+                // Nothing typed and nothing found: search rests in the middle.
+                readonly property bool idle:
                     query.text.length === 0
                     && resultList.count === 0
                     && !root.searchResults.querying
                     && !root.applicationLaunchPending
-                    && root.drawerProgress < 0.01
-                width: resting ? Math.min(parent.width,
+                // Where search sits with the drawers shut: mirrored edge
+                // affordances leave an equal gap above and below it at rest.
+                readonly property real compactWidth: idle ? Math.min(parent.width,
                     Math.max(360, parent.width * 0.72)) : parent.width
-                height: 58
+                readonly property real compactY: idle ? Math.round((parent.height - 58) / 2) : 0
+                // An open drawer holds search in its header, between Back and
+                // the sort button; it travels there as the drawer opens.
+                width: compactWidth + (drawerHandle.fieldWidth - compactWidth) * root.drawerProgress
+                height: 58 + (drawerHandle.openHeight - 58) * root.drawerProgress
                 x: (parent.width - width) / 2
-                // Mirrored edge affordances leave an equal gap above and below search.
-                y: resting ? Math.round((parent.height - height) / 2) : root.drawerOpen ? 64 : 0
+                y: Math.round(compactY * (1 - root.drawerProgress))
                 radius: height / 2
                 color: root.searchEngaged || query.text.length > 0
                     ? root.controlColor : "transparent"
@@ -508,10 +513,14 @@ Item {
                     opacity: root.openingControls
                 }
 
+                // The drawer's own motion carries search between its places;
+                // these ease only changes made while a drawer is shut or open.
                 Behavior on width {
+                    enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
                     NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
                 }
                 Behavior on y {
+                    enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
                     NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
                 }
                 Behavior on opacity {
@@ -943,6 +952,13 @@ Item {
                 id: drawerHandle
                 objectName: "drawer-header"
                 readonly property real sectionGap: 16
+                readonly property real openHeight: 44
+                // Search, in the open header, keeps to the middle: centred,
+                // and as clear of Back as of the sort button.
+                readonly property real fieldSide: Math.max(backButton.x + backButton.width,
+                    width - sortButton.x) + 12
+                readonly property real fieldWidth: Math.max(160,
+                    Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
                 readonly property real restingY: parent.height + root.contentInset - 48
                 readonly property real revealDistance: Math.max(1,
                     restingY)
@@ -954,7 +970,7 @@ Item {
                     : Math.round(restingY
                         - root.drawerProgress * revealDistance)
                 width: parent.width
-                height: 48 - 4 * root.drawerProgress
+                height: 48 - (48 - openHeight) * root.drawerProgress
                 opacity: (query.text.length === 0 || root.drawerOpen)
                     && !root.applicationLaunchPending ? root.openingControls : 0
                 transform: Translate { y: (1 - root.openingControls) * 10 }
@@ -996,37 +1012,53 @@ Item {
                     }
                 }
 
-                Text {
-                    id: openBrowseLabel
+                // Back returns to search. The suite's grey pill, 30 high in
+                // its 42 touch, mirrors the sort button across the header.
+                Item {
+                    id: backButton
+                    objectName: "drawer-back"
                     anchors.left: parent.left
-                    anchors.leftMargin: 18
+                    anchors.leftMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    text: root.filesMode ? words.i18n("explore files") : words.i18n("browse everything")
-                    color: openBrowseHover.running || !openBrowseMouse.containsMouse
-                        ? root.secondaryText : root.primaryText
-                    Behavior on color { ColorAnimation { duration: 100 } }
-                    font.pixelSize: 13
-                    font.letterSpacing: 0.25
-                    opacity: Math.max(0,
-                        (root.drawerProgress - 0.65) / 0.35)
+                    width: backLabel.x + backLabel.implicitWidth + 14
+                    height: 42
+                    opacity: Math.max(0, (root.drawerProgress - 0.65) / 0.35)
                     enabled: root.drawerOpen && opacity > 0.9
+                    Accessible.role: Accessible.Button
+                    Accessible.name: backLabel.text
+                    Accessible.onPressAction: root.setDrawerOpen(false)
 
-                    Timer { id: openBrowseHover; interval: 220 }
-                    MouseArea {
-                        id: openBrowseMouse
-                        anchors.fill: parent
-                        anchors.leftMargin: -4
-                        anchors.rightMargin: -12
-                        anchors.topMargin: -3
-                        anchors.bottomMargin: -3
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onContainsMouseChanged: {
-                            if (containsMouse) openBrowseHover.restart()
-                            else openBrowseHover.stop()
+                    Rectangle {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width
+                        height: 30
+                        radius: height / 2
+                        color: backTap.pressed ? "#4A4A4A"
+                            : backHover.hovered ? "#333333" : root.controlColor
+                        Behavior on color { ColorAnimation { duration: 90 } }
+                        SuiteIcon {
+                            glyph: "chevron-left"
+                            width: 14; height: 14
+                            x: 10
+                            anchors.verticalCenter: parent.verticalCenter
                         }
-                        onClicked: root.setDrawerOpen(false)
+                        Text {
+                            id: backLabel
+                            x: 28
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: words.i18n("Back")
+                            color: root.primaryText
+                            font.pixelSize: 13
+                        }
                     }
+                    HoverHandler {
+                        id: backHover
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                    // A tap, so a pull that starts on Back still closes the
+                    // drawer by its edge.
+                    TapHandler { id: backTap; onTapped: root.setDrawerOpen(false) }
                 }
 
                 Item {
@@ -1034,7 +1066,8 @@ Item {
                     objectName: "drawer-grabber"
                     anchors.horizontalCenter: parent.horizontalCenter
                     // Follow the same reveal clock in both directions, including
-                    // partial pulls: edge tab below label -> centered close pill.
+                    // partial pulls: the edge tab below the label grows, and
+                    // fades as search takes the header's middle.
                     y: 24 - 22 * root.drawerProgress
                     width: 124 + 46 * root.drawerProgress
                     height: 24 + 16 * root.drawerProgress
@@ -1061,30 +1094,6 @@ Item {
                         anchors.horizontalCenter: parent.horizontalCenter
                         width: parent.width; height: 24; y: 0
                         HoverHandler { id: drawerHover }
-                    }
-                    Rectangle {
-                        objectName: "close-drawer-button"
-                        anchors.fill: parent
-                        opacity: Math.max(0, (root.drawerProgress - 0.65) / 0.35)
-                        visible: opacity > 0
-                        enabled: root.drawerOpen && opacity > 0.9
-                        radius: height / 2
-                        color: closeDrawerHover.hovered || closeDrawerTap.pressed ? "#303030" : "transparent"
-                        border.width: 1
-                        border.color: closeDrawerHover.hovered || closeDrawerTap.pressed ? root.surfaceOutline : "transparent"
-                        Behavior on color { ColorAnimation { duration: 100 } }
-                        Behavior on border.color { ColorAnimation { duration: 100 } }
-                        Accessible.role: Accessible.Button
-                        Accessible.name: words.i18n("Close drawer")
-                        Accessible.onPressAction: root.setDrawerOpen(false)
-                        Text {
-                            anchors.centerIn: parent
-                            text: words.i18n("Close drawer")
-                            color: root.primaryText
-                            font.pixelSize: 13
-                        }
-                        HoverHandler { id: closeDrawerHover }
-                        TapHandler { id: closeDrawerTap; onTapped: root.setDrawerOpen(false) }
                     }
                 }
 

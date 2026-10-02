@@ -24,6 +24,7 @@
     "media-seek-backward": "rotate-ccw",
     "media-seek-forward": "rotate-cw",
     "action-eject": "eject",
-    "action-show-in-files": "folder-open"
+    "action-show-in-files": "folder-open",
+    "drawer-back": "chevron-left"
   }
 }

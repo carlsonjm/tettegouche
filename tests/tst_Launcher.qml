@@ -51,7 +51,8 @@ TestCase {
         signal guestBridgeLost()
         signal drawerRequested(string drawer)
         function close() { closes++ }
-        function showInputMethod() {}
+        property int keyRequests: 0
+        function showInputMethod() { keyRequests++ }
         function relatedOptionLabel(row) { return "Open Bluetooth settings" }
         function updateGuestDrag(value) {}
         function relatedItems(row) {
@@ -282,18 +283,20 @@ TestCase {
         tryCompare(sheet, "width", 980)
         tryCompare(sheet, "height", 710)
         compare(controller.drawerExpanded, true)
+        tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const closeDrawer = findChild(launcher, "close-drawer-button")
-        verify(closeDrawer && closeDrawer.visible)
+        const back = findChild(launcher, "drawer-back")
+        verify(back && back.visible && back.enabled)
         const header = findChild(launcher, "drawer-header")
         const search = findChild(launcher, "search-field")
         const grid = findChild(launcher, "application-grid")
-        compare(closeDrawer.parent.y + closeDrawer.height / 2, header.height / 2)
         compare(header.y,0)
-        tryCompare(search,"y",64)
+        // The drawer reaches up under the header, to search's old row.
+        compare(search.y,0)
         compare(grid.y-search.y-search.height,16)
+        verify(grid.y < 64)
         const closesBefore = controller.closes
-        mouseClick(closeDrawer, closeDrawer.width / 2, closeDrawer.height / 2)
+        mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
         compare(controller.closes, closesBefore)
         tryCompare(sheet, "width", 640)
@@ -944,6 +947,11 @@ TestCase {
         const grid = findChild(launcher, "application-grid")
         verify(grid.height > 150)
         verify(bottomOf(grid) <= 374.5)
+        // Search, in the drawer's header, stays in view above the keys.
+        tryCompare(launcher, "drawerProgress", 1)
+        const field = findChild(launcher, "search-field")
+        verify(field.mapToItem(launcher, 0, 0).y >= sheet.y)
+        verify(bottomOf(field) < grid.mapToItem(launcher, 0, 0).y)
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
         // Files keeps its folder, path and actions; tabs and Open step aside.
@@ -971,6 +979,8 @@ TestCase {
         verify(actions.visible)
         verify(bottomOf(files) <= 374.5)
         verify(bottomOf(actions) < bottomOf(files))
+        verify(field.mapToItem(launcher, 0, 0).y >= sheet.y)
+        verify(bottomOf(field) < navigation.mapToItem(launcher, 0, 0).y)
         // Keys up: the actions join the path's row, at its end.
         compare(actionRow.mapToItem(launcher, 0, 0).y, navigation.mapToItem(launcher, 0, 0).y)
         verify(actionRow.mapToItem(launcher, 0, 0).x >= navigation.mapToItem(launcher, navigation.width, 0).x)
@@ -1359,6 +1369,168 @@ TestCase {
         wait(50)
         verify(!launcher.drawerOpen)
         compare(controller.closes, 2)
+    }
+    // Both drawers share one header: Back on the left returns to search,
+    // search sits in the middle and is typed into as before, and the sort
+    // button stays on the right. No Close drawer pill remains.
+    function test_drawerHeader_data() {
+        return [{ tag: "browse everything", mode: "apps" }, { tag: "files", mode: "files" }]
+    }
+    function test_drawerHeader(data) {
+        launcher.fileBrowser = filesMock
+        filesMock.filter = ""
+        filesMock.selectedPath = ""
+        controller.closes = 0
+        launcher.setDrawerOpen(true, data.mode)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        compare(findChild(launcher, "close-drawer-button"), null)
+        const header = findChild(launcher, "drawer-header")
+        const back = findChild(launcher, "drawer-back")
+        const sort = findChild(launcher, "sort-button")
+        const field = findChild(launcher, "search-field")
+        const query = findChild(launcher, "search-query")
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        const right = item => item.mapToItem(launcher, item.width, 0).x
+        const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
+        // One row: Back, then search in the middle, then the sort button.
+        verify(back.visible && back.enabled)
+        verify(sort.visible && sort.enabled)
+        compare(middle(field).y, middle(header).y)
+        compare(middle(back).y, middle(header).y)
+        compare(middle(sort).y, middle(header).y)
+        verify(right(back) < left(field))
+        verify(right(field) < left(sort))
+        verify(Math.abs(middle(field).x - middle(header).x) < 1)
+        // The drawer reaches up to the row search held above it.
+        tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)
+        const drawer = findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid")
+        verify(drawer.visible)
+        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16)
+        // A tap or click on search takes the keys, and a tap by its edge
+        // asks for the on-screen ones; what is typed narrows the drawer,
+        // from the field or from anywhere in the launcher.
+        const tap = touchEvent(launcher)
+        launcher.forceActiveFocus()
+        tap.press(0, field, field.width / 2, field.height / 2).commit()
+        wait(30)
+        tap.release(0, field, field.width / 2, field.height / 2).commit()
+        verify(query.activeFocus)
+        wait(600)
+        const asks = controller.keyRequests
+        launcher.forceActiveFocus()
+        tap.press(0, field, 8, field.height / 2).commit()
+        wait(30)
+        tap.release(0, field, 8, field.height / 2).commit()
+        verify(query.activeFocus)
+        verify(controller.keyRequests > asks)
+        wait(600)
+        launcher.forceActiveFocus()
+        mouseClick(field, field.width / 2, field.height / 2)
+        verify(query.activeFocus)
+        keyClick("k")
+        launcher.forceActiveFocus()
+        keyClick("a")
+        compare(query.text, "ka")
+        verify(query.activeFocus)
+        if (data.mode === "files") compare(filesMock.filter, "ka")
+        else compare(catalog.filterText, "ka")
+        compare(results.queryString, "")
+        // Back returns to search with what was typed, by mouse and by touch.
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(results.queryString, "ka")
+        compare(controller.closes, 0)
+        tryCompare(launcher, "drawerProgress", 0)
+        query.text = ""
+        launcher.setDrawerOpen(true, data.mode)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const touch = touchEvent(launcher)
+        touch.press(0, back, back.width / 2, back.height / 2).commit()
+        wait(30)
+        touch.release(0, back, back.width / 2, back.height / 2).commit()
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 0)
+        tryCompare(launcher, "drawerProgress", 0)
+        // With nothing typed, search rests in the middle again.
+        tryCompare(field, "y", Math.round((field.parent.height - field.height) / 2))
+        tryCompare(field, "height", 58)
+        wait(600)
+    }
+    // Esc closes the sort menu if it is open, otherwise the drawer, while
+    // search in the header holds the keys.
+    function test_drawerHeaderEsc_data() {
+        return [{ tag: "browse everything", mode: "apps" }, { tag: "files", mode: "files" }]
+    }
+    function test_drawerHeaderEsc(data) {
+        launcher.fileBrowser = filesMock
+        filesMock.selectedPath = ""
+        controller.closes = 0
+        launcher.setDrawerOpen(true, data.mode)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const query = findChild(launcher, "search-query")
+        const sort = findChild(launcher, "sort-button")
+        query.forceActiveFocus()
+        mouseClick(sort, sort.width / 2, sort.height / 2)
+        const filesMenu = findChild(launcher, "files-sort-menu")
+        if (data.mode === "files") tryCompare(filesMenu, "opened", true)
+        else tryCompare(launcher, "sortMenuOpen", true)
+        keyClick(Qt.Key_Escape)
+        if (data.mode === "files") tryCompare(filesMenu, "opened", false)
+        else compare(launcher.sortMenuOpen, false)
+        verify(launcher.drawerOpen)
+        query.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 0)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+    // A pull down on the drawer's top edge still closes it, whether it starts
+    // on search, beside it or on Back, by touch or with the mouse.
+    function test_drawerTopEdgeCloses_data() {
+        return [
+            { tag: "browse everything, on search", mode: "apps", on: "search" },
+            { tag: "files, on search", mode: "files", on: "search" },
+            { tag: "browse everything, on Back", mode: "apps", on: "back" },
+            { tag: "files, beside search", mode: "files", on: "beside" }]
+    }
+    function test_drawerTopEdgeCloses(data) {
+        launcher.fileBrowser = filesMock
+        filesMock.selectedPath = ""
+        controller.closes = 0
+        for (const device of ["touch", "mouse"]) {
+            launcher.setDrawerOpen(true, data.mode)
+            tryCompare(launcher, "drawerProgress", 1)
+            wait(250)
+            const field = findChild(launcher, "search-field")
+            const back = findChild(launcher, "drawer-back")
+            const start = data.on === "search" ? field.mapToItem(launcher, field.width / 2, field.height / 2)
+                : data.on === "back" ? back.mapToItem(launcher, back.width / 2, back.height / 2)
+                : back.mapToItem(launcher, back.width + 6, back.height / 2)
+            if (data.on === "beside") verify(start.x < field.mapToItem(launcher, 0, 0).x)
+            const steps = [0, 30, 120, 260, 420, 540]
+            if (device === "touch") {
+                const touch = touchEvent(launcher)
+                touch.press(0, launcher, start.x, start.y).commit()
+                for (let i = 1; i < steps.length; ++i) {
+                    wait(20)
+                    touch.move(0, launcher, start.x, start.y + steps[i]).commit()
+                }
+                wait(20)
+                touch.release(0, launcher, start.x, start.y + 540).commit()
+            } else {
+                mousePress(launcher, start.x, start.y)
+                for (let i = 1; i < steps.length; ++i)
+                    mouseMove(launcher, start.x, start.y + steps[i], 20)
+                mouseRelease(launcher, start.x, start.y + 540)
+            }
+            tryCompare(launcher, "drawerOpen", false)
+            tryCompare(launcher, "drawerProgress", 0)
+            compare(controller.closes, 0)
+            wait(600)
+        }
     }
     function test_browseAndSort(data) {
         controller.guestMode = data.guest

@@ -69,6 +69,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
+        assets/icons/lucide/chevron-left.svg
         assets/icons/lucide/square.svg
         assets/icons/lucide/skip-back.svg
         assets/icons/lucide/play.svg

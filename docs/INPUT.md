@@ -56,12 +56,12 @@ than repeat it.
 | --- | --- |
 | Tap or click "browse everything" in Search | Opens Browse everything. |
 | Pull up the handle under "browse everything" | The drawer follows your finger or the pointer. Let go and it opens if pulled far enough, or falls back. |
-| Type | Narrows the applications to those whose names match. |
+| Type | Narrows the applications to those whose names match. What is typed shows in the search field, in the middle of the drawer's header. |
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
-| Tap or click "Close drawer", or the "browse everything" title | Returns to search. |
+| Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
 | Meta+G | Opens Search on Browse everything; pressed there again, closes it. It is listed under Tettegouche in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
@@ -71,7 +71,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click "explore files" in Search, or pull down from it | Opens Files. |
-| Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. |
+| Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. What is typed shows in the search field, in the middle of the drawer's header. |
 | Down, from what is typed | Moves the keys into the files, on the first one. |
 | With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder; Stop searching keeps what it has found. Hidden files are searched only while shown. |
 | Tap or click a place | Opens that folder. |
@@ -131,7 +131,7 @@ than repeat it.
 | Tap or click ⏏ beside a plugged-in drive | Makes it safe to pull out: its row says Ejecting…, then Files says it can be unplugged, and a drive powered off leaves the list. While Files copies or moves to or from it, the row says Ejects when done, and it ejects after. |
 | Plug in or pull out a drive while Files is open | It appears under the places, or leaves them. A tab showing a drive that leaves or is ejected goes Home. |
 | Another application opens a folder or asks to show files, as it would a file manager: Plasma's Open with File Manager for a drive, or Show in folder in a browser's downloads | Once Files is the file manager, it opens at the folder, or with the files chosen in theirs, or with a file's Properties when those are asked for. A plugged-in phone opens in Files; Trash and network shares open in Dolphin. |
-| Tap or click "Close drawer", or the "explore files" title | Returns to search. |
+| Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Pinch, Ctrl with + or −, or Ctrl and the scroll wheel | Makes the tiles larger or smaller, in four sizes. Ctrl+0 returns them to the usual size. The size is kept. |
 | Tap or click Pause, Resume or × on a running copy or move | Pauses, resumes or cancels that one alone. Other file actions stay available while it runs. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |

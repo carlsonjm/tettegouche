@@ -31,7 +31,7 @@ private Q_SLOTS:
             QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x"),
             QStringLiteral("plus"), QStringLiteral("arrow-left"), QStringLiteral("arrow-right"),
             QStringLiteral("refresh-cw"), QStringLiteral("ellipsis-vertical"), QStringLiteral("check"),
-            QStringLiteral("chevron-down"), QStringLiteral("square"),
+            QStringLiteral("chevron-down"), QStringLiteral("chevron-left"), QStringLiteral("square"),
             QStringLiteral("circle")
         };
         for (const QString &glyph : glyphs) {
