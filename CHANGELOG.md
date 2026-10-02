@@ -5,6 +5,13 @@ provenance.
 
 ## Unreleased
 
+- Touching and holding an application in Browse everything, or right-clicking
+  it, opens its sheet: its own actions, such as a new private window; Hide,
+  which takes it out of Browse everything while Search still finds it; and
+  Uninstall…, which opens it in the software centre where that lists it.
+- An eye beside the sort button, in both drawers, shows what is hidden:
+  hidden applications, dimmed, which can be unhidden from their sheet, and
+  hidden files, which leave the sort menu. Again, it hides them.
 - Browse everything and Files share one header: Back on the left returns to
   search, the search field sits in the middle, and the sort button stays on
   the right. The Close drawer pill is gone, and each drawer reaches up into

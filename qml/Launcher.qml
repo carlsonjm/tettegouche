@@ -974,7 +974,7 @@ Item {
                 // Search, in the open header, keeps to the middle: centred,
                 // and as clear of Back as of the sort button.
                 readonly property real fieldSide: Math.max(backButton.x + backButton.width,
-                    width - sortButton.x) + 12
+                    width - hiddenButton.x) + 12
                 readonly property real fieldWidth: Math.max(160,
                     Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
                 readonly property real restingY: parent.height + root.contentInset - 48
@@ -1115,6 +1115,61 @@ Item {
                     }
                 }
 
+                // The eye shows what is hidden: hidden applications in Browse
+                // everything, hidden files in Files. Again, it hides them.
+                Item {
+                    id: hiddenButton
+                    objectName: "hidden-button"
+                    readonly property bool showing: root.filesMode
+                        ? !!root.fileBrowser && root.fileBrowser.hidden
+                        : root.applicationCatalog.showHidden
+                    function toggle() {
+                        if (root.filesMode) {
+                            if (root.fileBrowser) root.fileBrowser.hidden = !root.fileBrowser.hidden
+                        } else {
+                            root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
+                        }
+                    }
+                    anchors.right: sortButton.left
+                    anchors.rightMargin: 4
+                    anchors.verticalCenter: sortButton.verticalCenter
+                    width: 42
+                    height: 42
+                    opacity: sortButton.opacity
+                    enabled: sortButton.enabled
+                    Accessible.role: Accessible.CheckBox
+                    Accessible.name: root.filesMode ? words.i18n("Show hidden files")
+                        : words.i18n("Show hidden applications")
+                    Accessible.checked: showing
+                    Accessible.onPressAction: toggle()
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 30
+                        height: 30
+                        radius: height / 2
+                        color: hiddenPress.pressed ? "#4A4A4A"
+                            : hiddenButton.showing ? "#333333"
+                            : hiddenHover.hovered ? root.controlColor : "transparent"
+                        Behavior on color { ColorAnimation { duration: 90 } }
+                    }
+                    SuiteIcon {
+                        anchors.centerIn: parent
+                        glyph: hiddenButton.showing ? "eye" : "eye-off"
+                        width: 18
+                        height: 18
+                    }
+                    HoverHandler {
+                        id: hiddenHover
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                    }
+                    MouseArea {
+                        id: hiddenPress
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: hiddenButton.toggle()
+                    }
+                }
+
                 Item {
                 id: sortButton
                     objectName: "sort-button"
@@ -1191,7 +1246,6 @@ Item {
                         SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
                         SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
                         SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
-                        SheetMenuItem { objectName: "files-show-hidden"; text: words.i18n("Show hidden files"); checkable: true; checked: root.fileBrowser ? root.fileBrowser.hidden : false; onTriggered: root.fileBrowser.hidden = !root.fileBrowser.hidden }
                     }
                 }
 

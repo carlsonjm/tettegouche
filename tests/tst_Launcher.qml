@@ -1334,13 +1334,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Files' order opens under its button and stays inside the sheet; a
-    // line sets the order, and the hidden-files line shows what it holds.
+    // Files' order opens under its button and stays inside the sheet, and a
+    // line sets the order. Hidden files are the eye's, not the menu's.
     function test_filesSortMenu() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
         filesMock.sortMode = 0
-        filesMock.hidden = false
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
@@ -1351,16 +1350,47 @@ TestCase {
         const sheet = menu.parent
         verify(menu.x >= 0 && menu.x + menu.width <= sheet.width)
         verify(menu.y > sort.mapToItem(sheet, 0, sort.height).y - 1)
-        const hidden = findChild(launcher, "files-show-hidden")
-        verify(!hidden.checked)
-        mouseClick(hidden, hidden.width / 2, hidden.height / 2)
-        compare(filesMock.hidden, true)
-        tryCompare(menu, "opened", false)
-        mouseClick(sort, sort.width / 2, sort.height / 2)
-        tryCompare(menu, "opened", true)
-        verify(hidden.checked)
+        verify(!findChild(launcher, "files-show-hidden"))
         menu.close()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // The eye beside the sort button shows what is hidden, in either drawer:
+    // hidden files in Files, hidden applications in Browse everything; again,
+    // it hides them. It keeps clear of the search field.
+    function test_hiddenEye() {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
         filesMock.hidden = false
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const eye = findChild(launcher, "hidden-button")
+        const sort = findChild(launcher, "sort-button")
+        const field = findChild(launcher, "search-query")
+        verify(eye.visible && eye.enabled)
+        verify(eye.mapToItem(null, eye.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
+        verify(field.mapToItem(null, field.width, 0).x <= eye.mapToItem(null, 0, 0).x + 0.5)
+        verify(!eye.showing)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, true)
+        verify(eye.showing)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, false)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        verify(!catalog.showHidden)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        verify(catalog.showHidden)
+        verify(eye.showing)
+        compare(filesMock.hidden, false)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        verify(!catalog.showHidden)
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }

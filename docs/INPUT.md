@@ -62,6 +62,7 @@ than repeat it.
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Hide, which takes it out of Browse everything while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
+| Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
@@ -90,7 +91,8 @@ than repeat it.
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
-| Tap or click the sort button | Offers name A–Z, name Z–A, newest first, largest first, and showing hidden files. |
+| Tap or click the sort button | Offers name A–Z, name Z–A, newest first and largest first. |
+| Tap or click the eye beside the sort button | Shows hidden files; again, hides them. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |
