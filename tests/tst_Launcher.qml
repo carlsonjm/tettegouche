@@ -446,6 +446,12 @@ TestCase {
         property int extracts: 0
         function compressSelected() { compresses++ }
         function extractSelected() { extracts++ }
+        property bool canHide: false
+        property bool canUnhide: false
+        property int hides: 0
+        property int unhides: 0
+        function hideSelected() { hides++ }
+        function unhideSelected() { unhides++ }
         property int trashItems: 0
         property string trashSize: ""
         property int trashChecks: 0
@@ -1440,6 +1446,20 @@ TestCase {
         verify(!findChild(launcher, "context-empty-trash").visible)
         filesMock.canExtract = true
         verify(findChild(launcher, "context-extract").visible)
+        // Hide waits in the same menu, and a file the list hides offers Unhide.
+        const hide = findChild(launcher, "context-hide")
+        verify(!hide.visible)
+        filesMock.canHide = true
+        verify(hide.visible)
+        compare(hide.text, "Hide")
+        hide.triggered()
+        compare(filesMock.hides, 1)
+        filesMock.canHide = false
+        filesMock.canUnhide = true
+        compare(hide.text, "Unhide")
+        hide.triggered()
+        compare(filesMock.unhides, 1)
+        filesMock.canUnhide = false
         menu.close()
         tryCompare(menu, "opened", false)
         filesMock.selectedPath = ""

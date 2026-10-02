@@ -1146,6 +1146,74 @@ private Q_SLOTS:
         QCOMPARE(entries.first().toMap().value(QStringLiteral("name")).toString(),QStringLiteral("IMG_0000.jpg"));
         QCOMPARE(entries.last().toMap().value(QStringLiteral("name")).toString(),QStringLiteral("IMG_2999.jpg"));
     }
+    // Hide lists a name in its folder's .hidden, which KDE and GNOME honor,
+    // so the file keeps its name; Unhide takes it out again. A name starting
+    // with a dot is hidden by its name and offers no Unhide.
+    void hideAndUnhide() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QDir root(dir.path());
+        for (const auto &name : {QStringLiteral("keep.txt"),QStringLiteral("tuck.txt"),QStringLiteral("spare.txt"),QStringLiteral(".dot.txt")}) {
+            QFile f(root.filePath(name)); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("test");
+        }
+        const auto list=root.filePath(QStringLiteral(".hidden"));
+        { QFile f(list); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("other-app-entry\ntuck.txt\n"); }
+        const auto names=[](const FileBrowser &b) {
+            QStringList out; for (const auto &e : b.entries()) out.append(e.toMap().value(QStringLiteral("name")).toString());
+            out.sort(); return out;
+        };
+        const auto listed=[&list] {
+            QFile f(list); if (!f.open(QIODevice::ReadOnly)) return QStringList{};
+            return QString::fromUtf8(f.readAll()).split(QLatin1Char('\n'),Qt::SkipEmptyParts);
+        };
+        FileBrowser browser; browser.navigate(dir.path()); QTRY_VERIFY(!browser.busy());
+        QCOMPARE(names(browser),(QStringList{QStringLiteral("keep.txt"),QStringLiteral("spare.txt")}));
+
+        // The eye shows every hidden file, dimmed; only a listed one unhides.
+        browser.setHidden(true); QTRY_VERIFY(!browser.busy());
+        QVERIFY(entryNamed(browser,QStringLiteral("tuck.txt")).value(QStringLiteral("hidden")).toBool());
+        QVERIFY(entryNamed(browser,QStringLiteral(".dot.txt")).value(QStringLiteral("hidden")).toBool());
+        QVERIFY(!entryNamed(browser,QStringLiteral("keep.txt")).value(QStringLiteral("hidden")).toBool());
+        browser.setSelectedPath(root.filePath(QStringLiteral(".dot.txt")));
+        QVERIFY(!browser.canHide()); QVERIFY(!browser.canUnhide());
+        browser.setSelectedPath(root.filePath(QStringLiteral("tuck.txt")));
+        QVERIFY(!browser.canHide()); QVERIFY(browser.canUnhide());
+        browser.setSelectedPath(root.filePath(QStringLiteral("keep.txt")));
+        QVERIFY(browser.canHide()); QVERIFY(!browser.canUnhide());
+
+        // Hiding two at once keeps what other applications listed.
+        browser.selectPaths({root.filePath(QStringLiteral("keep.txt")),root.filePath(QStringLiteral("spare.txt"))});
+        browser.hideSelected();
+        QCOMPARE(listed(),(QStringList{QStringLiteral("other-app-entry"),QStringLiteral("tuck.txt"),QStringLiteral("keep.txt"),QStringLiteral("spare.txt")}));
+        QVERIFY(browser.selectedPaths().isEmpty());
+        QTRY_VERIFY(entryNamed(browser,QStringLiteral("keep.txt")).value(QStringLiteral("hidden")).toBool());
+        browser.setHidden(false); QTRY_VERIFY(!browser.busy());
+        QCOMPARE(names(browser),QStringList{});
+
+        browser.setHidden(true); QTRY_VERIFY(!browser.busy());
+        browser.selectPaths({root.filePath(QStringLiteral("tuck.txt")),root.filePath(QStringLiteral("keep.txt"))});
+        QVERIFY(browser.canUnhide());
+        browser.unhideSelected();
+        QCOMPARE(listed(),(QStringList{QStringLiteral("other-app-entry"),QStringLiteral("spare.txt")}));
+        QTRY_VERIFY(!entryNamed(browser,QStringLiteral("tuck.txt")).value(QStringLiteral("hidden")).toBool());
+        browser.setHidden(false); QTRY_VERIFY(!browser.busy());
+        QCOMPARE(names(browser),(QStringList{QStringLiteral("keep.txt"),QStringLiteral("tuck.txt")}));
+
+        // An emptied list leaves no file behind.
+        browser.setHidden(true); QTRY_VERIFY(!browser.busy());
+        { QFile f(list); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("spare.txt\n"); }
+        browser.refresh(); QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(root.filePath(QStringLiteral("spare.txt"))); browser.unhideSelected();
+        QVERIFY(!QFile::exists(list));
+
+        // Nothing is offered where nothing can be written.
+        QVERIFY(root.mkdir(QStringLiteral("locked")));
+        { QFile f(root.filePath(QStringLiteral("locked/inside.txt"))); QVERIFY(f.open(QIODevice::WriteOnly)); }
+        QVERIFY(QFile::setPermissions(root.filePath(QStringLiteral("locked")),QFileDevice::ReadOwner|QFileDevice::ExeOwner));
+        auto unlock=qScopeGuard([&]{ QFile::setPermissions(root.filePath(QStringLiteral("locked")),QFileDevice::ReadOwner|QFileDevice::WriteOwner|QFileDevice::ExeOwner); });
+        browser.navigate(root.filePath(QStringLiteral("locked"))); QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(root.filePath(QStringLiteral("locked/inside.txt")));
+        QVERIFY(!browser.canHide());
+    }
     void browsing() {
         QTemporaryDir dir;
         QVERIFY(dir.isValid());

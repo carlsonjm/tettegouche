@@ -240,6 +240,12 @@ Item {
         }
         SheetMenuItem { text: words.i18n("Select all"); onTriggered: pane.browser.selectAll() }
         SheetMenuItem { text: words.i18n("New folder"); visible: !actions.targetPath.length && pane.browser && pane.browser.canWrite; onTriggered: pane.newFolderForm() }
+        SheetMenuItem {
+            objectName: "context-hide"
+            text: pane.browser && pane.browser.canUnhide ? words.i18n("Unhide") : words.i18n("Hide")
+            visible: actions.targetPath.length>0 && !!pane.browser && (pane.browser.canHide || pane.browser.canUnhide)
+            onTriggered: { if (pane.browser.canUnhide) pane.browser.unhideSelected(); else pane.browser.hideSelected() }
+        }
         SheetMenuItem { objectName: "context-properties"; text: words.i18n("Properties"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
     // The one permanent delete Files offers, said plainly before it happens.
@@ -997,6 +1003,8 @@ Item {
                     Column {
                         anchors.top: parent.top; anchors.topMargin: 12
                         width: parent.width-16; anchors.horizontalCenter: parent.horizontalCenter; spacing: 8
+                        // A hidden file, shown by the eye, is dimmed.
+                        opacity: modelData.hidden ? 0.45 : 1
                         Item {
                             width: pane.tile.icon; height: pane.tile.icon; anchors.horizontalCenter: parent.horizontalCenter
                             Kirigami.Icon { anchors.fill: parent; source: modelData.icon; visible: thumbnail.status !== Image.Ready }

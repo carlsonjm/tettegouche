@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- A file's menu in Files offers Hide, which takes it out of Files under its
+  own name, as Dolphin also hides it. The eye shows hidden files dimmed, and
+  Unhide brings one back.
 - Touching and holding an application in Browse everything, or right-clicking
   it, opens its sheet: its own actions, such as a new private window; Hide,
   which takes it out of Browse everything while Search still finds it; and

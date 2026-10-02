@@ -30,6 +30,7 @@
 #include <QTimer>
 #include <QFile>
 #include <QFileInfo>
+#include <QSaveFile>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QVariantList>
@@ -95,6 +96,8 @@ class FileBrowser : public QObject
     Q_PROPERTY(QVariantMap question READ question NOTIFY questionChanged)
     Q_PROPERTY(bool canCompress READ canCompress NOTIFY selectionChanged)
     Q_PROPERTY(bool canExtract READ canExtract NOTIFY selectionChanged)
+    Q_PROPERTY(bool canHide READ canHide NOTIFY selectionChanged)
+    Q_PROPERTY(bool canUnhide READ canUnhide NOTIFY selectionChanged)
     Q_PROPERTY(int trashItems READ trashItems NOTIFY trashChanged)
     Q_PROPERTY(QString trashSize READ trashSize NOTIFY trashChanged)
 public:
@@ -292,6 +295,22 @@ public:
         for(const auto &p:selectedPaths())
             startArk({QStringLiteral("--batch"),QStringLiteral("--autodestination"),QStringLiteral("--autosubfolder"),p},QFileInfo(p).path(),i18n("Extracting with Ark…"));
     }
+    // Hide lists the chosen names in their folder's .hidden, which KDE's file
+    // layer and GNOME read, so a file keeps its name. Both are offered only in
+    // a folder that can be written; a name starting with a dot is hidden by
+    // the name itself, so it offers neither.
+    bool canHide() const {
+        if(!canWrite() || selectedPaths().isEmpty())return false;
+        for(const auto &p:selectedPaths()) { const auto item=listedItem(p); if(!item.isNull() && !item.isHidden())return true; }
+        return false;
+    }
+    bool canUnhide() const {
+        if(!canWrite() || selectedPaths().isEmpty())return false;
+        for(const auto &p:selectedPaths()) if(!hiddenByList(listedItem(p)))return false;
+        return true;
+    }
+    Q_INVOKABLE void hideSelected() { if(canHide())setListedHidden(true); }
+    Q_INVOKABLE void unhideSelected() { if(canUnhide())setListedHidden(false); }
     // What Trash holds, asked when the folder's menu opens.
     int trashItems() const { return m_trashItems; }
     QString trashSize() const { return m_trashSize; }
@@ -1077,6 +1096,32 @@ private:
         const auto target = item.targetUrl();
         return target.isLocalFile() ? target.toLocalFile() : item.localPath();
     }
+    static bool hiddenByList(const KFileItem &item) {
+        return !item.isNull() && item.isHidden() && !item.name().startsWith(QLatin1Char('.'));
+    }
+    // Rewrites the folder's .hidden, keeping every line another application
+    // wrote, and removes it once it lists nothing.
+    void setListedHidden(bool hide) {
+        const auto list=QDir(path()).filePath(QStringLiteral(".hidden"));
+        QStringList lines;
+        { QFile f(list); if(f.open(QIODevice::ReadOnly))lines=QString::fromUtf8(f.readAll()).split(QLatin1Char('\n'),Qt::SkipEmptyParts); }
+        for(const auto &p:selectedPaths()) {
+            const auto name=QFileInfo(p).fileName();
+            if(hide && !listedItem(p).isHidden() && !name.contains(QLatin1Char('\n')) && !lines.contains(name))lines.append(name);
+            if(!hide)lines.removeAll(name);
+        }
+        bool written;
+        if(lines.isEmpty()) written=!QFile::exists(list) || QFile::remove(list);
+        else {
+            QSaveFile f(list);
+            written=f.open(QIODevice::WriteOnly) && f.write((lines.join(QLatin1Char('\n'))+QLatin1Char('\n')).toUtf8())>=0 && f.commit();
+        }
+        if(!written) { m_error=hide ? i18n("Could not hide that here.") : i18n("Could not unhide that here."); Q_EMIT changed(); return; }
+        setSelecting(false);
+        // KDE reads .hidden as it lists. It notices the change itself only
+        // where it watches the folder, so the folder is listed again.
+        m_lister->updateDirectory(m_lister->url());
+    }
     KFileItem listedItem(const QString &p) const {
         if (!m_lister) return {};
         if (inFolder()) return m_lister->findByUrl(QUrl::fromLocalFile(p));
@@ -1313,7 +1358,7 @@ private:
             const auto local=localPathOf(f);
             if(local.isEmpty() || !f.text().contains(m_filter,Qt::CaseInsensitive))continue;
             m_entries.append(QVariantMap{{QStringLiteral("name"),f.text()},{QStringLiteral("path"),local},
-                {QStringLiteral("directory"),f.isDir()},{QStringLiteral("icon"),f.iconName()},
+                {QStringLiteral("directory"),f.isDir()},{QStringLiteral("hidden"),f.isHidden()},{QStringLiteral("icon"),f.iconName()},
                 {QStringLiteral("thumbnail"),!f.isDir() && m_thumbnailSource ? m_thumbnailSource(local,typeOf(f),f.time(KFileItem::ModificationTime).toSecsSinceEpoch()) : QString()},
                 {QStringLiteral("detail"),kind!=Kind::Folder ? folderLabel(local) : f.isDir()?i18n("Folder"):QLocale().formattedDataSize(f.size())}});
         }

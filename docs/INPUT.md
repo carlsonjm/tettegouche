@@ -92,7 +92,7 @@ than repeat it.
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
 | Tap or click the sort button | Offers name A–Z, name Z–A, newest first and largest first. |
-| Tap or click the eye beside the sort button | Shows hidden files; again, hides them. |
+| Tap or click the eye beside the sort button | Shows hidden files, dimmed; again, hides them. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |
@@ -111,10 +111,11 @@ than repeat it.
 | Ctrl with an arrow | Moves the focus outline without changing the selection. |
 | Ctrl+Shift with an arrow | Adds the range to the selection. |
 | Enter, or tap or click Open | Opens the selected file, as a double-click does. With nothing selected and text typed, Enter searches inside folders. |
-| Right-click a file, or tap or click ⋯ with files chosen | Their action menu: Open, Open with, Copy, Cut, Rename, Move to Trash, Compress, Extract here for archives, Restore last trashed item, Select all, Properties, and for a folder, Paste into it. |
+| Right-click a file, or tap or click ⋯ with files chosen | Their action menu: Open, Open with, Copy, Cut, Rename, Move to Trash, Compress, Extract here for archives, Restore last trashed item, Select all, Hide or Unhide, Properties, and for a folder, Paste into it. |
 | Choose Open with | Lists the applications for the file's kind, the default first; Show all applications lists every one, with a filter. "Always use it" makes the pick KDE's default for that kind. A tap opens the file and closes Search. |
 | Choose Compress | Ark makes a zip beside the first: one item keeps its name, several make Archive.zip. Its progress shows in Ambient. |
 | Choose Extract here | Ark unpacks each archive beside itself, in a folder of its own when it holds several items. Its progress shows in Ambient. |
+| Choose Hide | Takes the chosen files out of Files under their own names, listed in their folder's `.hidden`, which Dolphin reads too. The eye shows them dimmed, and Unhide brings them back. A name starting with a dot is hidden by that name, and a folder that cannot be written offers neither. |
 | With one file or folder chosen, tap or click Properties in the bar or the menu, or press Alt+Enter | Shows its kind, size, folder and dates. A folder's total size and what it holds follow once counted; a photo adds its dimensions, date taken and camera, a song its title, artist, album and length, a video its dimensions and length. Close or Esc puts it away. |
 | Right-click empty space, or tap or click ⋯ with nothing chosen | The folder's action menu: Paste here, Select all, New folder, Restore last trashed item, Empty Trash. Recent, a search and a folder that cannot be written offer no Paste here or New folder. |
 | Choose Empty Trash | Asks first, giving how many items and how much space; Empty Trash removes everything in Trash for good. |
