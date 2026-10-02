@@ -180,21 +180,21 @@ private Q_SLOTS:
 
     void configuredActivation()
     {
-        m_applet->config().writeEntry(QStringLiteral("useKadunce"), false);
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("useKadunce"), false);
         QSignalSpy started(m_process, &QProcess::started);
         // The same signal Plasma emits for a configured global shortcut.
         m_applet->activated();
         QTRY_COMPARE(started.count(), 1);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--standalone")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().writeEntry(QStringLiteral("useKadunce"), true);
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("useKadunce"), true);
         // With recent use off, Search is told so as it starts.
-        m_applet->config().writeEntry(QStringLiteral("offerRecent"), false);
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerRecent"), false);
         m_applet->activated();
         QTRY_COMPARE(started.count(), 2);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-recent")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().writeEntry(QStringLiteral("offerRecent"), true);
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerRecent"), true);
     }
 
     void repeatedActivationToggles()

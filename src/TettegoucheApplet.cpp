@@ -36,7 +36,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
             [this] { Q_EMIT launcherActiveChanged(); });
 
     connect(this, &Plasma::Applet::activated, this, [this] {
-        launch(config().readEntry(QStringLiteral("useKadunce"), true));
+        launch(settings().readEntry(QStringLiteral("useKadunce"), true));
     });
     m_keys = LauncherKeys::acquire();
     m_keys->attach(this, [this](const QString &drawer) { openDrawer(drawer); });
@@ -81,10 +81,10 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
             setAmbientActivities(m_activities->activities());
         });
         connect(m_activities.get(), &ActivityModel::driveOpenRequested, this, [this](const QString &udi) {
-            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), {}, {}, udi);
+            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), {}, {}, udi);
         });
         connect(m_activities.get(), &ActivityModel::revealRequested, this, [this](const QString &path) {
-            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), path);
+            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), path);
         });
         setAmbientActivities(m_activities->activities());
     }
@@ -203,7 +203,7 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
         const auto url = m_activities->destinationForReveal(id, generation);
         if (url.isLocalFile()) {
             m_activities->revealed(id, generation);
-            startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
+            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
         }
     } else m_activities->invoke(id, generation, action, value);
 }
@@ -263,7 +263,12 @@ void TettegoucheApplet::launch(bool useKadunce)
 void TettegoucheApplet::openDrawer(const QString &drawer)
 {
     if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")) return;
-    startLauncher(config().readEntry(QStringLiteral("useKadunce"), true), {}, drawer);
+    startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), {}, drawer);
+}
+
+KConfigGroup TettegoucheApplet::settings() const
+{
+    return config().group(QStringLiteral("General"));
 }
 
 void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
@@ -294,7 +299,7 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     m_process->setProgram(executable);
     QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
     // Search's first screen offers what was used lately unless that is off.
-    if (!config().readEntry(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
+    if (!settings().readEntry(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
     else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
     else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;

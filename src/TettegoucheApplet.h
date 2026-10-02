@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <KConfigGroup>
+
 #include <Plasma/Applet>
 #include <QList>
 #include <QPointer>
@@ -48,6 +50,9 @@ Q_SIGNALS:
 
 private:
     void watchGeometryItem(QQuickItem *item);
+    // The widget's settings where its settings page keeps them: the General
+    // group of its configuration, as main.xml names it.
+    KConfigGroup settings() const;
     void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
                        const QString &drive = {});
 
