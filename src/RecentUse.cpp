@@ -14,6 +14,9 @@
 #include <PlasmaActivities/Stats/ResultSet>
 #include <PlasmaActivities/Stats/Terms>
 
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusReply>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QMimeDatabase>
@@ -199,9 +202,21 @@ QList<RecentUse::Used> RecentUse::readRecord()
 {
     using namespace KActivities::Stats;
     using namespace KActivities::Stats::Terms;
+    // The current activity is asked of KDE's activity service directly. The
+    // library's own answer arrives on the event loop after the service is
+    // first seen, so read the moment Search opens it named none, and nothing
+    // was read.
+    const QDBusReply<QString> current = QDBusConnection::sessionBus().call(
+        QDBusMessage::createMethodCall(QStringLiteral("org.kde.ActivityManager"),
+            QStringLiteral("/ActivityManager/Activities"), QStringLiteral("org.kde.ActivityManager.Activities"),
+            QStringLiteral("CurrentActivity")),
+        QDBus::Block, 500);
+    if (!current.isValid() || current.value().isEmpty()) {
+        return {};
+    }
     // Enough to fill a row once what is pinned, open or gone is left out.
     const Query query = UsedResources | RecentlyUsedFirst | Agent::any() | Type::any()
-        | Activity::current() | Limit(60);
+        | Activity(current.value()) | Limit(60);
     QList<Used> record;
     for (const ResultSet::Result &result : ResultSet(query)) {
         record.append({result.resource(), result.lastUpdate()});

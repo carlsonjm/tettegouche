@@ -18,6 +18,7 @@
 #include <QFile>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QTest>
 
 namespace
@@ -221,8 +222,16 @@ int readRecord()
 int main(int argc, char **argv)
 {
     if (argc > 1 && qstrcmp(argv[1], "--record") == 0) {
+        // Read as the launcher reads, once its event loop runs: the moment
+        // Search opens.
         QCoreApplication application(argc, argv);
-        return readRecord();
+        int result = 1;
+        QTimer::singleShot(0, &application, [&] {
+            result = readRecord();
+            application.quit();
+        });
+        application.exec();
+        return result;
     }
     QTemporaryDir root;
     qputenv("HOME", root.path().toUtf8());
