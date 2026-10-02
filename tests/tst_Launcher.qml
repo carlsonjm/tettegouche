@@ -467,6 +467,24 @@ TestCase {
         const right = row.width - files.mapToItem(row, files.width, 0).x
         verify(Math.abs(left - right) <= 1)
     }
+    // With the setting off the launcher has no record at all: the two doors
+    // alone, centred, and Tab goes from one to the other.
+    function test_firstRowSettingOff() {
+        launcher.fileBrowser = filesMock
+        launcher.recentUse = null
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const row = findChild(launcher, "first-row")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
+        verify(row.visible && apps.visible && files.visible)
+        compare(row.shownCount, 0)
+        verify(!findChild(launcher, "recent-0"))
+        const left = apps.mapToItem(row, 0, 0).x
+        const right = row.width - files.mapToItem(row, files.width, 0).x
+        verify(Math.abs(left - right) <= 1)
+        launcher.recentUse = recentStub
+    }
     // Apps and Files each open their drawer, by mouse and by touch.
     function test_firstRowDoors() {
         launcher.fileBrowser = filesMock

@@ -84,5 +84,9 @@ rg -Fq 'Q_PROPERTY(bool launcherActive' \
 # Panel rendering and input are exercised by panel-applet-test through Plasma.
 rg -q 'cfg_animateIndicator' \
     "${project_root}/applet/ConfigGeneral.qml"
+rg -q 'cfg_offerRecent' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q '\-\-no-recent' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
 
 echo "Tettegouche source checks passed."

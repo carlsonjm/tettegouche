@@ -293,6 +293,8 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
 
     m_process->setProgram(executable);
     QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
+    // Search's first screen offers what was used lately unless that is off.
+    if (!config().readEntry(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
     else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
     else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;

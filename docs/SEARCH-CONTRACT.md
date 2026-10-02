@@ -20,6 +20,8 @@ decides what is kept.
 - Nothing is offered while the screen is shared or recorded, so no file's name
   is on show; the two doors stay.
 - Typing hands the room to the results.
+- The widget's setting "Show recent files and apps", off, leaves the two doors
+  alone, and nothing is read.
 
 ## Eligibility and confidence
 

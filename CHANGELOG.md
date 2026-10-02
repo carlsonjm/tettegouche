@@ -14,6 +14,8 @@ provenance.
   on an open drawer's header still closes it.
 - Tab, with nothing typed, moves between Search's controls instead of typing
   into the field.
+- The widget's settings offer "Show recent files and apps"; off, Search opens
+  with Apps and Files alone.
 - An application waiting on you gets an island in Ambient while it waits: its
   icon, its name and, where it can be read, its dialog's question. A tap brings
   the application and its dialog forward. Once the wait is over the island

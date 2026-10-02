@@ -9,6 +9,10 @@
       <label>Allow Tettegouche to open inside Kadunce's Spread when available</label>
       <default>true</default>
     </entry>
+    <entry name="offerRecent" type="Bool">
+      <label>Show recent files and applications in Search before anything is typed</label>
+      <default>true</default>
+    </entry>
     <entry name="animateIndicator" type="Bool">
       <label>Animate the panel indicator when Tettegouche opens</label>
       <default>true</default>

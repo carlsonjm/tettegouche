@@ -8,6 +8,8 @@ import org.kde.kirigami as Kirigami
 KCMUtils.SimpleKCM {
     property bool cfg_useKadunce
     property bool cfg_useKadunceDefault
+    property bool cfg_offerRecent
+    property bool cfg_offerRecentDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -20,6 +22,13 @@ KCMUtils.SimpleKCM {
             text: i18n("Open inside Spread when available")
             checked: cfg_useKadunce
             onToggled: cfg_useKadunce = checked
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Search:")
+            text: i18n("Show recent files and apps")
+            checked: cfg_offerRecent
+            onToggled: cfg_offerRecent = checked
         }
 
         QQC2.CheckBox {

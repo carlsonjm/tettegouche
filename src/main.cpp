@@ -1079,11 +1079,13 @@ int main(int argc, char **argv)
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
     controller.setFileBrowser(&fileBrowser);
+    // With the setting off, nothing used lately is read or offered.
+    const bool offerRecent = !application.arguments().contains(QStringLiteral("--no-recent"));
     RecentUse recent;
     recent.setThumbnails([](const QString &path, const QString &mimeType, qint64 modified) {
         return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
     });
-    controller.setRecentUse(&recent);
+    if (offerRecent) controller.setRecentUse(&recent);
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1119,7 +1121,7 @@ int main(int argc, char **argv)
          QVariant::fromValue(static_cast<QObject *>(&results))},
         {QStringLiteral("applicationCatalog"),
          QVariant::fromValue(static_cast<QObject *>(&catalog))},
-        {QStringLiteral("recentUse"), QVariant::fromValue(static_cast<QObject *>(&recent))},
+        {QStringLiteral("recentUse"), offerRecent ? QVariant::fromValue(static_cast<QObject *>(&recent)) : QVariant()},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {
