@@ -5,12 +5,23 @@
 
 #include "ApplicationCatalog.h"
 
+#include <AppStreamQt/component-box.h>
+#include <AppStreamQt/launchable.h>
+#include <AppStreamQt/pool.h>
 #include <KIO/ApplicationLauncherJob>
-#include <KService/KApplicationTrader>
+#include <KIO/OpenUrlJob>
+#include <KApplicationTrader>
 
-#include <QSet>
+#include <QSettings>
+#include <QUrl>
 
 #include <algorithm>
+
+namespace
+{
+// The applications hidden from Browse everything, by desktop file id.
+const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
+}
 
 ApplicationCatalog::ApplicationCatalog(QObject *parent)
     : QAbstractListModel(parent)
@@ -38,8 +49,12 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
               [](const Entry &left, const Entry &right) {
         return QString::localeAwareCompare(left.name, right.name) < 0;
     });
+    const QStringList hidden = QSettings().value(HiddenKey).toStringList();
+    m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     rebuildVisibleRows();
 }
+
+ApplicationCatalog::~ApplicationCatalog() = default;
 
 int ApplicationCatalog::rowCount(const QModelIndex &parent) const
 {
@@ -60,6 +75,8 @@ QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
         return entry.icon;
     case ApplicationIdRole:
         return entry.applicationId;
+    case HiddenRole:
+        return m_hidden.contains(entry.applicationId);
     default:
         return {};
     }
@@ -71,6 +88,7 @@ QHash<int, QByteArray> ApplicationCatalog::roleNames() const
         {NameRole, QByteArrayLiteral("name")},
         {IconRole, QByteArrayLiteral("icon")},
         {ApplicationIdRole, QByteArrayLiteral("applicationId")},
+        {HiddenRole, QByteArrayLiteral("hidden")},
     };
 }
 
@@ -95,6 +113,148 @@ QString ApplicationCatalog::applicationName(int row) const
 {
     return row >= 0 && row < m_visibleRows.size()
         ? m_entries.at(m_visibleRows.at(row)).name : QString();
+}
+
+const ApplicationCatalog::Entry *ApplicationCatalog::entryAt(int row) const
+{
+    return row >= 0 && row < m_visibleRows.size()
+        ? &m_entries.at(m_visibleRows.at(row)) : nullptr;
+}
+
+QVariantList ApplicationCatalog::actions(int row) const
+{
+    QVariantList actions;
+    const Entry *entry = entryAt(row);
+    if (!entry) {
+        return actions;
+    }
+    const QList<KServiceAction> own = entry->service->actions();
+    for (int index = 0; index < own.size(); ++index) {
+        const KServiceAction &action = own.at(index);
+        if (action.isSeparator() || action.noDisplay()
+            || action.text().trimmed().isEmpty()) {
+            continue;
+        }
+        actions.append(QVariantMap{{QStringLiteral("index"), index},
+                                   {QStringLiteral("name"), action.text().trimmed()},
+                                   {QStringLiteral("icon"), action.icon()}});
+    }
+    return actions;
+}
+
+bool ApplicationCatalog::runAction(int row, int action)
+{
+    const Entry *entry = entryAt(row);
+    if (!entry) {
+        return false;
+    }
+    const QList<KServiceAction> own = entry->service->actions();
+    if (action < 0 || action >= own.size() || own.at(action).isSeparator()) {
+        return false;
+    }
+    auto *job = new KIO::ApplicationLauncherJob(own.at(action), this);
+    job->start();
+    return true;
+}
+
+bool ApplicationCatalog::isHidden(int row) const
+{
+    const Entry *entry = entryAt(row);
+    return entry && m_hidden.contains(entry->applicationId);
+}
+
+void ApplicationCatalog::setHidden(int row, bool hidden)
+{
+    const Entry *entry = entryAt(row);
+    if (!entry || m_hidden.contains(entry->applicationId) == hidden) {
+        return;
+    }
+    if (hidden) {
+        m_hidden.insert(entry->applicationId);
+    } else {
+        m_hidden.remove(entry->applicationId);
+    }
+    QStringList stored(m_hidden.cbegin(), m_hidden.cend());
+    stored.sort();
+    QSettings().setValue(HiddenKey, stored);
+    rebuildVisibleRows();
+    Q_EMIT hiddenCountChanged();
+}
+
+QString ApplicationCatalog::softwareId(const Entry &entry) const
+{
+    if (!m_softwareReady || !m_software) {
+        return {};
+    }
+    const AppStream::ComponentBox found = m_software->componentsByLaunchable(
+        AppStream::Launchable::KindDesktopId,
+        entry.service->desktopEntryName() + QStringLiteral(".desktop"));
+    const auto component = found.indexSafe(0);
+    return component ? component->id() : QString();
+}
+
+void ApplicationCatalog::prepareSoftware()
+{
+    if (m_software) {
+        return;
+    }
+    // Reading the system's software catalog takes no time from its cache and
+    // seconds when the cache is stale, so it is never done on the way to a sheet.
+    m_software = std::make_unique<AppStream::Pool>();
+    connect(m_software.get(), &AppStream::Pool::loadFinished, this, [this](bool) {
+        m_softwareReady = true;
+        Q_EMIT softwareReadyChanged();
+    });
+    m_software->loadAsync();
+}
+
+bool ApplicationCatalog::canUninstall(int row) const
+{
+    const Entry *entry = entryAt(row);
+    return entry && m_softwareReady
+        && KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/appstream"))
+        && !softwareId(*entry).isEmpty();
+}
+
+bool ApplicationCatalog::uninstall(int row)
+{
+    const Entry *entry = entryAt(row);
+    const QString id = entry ? softwareId(*entry) : QString();
+    if (id.isEmpty()) {
+        return false;
+    }
+    auto *job = new KIO::OpenUrlJob(QUrl(QStringLiteral("appstream://") + id), this);
+    job->start();
+    return true;
+}
+
+bool ApplicationCatalog::showHidden() const
+{
+    return m_showHidden;
+}
+
+void ApplicationCatalog::setShowHidden(bool showHidden)
+{
+    if (m_showHidden == showHidden) {
+        return;
+    }
+    m_showHidden = showHidden;
+    rebuildVisibleRows();
+    Q_EMIT showHiddenChanged();
+}
+
+int ApplicationCatalog::hiddenCount() const
+{
+    int count = 0;
+    for (const Entry &entry : m_entries) {
+        count += m_hidden.contains(entry.applicationId) ? 1 : 0;
+    }
+    return count;
+}
+
+bool ApplicationCatalog::softwareReady() const
+{
+    return m_softwareReady;
 }
 
 QString ApplicationCatalog::filterText() const
@@ -135,8 +295,9 @@ void ApplicationCatalog::rebuildVisibleRows()
     m_visibleRows.reserve(m_entries.size());
 
     const auto matches = [this](const Entry &entry) {
-        return m_filterText.isEmpty()
-            || entry.name.contains(m_filterText, Qt::CaseInsensitive);
+        return (m_showHidden || !m_hidden.contains(entry.applicationId))
+            && (m_filterText.isEmpty()
+                || entry.name.contains(m_filterText, Qt::CaseInsensitive));
     };
     if (m_descending) {
         for (int row = m_entries.size() - 1; row >= 0; --row) {

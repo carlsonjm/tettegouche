@@ -21,6 +21,7 @@ find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
 find_package(Plasma 6.7 REQUIRED)
 find_package(LibNotificationManager REQUIRED)
+find_package(AppStreamQt 1.0 REQUIRED)
 
 add_library(tettegouche-activities STATIC
     src/MprisActivityProvider.cpp src/MprisActivityProvider.h
@@ -101,6 +102,7 @@ target_link_libraries(tettegouche PRIVATE
     KF6::Service
     KF6::BluezQt
     KF6::Solid
+    AppStreamQt
     KF6Kirigami
     KF6::KirigamiPlatform
     LayerShellQt::Interface
@@ -190,6 +192,11 @@ if(BUILD_TESTING)
     set_tests_properties(words-test PROPERTIES TIMEOUT 60)
     add_test(NAME files-sealed-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-files-sealed.sh $<TARGET_FILE:file-browser-test>)
     set_tests_properties(files-sealed-test PROPERTIES TIMEOUT 150)
+    qt_add_executable(application-catalog-test tests/ApplicationCatalogTest.cpp
+        src/ApplicationCatalog.cpp src/ApplicationCatalog.h)
+    target_include_directories(application-catalog-test PRIVATE src)
+    target_link_libraries(application-catalog-test PRIVATE KF6::KIOGui KF6::Service AppStreamQt Qt6::Test)
+    add_test(NAME application-catalog-test COMMAND application-catalog-test)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
     target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
     add_test(NAME related-info-test COMMAND related-info-test)

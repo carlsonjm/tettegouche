@@ -112,7 +112,7 @@ Uninstalling removes the installed files without deleting this source folder.
 
 - KDE Plasma 6.7 or newer, on Wayland
 - Qt 6.10 and KDE Frameworks 6.26, or newer
-- LayerShellQt 6.7, BluezQt, and Solid
+- LayerShellQt 6.7, BluezQt, Solid, and AppStreamQt 1.0
 - CMake and a C++20 compiler
 - gettext, for translations and the checks on them
 
