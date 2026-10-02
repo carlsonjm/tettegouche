@@ -4,6 +4,7 @@
 */
 
 #include "ApplicationCatalog.h"
+#include "UseRecord.h"
 
 #include <AppStreamQt/component-box.h>
 #include <AppStreamQt/launchable.h>
@@ -19,7 +20,7 @@
 
 namespace
 {
-// The applications hidden from Browse everything, by desktop file id.
+// The applications hidden from Apps, by desktop file id.
 const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
 }
 
@@ -97,9 +98,10 @@ bool ApplicationCatalog::launch(int row)
     if (row < 0 || row >= m_visibleRows.size()) {
         return false;
     }
-    auto *job = new KIO::ApplicationLauncherJob(
-        m_entries.at(m_visibleRows.at(row)).service, this);
+    const Entry &entry = m_entries.at(m_visibleRows.at(row));
+    auto *job = new KIO::ApplicationLauncherJob(entry.service, this);
     job->start();
+    noteApplicationUsed(entry.applicationId);
     return true;
 }
 
@@ -154,6 +156,7 @@ bool ApplicationCatalog::runAction(int row, int action)
     }
     auto *job = new KIO::ApplicationLauncherJob(own.at(action), this);
     job->start();
+    noteApplicationUsed(entry->applicationId);
     return true;
 }
 
@@ -161,6 +164,11 @@ bool ApplicationCatalog::isHidden(int row) const
 {
     const Entry *entry = entryAt(row);
     return entry && m_hidden.contains(entry->applicationId);
+}
+
+bool ApplicationCatalog::isHiddenApplication(const QString &applicationId) const
+{
+    return m_hidden.contains(applicationId);
 }
 
 void ApplicationCatalog::setHidden(int row, bool hidden)

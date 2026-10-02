@@ -11,6 +11,8 @@
 #include "TransferActivityBridge.h"
 #include "OmniResults.h"
 #include "RelatedInfo.h"
+#include "RecentUse.h"
+#include "ScreenShareProvider.h"
 #include <KIO/ApplicationLauncherJob>
 #include <KIO/OpenUrlJob>
 #include <KLocalizedString>
@@ -341,6 +343,30 @@ public:
 public Q_SLOTS:
     void workspaceUpdated() { refreshContext(); }
 
+    // The applications pinned in Shuffle's dock, which it publishes; with no
+    // dock there, none.
+    void askPinned()
+    {
+        const QDBusMessage request = QDBusMessage::createMethodCall(
+            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
+            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("pinnedApplications"));
+        auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 500), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+            watcher->deleteLater();
+            const QDBusPendingReply<QStringList> reply = *watcher;
+            QSet<QString> pinned;
+            if (!reply.isError()) {
+                for (QString id : reply.value()) {
+                    if (id.startsWith(QStringLiteral("applications:"))) id.remove(0, 13);
+                    pinned.insert(id);
+                }
+            }
+            if (pinned == m_pinned) return;
+            m_pinned = pinned;
+            if (m_recent) m_recent->refilter();
+        });
+    }
+
     void bridgeLost()
     {
         ++m_presentationGeneration;
@@ -415,7 +441,7 @@ public Q_SLOTS:
     // The same, with the first one's Properties open.
     Q_SCRIPTABLE void showItemProperties(const QStringList &locations) { reveal(locations, true); }
 
-    // Meta+G opens Browse everything and Meta+E Files; the drawer already
+    // Meta+G opens Apps and Meta+E Files; the drawer already
     // open closes the launcher instead.
     Q_SCRIPTABLE void openDrawer(const QString &drawer)
     {
@@ -433,6 +459,11 @@ public Q_SLOTS:
         refreshContext();
         m_runnerManager->setupMatchSession();
         m_results->setQueryString(QString());
+        if (m_recent) {
+            m_recent->setWithheld(!m_shares.activities().isEmpty());
+            m_recent->refresh();
+            askPinned();
+        }
         m_view->show();
         m_view->requestActivate();
         Q_EMIT opened();
@@ -677,6 +708,28 @@ public:
             if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
         });
     }
+    // What was used lately leaves out what the dock holds, what is open and
+    // what is hidden from Apps, and is withheld while the screen is shared.
+    void setRecentUse(RecentUse *recent) {
+        m_recent = recent;
+        recent->setExcluded([this](const QString &applicationId, const QString &name) {
+            return m_pinned.contains(applicationId) || m_context.applicationIsOpen(applicationId, name)
+                || (m_catalog && m_catalog->isHiddenApplication(applicationId));
+        });
+        connect(this, &LauncherController::contextChanged, recent, &RecentUse::refilter);
+        connect(&m_shares, &ScreenShareProvider::changed, recent, [this] {
+            m_recent->setWithheld(!m_shares.activities().isEmpty());
+        });
+        QDBusConnection::sessionBus().connect(QStringLiteral("studio.warbler.BottomSurface"),
+            QStringLiteral("/BottomSurface"), QStringLiteral("studio.warbler.BottomSurface"),
+            QStringLiteral("pinnedApplicationsChanged"), this, SLOT(askPinned()));
+    }
+    // A recent application, or a recent file's usual one, is awaited as a card
+    // as any launch from Search is.
+    Q_INVOKABLE bool beginGuestRecentLaunch(int row)
+    {
+        return m_recent ? prepareGuestIdentity(m_recent->applicationFor(row)) : false;
+    }
 private:
     void showFiles()
     {
@@ -883,6 +936,9 @@ private:
     RelatedInfo m_related;
     int m_relatedRevision = 0;
     ApplicationCatalog *m_catalog;
+    RecentUse *m_recent = nullptr;
+    QSet<QString> m_pinned;
+    ScreenShareProvider m_shares{QDBusConnection::sessionBus()};
     WorkspaceContext m_context;
     QRect m_guestRect;
     QRect m_compactGuestRect, m_activeGuestRect;
@@ -1023,6 +1079,11 @@ int main(int argc, char **argv)
     LauncherController controller(&view, &runnerManager, &results, &catalog,
                                   guestAllowed);
     controller.setFileBrowser(&fileBrowser);
+    RecentUse recent;
+    recent.setThumbnails([](const QString &path, const QString &mimeType, qint64 modified) {
+        return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
+    });
+    controller.setRecentUse(&recent);
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1058,6 +1119,7 @@ int main(int argc, char **argv)
          QVariant::fromValue(static_cast<QObject *>(&results))},
         {QStringLiteral("applicationCatalog"),
          QVariant::fromValue(static_cast<QObject *>(&catalog))},
+        {QStringLiteral("recentUse"), QVariant::fromValue(static_cast<QObject *>(&recent))},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

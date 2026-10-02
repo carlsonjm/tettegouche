@@ -4,6 +4,23 @@ Search reveals recognizable destinations rather than rewarding incidental
 strings. Screenshot-specific changes must become general rules tested against
 unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 
+## First screen
+
+Before anything is typed, Search offers two doors, Apps and Files, and beside
+them what was used lately, newest first: at most six, as many as the width
+holds, spaced evenly to the field's width. Its source is KDE's record of use for
+the current activity, read when Search opens; Tettegouche tells that record each
+application it starts and each file it opens, and Plasma's privacy setting
+decides what is kept.
+
+- An application is offered unless it is open, pinned in the dock, hidden from
+  Apps, hidden from menus, or Tettegouche itself.
+- A file is offered while it exists on this machine; a folder, a hidden file and
+  anything remote are not.
+- Nothing is offered while the screen is shared or recorded, so no file's name
+  is on show; the two doors stay.
+- Typing hands the room to the results.
+
 ## Eligibility and confidence
 
 1. Scope decides eligibility, not authorship. Everyday hides quiet collections,

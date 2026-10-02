@@ -5,6 +5,15 @@ provenance.
 
 ## Unreleased
 
+- Before anything is typed, Search offers Apps and Files as pills under the
+  field, and beside them what you used lately: files, and applications that
+  are not open, pinned in the dock or hidden. They are spaced evenly to the
+  field's width, as many as fit and at most six, and none show while the
+  screen is shared. Tab moves between them. Browse everything is now called
+  Apps, and the words and pull handles on Search's edges are gone; a pull down
+  on an open drawer's header still closes it.
+- Tab, with nothing typed, moves between Search's controls instead of typing
+  into the field.
 - An application waiting on you gets an island in Ambient while it waits: its
   icon, its name and, where it can be read, its dialog's question. A tap brings
   the application and its dialog forward. Once the wait is over the island

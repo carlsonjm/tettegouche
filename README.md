@@ -15,8 +15,8 @@ touch, a pointer, or a keyboard. No background service is required.
 | Task | Touch | Keyboard |
 | --- | --- | --- |
 | Search | Tap the dot | `Meta`, once set in Plasma |
-| Browse everything | Tap "browse everything" in Search | `Meta+G` |
-| Files | Tap "explore files" in Search | `Meta+E` |
+| Apps | Tap Apps in Search | `Meta+G` |
+| Files | Tap Files in Search | `Meta+E` |
 | Ambient | Tap the island | — |
 
 `Meta+G` and `Meta+E` are listed under Tettegouche in System Settings' Shortcuts,
@@ -25,7 +25,9 @@ key to Tettegouche there. Every other input is in [docs/INPUT.md](docs/INPUT.md)
 
 ## Search
 
-Tap the dot in the panel and start typing. Search can find:
+Tap the dot in the panel. Before you type, Search offers Apps and Files, and
+beside them what you used lately: files, and applications that are not already
+open or pinned in the dock. Start typing and Search can find:
 
 - Installed applications
 - Indexed files and recent documents
@@ -37,12 +39,12 @@ Local results appear first. If nothing local matches, submitting the query can o
 it in your web browser. Tettegouche does not learn from or rank results by your
 usage history.
 
-**Browse everything** opens an alphabetical list of installed applications when
-you would rather look than search.
+**Apps** opens an alphabetical list of installed applications when you would
+rather look than search.
 
 ## Files
 
-**Explore files** is a local file browser inside Tettegouche. It includes Places,
+**Files** is a local file browser inside Tettegouche. It includes Places,
 tabs, history, breadcrumbs, filtering, sorting, selection, and hidden-file display.
 
 You can open, copy, move, rename, and delete files; create folders; drag files

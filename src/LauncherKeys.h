@@ -12,7 +12,7 @@
 
 class QAction;
 
-// Meta+G for Browse everything and Meta+E for Files, listed once per Plasma
+// Meta+G for Apps and Meta+E for Files, listed once per Plasma
 // process in KDE's own shortcut settings under Tettegouche, however many
 // Tettegouche widgets that process holds. A press goes to the earliest widget
 // still present, so exactly one launcher answers it.

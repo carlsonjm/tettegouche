@@ -22,7 +22,16 @@ find_package(LayerShellQt 6.7 REQUIRED)
 find_package(Plasma 6.7 REQUIRED)
 find_package(LibNotificationManager REQUIRED)
 find_package(LibTaskManager REQUIRED)
+find_package(PlasmaActivitiesStats REQUIRED)
 find_package(AppStreamQt 1.0 REQUIRED)
+
+# The screen being shared: Ambient's island, and Search keeping what was used
+# lately out of sight meanwhile.
+add_library(tettegouche-screenshare STATIC
+    src/ScreenShareProvider.cpp src/ScreenShareProvider.h src/ActivityUtils.h)
+target_include_directories(tettegouche-screenshare PUBLIC src)
+set_target_properties(tettegouche-screenshare PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(tettegouche-screenshare PUBLIC Qt6::DBus Qt6::Core)
 
 add_library(tettegouche-activities STATIC
     src/MprisActivityProvider.cpp src/MprisActivityProvider.h
@@ -31,12 +40,11 @@ add_library(tettegouche-activities STATIC
     src/TetteTransferProvider.cpp src/TetteTransferProvider.h
     src/FinishNotices.cpp src/FinishNotices.h
     src/DriveActivityProvider.cpp src/DriveActivityProvider.h src/DriveRules.h
-    src/ScreenShareProvider.cpp src/ScreenShareProvider.h
     src/WaitingAppProvider.cpp src/WaitingAppProvider.h
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
+target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
 target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
 
@@ -61,6 +69,9 @@ qt_add_executable(tettegouche
     src/OmniResults.h
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
+    src/RecentUse.cpp
+    src/RecentUse.h
+    src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
     src/FileDetails.cpp src/FileDetails.h
     src/FileThumbnails.cpp src/FileThumbnails.h
@@ -89,10 +100,13 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/eject.svg
         assets/icons/lucide/eye.svg
         assets/icons/lucide/eye-off.svg
+        assets/icons/lucide/folder-open.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
     tettegouche-related
+    tettegouche-screenshare
+    Plasma::ActivitiesStats
     Qt6::Core
     Qt6::DBus
     Qt6::Gui
@@ -198,10 +212,20 @@ if(BUILD_TESTING)
     add_test(NAME files-sealed-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-files-sealed.sh $<TARGET_FILE:file-browser-test>)
     set_tests_properties(files-sealed-test PROPERTIES TIMEOUT 150)
     qt_add_executable(application-catalog-test tests/ApplicationCatalogTest.cpp
-        src/ApplicationCatalog.cpp src/ApplicationCatalog.h)
+        src/ApplicationCatalog.cpp src/ApplicationCatalog.h src/UseRecord.h)
     target_include_directories(application-catalog-test PRIVATE src)
-    target_link_libraries(application-catalog-test PRIVATE KF6::KIOGui KF6::Service AppStreamQt Qt6::Test)
+    target_link_libraries(application-catalog-test PRIVATE KF6::KIOGui KF6::Service AppStreamQt Qt6::DBus Qt6::Test)
     add_test(NAME application-catalog-test COMMAND application-catalog-test)
+    qt_add_executable(recent-use-test tests/RecentUseTest.cpp src/RecentUse.cpp src/RecentUse.h src/UseRecord.h)
+    target_include_directories(recent-use-test PRIVATE src)
+    target_link_libraries(recent-use-test PRIVATE KF6::KIOGui KF6::Service Plasma::ActivitiesStats Qt6::DBus Qt6::Test)
+    # A private bus that starts no desktop service, so nothing reaches the
+    # person's own record; the record itself is read by recent-use-record-test.
+    add_test(NAME recent-use-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:recent-use-test>)
+    set_tests_properties(recent-use-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    add_test(NAME recent-use-record-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent-use.sh $<TARGET_FILE:recent-use-test>)
+    set_tests_properties(recent-use-record-test PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
     target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
     add_test(NAME related-info-test COMMAND related-info-test)

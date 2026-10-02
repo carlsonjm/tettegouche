@@ -2,7 +2,7 @@
 
 Tettegouche 0.2.0 has two lifetimes: a persistent Plasma panel applet and an
 on-demand launcher process. The applet owns the panel's launcher dot and the
-Ambient island. The launcher owns search, Browse everything, local Files state
+Ambient island. The launcher owns search, Apps, local Files state
 and the temporary layer-shell surface. It stays fully useful without Kadunce,
 the optional related-setting tools, Bluetooth hardware or any Ambient source.
 Every input is listed in [INPUT.md](INPUT.md).
@@ -91,9 +91,16 @@ The compact search model combines an allowlisted set of KRunner providers and a
 Tettegouche-owned confidence policy. Its behavior is owned by
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
-The Browse drawer reads visible applications from `KApplicationTrader`, sorts by
-display name, and launches with `KIO::ApplicationLauncherJob`. It has no usage,
-recency, or recommendation layer. Existing-window matching runs before launch.
+Apps reads visible applications from `KApplicationTrader`, sorts by display
+name, and launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
+service each start. Existing-window matching runs before launch.
+
+`RecentUse` reads KDE's record of use through PlasmaActivitiesStats when Search
+opens, for the first screen ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § First
+screen). What the dock pins comes from the Bottom Surface's
+`pinnedApplications`, what is open from Kadunce's workspace context, and
+whether the screen is shared from the portal's status item; each is optional,
+and with none of them nothing is left out on its account.
 
 ## Files
 
@@ -162,9 +169,7 @@ counts follow the language.
   the suite's three tiers: 8 px for the launcher's sheet and all laid in it,
   12 px for menus and the open island, which float above and close, and pills
   for what is pressed.
-- Quiet spatial invitations are lowercase, as in "browse everything" and
-  "explore files"; other labels use sentence case, and OPEN is the one
-  all-caps tag.
+- Labels use sentence case, and OPEN is the one all-caps tag.
 - Motion explains a change of state or place, can be interrupted, and never
   shows progress or success a source has not reported.
 

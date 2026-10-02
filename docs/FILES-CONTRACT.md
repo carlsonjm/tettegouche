@@ -1,6 +1,6 @@
 # Files contract
 
-This document defines the current Explore files behavior and the invariants that
+This document defines the current Files behavior and the invariants that
 must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 
 ## State and navigation

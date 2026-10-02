@@ -23,7 +23,7 @@ class ApplicationCatalog final : public QAbstractListModel
     Q_OBJECT
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     Q_PROPERTY(bool descending READ descending WRITE setDescending NOTIFY descendingChanged)
-    // Hidden applications leave Browse everything; this shows them again.
+    // Hidden applications leave Apps; this shows them again.
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY showHiddenChanged)
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY hiddenCountChanged)
     // Whether the software catalog has loaded, so canUninstall can answer.
@@ -53,6 +53,7 @@ public:
     Q_INVOKABLE [[nodiscard]] QVariantList actions(int row) const;
     Q_INVOKABLE bool runAction(int row, int action);
     Q_INVOKABLE [[nodiscard]] bool isHidden(int row) const;
+    [[nodiscard]] bool isHiddenApplication(const QString &applicationId) const;
     Q_INVOKABLE void setHidden(int row, bool hidden);
     // Loads the software catalog once, in the background; softwareReady says
     // when it has. Until then canUninstall answers false.

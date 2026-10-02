@@ -7,15 +7,18 @@ than repeat it.
 | Task | Touch | Keyboard |
 | --- | --- | --- |
 | Search | Tap the dot | `Meta`, once set in Plasma |
-| Browse everything | Tap "browse everything" in Search | `Meta+G` |
-| Files | Tap "explore files" in Search | `Meta+E` |
+| Apps | Tap Apps in Search | `Meta+G` |
+| Files | Tap Files in Search | `Meta+E` |
 | Ambient | Tap the island | — |
 
 ## Search
 
 | Input | What happens |
 | --- | --- |
-| Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. |
+| Tap or click Apps or Files, under the search field | Opens that drawer. |
+| Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
+| Tab, with nothing typed | Moves between Apps, Files and what was used lately; Enter or Space opens the one focused. |
+| Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
@@ -50,29 +53,28 @@ than repeat it.
 | Enter on a detail row | Opens that setting's page in System Settings. |
 | Tap or click a detail row | Opens that setting's page in System Settings. It never connects, pairs, mounts or switches anything. If the page cannot open, the row says so. |
 
-## Browse everything
+## Apps
 
 | Input | What happens |
 | --- | --- |
-| Tap or click "browse everything" in Search | Opens Browse everything. |
-| Pull up the handle under "browse everything" | The drawer follows your finger or the pointer. Let go and it opens if pulled far enough, or falls back. |
+| Tap or click Apps in Search | Opens Apps. |
 | Type | Narrows the applications to those whose names match. What is typed shows in the search field, in the middle of the drawer's header. |
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
-| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Hide, which takes it out of Browse everything while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
+| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
 | Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
-| Meta+G | Opens Search on Browse everything; pressed there again, closes it. It is listed under Tettegouche in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
+| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
 
 | Input | What happens |
 | --- | --- |
-| Tap or click "explore files" in Search, or pull down from it | Opens Files. |
+| Tap or click Files in Search | Opens Files. |
 | Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. What is typed shows in the search field, in the middle of the drawer's header. |
 | Down, from what is typed | Moves the keys into the files, on the first one. |
 | With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder; Stop searching keeps what it has found. Hidden files are searched only while shown. |

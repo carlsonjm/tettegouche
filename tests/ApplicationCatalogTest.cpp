@@ -3,7 +3,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Browse everything's catalog, over two applications of its own: one with
+// Apps' catalog, over two applications of its own: one with
 // actions of its own, one without. The applications, their database and the
 // settings live in a temporary home, so nothing of the person's is read or
 // written.
