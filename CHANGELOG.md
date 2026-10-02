@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Browse everything and Files share one header: Back on the left returns to
+  search, the search field sits in the middle, and the sort button stays on
+  the right. The Close drawer pill is gone, and each drawer reaches up into
+  the row the field held above it. A pull down on the top edge still closes
+  either drawer, and the field stays above the on-screen keys.
 - A large folder opens whole and in order: it no longer arrives in batches
   that reshuffle what is shown, and thousands of files open in a moment rather
   than seconds. A folder slow to list, on a phone or a share, shows what it

@@ -26,6 +26,7 @@
     "action-eject": "eject",
     "action-show-in-files": "folder-open",
     "action-show-hidden": "eye",
-    "action-keep-hidden": "eye-off"
+    "action-keep-hidden": "eye-off",
+    "drawer-back": "chevron-left"
   }
 }
