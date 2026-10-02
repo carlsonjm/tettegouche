@@ -109,7 +109,10 @@ safety boundary is owned by [FILES-CONTRACT.md](FILES-CONTRACT.md).
 
 The applet constructs one shared activity model per Plasma process from the
 sources [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) lists; that contract owns
-admission, source truth, width and actions.
+admission, source truth, width and actions. Waiting applications come from
+Plasma's own window list (libtaskmanager), shared in process with Plasma's task
+manager, and Ambient asks it, not Kadunce, to bring one forward; this is
+neither KWin discovery nor a task manager of Tettegouche's own.
 
 The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and the suite's black while the

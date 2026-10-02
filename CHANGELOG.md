@@ -5,6 +5,12 @@ provenance.
 
 ## Unreleased
 
+- An application waiting on you gets an island in Ambient while it waits: its
+  icon, its name and, where it can be read, its dialog's question. A tap brings
+  the application and its dialog forward. Once the wait is over the island
+  leaves, and nothing is filed.
+- A screen shared or recorded through Plasma's portal gets an island: a red
+  dot, who receives the screen, and Stop, which ends the share.
 - A file's menu in Files offers Hide, which takes it out of Files under its
   own name, as Dolphin also hides it. The eye shows hidden files dimmed, and
   Unhide brings one back.

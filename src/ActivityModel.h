@@ -4,6 +4,7 @@
 #include "DriveActivityProvider.h"
 #include "FinishNotices.h"
 #include "ScreenShareProvider.h"
+#include "WaitingAppProvider.h"
 #include "IncomingFileProvider.h"
 #include "TetteTransferProvider.h"
 #include <memory>
@@ -14,7 +15,10 @@ class ActivityModel : public QObject {
     Q_OBJECT
 public:
     static std::shared_ptr<ActivityModel> acquire();
-    explicit ActivityModel(const QDBusConnection &bus, const QString &downloads, QObject *parent = nullptr);
+    // `windows` is Plasma's window list, for applications waiting on the
+    // person; without one, none wait.
+    explicit ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows = nullptr,
+                           QObject *parent = nullptr);
     QVariantList activities() const { return m_rows; }
     void invoke(const QString &id, int generation, const QString &action, const QVariant &value = {});
     QUrl destinationForReveal(const QString &id, int generation) const;
@@ -42,6 +46,7 @@ private:
     FinishNotices m_notices;
     DriveActivityProvider m_drives;
     ScreenShareProvider m_screen;
+    WaitingAppProvider m_waiting;
     QVariantList m_rows;
     QMap<QString, QVariantMap> m_routes;
     QMap<QString, QString> m_presentations;

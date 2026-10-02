@@ -4,10 +4,6 @@ What is planned for Tettegouche, and what is not.
 
 ## Next
 
-- **New Ambient rows.** An application waiting on a dialog gets a row that
-  names it, and tapping the row brings the application and its dialog forward.
-  Sharing or recording the screen gets a row that names who is doing it, with
-  Stop.
 - **Release validation.** One installed pass over media, Plasma jobs, Files
   transfers, downloads, and the island at tablet and monitor widths by touch,
   mouse and keyboard. Then a keyboard and accessibility review, large folders,

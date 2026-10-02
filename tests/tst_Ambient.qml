@@ -468,6 +468,69 @@ TestCase {
         verify(shown(surface, "screen").indexOf("stop") >= 0);
     }
 
+    // An application waiting on the person shows its icon, its name and its
+    // dialog's question; a tap anywhere on it brings it forward and opens
+    // nothing, and narrow, it keeps its icon longest, then its name.
+    function test_a_waiting_application_comes_forward() {
+        const waiting = {id: "waiting:w1", generation: 6, kind: "waiting", state: "running",
+            title: "Kate", icon: "kate", question: "Save changes to the letter?", capabilities: {raise: true}};
+        const surface = createSurface(460, [waiting]);
+        settle();
+        const shape = island(surface, "waiting");
+        verify(shape.visible);
+        compare(shown(surface, "waiting"), ["icon", "name", "question"]);
+        compare(findChild(surface, "ambient-waiting-icon").source, "kate");
+        compare(findChild(surface, "ambient-waiting-name").text, "Kate");
+        compare(findChild(surface, "ambient-waiting-question").text, "Save changes to the letter?");
+        verify(rightOf(surface, findChild(surface, "ambient-waiting-icon"))
+            <= leftOf(surface, findChild(surface, "ambient-waiting-name")) + 1);
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(shape, shape.width - 12, shape.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "waiting:w1");
+        compare(invoked.signalArguments[0][1], 6);
+        compare(invoked.signalArguments[0][2], "raise");
+        compare(opens.count, 0);
+        // Its question goes first, then its name; the icon stays.
+        surface.width = 120;
+        settle();
+        compare(shown(surface, "waiting"), ["icon", "name"]);
+        surface.width = 60;
+        settle();
+        compare(shown(surface, "waiting"), ["icon"]);
+        // With no question to read, it names the application alone.
+        const plain = createSurface(460, [Object.assign({}, waiting, {question: ""})]);
+        settle();
+        compare(shown(plain, "waiting"), ["icon", "name"]);
+        verify(!findChild(plain, "ambient-waiting-question").visible);
+    }
+
+    // Beside music, a waiting application has the room first, and what does
+    // not fit folds into the bubble, whose tap brings the newest waiting
+    // application forward.
+    function test_a_waiting_application_beside_media() {
+        const waiting = {id: "waiting:w2", generation: 7, kind: "waiting", state: "running",
+            title: "Firefox", icon: "firefox", question: "Leave page?", capabilities: {raise: true}};
+        const surface = createSurface(460, [media, waiting]);
+        settle();
+        compare(surface.bandKinds, ["media", "waiting"]);
+        verify(shown(surface, "waiting").indexOf("name") >= 0);
+        const narrow = createSurface(100, [media, waiting]);
+        settle();
+        compare(narrow.folded, ["media"]);
+        compare(shown(narrow, "waiting"), ["icon"]);
+        const second = Object.assign({}, waiting, {id: "waiting:w3", generation: 9, title: "Kate", icon: "kate"});
+        const folded = createSurface(48, [media, waiting, second]);
+        settle();
+        verify(folded.folded.indexOf("waiting") >= 0);
+        const invoked = spyOn(folded, "invokeRequested");
+        mouseClick(bubble(folded));
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "waiting:w3");
+        compare(invoked.signalArguments[0][2], "raise");
+    }
+
     // A transfer that ends keeps its place in the band.
     function test_an_ended_transfer_keeps_its_place() {
         const surface = createSurface(460, [transfer]);

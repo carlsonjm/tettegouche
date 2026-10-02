@@ -80,11 +80,12 @@ Item {
     readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
     readonly property int bubbleCount: folded.reduce((count, kind) => count
         + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length
-            : kind === "drive" ? drives.length : kind === "screen" ? screens.length : 1), 0)
+            : kind === "drive" ? drives.length : kind === "screen" ? screens.length
+            : kind === "waiting" ? waitings.length : 1), 0)
     // The least the band needs: each island's first piece.
     readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
-        || driveIsland.peeling || screenIsland.peeling
+        || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -144,7 +145,7 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -283,6 +284,14 @@ Item {
     readonly property string stopLabel: words.i18n("Stop")
     readonly property real dotWidth: 28
 
+    // An application waiting on the person: its icon, its name, and its
+    // dialog's question where that can be read. The newest shows.
+    readonly property var waitings: activities.filter(activity => activity.kind === "waiting")
+    readonly property var waitingShown: waitings.length > 0 ? waitings[waitings.length - 1] : null
+    readonly property string waitingName: waitingShown ? waitingShown.title || words.i18n("An application") : ""
+    readonly property string waitingQuestion: waitingShown && waitingShown.question ? waitingShown.question : ""
+    readonly property string waitingIcon: waitingShown && waitingShown.icon ? waitingShown.icon : "application-x-executable"
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -323,6 +332,10 @@ Item {
     }
     function openWidth() {
         return pillWidth(openLabel);
+    }
+    function waitingWords(name, question) {
+        return column(name ? textWidth(strongMetrics, waitingName) : 0,
+            question ? textWidth(smallMetrics, waitingQuestion) : 0, 180);
     }
     // Who receives the screen, on one line.
     function screenWords(who) {
@@ -368,6 +381,8 @@ Item {
         if (kind === "screen")
             return 2 * inset + (has("dot") ? dotWidth : 0) + screenWords(has("who"))
                 + (has("stop") ? pillWidth(stopLabel) : 0);
+        if (kind === "waiting")
+            return 2 * inset + (has("icon") ? lead : 0) + waitingWords(has("name"), has("question"));
         return 0;
     }
 
@@ -395,6 +410,8 @@ Item {
         case "screen.dot": return screenShown !== null;
         case "screen.who": return screenWho !== "";
         case "screen.stop": return capability(screenShown, "stop");
+        case "waiting.icon": case "waiting.name": return waitingShown !== null;
+        case "waiting.question": return tall && waitingQuestion !== "";
         }
         return false;
     }
@@ -406,7 +423,7 @@ Item {
     function islandOf(kind) {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
             : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
-            : kind === "screen" ? screenIsland : null;
+            : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -434,8 +451,11 @@ Item {
     }
     // A drive's island is one tap: Files opens the drive, mounting it first.
     // A shared screen's island only tells, and stops: a tap opens nothing.
+    // A waiting application's island brings the application forward, and its
+    // dialog with it.
     function open(kind) {
         if (kind === "drive") invoke(driveShown, "open");
+        else if (kind === "waiting") invoke(waitingShown, "raise");
         else if (kind !== "screen") openRequested(openKind(kind));
     }
     // Where the open island grows from.
@@ -449,6 +469,9 @@ Item {
         if (kind === "media") return words.i18n("Media %1, open", mediaTitle);
         if (kind === "transfer") return words.i18np("1 transfer, open", "%1 transfers, open", running.length);
         if (kind === "screen") return screenWho;
+        if (kind === "waiting") return waitingQuestion
+            ? words.i18n("%1 is waiting: %2, show it", waitingName, waitingQuestion)
+            : words.i18n("%1 is waiting, show it", waitingName);
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
         return words.i18n("%1, open", endingName);
     }
@@ -456,7 +479,7 @@ Item {
     function setAside(kind) {
         if (kind === "media") invoke(player, "setAside");
         else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives
-                : kind === "screen" ? screens : endings)
+                : kind === "screen" ? screens : kind === "waiting" ? waitings : endings)
             invoke(activity, "setAside");
     }
 
@@ -1178,6 +1201,51 @@ Item {
         }
     }
 
+    // An application waiting on the person: its icon, its name, and its
+    // dialog's question below. The whole island is one tap, which brings the
+    // application and its dialog forward.
+    BandIsland {
+        id: waitingIsland
+        kind: "waiting"
+        opens: surface.capability(surface.waitingShown, "raise")
+        Piece {
+            island: waitingIsland
+            name: "icon"
+            size: surface.lead
+            Kirigami.Icon {
+                objectName: "ambient-waiting-icon"
+                anchors.centerIn: parent
+                width: surface.artSize > 26 ? 24 : 18
+                height: width
+                source: surface.waitingIcon
+            }
+        }
+        Piece {
+            id: waitingWordsPiece
+            island: waitingIsland
+            shows: waitingIsland.has("name") || waitingIsland.has("question")
+            size: surface.waitingWords(waitingIsland.has("name"), waitingIsland.has("question"))
+            Column {
+                x: 6
+                width: waitingWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-waiting-name"
+                    width: parent.width
+                    visible: waitingIsland.has("name")
+                    text: surface.waitingName
+                    font.weight: Font.DemiBold
+                }
+                Detail {
+                    objectName: "ambient-waiting-question"
+                    width: parent.width
+                    visible: waitingIsland.has("question")
+                    text: surface.waitingQuestion
+                }
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1234,6 +1302,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "drive"
             source: surface.driveShown && surface.driveShown.icon ? surface.driveShown.icon : "drive-removable-media"
+        }
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 24 : 18
+            height: width
+            visible: surface.bubbleKind === "waiting"
+            source: surface.waitingIcon
         }
         Rectangle {
             objectName: "ambient-bubble-count"

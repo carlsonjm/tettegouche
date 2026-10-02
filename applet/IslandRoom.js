@@ -34,6 +34,9 @@ var PIECES = {
     screen: [
         { id: "stop" }, { id: "dot" }, { id: "who", name: true },
     ],
+    waiting: [
+        { id: "icon" }, { id: "name" }, { id: "question" },
+    ],
     drive: [
         { id: "icon" }, { id: "size" }, { id: "open" }, { id: "name", name: true },
     ],

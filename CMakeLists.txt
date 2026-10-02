@@ -21,6 +21,7 @@ find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
 find_package(Plasma 6.7 REQUIRED)
 find_package(LibNotificationManager REQUIRED)
+find_package(LibTaskManager REQUIRED)
 find_package(AppStreamQt 1.0 REQUIRED)
 
 add_library(tettegouche-activities STATIC
@@ -31,10 +32,11 @@ add_library(tettegouche-activities STATIC
     src/FinishNotices.cpp src/FinishNotices.h
     src/DriveActivityProvider.cpp src/DriveActivityProvider.h src/DriveRules.h
     src/ScreenShareProvider.cpp src/ScreenShareProvider.h
+    src/WaitingAppProvider.cpp src/WaitingAppProvider.h
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core KF6::I18n KF6::Solid PW::LibNotificationManager)
+target_link_libraries(tettegouche-activities PUBLIC Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
 target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
 

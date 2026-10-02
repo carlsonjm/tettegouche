@@ -4,6 +4,7 @@
 #include "FileBrowser.h"
 #include <notification.h>
 #include <server.h>
+#include <taskmanager/abstracttasksmodel.h>
 #include <QTest>
 #include <QGuiApplication>
 #include <QDBusAbstractAdaptor>
@@ -144,6 +145,36 @@ public:
             return false;
         }
         return true;
+    }
+};
+
+// Plasma's window list as libtaskmanager gives it, one window per row, with
+// the activations asked of it.
+class FakeWindows : public TaskManager::AbstractTasksModel {
+public:
+    using Row = QHash<int, QVariant>;
+    QList<Row> rows;
+    QList<QString> activated;
+    static Row window(const QString &id, const QString &title, const QString &app, const QString &name, qint64 pid,
+                      bool skipTaskbar = false) {
+        return {{Qt::DisplayRole, title}, {AppId, app}, {AppName, name}, {AppPid, pid}, {IsWindow, true},
+            {SkipTaskbar, skipTaskbar}, {IsDemandingAttention, false}, {WinIdList, QVariantList{id}}};
+    }
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override { return parent.isValid() ? 0 : int(rows.size()); }
+    QVariant data(const QModelIndex &index, int role) const override {
+        return index.isValid() && index.row() < rows.size() ? rows.at(index.row()).value(role) : QVariant();
+    }
+    void requestActivate(const QModelIndex &index) override {
+        activated.append(index.data(WinIdList).toList().value(0).toString());
+    }
+    void add(const Row &row) {
+        beginInsertRows(QModelIndex(), int(rows.size()), int(rows.size()));
+        rows.append(row);
+        endInsertRows();
+    }
+    void set(int row, int role, const QVariant &value) {
+        rows[row][role] = value;
+        Q_EMIT dataChanged(index(row), index(row), {role});
     }
 };
 
@@ -787,6 +818,83 @@ private Q_SLOTS:
         peer.unregisterService(QStringLiteral("org.kde.StatusNotifierWatcher"));
         peer.unregisterObject(QStringLiteral("/"),QDBusConnection::UnregisterTree);
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-tray"));
+    }
+
+    // A window raising Plasma's attention flag is an application waiting: a
+    // row naming it, with the one window its process keeps off the task bar
+    // as the question. Raise activates the window, a stale one nothing; the
+    // row leaves when the flag drops, and a window only moving asks nothing.
+    void waitingApplicationFromWindowList() {
+        using T = TaskManager::AbstractTasksModel;
+        FakeWindows windows;
+        windows.add(FakeWindows::window(QStringLiteral("w1"), QStringLiteral("Letter.odt — Kate"), QStringLiteral("org.kde.kate"), QStringLiteral("Kate"), 41));
+        windows.add(FakeWindows::window(QStringLiteral("w2"), QStringLiteral("Konsole"), QStringLiteral("org.kde.konsole"), QStringLiteral("Konsole"), 52));
+        WaitingAppProvider waiting(&windows);
+        QSignalSpy changed(&waiting, &WaitingAppProvider::changed);
+        QVERIFY(waiting.activities().isEmpty());
+        // A dialog alone is no wait.
+        windows.add(FakeWindows::window(QStringLiteral("d1"), QStringLiteral("Save changes? — Kate"), QStringLiteral("org.kde.kate"), QStringLiteral("Kate"), 41, true));
+        QVERIFY(waiting.activities().isEmpty());
+        windows.set(0, T::IsDemandingAttention, true);
+        QCOMPARE(waiting.activities().size(), 1);
+        auto row = waiting.activities().first().toMap();
+        QCOMPARE(row.value(QStringLiteral("kind")).toString(), QStringLiteral("waiting"));
+        QCOMPARE(row.value(QStringLiteral("title")).toString(), QStringLiteral("Kate"));
+        QCOMPARE(row.value(QStringLiteral("icon")).toString(), QStringLiteral("org.kde.kate"));
+        QCOMPARE(row.value(QStringLiteral("question")).toString(), QStringLiteral("Save changes?"));
+        QVERIFY(row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("raise")).toBool());
+        const auto id = row.value(QStringLiteral("id")).toString();
+        const int generation = row.value(QStringLiteral("generation")).toInt();
+        const int heard = changed.count();
+        windows.set(0, T::Geometry, QRect(10, 10, 400, 300));
+        windows.set(0, T::StackingOrder, 3);
+        QCOMPARE(changed.count(), heard);
+        waiting.invoke(id, generation + 1, QStringLiteral("raise"));
+        waiting.invoke(id, generation, QStringLiteral("cancel"));
+        QVERIFY(windows.activated.isEmpty());
+        waiting.invoke(id, generation, QStringLiteral("raise"));
+        QCOMPARE(windows.activated, QList<QString>{QStringLiteral("w1")});
+        // Two windows off the task bar: no telling which asks, so none does.
+        windows.add(FakeWindows::window(QStringLiteral("d2"), QStringLiteral("Find — Kate"), QStringLiteral("org.kde.kate"), QStringLiteral("Kate"), 41, true));
+        row = waiting.activities().first().toMap();
+        QCOMPARE(row.value(QStringLiteral("question")).toString(), QString());
+        QCOMPARE(row.value(QStringLiteral("generation")).toInt(), generation);
+        // Another application waits too, the newer last; it has no dialog.
+        windows.set(1, T::IsDemandingAttention, true);
+        QCOMPARE(waiting.activities().size(), 2);
+        QCOMPARE(waiting.activities().last().toMap().value(QStringLiteral("title")).toString(), QStringLiteral("Konsole"));
+        QCOMPARE(waiting.activities().last().toMap().value(QStringLiteral("question")).toString(), QString());
+        windows.set(0, T::IsDemandingAttention, false);
+        QCOMPARE(waiting.activities().size(), 1);
+        windows.set(0, T::IsDemandingAttention, true);
+        QVERIFY(waiting.activities().last().toMap().value(QStringLiteral("generation")).toInt() > generation);
+        windows.set(1, T::IsDemandingAttention, false);
+        {
+            // Through Ambient: Raise reaches the window, and set aside the row
+            // stays away until its wait ends.
+            ActivityModel model(QDBusConnection::sessionBus(), QString(), &windows);
+            QTRY_COMPARE(model.activities().size(), 1);
+            const auto shown = model.activities().first().toMap();
+            QCOMPARE(shown.value(QStringLiteral("kind")).toString(), QStringLiteral("waiting"));
+            const auto shownId = shown.value(QStringLiteral("id")).toString();
+            const int shownGeneration = shown.value(QStringLiteral("generation")).toInt();
+            model.invoke(shownId, shownGeneration, QStringLiteral("raise"));
+            QCOMPARE(windows.activated.size(), 2);
+            QCOMPARE(windows.activated.last(), QStringLiteral("w1"));
+            model.setAside(shownId, shownGeneration);
+            QVERIFY(model.activities().isEmpty());
+            windows.set(0, T::AppName, QStringLiteral("Kate editor"));
+            QTest::qWait(20);
+            QVERIFY(model.activities().isEmpty());
+            windows.set(0, T::IsDemandingAttention, false);
+            QTest::qWait(20);
+            windows.set(0, T::IsDemandingAttention, true);
+            QTRY_COMPARE(model.activities().size(), 1);
+        }
+        // With no window list, nothing waits.
+        WaitingAppProvider none(nullptr);
+        QVERIFY(none.activities().isEmpty());
+        none.invoke(id, generation, QStringLiteral("raise"));
     }
 
     void tetteBridgeLifecycle() {

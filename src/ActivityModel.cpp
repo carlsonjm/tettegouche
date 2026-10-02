@@ -1,5 +1,6 @@
 #include "ActivityModel.h"
 #include "ActivityUtils.h"
+#include <taskmanager/windowtasksmodel.h>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QFileInfo>
@@ -20,15 +21,18 @@ std::shared_ptr<ActivityModel> ActivityModel::acquire() {
     static std::weak_ptr<ActivityModel> instance;
     auto model = instance.lock();
     if (!model) {
+        // Plasma's own window list, shared in process with its task manager.
+        auto *windows = new TaskManager::WindowTasksModel;
         model = std::make_shared<ActivityModel>(QDBusConnection::sessionBus(),
-            QStandardPaths::writableLocation(QStandardPaths::DownloadLocation));
+            QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), windows);
+        windows->setParent(model.get());
         instance = model;
     }
     return model;
 }
-ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QObject *parent)
+ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows, QObject *parent)
     : QObject(parent), m_media(bus, this), m_jobs(this), m_files(downloads, this), m_tette(bus, this),
-      m_notices(bus, downloads, this), m_drives(bus, this), m_screen(bus, this) {
+      m_notices(bus, downloads, this), m_drives(bus, this), m_screen(bus, this), m_waiting(windows, this) {
     const auto update = [this] {
         if (m_refreshPending) return;
         m_refreshPending = true;
@@ -41,6 +45,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_notices, &FinishNotices::changed, this, update);
     connect(&m_drives, &DriveActivityProvider::changed, this, update);
     connect(&m_screen, &ScreenShareProvider::changed, this, update);
+    connect(&m_waiting, &WaitingAppProvider::changed, this, update);
     connect(&m_drives, &DriveActivityProvider::openRequested, this, &ActivityModel::driveOpenRequested);
     connect(&m_jobs, &DesktopJobProvider::finished, this, [this](const QVariantMap &job) {
         m_notices.report(job);
@@ -61,7 +66,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
 }
 void ActivityModel::refresh() {
     reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities(),
-              m_drives.activities() + m_screen.activities());
+              m_drives.activities() + m_screen.activities() + m_waiting.activities());
 }
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files,
                               const QVariantList &drives) {
@@ -174,6 +179,7 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     else if (sourceId.startsWith(QLatin1String("job:"))) m_jobs.invoke(sourceId,sourceGeneration,action);
     else if (sourceId.startsWith(QLatin1String("drive:")) && action == QLatin1String("open")) m_drives.open(sourceId);
     else if (sourceId.startsWith(QLatin1String("screen:"))) m_screen.invoke(sourceId, sourceGeneration, action);
+    else if (sourceId.startsWith(QLatin1String("waiting:"))) m_waiting.invoke(sourceId, sourceGeneration, action);
 }
 void ActivityModel::setAside(const QString &id, int generation) {
     const auto route = m_routes.value(id);
@@ -184,7 +190,8 @@ void ActivityModel::setAside(const QString &id, int generation) {
     if (kind == QLatin1String("media")) m_asideMedia.insert(source, state);
     else if (kind == QLatin1String("drive")) {
         m_drives.setAside(source);
-        reconcile(m_lastTransfers, m_lastMedia, m_lastFiles, m_drives.activities() + m_screen.activities());
+        reconcile(m_lastTransfers, m_lastMedia, m_lastFiles,
+                  m_drives.activities() + m_screen.activities() + m_waiting.activities());
         return;
     }
     else if (state == QLatin1String("finished") || state == QLatin1String("failed")) m_notices.used(source);

@@ -17,7 +17,10 @@ Current sources are:
 - running or suspended jobs from Plasma's shared desktop-jobs model;
 - Tette-owned KIO copy/move operations through the launcher's activity bridge;
 - filesystem evidence for new direct children in the configured Downloads folder;
-- drives plugged in that nothing has mounted, from Solid (§ Drives).
+- drives plugged in that nothing has mounted, from Solid (§ Drives);
+- a screen shared or recorded through Plasma's portal (§ Shared screen);
+- windows raising Plasma's attention flag, from Plasma's window list
+  (§ Waiting applications).
 
 Static system status, completed work past its end's minute (§ Ends),
 ordinary notifications, and historical activity do not remain in Ambient. Ambient owns composition and routing; it does
@@ -92,6 +95,29 @@ the freedesktop `device.added` category with Open in Files, which the history
 keeps and Temperance's ticker does not play. Unplugged, it leaves, and its
 notice is closed.
 
+### Shared screen
+
+While a screen is shared or recorded, Plasma's portal shows a status notifier
+item; Ambient follows it through the StatusNotifierWatcher as it comes, changes
+and goes. The island shows a red dot, the portal's own line naming who receives
+the screen, and Stop, which clicks the item's End. A tap elsewhere on it opens
+nothing. It lasts while the share does and leaves nothing behind.
+
+### Waiting applications
+
+Ambient reads Plasma's window list, the one its task manager shows, in process.
+A window raising Plasma's standard attention flag is an application waiting on
+the person: Kadunce raises it for an application whose dialog waits while the
+application is not in front, and an application may raise it for itself. The
+list does not say which, so both show. The island shows the application's icon
+and name and, where its process has exactly one window kept off the task bar,
+that window's title, less the application's name, as the question; with none
+or several, it shows the icon and name alone. A tap on the island, or on the
+bubble holding it, asks Plasma to activate the window, which brings the
+application and its dialog forward. It lasts while the flag does and leaves no
+line and no history. With several waiting, the island shows the newest. A
+window moving or restacking is not read.
+
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
@@ -118,7 +144,8 @@ merely because the applet starts.
 ## The islands
 
 Each kind of activity is its own island: media, transfers under way, ends
-waiting out their minute (§ Ends), and drives plugged in (§ Drives). The islands sit side by side in the order
+waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
+screen (§ Shared screen) and applications waiting (§ Waiting applications). The islands sit side by side in the order
 they arrived, an end in its transfer's place, the group centred in the width
 the panel hands Ambient. They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
@@ -130,8 +157,8 @@ across.
 The islands share the width by turns (`applet/IslandRoom.js`). Every island
 keeps its first piece; then each takes one more piece per turn in its own
 order, and stops at the first that does not fit. The newest island takes its
-turn first for 2.4 s; after that the more urgent goes first, a transfer's end
-before a transfer and a transfer before media. Names, such as a player or where
+turn first for 2.4 s; after that the more urgent goes first: a waiting
+application, a shared screen, a drive, a transfer's end, a transfer, then media. Names, such as a player or where
 a transfer comes from, wait until every island has had the rest, so they are
 the first to go; a song's title and artist are not names. What cannot keep even
 its first piece folds into a round bubble after the islands, which counts what
@@ -144,6 +171,8 @@ together and settle without overshoot.
 | Transfer | progress ring (the percentage rides inside it), name, size, source, Cancel |
 | End | how it ended, Show in Files, name, what happened |
 | Drive | icon, size, Open, name |
+| Shared screen | Stop, red dot, who receives it |
+| Waiting application | icon, name, question |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title
