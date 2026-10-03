@@ -10,6 +10,12 @@ if rg -n -i 'webos|project[[:space:]_-]*webos|ghostiepost|palm|chromeos' \
     exit 1
 fi
 
+# Files is the file manager's one name in what a person reads.
+if rg -n -i 'tette[[:space:]]+files' --glob '!build*/**' --glob '!tests/verify-source.sh' .; then
+    echo "Files carries a retired name." >&2
+    exit 1
+fi
+
 rg -q 'QStringLiteral\("workspaceContext"\)' "${project_root}/src/main.cpp"
 rg -q 'studio\.warbler\.kadunce\.workspace-context' \
     "${project_root}/src/WorkspaceContext.cpp"

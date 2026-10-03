@@ -350,7 +350,7 @@ public:
             if (failure.until<now) continue;
             rows.append(QVariantMap{{QStringLiteral("id"), failure.id}, {QStringLiteral("generation"), 1},
                 {QStringLiteral("kind"), QStringLiteral("transfer")}, {QStringLiteral("state"), QStringLiteral("failed")},
-                {QStringLiteral("source"), i18n("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+                {QStringLiteral("source"), i18n("Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
                 {QStringLiteral("title"), failure.title}, {QStringLiteral("description"), failure.why},
                 {QStringLiteral("evidence"), QStringLiteral("job")}, {QStringLiteral("capabilities"), QVariantMap{}}});
         }
@@ -360,7 +360,7 @@ public:
             const bool suspendable = op.job->capabilities().testFlag(KJob::Suspendable);
             QVariantMap row{{QStringLiteral("id"), op.id}, {QStringLiteral("generation"), 1}, {QStringLiteral("kind"), QStringLiteral("transfer")},
                 {QStringLiteral("state"), suspended ? QStringLiteral("suspended") : QStringLiteral("running")},
-                {QStringLiteral("source"), i18n("Tette Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
+                {QStringLiteral("source"), i18n("Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
                 {QStringLiteral("title"), op.destination.isEmpty() ? op.label : op.destination.fileName()},
                 {QStringLiteral("evidence"), QStringLiteral("job")},
                 {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("cancel"), op.job->capabilities().testFlag(KJob::Killable)},
