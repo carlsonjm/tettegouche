@@ -26,10 +26,9 @@ from Git history.
 - This repository is public. Its documents, code comments and commit messages
   describe the product: Tettegouche does things, you act, shipped behavior is in
   the present tense, and planned behavior lives only in `docs/ROADMAP.md`. They
-  carry no names, approvals or approval dates, no chat or handover narration,
-  and nothing of Table, whose design stays with Kadunce. `tests/verify-public.py`
-  checks what a check can, in files and in commits not yet pushed; who decided
-  what belongs in the private suite record.
+  carry no names, approvals or approval dates, and no chat or handover
+  narration. `tests/verify-public.py` checks what a check can, in files and in
+  commits not yet pushed; who decided what belongs in the private suite record.
 - Each document owns one subject and states what is true now. Removed text lives
   in Git history.
 - Keep an assignment compact: roadmap item, required outcome, relevant

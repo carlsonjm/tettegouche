@@ -11,7 +11,8 @@ redistribute the source under its terms.
 The following are not licensed under the GPL and remain the property of the
 copyright holder, Jared Carlson:
 
-- The names **Shuffle**, **Kadunce**, **Tettegouche** and **Temperance**
+- The publisher name **Good Input** and the product name **Shuffle for Plasma**
+- The names **Kadunce**, **Tettegouche** and **Temperance**
 - The Tettegouche logo and the Tette Dot mark
 
 This is the ordinary arrangement for free software: the code is free to
