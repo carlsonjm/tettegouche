@@ -27,6 +27,15 @@ Item {
     // Gooseberry's quick note, offered while it is installed; null when the
     // setting is off.
     property var notesDoor: null
+    // The quick note Search writes in its own window; null when the setting is
+    // off. Notes is one of Search's modes while the notes application speaks
+    // its interface, and opens that application's own card otherwise.
+    property var quickNote: null
+    property bool notesOpen: false
+    property real notesProgress: 0
+    property bool notesGrowing: false
+    property bool notesHandoff: false
+    property string notesBoardToken: ""
     property bool filesMode: false
     focus: true
     readonly property color primaryText: "#f2ffffff"
@@ -413,12 +422,54 @@ Item {
         return false
     }
 
-    // Notes brings Gooseberry's quick-note sheet, which is not a window, so
-    // Search closes at once rather than waiting in Spread for one to arrive.
+    // Notes opens in Search's window with the drawer's motion; the field
+    // becomes the note pad and the window keeps its size. An older notes
+    // application without the interface gets its own card, and Search closes.
     function openNotes() {
+        if (root.quickNote && root.quickNote.available) {
+            root.quickNote.start()
+            root.notesOpen = true
+            root.sortMenuOpen = false
+            notesSettle.to = 1
+            notesSettle.restart()
+            notesPane.focusPad()
+            return true
+        }
         if (!root.notesDoor || !root.notesDoor.open()) return false
         root.launcherController.finishLaunch()
         return true
+    }
+    function closeNotes() {
+        if (!root.notesOpen || root.notesGrowing) return
+        root.quickNote.flush()
+        root.notesOpen = false
+        notesSettle.to = 0
+        notesSettle.restart()
+        root.forceActiveFocus()
+    }
+    // All notes grows the window as Apps does, and the board's own window
+    // takes its place: in Spread through Kadunce's launch, over an Active card
+    // once the board has drawn, since Kadunce puts it in the card's place.
+    function growNotes() {
+        if (!root.notesOpen || root.notesGrowing) return
+        root.notesGrowing = true
+        root.notesBoardToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
+        root.launcherController.setDrawerExpanded(true)
+        root.notesHandoff = root.launcherController.guestMode
+            && root.launcherController.beginGuestNotesLaunch()
+        if (!root.quickNote.openBoard(root.notesBoardToken)) {
+            root.stopGrowingNotes()
+            return
+        }
+        notesTimeout.restart()
+    }
+    function stopGrowingNotes() {
+        notesTimeout.stop()
+        if (root.notesHandoff) root.launcherController.cancelGuestApplicationLaunch()
+        root.notesHandoff = false
+        root.notesGrowing = false
+        root.notesBoardToken = ""
+        root.launcherController.setDrawerExpanded(false)
     }
 
     // Something used lately opens: an application, or a file in its usual one,
@@ -500,6 +551,11 @@ Item {
                 event.accepted = true
                 return
             }
+            if (root.notesOpen) {
+                root.closeNotes()
+                event.accepted = true
+                return
+            }
             if (root.drawerProgress > 0.01) {
                 root.setDrawerOpen(false)
                 event.accepted = true
@@ -529,7 +585,7 @@ Item {
         // search.
         if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
                 && event.key !== Qt.Key_Tab && event.key !== Qt.Key_Backtab
-                && !query.activeFocus && event.text.length > 0
+                && !query.activeFocus && !root.notesOpen && event.text.length > 0
                 && !(event.modifiers & (Qt.ControlModifier
                     | Qt.AltModifier | Qt.MetaModifier))) {
             root.searchEngaged = true
@@ -563,6 +619,15 @@ Item {
             root.drawerOpen = false
             root.drawerProgress = 0
             root.sortMenuOpen = false
+            notesSettle.stop()
+            notesTimeout.stop()
+            notesExit.stop()
+            root.notesOpen = false
+            root.notesProgress = 0
+            root.notesGrowing = false
+            root.notesHandoff = false
+            root.notesBoardToken = ""
+            if (root.quickNote) root.quickNote.refresh()
             root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
@@ -581,6 +646,13 @@ Item {
             else root.setDrawerOpen(true, files ? "files" : "apps")
         }
         function onGuestLaunchReady() {
+            if (root.notesHandoff) {
+                notesTimeout.stop()
+                root.notesHandoff = false
+                root.guestExiting = true
+                launchReadyExit.restart()
+                return
+            }
             if (!root.applicationLaunchPending) {
                 return
             }
@@ -740,8 +812,9 @@ Item {
                 radius: height / 2
                 color: root.searchEngaged || query.text.length > 0
                     ? root.controlColor : "transparent"
-                opacity: root.applicationLaunchPending ? 0 : 1
-                enabled: !root.applicationLaunchPending
+                opacity: (root.applicationLaunchPending ? 0 : 1)
+                    * Math.max(0, 1 - root.notesProgress * 2)
+                enabled: !root.applicationLaunchPending && !root.notesOpen
                 border.width: 0
                 border.color: root.surfaceOutline
 
@@ -767,6 +840,9 @@ Item {
                     NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
                 }
                 Behavior on opacity {
+                    // The notes pad grows out of the field; its own motion
+                    // carries the fade.
+                    enabled: root.notesProgress <= 0 || root.notesProgress >= 1
                     NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
                 }
                 Behavior on color {
@@ -952,9 +1028,10 @@ Item {
                 width: searchField.compactWidth
                 height: 64
                 opacity: searchField.idle && fits && !root.applicationLaunchPending
-                    ? root.openingControls * Math.max(0, 1 - root.drawerProgress * 3) : 0
+                    ? root.openingControls * Math.max(0, 1 - root.drawerProgress * 3)
+                        * Math.max(0, 1 - root.notesProgress * 3) : 0
                 visible: opacity > 0
-                enabled: opacity > 0.5 && !root.drawerOpen
+                enabled: opacity > 0.5 && !root.drawerOpen && !root.notesOpen
                 transform: Translate { y: (1 - root.openingControls) * 10 }
 
                 Row {
@@ -1298,7 +1375,8 @@ Item {
                 width: parent.width
                 height: 48 - (48 - openHeight) * root.drawerProgress
                 opacity: (query.text.length === 0 || root.drawerOpen)
-                    && !root.applicationLaunchPending ? root.openingControls : 0
+                    && !root.applicationLaunchPending
+                    ? root.openingControls * (1 - root.notesProgress) : 0
                 transform: Translate { y: (1 - root.openingControls) * 10 }
                 enabled: opacity > 0.5
                 z: 4
@@ -1523,6 +1601,24 @@ Item {
                         }
                     }
                 }
+            }
+
+            NotesPane {
+                id: notesPane
+                objectName: "notes-pane"
+                anchors.fill: parent
+                z: 5
+                quickNote: root.quickNote
+                progress: root.notesProgress
+                fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
+                growing: root.notesGrowing
+                surfaceColor: root.surfaceColor
+                surfaceOutline: root.surfaceOutline
+                controlColor: root.controlColor
+                primaryText: root.primaryText
+                onBack: root.closeNotes()
+                onGrow: root.growNotes()
+                onFinished: root.launcherController.close()
             }
 
             Loader {
@@ -1840,6 +1936,44 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    NumberAnimation {
+        id: notesSettle
+        target: root
+        property: "notesProgress"
+        duration: 260
+        easing.type: Easing.OutCubic
+    }
+
+    // The board never arrived: back to the note.
+    Timer {
+        id: notesTimeout
+        interval: 10000
+        repeat: false
+        onTriggered: root.stopGrowingNotes()
+    }
+
+    // Over an Active card the board has taken the card's place under the
+    // grown window, which fades to show it.
+    NumberAnimation {
+        id: notesExit
+        target: sheet
+        property: "opacity"
+        to: 0
+        duration: 140
+        easing.type: Easing.OutCubic
+        onFinished: root.launcherController.finishLaunch()
+    }
+
+    Connections {
+        target: root.quickNote
+        ignoreUnknownSignals: true
+        function onBoardShown(requestToken) {
+            if (!root.notesGrowing || root.notesHandoff || requestToken !== root.notesBoardToken) return
+            notesTimeout.stop()
+            notesExit.restart()
         }
     }
 

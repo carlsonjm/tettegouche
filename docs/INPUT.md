@@ -16,7 +16,12 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click Apps or Files, under the search field | Opens that drawer. |
-| Tap or click Notes, after Files | Opens Gooseberry's quick-note sheet with the cursor in the note, and Search closes. Inside Kadunce's Spread, Spread comes back at once, with the sheet over it. Notes is there only while Gooseberry is installed. |
+| Tap or click Notes, after Files | The field becomes the note pad in the same window, with the cursor in it. Notes is there only while Gooseberry is installed. |
+| Type, in Notes | Writes the note; Gooseberry keeps it as you go. |
+| Tap or click Back, or `Esc`, in Notes | Returns to Search; Notes resumes the same note. |
+| Tap or click a colour or a place under Belongs to, in Notes | Sets the note's colour, or what it belongs to. |
+| Tap or click All notes, in Notes | Search grows and Gooseberry's board takes its place. |
+| Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tab, with nothing typed | Moves between Apps, Files, Notes and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |

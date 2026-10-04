@@ -12,6 +12,9 @@
 #include "OmniResults.h"
 #include "RelatedInfo.h"
 #include "NotesDoor.h"
+#include "QuickNote.h"
+
+#include <memory>
 #include "RecentUse.h"
 #include "ScreenShareProvider.h"
 #include <KIO/ApplicationLauncherJob>
@@ -605,6 +608,13 @@ public Q_SLOTS:
         return accepted;
     }
 
+    // The notes application's board, awaited in Spread as any launch from
+    // Search is, so its window takes Search's place.
+    Q_INVOKABLE bool beginGuestNotesLaunch()
+    {
+        return prepareGuestIdentity(QString::fromLatin1(NotesDoor::ApplicationId));
+    }
+
     Q_INVOKABLE void cancelGuestApplicationLaunch()
     {
         m_launchToken.clear();
@@ -1094,6 +1104,10 @@ int main(int argc, char **argv)
     const bool offerNotes = !application.arguments().contains(QStringLiteral("--no-notes"));
     NotesDoor notes;
     if (offerNotes) controller.setNotesDoor(&notes);
+    // The quick note itself, written in Search's window and kept by the notes
+    // application; asked for only while Notes is offered.
+    std::unique_ptr<QuickNote> quickNote;
+    if (offerNotes) quickNote = std::make_unique<QuickNote>();
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1131,6 +1145,7 @@ int main(int argc, char **argv)
          QVariant::fromValue(static_cast<QObject *>(&catalog))},
         {QStringLiteral("recentUse"), offerRecent ? QVariant::fromValue(static_cast<QObject *>(&recent)) : QVariant()},
         {QStringLiteral("notesDoor"), offerNotes ? QVariant::fromValue(static_cast<QObject *>(&notes)) : QVariant()},
+        {QStringLiteral("quickNote"), quickNote ? QVariant::fromValue(static_cast<QObject *>(quickNote.get())) : QVariant()},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

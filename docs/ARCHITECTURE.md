@@ -96,7 +96,10 @@ name, and launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
 service each start. Existing-window matching runs before launch.
 
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list
-each time Search opens, and runs it through `KIO::ApplicationLauncherJob`
+each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
+the session bus, and `NotesPane` draws the note in Search's window; with an
+older Gooseberry, `NotesDoor` runs the Capture action through
+`KIO::ApplicationLauncherJob` instead
 ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes).
 
 `RecentUse` reads KDE's record of use through PlasmaActivitiesStats when Search

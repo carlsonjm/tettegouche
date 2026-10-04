@@ -11,6 +11,9 @@ What is planned for Tettegouche, and what is not.
 
 ## Later
 
+- **Search:** Genie as one of Search's modes, as Notes is, once Split Rock
+  offers its conversation service; what was used lately below the pills.
+
 - **Files:** dates, item counts, selection size and free space; Desktop, Music
   and Videos in Places; pinning a folder; remembering sort and hidden files, and
   more sort orders; Share; Undo; a new file from a template; Duplicate, Copy

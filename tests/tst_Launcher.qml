@@ -18,6 +18,8 @@ TestCase {
         launcher.notesDoor = null
         notesStub.available = true
         notesStub.opened = 0
+        launcher.quickNote = null
+        quickStub.reset()
         controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
@@ -72,6 +74,13 @@ TestCase {
         property rect carriedSheet
         function carryOut(paths, sheet) { carried = paths; carriedSheet = sheet }
         function beginGuestWebLaunch() { return false }
+        property int notesLaunches: 0
+        property bool notesLaunchAccepted: true
+        function beginGuestNotesLaunch() { notesLaunches++; return guestMode && notesLaunchAccepted }
+        property int launchCancels: 0
+        function cancelGuestApplicationLaunch() { launchCancels++ }
+        property int handoffs: 0
+        function completeGuestHandoff() { handoffs++ }
         function searchWeb(text) { webSearches++; return true }
     }
     ListModel {
@@ -122,6 +131,47 @@ TestCase {
         property bool available: true
         property int opened: 0
         function open() { if (!available) return false; opened++; return true }
+    }
+    // Gooseberry's quick-note interface, as Search speaks it.
+    QtObject {
+        id: quickStub
+        property bool available: true
+        property bool open: false
+        property string text: ""
+        property string colour: "yellow"
+        property var colours: ["yellow", "rose", "teal", "green", "stone"]
+        property var colourHexes: ["#F2D98A", "#E8B4A8", "#9ED6CB", "#C9D89A", "#D9D4CC"]
+        readonly property string colourHex: colourHexes[colours.indexOf(colour)] || ""
+        property var choices: [{ kind: "window", label: "This window · Kate", project: "", chosen: false },
+                               { kind: "loose", label: "Loose", project: "", chosen: true }]
+        property string noteId: "note-1"
+        property bool kept: false
+        property bool readOnly: false
+        property string problem: ""
+        property int starts: 0
+        property var texts: []
+        property int flushes: 0
+        property string belongs: ""
+        property int dones: 0
+        property int tucks: 0
+        property var boards: []
+        property bool boardOpens: true
+        signal noteChanged()
+        signal boardShown(string requestToken)
+        function reset() {
+            available = true; open = false; text = ""; colour = "yellow"; starts = 0; texts = []
+            flushes = 0; belongs = ""; dones = 0; tucks = 0; boards = []; boardOpens = true
+        }
+        function refresh() {}
+        function start() { starts++; open = true; noteChanged() }
+        function setText(value) { texts = texts.concat([value]); text = value }
+        function flush() { flushes++ }
+        function setColour(name) { colour = name; noteChanged() }
+        function setBelongs(kind, project) { belongs = kind; noteChanged() }
+        function done() { dones++; open = false }
+        function tuckAway() { tucks++; open = false }
+        function remove() {}
+        function openBoard(token) { if (!boardOpens) return false; boards = boards.concat([token]); return true }
     }
     function fillRecent(n) {
         recentStub.clear()
@@ -1875,5 +1925,135 @@ TestCase {
         tryCompare(catalog, "descending", true)
         compare(launcher.sortMenuOpen, false)
         compare(controller.closes, 0)
+    }
+    function openNotesMode() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.closes = 0
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+    }
+    // Notes opens in Search's own window with the drawer's motion: the field
+    // becomes the note pad, the pills fade, Back and the note's controls come
+    // in, and the window keeps its size. Nothing is handed to Gooseberry's
+    // own card and Search stays open.
+    function test_notesModeOpensInSearch() {
+        const sheet = findChild(launcher, "launcher-sheet")
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        controller.closes = 0
+        const rest = Qt.size(sheet.width, sheet.height)
+        const field = findChild(launcher, "search-field")
+        const fieldAt = field.mapToItem(sheet, 0, 0)
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        verify(launcher.notesOpen)
+        compare(quickStub.starts, 1)
+        compare(notesStub.opened, 0)
+        compare(controller.closes, 0)
+        compare(controller.drawerExpanded, false)
+        const pad = findChild(launcher, "notes-pad")
+        tryCompare(launcher, "notesProgress", 1)
+        compare(sheet.width, rest.width)
+        compare(sheet.height, rest.height)
+        verify(field.opacity < 0.01)
+        verify(findChild(launcher, "first-row").opacity < 0.01)
+        const back = findChild(launcher, "notes-back")
+        const grow = findChild(launcher, "notes-all")
+        verify(back.opacity > 0.99 && grow.opacity > 0.99)
+        verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
+        verify(back.mapToItem(sheet, 0, 0).x < sheet.width / 2)
+        const padAt = pad.mapToItem(sheet, 0, 0)
+        verify(padAt.y > back.mapToItem(sheet, 0, back.height).y - 4)
+        verify(pad.width > field.width)
+        verify(pad.activeFocus)
+        // Back returns to Search, and the note stays open to resume.
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "notesProgress", 0)
+        verify(!launcher.notesOpen)
+        tryCompare(field, "opacity", 1)
+        compare(quickStub.dones, 0)
+        compare(controller.closes, 0)
+        compare(field.mapToItem(sheet, 0, 0).y, fieldAt.y)
+    }
+    // Esc steps back from the note to Search, then closes Search.
+    function test_notesModeEscape() {
+        openNotesMode()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "notesProgress", 0)
+        compare(controller.closes, 0)
+        keyClick(Qt.Key_Escape)
+        compare(controller.closes, 1)
+    }
+    // Typing goes to the note, not to search; colours and Belongs to are the
+    // note's; Done finishes it and Search closes.
+    function test_notesModeWrites() {
+        openNotesMode()
+        const pad = findChild(launcher, "notes-pad")
+        verify(pad.activeFocus)
+        keyClick(Qt.Key_H)
+        keyClick(Qt.Key_I)
+        compare(findChild(launcher, "search-query").text, "")
+        compare(quickStub.texts[quickStub.texts.length - 1], "hi")
+        const swatches = findChild(launcher, "notes-colours")
+        const teal = swatches.children[2]
+        mouseClick(teal, teal.width / 2, teal.height / 2)
+        compare(quickStub.colour, "teal")
+        const done = findChild(launcher, "notes-done")
+        mouseClick(done, done.width / 2, done.height / 2)
+        compare(quickStub.dones, 1)
+        compare(controller.closes, 1)
+    }
+    // Over an Active card, All notes grows the window as Apps does, opens the
+    // board, and fades once the board has drawn in the card's place.
+    function test_notesGrowOverActive() {
+        openNotesMode()
+        const grow = findChild(launcher, "notes-all")
+        mouseClick(grow, grow.width / 2, grow.height / 2)
+        verify(launcher.notesGrowing)
+        compare(controller.drawerExpanded, true)
+        compare(controller.notesLaunches, 1)
+        compare(quickStub.boards.length, 1)
+        compare(controller.closes, 0)
+        quickStub.boardShown("not-this-one")
+        wait(200)
+        compare(controller.closes, 0)
+        quickStub.boardShown(quickStub.boards[0])
+        tryCompare(controller, "closes", 1)
+    }
+    // In Spread, All notes grows the guest, Kadunce awaits the board's window,
+    // and Search leaves as it does for any launch.
+    function test_notesGrowInSpread() {
+        controller.guestMode = true
+        controller.handoffs = 0
+        openNotesMode()
+        const grow = findChild(launcher, "notes-all")
+        mouseClick(grow, grow.width / 2, grow.height / 2)
+        compare(controller.drawerExpanded, true)
+        compare(controller.notesLaunches, 1)
+        verify(launcher.notesHandoff)
+        quickStub.boardShown(quickStub.boards[0])
+        wait(200)
+        compare(controller.handoffs, 0)
+        controller.guestLaunchReady()
+        tryCompare(controller, "handoffs", 1)
+        controller.guestMode = false
+    }
+    // A board that cannot open brings the note back as it was.
+    function test_notesGrowRefused() {
+        openNotesMode()
+        quickStub.boardOpens = false
+        const grow = findChild(launcher, "notes-all")
+        mouseClick(grow, grow.width / 2, grow.height / 2)
+        verify(!launcher.notesGrowing)
+        compare(controller.drawerExpanded, false)
+        verify(launcher.notesOpen)
     }
 }

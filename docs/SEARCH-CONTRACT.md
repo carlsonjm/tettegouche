@@ -25,17 +25,32 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 
 ### Notes
 
-Notes opens Gooseberry's quick-note sheet. Gooseberry is a separate
+Notes is one of Search's modes. Gooseberry keeps the note; Search draws it in
+its own window and loads none of Gooseberry's code. Gooseberry is a separate
 application and Tettegouche never depends on it.
 
 - Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
   is installed with its Capture action, looked for each time Search opens and
-  whenever KDE's application list changes. Without it, or with an older
-  Gooseberry that lacks the action, the first screen has Apps and Files only.
-- Notes runs the Capture action, `gooseberry --capture`, and Search closes.
-  The sheet lies over the screen and is not a window, so Search does not wait
-  for one: inside Kadunce's Spread, Search ends its guest place at once rather
-  than holding it for an arriving card.
+  whenever KDE's application list changes. Without it, the first screen has
+  Apps and Files only.
+- Notes opens in the same window with the drawer's motion: the field becomes
+  the note pad, the pills fade, and Back, the note's five colours and All notes
+  come into the header where Apps has Back and its sort button. The window
+  keeps its size. Belongs to, Saved as you go, Tuck away and Done sit under the
+  pad. Back or `Esc` returns to Search and the note stays open, so Notes
+  resumes it; Done and Tuck away finish it and Search closes.
+- The note is Gooseberry's quick note over its session-bus interface, version
+  1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search). Typing is sent
+  half a second after it pauses and at least every three seconds, and on
+  closing; each change is written by Gooseberry before its reply.
+- All notes grows the window as Apps does, and Gooseberry's board, its own
+  window, takes the window's place with no Back. Inside Kadunce's Spread the
+  board is awaited as any launch from Search is. Over an Active card Search
+  fades once the board has drawn, since Kadunce puts it in the Active card's
+  place. A board that does not draw within ten seconds leaves the note as it
+  was.
+- An older Gooseberry without the interface keeps the earlier door: Notes runs
+  the Capture action and Search closes.
 - The widget's setting "Show Notes when Gooseberry is installed" is on by
   default; off, Notes is never offered.
 
