@@ -94,9 +94,15 @@ private Q_SLOTS:
         conversation.state[QStringLiteral("phase")] = QStringLiteral("ready");
         conversation.state[QStringLiteral("answer")] = QStringLiteral("It dims after two minutes.");
         conversation.state[QStringLiteral("steps")] = QStringList{QStringLiteral("Open Power Management.")};
+        conversation.state[QStringLiteral("more")] = QStringList{QStringLiteral("It saves power.")};
+        conversation.state[QStringLiteral("remember")] = QStringLiteral("You read on battery.");
+        conversation.state[QStringLiteral("fixed")] = true;
         Q_EMIT conversation.Changed(conversation.state);
         QTRY_COMPARE(genie.answer(), QStringLiteral("It dims after two minutes."));
         QCOMPARE(genie.steps(), QStringList{QStringLiteral("Open Power Management.")});
+        QCOMPARE(genie.more(), QStringList{QStringLiteral("It saves power.")});
+        QCOMPARE(genie.remember(), QStringLiteral("You read on battery."));
+        QVERIFY(genie.fixed());
         QVERIFY(!genie.canDoIt());
         QCOMPARE(genie.doItReason(), QStringLiteral("Not yet"));
 
@@ -163,9 +169,10 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(genie.phase() == QLatin1String("answering") || !genie.answer().isEmpty(), 5000);
         QTRY_COMPARE_WITH_TIMEOUT(genie.phase(), QStringLiteral("ready"), 15000);
         QVERIFY(!genie.answer().isEmpty());
-        // Keep this arrives with the notebook: refused, and said why.
+        // Keep this files the answer in the notebook.
         genie.act(QStringLiteral("keep"));
-        QTRY_VERIFY_WITH_TIMEOUT(!genie.problem().isEmpty(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(genie.kept(), 5000);
+        QVERIFY(genie.problem().isEmpty());
         QSignalSpy shown(&genie, &GenieChat::windowShown);
         QVERIFY(genie.openWindow(QStringLiteral("token-real")));
         QTRY_COMPARE_WITH_TIMEOUT(shown.count(), 1, 10000);

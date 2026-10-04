@@ -67,8 +67,11 @@ code, and Tettegouche never depends on it.
 - Genie opens in the same window with the drawer's motion: the field travels
   into the header and holds the question, Back comes in on its left and Expand
   on its right, and the answer arrives below. The window keeps its size.
-  Enter asks; a suggestion is asked as typed. An answer offers Do it, Show me
-  how and Keep this; Stop ends one in progress. Before an assistant is chosen
+  Enter asks; a suggestion is asked as typed. An answer shows its steps and
+  any paragraphs after them, and offers Do it where it asks for a change, Show
+  me how, Keep this and That fixed it; Stop ends one in progress. What Genie
+  offers to remember about the person is asked as "Remember that?", and
+  written only after Remember. Before an assistant is chosen
   or signed in, Genie says so and Open Genie finishes it in Genie's window.
   Back or `Esc` returns to Search and the conversation stays.
 - Expand grows the window as Apps does, and Genie's own window takes its place

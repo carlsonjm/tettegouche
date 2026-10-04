@@ -24,6 +24,8 @@ than repeat it.
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click Genie, after Notes | The field travels into the header for the question, in the same window. Genie is there only while Split Rock answers. |
 | Type, then Enter, or tap a suggestion, in Genie | Asks Genie; the answer arrives below. |
+| Tap or click Keep this or That fixed it, in Genie | Files the answer in Genie's notebook, or records that it fixed the problem. |
+| Tap or click Remember or Not now, in Genie | Genie writes down what it offered to remember about you, or leaves it. |
 | Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
 | Tap or click Expand, in Genie | Search grows and Genie's own window takes its place. |
 | Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |

@@ -192,6 +192,9 @@ TestCase {
         property bool canDoIt: false
         property string doItReason: "Changes come in a later version."
         property bool kept: false
+        property var more: []
+        property string remember: ""
+        property bool fixed: false
         property string problem: ""
         property int starts: 0
         property var asked: []
@@ -202,13 +205,19 @@ TestCase {
         signal windowShown(string requestToken)
         function reset() {
             available = true; phase = "ready"; question = ""; answer = ""; steps = []; kept = false
+            more = []; remember = ""; fixed = false
             problem = ""; starts = 0; asked = []; acts = []; cancels = 0; windows = []
         }
         function refresh() {}
         function start() { starts++ }
         function ask(text) { asked = asked.concat([text]); question = text; phase = "answering"; conversationChanged() }
         function cancel() { cancels++; phase = "ready" }
-        function act(action) { acts = acts.concat([action]); if (action === "keep") kept = true }
+        function act(action) {
+            acts = acts.concat([action])
+            if (action === "keep") kept = true
+            if (action === "fixed") fixed = true
+            if (action === "remember" || action === "dont-remember") remember = ""
+        }
         function openWindow(token) { windows = windows.concat([token]); return true }
     }
     function fillRecent(n) {
@@ -2214,5 +2223,30 @@ TestCase {
         tryVerify(function() { return open.visible })
         mouseClick(open, open.width / 2, open.height / 2)
         compare(genieStub.windows.length, 1)
+    }
+    // A longer answer shows its other paragraphs; That fixed it is offered
+    // beside Keep this; Remember that? asks before anything is written.
+    function test_genieRemembers() {
+        openGenieMode()
+        genieStub.answer = "Your screen dims on battery."
+        genieStub.steps = ["Open Power Management."]
+        genieStub.more = ["It saves power while you read."]
+        genieStub.remember = "You read on battery most evenings."
+        genieStub.phase = "ready"
+        genieStub.conversationChanged()
+        const more = findChild(launcher, "genie-more")
+        tryVerify(function() { return more && more.visible })
+        compare(more.text, "It saves power while you read.")
+        const fixed = findChild(launcher, "genie-fixed")
+        tryVerify(function() { return fixed.visible && fixed.width > 0 })
+        wait(50)
+        mouseClick(fixed, fixed.width / 2, fixed.height / 2)
+        tryCompare(fixed, "label", "Fixed")
+        const offer = findChild(launcher, "genie-remember-offer")
+        verify(offer.visible)
+        const notNow = findChild(launcher, "genie-not-now")
+        mouseClick(notNow, notNow.width / 2, notNow.height / 2)
+        compare(genieStub.acts, ["fixed", "dont-remember"])
+        tryVerify(function() { return !offer.visible })
     }
 }

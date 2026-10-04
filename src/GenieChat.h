@@ -24,6 +24,9 @@ class GenieChat : public QObject
     Q_PROPERTY(QString question READ question NOTIFY conversationChanged)
     Q_PROPERTY(QString answer READ answer NOTIFY conversationChanged)
     Q_PROPERTY(QStringList steps READ steps NOTIFY conversationChanged)
+    Q_PROPERTY(QStringList more READ more NOTIFY conversationChanged)
+    Q_PROPERTY(QString remember READ remember NOTIFY conversationChanged)
+    Q_PROPERTY(bool fixed READ fixed NOTIFY conversationChanged)
     Q_PROPERTY(QStringList suggestions READ suggestions NOTIFY conversationChanged)
     Q_PROPERTY(bool canDoIt READ canDoIt NOTIFY conversationChanged)
     Q_PROPERTY(QString doItReason READ doItReason NOTIFY conversationChanged)
@@ -46,6 +49,11 @@ public:
     QString answer() const { return text(QStringLiteral("answer")); }
     QStringList steps() const { return m_state.value(QStringLiteral("steps")).toStringList(); }
     QStringList suggestions() const { return m_state.value(QStringLiteral("suggestions")).toStringList(); }
+    // Added within version 1: the answer's paragraphs after its steps, what
+    // the assistant offers to remember about the person, and That fixed it.
+    QStringList more() const { return m_state.value(QStringLiteral("more")).toStringList(); }
+    QString remember() const { return text(QStringLiteral("remember")); }
+    bool fixed() const { return m_state.value(QStringLiteral("fixed")).toBool(); }
     bool canDoIt() const { return m_state.value(QStringLiteral("canDoIt")).toBool(); }
     QString doItReason() const { return text(QStringLiteral("doItReason")); }
     bool kept() const { return m_state.value(QStringLiteral("kept")).toBool(); }
@@ -57,7 +65,7 @@ public:
     Q_INVOKABLE void start();
     Q_INVOKABLE void ask(const QString &question);
     Q_INVOKABLE void cancel();
-    // "keep", "show-me-how" or "do-it".
+    // "keep", "show-me-how", "do-it", "remember", "dont-remember" or "fixed".
     Q_INVOKABLE void act(const QString &action);
     // The assistant's full window, on this conversation. The token comes back
     // in windowShown once the window has drawn.

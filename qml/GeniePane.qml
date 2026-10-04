@@ -209,6 +209,20 @@ Item {
                         }
                     }
                 }
+                // The answer's other paragraphs, after its steps.
+                Repeater {
+                    model: pane.genie && pane.phase !== "failed" ? pane.genie.more : []
+                    delegate: Text {
+                        required property string modelData
+                        objectName: "genie-more"
+                        width: answerColumn.width
+                        text: modelData
+                        wrapMode: Text.Wrap
+                        color: "#E4E4EA"
+                        font.pixelSize: 15
+                        lineHeight: 1.3
+                    }
+                }
                 // With nothing asked yet, the assistant's suggestions.
                 Flow {
                     width: parent.width
@@ -272,6 +286,43 @@ Item {
                         label: pane.genie && pane.genie.kept ? words.i18n("Kept") : words.i18n("Keep this")
                         tall: true
                         onActivated: pane.genie.act("keep")
+                    }
+                    Pill {
+                        objectName: "genie-fixed"
+                        label: pane.genie && pane.genie.fixed ? words.i18n("Fixed") : words.i18n("That fixed it")
+                        tall: true
+                        onActivated: pane.genie.act("fixed")
+                    }
+                }
+                // What the assistant offers to remember about the person:
+                // written only once Remember is chosen.
+                Column {
+                    objectName: "genie-remember-offer"
+                    width: parent.width
+                    spacing: 8
+                    visible: !!pane.genie && pane.genie.remember !== ""
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.Wrap
+                        color: pane.primaryText
+                        font.pixelSize: 14
+                        text: pane.genie ? words.i18n("Remember that? %1", pane.genie.remember) : ""
+                    }
+                    Row {
+                        spacing: 8
+                        Pill {
+                            objectName: "genie-remember"
+                            label: words.i18n("Remember")
+                            tall: true
+                            light: true
+                            onActivated: pane.genie.act("remember")
+                        }
+                        Pill {
+                            objectName: "genie-not-now"
+                            label: words.i18n("Not now")
+                            tall: true
+                            onActivated: pane.genie.act("dont-remember")
+                        }
                     }
                 }
                 Text {
