@@ -12,6 +12,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerRecentDefault
     property bool cfg_offerNotes
     property bool cfg_offerNotesDefault
+    property bool cfg_offerGenie
+    property bool cfg_offerGenieDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -37,6 +39,12 @@ KCMUtils.SimpleKCM {
             text: i18n("Show Notes when Gooseberry is installed")
             checked: cfg_offerNotes
             onToggled: cfg_offerNotes = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show Genie when Split Rock is installed")
+            checked: cfg_offerGenie
+            onToggled: cfg_offerGenie = checked
         }
 
         QQC2.CheckBox {

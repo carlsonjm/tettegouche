@@ -75,6 +75,8 @@ qt_add_executable(tettegouche
     src/NotesDoor.h
     src/QuickNote.cpp
     src/QuickNote.h
+    src/GenieChat.cpp
+    src/GenieChat.h
     src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
     src/FileDetails.cpp src/FileDetails.h
@@ -83,12 +85,13 @@ qt_add_executable(tettegouche
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/SuiteIcon.qml
+    FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/GeniePane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
         assets/icons/lucide/maximize-2.svg
+        assets/icons/suite/genie.svg
         assets/icons/lucide/square.svg
         assets/icons/lucide/skip-back.svg
         assets/icons/lucide/play.svg
@@ -244,6 +247,13 @@ if(BUILD_TESTING)
     add_test(NAME quick-note-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:quick-note-test>)
     set_tests_properties(quick-note-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90 SKIP_RETURN_CODE 77)
+    qt_add_executable(genie-chat-test tests/GenieChatTest.cpp src/GenieChat.cpp src/GenieChat.h)
+    target_include_directories(genie-chat-test PRIVATE src)
+    target_link_libraries(genie-chat-test PRIVATE Qt6::DBus Qt6::Test)
+    # A stand-in for Split Rock's conversation, on a private bus.
+    add_test(NAME genie-chat-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:genie-chat-test>)
+    set_tests_properties(genie-chat-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     add_test(NAME recent-use-record-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent-use.sh $<TARGET_FILE:recent-use-test>)
     set_tests_properties(recent-use-record-test PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)

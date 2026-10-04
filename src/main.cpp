@@ -13,6 +13,7 @@
 #include "RelatedInfo.h"
 #include "NotesDoor.h"
 #include "QuickNote.h"
+#include "GenieChat.h"
 
 #include <memory>
 #include "RecentUse.h"
@@ -615,6 +616,12 @@ public Q_SLOTS:
         return prepareGuestIdentity(QString::fromLatin1(NotesDoor::ApplicationId));
     }
 
+    // The assistant's full window, awaited the same way.
+    Q_INVOKABLE bool beginGuestGenieLaunch()
+    {
+        return prepareGuestIdentity(QString::fromLatin1(GenieChat::ApplicationId));
+    }
+
     Q_INVOKABLE void cancelGuestApplicationLaunch()
     {
         m_launchToken.clear();
@@ -1108,6 +1115,10 @@ int main(int argc, char **argv)
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;
     if (offerNotes) quickNote = std::make_unique<QuickNote>();
+    // Genie's chat, kept by Split Rock; with the setting off, never offered.
+    const bool offerGenie = !application.arguments().contains(QStringLiteral("--no-genie"));
+    std::unique_ptr<GenieChat> genie;
+    if (offerGenie) genie = std::make_unique<GenieChat>();
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1146,6 +1157,7 @@ int main(int argc, char **argv)
         {QStringLiteral("recentUse"), offerRecent ? QVariant::fromValue(static_cast<QObject *>(&recent)) : QVariant()},
         {QStringLiteral("notesDoor"), offerNotes ? QVariant::fromValue(static_cast<QObject *>(&notes)) : QVariant()},
         {QStringLiteral("quickNote"), quickNote ? QVariant::fromValue(static_cast<QObject *>(quickNote.get())) : QVariant()},
+        {QStringLiteral("genie"), genie ? QVariant::fromValue(static_cast<QObject *>(genie.get())) : QVariant()},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

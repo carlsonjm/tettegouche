@@ -100,7 +100,10 @@ each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
 the session bus, and `NotesPane` draws the note in Search's window; with an
 older Gooseberry, `NotesDoor` runs the Capture action through
 `KIO::ApplicationLauncherJob` instead
-([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes).
+([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes). `GenieChat` speaks Split
+Rock's conversation interface the same way and `GeniePane` draws it (§ Genie).
+Both modes share the launcher's mode state, its drawer easing and its hand-off
+to the application's own window.
 
 `RecentUse` reads KDE's record of use through PlasmaActivitiesStats when Search
 opens, for the first screen ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § First

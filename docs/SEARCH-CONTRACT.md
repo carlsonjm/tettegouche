@@ -54,6 +54,30 @@ application and Tettegouche never depends on it.
 - The widget's setting "Show Notes when Gooseberry is installed" is on by
   default; off, Notes is never offered.
 
+### Genie
+
+Genie is one of Search's modes, as Notes is. Split Rock keeps the
+conversation; Search draws it in its own window and loads none of Split Rock's
+code, and Tettegouche never depends on it.
+
+- Genie is offered while Split Rock's conversation service is running or can
+  be started from the session bus and answers version 1
+  (`io.github.carlsonjm.splitrock`, `/Conversation`). Without it, the first
+  screen has no Genie.
+- Genie opens in the same window with the drawer's motion: the field travels
+  into the header and holds the question, Back comes in on its left and Expand
+  on its right, and the answer arrives below. The window keeps its size.
+  Enter asks; a suggestion is asked as typed. An answer offers Do it, Show me
+  how and Keep this; Stop ends one in progress. Before an assistant is chosen
+  or signed in, Genie says so and Open Genie finishes it in Genie's window.
+  Back or `Esc` returns to Search and the conversation stays.
+- Expand grows the window as Apps does, and Genie's own window takes its place
+  with no Back: inside Kadunce's Spread through its launch hand-off, over an
+  Active card once the window has drawn. A window that does not draw within ten
+  seconds leaves Genie as it was.
+- The widget's setting "Show Genie when Split Rock is installed" is on by
+  default; off, Genie is never offered.
+
 ## Eligibility and confidence
 
 1. Scope decides eligibility, not authorship. Everyday hides quiet collections,

@@ -31,11 +31,23 @@ Item {
     // off. Notes is one of Search's modes while the notes application speaks
     // its interface, and opens that application's own card otherwise.
     property var quickNote: null
-    property bool notesOpen: false
-    property real notesProgress: 0
-    property bool notesGrowing: false
-    property bool notesHandoff: false
-    property string notesBoardToken: ""
+    // Genie's chat, kept by Split Rock; null when the setting is off.
+    property var genie: null
+    // Search's modes, Notes and Genie: each opens in this window with the
+    // drawer's motion and grows into its application's own window. The shown
+    // mode stays while it closes, until its motion ends.
+    property string modeShown: ""
+    property bool modeOpen: false
+    property real modeProgress: 0
+    property bool modeGrowing: false
+    property bool modeHandoff: false
+    property string modeToken: ""
+    readonly property bool notesOpen: modeOpen && modeShown === "notes"
+    readonly property real notesProgress: modeShown === "notes" ? modeProgress : 0
+    readonly property bool notesGrowing: modeGrowing && modeShown === "notes"
+    readonly property bool notesHandoff: modeHandoff && modeShown === "notes"
+    readonly property bool genieOpen: modeOpen && modeShown === "genie"
+    readonly property real genieProgress: modeShown === "genie" ? modeProgress : 0
     property bool filesMode: false
     focus: true
     readonly property color primaryText: "#f2ffffff"
@@ -173,9 +185,9 @@ Item {
                     }
                 }
                 SuiteIcon {
-                    visible: pill.glyph === "files" || pill.glyph === "notes"
+                    visible: pill.glyph === "files" || pill.glyph === "notes" || pill.glyph === "genie"
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: pill.glyph === "notes" ? "sticky-note" : "folder-open"
+                    glyph: pill.glyph === "notes" ? "sticky-note" : pill.glyph === "genie" ? "genie" : "folder-open"
                     width: 18
                     height: 18
                 }
@@ -422,54 +434,74 @@ Item {
         return false
     }
 
-    // Notes opens in Search's window with the drawer's motion; the field
-    // becomes the note pad and the window keeps its size. An older notes
-    // application without the interface gets its own card, and Search closes.
+    // A mode opens in Search's window with the drawer's motion and the
+    // window keeps its size: Notes turns the field into the note pad, Genie
+    // carries it into the header with the question.
+    function openMode(name) {
+        const client = name === "notes" ? root.quickNote : root.genie
+        if (!client || !client.available || root.modeGrowing) return false
+        client.start()
+        root.modeShown = name
+        root.modeOpen = true
+        root.sortMenuOpen = false
+        modeSettle.to = 1
+        modeSettle.restart()
+        if (name === "notes") notesPane.focusPad()
+        else geniePane.focusField()
+        return true
+    }
+    // An older notes application without the interface gets its own card,
+    // and Search closes.
     function openNotes() {
-        if (root.quickNote && root.quickNote.available) {
-            root.quickNote.start()
-            root.notesOpen = true
-            root.sortMenuOpen = false
-            notesSettle.to = 1
-            notesSettle.restart()
-            notesPane.focusPad()
-            return true
-        }
+        if (root.openMode("notes")) return true
         if (!root.notesDoor || !root.notesDoor.open()) return false
         root.launcherController.finishLaunch()
         return true
     }
-    function closeNotes() {
-        if (!root.notesOpen || root.notesGrowing) return
-        root.quickNote.flush()
-        root.notesOpen = false
-        notesSettle.to = 0
-        notesSettle.restart()
+    function openGenie() { return root.openMode("genie") }
+    function closeMode() {
+        if (!root.modeOpen || root.modeGrowing) return
+        if (root.modeShown === "notes") root.quickNote.flush()
+        root.modeOpen = false
+        modeSettle.to = 0
+        modeSettle.restart()
         root.forceActiveFocus()
     }
-    // All notes grows the window as Apps does, and the board's own window
-    // takes its place: in Spread through Kadunce's launch, over an Active card
-    // once the board has drawn, since Kadunce puts it in the card's place.
-    function growNotes() {
-        if (!root.notesOpen || root.notesGrowing) return
-        root.notesGrowing = true
-        root.notesBoardToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
+    function closeNotes() { root.closeMode() }
+    // All notes and Expand grow the window as Apps does, and the
+    // application's own window takes its place: in Spread through Kadunce's
+    // launch, over an Active card once it has drawn, since Kadunce puts it in
+    // the card's place.
+    function growMode() {
+        if (!root.modeOpen || root.modeGrowing) return
+        const notes = root.modeShown === "notes"
+        root.modeGrowing = true
+        root.modeToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
         root.launcherController.setDrawerExpanded(true)
-        root.notesHandoff = root.launcherController.guestMode
-            && root.launcherController.beginGuestNotesLaunch()
-        if (!root.quickNote.openBoard(root.notesBoardToken)) {
-            root.stopGrowingNotes()
+        root.modeHandoff = root.launcherController.guestMode
+            && (notes ? root.launcherController.beginGuestNotesLaunch()
+                      : root.launcherController.beginGuestGenieLaunch())
+        const opened = notes ? root.quickNote.openBoard(root.modeToken)
+                             : root.genie.openWindow(root.modeToken)
+        if (!opened) {
+            root.stopGrowingMode()
             return
         }
-        notesTimeout.restart()
+        modeTimeout.restart()
     }
-    function stopGrowingNotes() {
-        notesTimeout.stop()
-        if (root.notesHandoff) root.launcherController.cancelGuestApplicationLaunch()
-        root.notesHandoff = false
-        root.notesGrowing = false
-        root.notesBoardToken = ""
+    function growNotes() { root.growMode() }
+    function stopGrowingMode() {
+        modeTimeout.stop()
+        if (root.modeHandoff) root.launcherController.cancelGuestApplicationLaunch()
+        root.modeHandoff = false
+        root.modeGrowing = false
+        root.modeToken = ""
         root.launcherController.setDrawerExpanded(false)
+    }
+    function modeWindowShown(requestToken) {
+        if (!root.modeGrowing || root.modeHandoff || requestToken !== root.modeToken) return
+        modeTimeout.stop()
+        modeExit.restart()
     }
 
     // Something used lately opens: an application, or a file in its usual one,
@@ -551,8 +583,8 @@ Item {
                 event.accepted = true
                 return
             }
-            if (root.notesOpen) {
-                root.closeNotes()
+            if (root.modeOpen) {
+                root.closeMode()
                 event.accepted = true
                 return
             }
@@ -585,7 +617,7 @@ Item {
         // search.
         if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
                 && event.key !== Qt.Key_Tab && event.key !== Qt.Key_Backtab
-                && !query.activeFocus && !root.notesOpen && event.text.length > 0
+                && !query.activeFocus && !root.modeOpen && event.text.length > 0
                 && !(event.modifiers & (Qt.ControlModifier
                     | Qt.AltModifier | Qt.MetaModifier))) {
             root.searchEngaged = true
@@ -619,15 +651,17 @@ Item {
             root.drawerOpen = false
             root.drawerProgress = 0
             root.sortMenuOpen = false
-            notesSettle.stop()
-            notesTimeout.stop()
-            notesExit.stop()
-            root.notesOpen = false
-            root.notesProgress = 0
-            root.notesGrowing = false
-            root.notesHandoff = false
-            root.notesBoardToken = ""
+            modeSettle.stop()
+            modeTimeout.stop()
+            modeExit.stop()
+            root.modeOpen = false
+            root.modeShown = ""
+            root.modeProgress = 0
+            root.modeGrowing = false
+            root.modeHandoff = false
+            root.modeToken = ""
             if (root.quickNote) root.quickNote.refresh()
+            if (root.genie) root.genie.refresh()
             root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
@@ -646,9 +680,9 @@ Item {
             else root.setDrawerOpen(true, files ? "files" : "apps")
         }
         function onGuestLaunchReady() {
-            if (root.notesHandoff) {
-                notesTimeout.stop()
-                root.notesHandoff = false
+            if (root.modeHandoff) {
+                modeTimeout.stop()
+                root.modeHandoff = false
                 root.guestExiting = true
                 launchReadyExit.restart()
                 return
@@ -813,8 +847,8 @@ Item {
                 color: root.searchEngaged || query.text.length > 0
                     ? root.controlColor : "transparent"
                 opacity: (root.applicationLaunchPending ? 0 : 1)
-                    * Math.max(0, 1 - root.notesProgress * 2)
-                enabled: !root.applicationLaunchPending && !root.notesOpen
+                    * Math.max(0, 1 - root.modeProgress * 2)
+                enabled: !root.applicationLaunchPending && !root.modeOpen
                 border.width: 0
                 border.color: root.surfaceOutline
 
@@ -842,7 +876,7 @@ Item {
                 Behavior on opacity {
                     // The notes pad grows out of the field; its own motion
                     // carries the fade.
-                    enabled: root.notesProgress <= 0 || root.notesProgress >= 1
+                    enabled: root.modeProgress <= 0 || root.modeProgress >= 1
                     NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
                 }
                 Behavior on color {
@@ -1015,6 +1049,7 @@ Item {
                 readonly property real pillsWidth: appsPill.width
                     + (filesPill.visible ? pillGap + filesPill.width : 0)
                     + (notesPill.visible ? pillGap + notesPill.width : 0)
+                    + (geniePill.visible ? pillGap + geniePill.width : 0)
                 readonly property real naturalWidth: pillsWidth
                     + (offered > 0 ? divide + Math.min(offered, most) * tileWidth : 0)
                 readonly property int shownCount: offered > 0 ? Math.max(0, Math.min(offered, most,
@@ -1029,9 +1064,9 @@ Item {
                 height: 64
                 opacity: searchField.idle && fits && !root.applicationLaunchPending
                     ? root.openingControls * Math.max(0, 1 - root.drawerProgress * 3)
-                        * Math.max(0, 1 - root.notesProgress * 3) : 0
+                        * Math.max(0, 1 - root.modeProgress * 3) : 0
                 visible: opacity > 0
-                enabled: opacity > 0.5 && !root.drawerOpen && !root.notesOpen
+                enabled: opacity > 0.5 && !root.drawerOpen && !root.modeOpen
                 transform: Translate { y: (1 - root.openingControls) * 10 }
 
                 Row {
@@ -1060,6 +1095,14 @@ Item {
                         glyph: "notes"
                         visible: root.notesDoor !== null && root.notesDoor.available
                         onActivated: root.openNotes()
+                    }
+                    FirstPill {
+                        id: geniePill
+                        objectName: "genie-pill"
+                        label: words.i18n("Genie")
+                        glyph: "genie"
+                        visible: root.genie !== null && root.genie.available
+                        onActivated: root.openGenie()
                     }
                 }
                 Rectangle {
@@ -1376,7 +1419,7 @@ Item {
                 height: 48 - (48 - openHeight) * root.drawerProgress
                 opacity: (query.text.length === 0 || root.drawerOpen)
                     && !root.applicationLaunchPending
-                    ? root.openingControls * (1 - root.notesProgress) : 0
+                    ? root.openingControls * (1 - root.modeProgress) : 0
                 transform: Translate { y: (1 - root.openingControls) * 10 }
                 enabled: opacity > 0.5
                 z: 4
@@ -1611,7 +1654,7 @@ Item {
                 quickNote: root.quickNote
                 progress: root.notesProgress
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
-                growing: root.notesGrowing
+                growing: root.modeGrowing
                 surfaceColor: root.surfaceColor
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
@@ -1619,6 +1662,24 @@ Item {
                 onBack: root.closeNotes()
                 onGrow: root.growNotes()
                 onFinished: root.launcherController.close()
+            }
+
+            GeniePane {
+                id: geniePane
+                objectName: "genie-pane"
+                anchors.fill: parent
+                z: 5
+                genie: root.genie
+                progress: root.genieProgress
+                fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
+                growing: root.modeGrowing
+                keysUp: root.keysUp
+                surfaceColor: root.surfaceColor
+                surfaceOutline: root.surfaceOutline
+                controlColor: root.controlColor
+                primaryText: root.primaryText
+                onBack: root.closeMode()
+                onGrow: root.growMode()
             }
 
             Loader {
@@ -1940,25 +2001,26 @@ Item {
     }
 
     NumberAnimation {
-        id: notesSettle
+        id: modeSettle
         target: root
-        property: "notesProgress"
+        property: "modeProgress"
         duration: 260
         easing.type: Easing.OutCubic
+        onFinished: if (!root.modeOpen && root.modeProgress <= 0) root.modeShown = ""
     }
 
-    // The board never arrived: back to the note.
+    // The application's window never arrived: back to the mode.
     Timer {
-        id: notesTimeout
+        id: modeTimeout
         interval: 10000
         repeat: false
-        onTriggered: root.stopGrowingNotes()
+        onTriggered: root.stopGrowingMode()
     }
 
-    // Over an Active card the board has taken the card's place under the
-    // grown window, which fades to show it.
+    // Over an Active card the application's window has taken the card's
+    // place under the grown window, which fades to show it.
     NumberAnimation {
-        id: notesExit
+        id: modeExit
         target: sheet
         property: "opacity"
         to: 0
@@ -1970,11 +2032,12 @@ Item {
     Connections {
         target: root.quickNote
         ignoreUnknownSignals: true
-        function onBoardShown(requestToken) {
-            if (!root.notesGrowing || root.notesHandoff || requestToken !== root.notesBoardToken) return
-            notesTimeout.stop()
-            notesExit.restart()
-        }
+        function onBoardShown(requestToken) { root.modeWindowShown(requestToken) }
+    }
+    Connections {
+        target: root.genie
+        ignoreUnknownSignals: true
+        function onWindowShown(requestToken) { root.modeWindowShown(requestToken) }
     }
 
     Timer {

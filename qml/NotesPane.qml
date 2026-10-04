@@ -282,71 +282,9 @@ Item {
         }
     }
 
-    // The suite's grey pill: 30 high in a 42 touch in the header, 44 below.
-    component Pill: Item {
-        id: pill
-        property string label
-        property string glyph: ""
-        property bool tall: false
-        property bool light: false
-        signal activated()
-        width: pillRow.implicitWidth + (tall ? 36 : 28)
-        height: tall ? 44 : 42
-        activeFocusOnTab: true
-        Accessible.role: Accessible.Button
-        Accessible.name: label
-        Accessible.onPressAction: pill.activated()
-        Keys.onReturnPressed: pill.activated()
-        Keys.onEnterPressed: pill.activated()
-        Keys.onSpacePressed: pill.activated()
-        Rectangle {
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width
-            height: pill.tall ? 44 : 30
-            radius: height / 2
-            scale: pillTap.pressed ? 1.04 : 1
-            Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-            color: pill.light ? (pillTap.pressed ? "#d8d8de" : pane.primaryText)
-                : pillTap.pressed ? "#4A4A4A" : pillHover.hovered ? "#333333" : pane.controlColor
-            Behavior on color { ColorAnimation { duration: 90 } }
-            Row {
-                id: pillRow
-                anchors.centerIn: parent
-                spacing: 6
-                SuiteIcon {
-                    visible: pill.glyph !== ""
-                    glyph: pill.glyph === "" ? "circle" : pill.glyph
-                    width: 14
-                    height: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Text {
-                    text: pill.label
-                    color: pill.light ? pane.surfaceColor : pane.primaryText
-                    font.pixelSize: pill.tall ? 14 : 13
-                    font.weight: pill.light ? Font.Black : Font.Normal
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-        }
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: -3
-            radius: height / 2
-            color: "transparent"
-            border.width: 1.5
-            border.color: "#b0ffffff"
-            visible: pill.activeFocus
-        }
-        HoverHandler {
-            id: pillHover
-            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-            cursorShape: Qt.PointingHandCursor
-        }
-        TapHandler {
-            id: pillTap
-            gesturePolicy: TapHandler.ReleaseWithinBounds
-            onTapped: pill.activated()
-        }
+    component Pill: ModePill {
+        primaryText: pane.primaryText
+        surfaceColor: pane.surfaceColor
+        controlColor: pane.controlColor
     }
 }

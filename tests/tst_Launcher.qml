@@ -20,6 +20,10 @@ TestCase {
         notesStub.opened = 0
         launcher.quickNote = null
         quickStub.reset()
+        launcher.genie = null
+        genieStub.reset()
+        controller.notesLaunches = 0
+        controller.genieLaunches = 0
         controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
@@ -81,6 +85,8 @@ TestCase {
         function cancelGuestApplicationLaunch() { launchCancels++ }
         property int handoffs: 0
         function completeGuestHandoff() { handoffs++ }
+        property int genieLaunches: 0
+        function beginGuestGenieLaunch() { genieLaunches++; return guestMode }
         function searchWeb(text) { webSearches++; return true }
     }
     ListModel {
@@ -172,6 +178,38 @@ TestCase {
         function tuckAway() { tucks++; open = false }
         function remove() {}
         function openBoard(token) { if (!boardOpens) return false; boards = boards.concat([token]); return true }
+    }
+    // Split Rock's conversation interface, as Search speaks it.
+    QtObject {
+        id: genieStub
+        property bool available: true
+        property string phase: "ready"
+        property string assistant: "Codex"
+        property string question: ""
+        property string answer: ""
+        property var steps: []
+        property var suggestions: ["Make the writing bigger", "Why is my battery draining?"]
+        property bool canDoIt: false
+        property string doItReason: "Changes come in a later version."
+        property bool kept: false
+        property string problem: ""
+        property int starts: 0
+        property var asked: []
+        property var acts: []
+        property int cancels: 0
+        property var windows: []
+        signal conversationChanged()
+        signal windowShown(string requestToken)
+        function reset() {
+            available = true; phase = "ready"; question = ""; answer = ""; steps = []; kept = false
+            problem = ""; starts = 0; asked = []; acts = []; cancels = 0; windows = []
+        }
+        function refresh() {}
+        function start() { starts++ }
+        function ask(text) { asked = asked.concat([text]); question = text; phase = "answering"; conversationChanged() }
+        function cancel() { cancels++; phase = "ready" }
+        function act(action) { acts = acts.concat([action]); if (action === "keep") kept = true }
+        function openWindow(token) { windows = windows.concat([token]); return true }
     }
     function fillRecent(n) {
         recentStub.clear()
@@ -2019,7 +2057,7 @@ TestCase {
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(launcher.notesGrowing)
         compare(controller.drawerExpanded, true)
-        compare(controller.notesLaunches, 1)
+        compare(controller.notesLaunches, 0)
         compare(quickStub.boards.length, 1)
         compare(controller.closes, 0)
         quickStub.boardShown("not-this-one")
@@ -2055,5 +2093,126 @@ TestCase {
         verify(!launcher.notesGrowing)
         compare(controller.drawerExpanded, false)
         verify(launcher.notesOpen)
+    }
+    function openGenieMode() {
+        launcher.fileBrowser = filesMock
+        launcher.genie = genieStub
+        controller.closes = 0
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const pill = findChild(launcher, "genie-pill")
+        verify(pill.visible)
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        tryCompare(launcher, "genieProgress", 1)
+    }
+    // Genie follows Files, and is there only while Split Rock answers.
+    function test_genieOffered() {
+        launcher.fileBrowser = filesMock
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const row = findChild(launcher, "first-row")
+        const genie = findChild(launcher, "genie-pill")
+        verify(!genie.visible)
+        launcher.genie = genieStub
+        verify(genie.visible)
+        compare(genie.label, "Genie")
+        compare(row.pillsWidth, findChild(launcher, "apps-pill").width + findChild(launcher, "files-pill").width
+            + genie.width + 2 * row.pillGap)
+        genieStub.available = false
+        verify(!genie.visible)
+    }
+    // Genie opens in Search's own window with the drawer's motion: the field
+    // travels into the header for the question, the answer comes below, and
+    // the window keeps its size.
+    function test_genieModeOpensInSearch() {
+        const sheet = findChild(launcher, "launcher-sheet")
+        launcher.fileBrowser = filesMock
+        launcher.genie = genieStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        controller.closes = 0
+        const rest = Qt.size(sheet.width, sheet.height)
+        const pill = findChild(launcher, "genie-pill")
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.genieOpen)
+        compare(genieStub.starts, 1)
+        tryCompare(launcher, "genieProgress", 1)
+        compare(sheet.width, rest.width)
+        compare(sheet.height, rest.height)
+        compare(controller.drawerExpanded, false)
+        verify(findChild(launcher, "search-field").opacity < 0.01)
+        const question = findChild(launcher, "genie-question")
+        verify(question.activeFocus)
+        const back = findChild(launcher, "genie-back")
+        const expand = findChild(launcher, "genie-expand")
+        const body = findChild(launcher, "genie-answer")
+        const fieldTop = question.mapToItem(sheet, 0, 0).y
+        verify(Math.abs(fieldTop - back.mapToItem(sheet, 0, back.height / 2).y) < question.height)
+        verify(body.mapToItem(sheet, 0, 0).y > fieldTop)
+        verify(expand.mapToItem(sheet, 0, 0).x > sheet.width / 2)
+        // Typing asks Genie, not search.
+        keyClick(Qt.Key_H)
+        keyClick(Qt.Key_I)
+        keyClick(Qt.Key_Return)
+        compare(genieStub.asked, ["hi"])
+        compare(findChild(launcher, "search-query").text, "")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "genieProgress", 0)
+        verify(!launcher.genieOpen)
+        compare(controller.closes, 0)
+    }
+    // A suggestion is asked as typed; an answer offers Do it, Show me how and
+    // Keep this; Stop cancels an answer in progress.
+    function test_genieModeAnswers() {
+        openGenieMode()
+        const suggestion = findChild(launcher, "genie-suggestion")
+        mouseClick(suggestion, suggestion.width / 2, suggestion.height / 2)
+        compare(genieStub.asked.length, 1)
+        const stop = findChild(launcher, "genie-stop")
+        tryVerify(function() { return stop.visible && stop.width > 0 })
+        wait(50)
+        mouseClick(stop, stop.width / 2, stop.height / 2)
+        compare(genieStub.cancels, 1)
+        genieStub.answer = "Your screen dims after 2 minutes on battery."
+        genieStub.steps = ["Open System Settings.", "Find Dim screen."]
+        genieStub.phase = "ready"
+        genieStub.conversationChanged()
+        const keep = findChild(launcher, "genie-keep")
+        tryVerify(function() { return keep.visible && keep.width > 0 })
+        wait(50)
+        mouseClick(keep, keep.width / 2, keep.height / 2)
+        compare(genieStub.acts, ["keep"])
+        tryCompare(keep, "label", "Kept")
+    }
+    // Expand grows the window and Genie's own window takes its place, over
+    // an Active card once it has drawn, and in Spread through Kadunce.
+    function test_genieExpands() {
+        openGenieMode()
+        const expand = findChild(launcher, "genie-expand")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, true)
+        compare(controller.genieLaunches, 0)
+        compare(genieStub.windows.length, 1)
+        genieStub.windowShown(genieStub.windows[0])
+        tryCompare(controller, "closes", 1)
+        controller.guestMode = true
+        controller.handoffs = 0
+        controller.drawerExpanded = false
+        openGenieMode()
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.genieLaunches, 1)
+        controller.guestLaunchReady()
+        tryCompare(controller, "handoffs", 1)
+        controller.guestMode = false
+    }
+    // Before an assistant is ready, Genie says what it needs, and Open Genie
+    // grows into its window to finish it.
+    function test_genieNeedsSignIn() {
+        genieStub.phase = "sign-in"
+        openGenieMode()
+        const open = findChild(launcher, "genie-open")
+        tryVerify(function() { return open.visible })
+        mouseClick(open, open.width / 2, open.height / 2)
+        compare(genieStub.windows.length, 1)
     }
 }

@@ -22,8 +22,12 @@ than repeat it.
 | Tap or click a colour or a place under Belongs to, in Notes | Sets the note's colour, or what it belongs to. |
 | Tap or click All notes, in Notes | Search grows and Gooseberry's board takes its place. |
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
+| Tap or click Genie, after Notes | The field travels into the header for the question, in the same window. Genie is there only while Split Rock answers. |
+| Type, then Enter, or tap a suggestion, in Genie | Asks Genie; the answer arrives below. |
+| Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
+| Tap or click Expand, in Genie | Search grows and Genie's own window takes its place. |
 | Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
-| Tab, with nothing typed | Moves between Apps, Files, Notes and what was used lately; Enter or Space opens the one focused. |
+| Tab, with nothing typed | Moves between Apps, Files, Notes, Genie and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
@@ -51,6 +55,7 @@ than repeat it.
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
 | Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
+| Setting "Show Genie when Split Rock is installed", off | Search never offers Genie. On, its default, Genie appears whenever Split Rock answers. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings

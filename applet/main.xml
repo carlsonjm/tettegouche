@@ -17,6 +17,10 @@
       <label>Show Notes in Search before anything is typed, when Gooseberry is installed</label>
       <default>true</default>
     </entry>
+    <entry name="offerGenie" type="Bool">
+      <label>Show Genie in Search before anything is typed, when Split Rock is installed</label>
+      <default>true</default>
+    </entry>
     <entry name="animateIndicator" type="Bool">
       <label>Animate the panel indicator when Tettegouche opens</label>
       <default>true</default>
