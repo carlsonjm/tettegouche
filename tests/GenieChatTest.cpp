@@ -10,7 +10,11 @@
 #include "GenieChat.h"
 
 #include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDBusContext>
+#include <QDir>
+#include <QProcess>
+#include <QTemporaryDir>
 #include <QSignalSpy>
 #include <QtTest>
 
@@ -109,6 +113,63 @@ private Q_SLOTS:
 
         bus.unregisterService(QString::fromLatin1(GenieChat::Service));
         bus.unregisterObject(QString::fromLatin1(GenieChat::Path));
+    }
+
+    // Against Split Rock itself, with its pretend assistant, in a home of its
+    // own and off screen. TETTEGOUCHE_TEST_GENIE names its program and
+    // TETTEGOUCHE_TEST_GENIE_SCRIPT the pretend assistant's script; without
+    // them this is skipped.
+    void againstSplitRock()
+    {
+        const QString program = qEnvironmentVariable("TETTEGOUCHE_TEST_GENIE");
+        const QString script = qEnvironmentVariable("TETTEGOUCHE_TEST_GENIE_SCRIPT");
+        if (program.isEmpty() || script.isEmpty()) QSKIP("Split Rock is not named for this run.");
+        QTemporaryDir home(QDir::tempPath() + QStringLiteral("/tettegouche-genie-XXXXXX"));
+        QVERIFY(home.isValid());
+        QDir().mkpath(home.filePath(QStringLiteral("config")));
+        QFile rc(home.filePath(QStringLiteral("config/split-rockrc")));
+        QVERIFY(rc.open(QIODevice::WriteOnly));
+        rc.write("[Assistant]\nchosen=pretend\n");
+        rc.close();
+        QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
+        environment.insert(QStringLiteral("HOME"), home.path());
+        for (const auto &[name, folder] : {std::pair{"XDG_DATA_HOME", "share"}, {"XDG_CONFIG_HOME", "config"},
+                                           {"XDG_CACHE_HOME", "cache"}, {"XDG_STATE_HOME", "state-home"}})
+            environment.insert(QString::fromLatin1(name), home.filePath(QString::fromLatin1(folder)));
+        environment.insert(QStringLiteral("QT_QPA_PLATFORM"), QStringLiteral("offscreen"));
+        environment.remove(QStringLiteral("WAYLAND_DISPLAY"));
+        environment.remove(QStringLiteral("DISPLAY"));
+        QProcess splitRock;
+        splitRock.setProcessEnvironment(environment);
+        splitRock.setProcessChannelMode(QProcess::ForwardedErrorChannel);
+        splitRock.start(program, {QStringLiteral("--background"), QStringLiteral("--assistants"),
+            home.filePath(QStringLiteral("no-adapters")), QStringLiteral("--state"), home.filePath(QStringLiteral("state")),
+            QStringLiteral("--pretend"), script});
+        QVERIFY(splitRock.waitForStarted());
+        auto cleanup = qScopeGuard([&splitRock] {
+            splitRock.terminate();
+            if (!splitRock.waitForFinished(5000)) splitRock.kill();
+        });
+        QTRY_VERIFY_WITH_TIMEOUT(QDBusConnection::sessionBus().interface()->isServiceRegistered(
+            QString::fromLatin1(GenieChat::Service)).value(), 15000);
+
+        GenieChat genie;
+        QTRY_VERIFY_WITH_TIMEOUT(genie.available(), 10000);
+        genie.start();
+        QTRY_COMPARE_WITH_TIMEOUT(genie.phase(), QStringLiteral("ready"), 15000);
+        QVERIFY(!genie.assistant().isEmpty());
+        QVERIFY(!genie.suggestions().isEmpty());
+        genie.ask(genie.suggestions().first());
+        QTRY_VERIFY_WITH_TIMEOUT(genie.phase() == QLatin1String("answering") || !genie.answer().isEmpty(), 5000);
+        QTRY_COMPARE_WITH_TIMEOUT(genie.phase(), QStringLiteral("ready"), 15000);
+        QVERIFY(!genie.answer().isEmpty());
+        // Keep this arrives with the notebook: refused, and said why.
+        genie.act(QStringLiteral("keep"));
+        QTRY_VERIFY_WITH_TIMEOUT(!genie.problem().isEmpty(), 5000);
+        QSignalSpy shown(&genie, &GenieChat::windowShown);
+        QVERIFY(genie.openWindow(QStringLiteral("token-real")));
+        QTRY_COMPARE_WITH_TIMEOUT(shown.count(), 1, 10000);
+        QCOMPARE(shown.first().first().toString(), QStringLiteral("token-real"));
     }
 };
 

@@ -250,8 +250,11 @@ Item {
                     width: parent.width
                     spacing: 8
                     visible: !!pane.genie && pane.phase === "ready" && pane.genie.answer !== ""
+                    // Do it, where the answer asks for a change: unavailable,
+                    // with why, until Genie may make it.
                     Pill {
                         objectName: "genie-do-it"
+                        visible: !!pane.genie && (pane.genie.canDoIt || pane.genie.doItReason !== "")
                         label: words.i18n("Do it")
                         tall: true
                         light: true
@@ -279,6 +282,17 @@ Item {
                     font.pixelSize: 13
                     text: pane.genie && pane.phase === "ready" && pane.genie.answer !== "" && !pane.genie.canDoIt
                         ? pane.genie.doItReason : ""
+                }
+                // Why the last request could not be done, outside a failed
+                // answer, which says it above.
+                Text {
+                    objectName: "genie-problem"
+                    width: parent.width
+                    visible: text !== ""
+                    wrapMode: Text.Wrap
+                    color: "#E08A80"
+                    font.pixelSize: 13
+                    text: pane.genie && pane.phase !== "failed" ? pane.genie.problem : ""
                 }
             }
         }
