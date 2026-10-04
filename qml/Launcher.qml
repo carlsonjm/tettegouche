@@ -24,6 +24,9 @@ Item {
     property var fileBrowser: null
     // What was used lately, offered before anything is typed.
     property var recentUse: null
+    // Gooseberry's quick note, offered while it is installed; null when the
+    // setting is off.
+    property var notesDoor: null
     property bool filesMode: false
     focus: true
     readonly property color primaryText: "#f2ffffff"
@@ -122,7 +125,7 @@ Item {
         }
     }
 
-    // A door on Search's first screen, Apps or Files: the suite's pill.
+    // A door on Search's first screen, Apps, Files or Notes: the suite's pill.
     component FirstPill: Item {
         id: pill
         property string label
@@ -161,9 +164,9 @@ Item {
                     }
                 }
                 SuiteIcon {
-                    visible: pill.glyph === "files"
+                    visible: pill.glyph === "files" || pill.glyph === "notes"
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: "folder-open"
+                    glyph: pill.glyph === "notes" ? "sticky-note" : "folder-open"
                     width: 18
                     height: 18
                 }
@@ -408,6 +411,14 @@ Item {
             root.launchingApplication = ""
         }
         return false
+    }
+
+    // Notes brings Gooseberry's quick-note sheet, which is not a window, so
+    // Search closes at once rather than waiting in Spread for one to arrive.
+    function openNotes() {
+        if (!root.notesDoor || !root.notesDoor.open()) return false
+        root.launcherController.finishLaunch()
+        return true
     }
 
     // Something used lately opens: an application, or a file in its usual one,
@@ -910,11 +921,11 @@ Item {
                 }
             }
 
-            // Before anything is typed: Apps and Files, then what was used
-            // lately and is neither pinned, open nor hidden, spaced evenly
-            // across the field's width. A narrow sheet keeps the two and as
-            // many of the rest as fit; with none of the rest, the two are
-            // centred.
+            // Before anything is typed: Apps, Files and, where Gooseberry is
+            // installed, Notes; then what was used lately and is neither
+            // pinned, open nor hidden, spaced evenly across the field's width.
+            // A narrow sheet keeps the doors and as many of the rest as fit;
+            // with none of the rest, the doors are centred.
             Item {
                 id: firstRow
                 objectName: "first-row"
@@ -927,6 +938,7 @@ Item {
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
                 readonly property real pillsWidth: appsPill.width
                     + (filesPill.visible ? pillGap + filesPill.width : 0)
+                    + (notesPill.visible ? pillGap + notesPill.width : 0)
                 readonly property real naturalWidth: pillsWidth
                     + (offered > 0 ? divide + Math.min(offered, most) * tileWidth : 0)
                 readonly property int shownCount: offered > 0 ? Math.max(0, Math.min(offered, most,
@@ -963,6 +975,14 @@ Item {
                         glyph: "files"
                         visible: root.fileBrowser !== null
                         onActivated: root.setDrawerOpen(true, "files")
+                    }
+                    FirstPill {
+                        id: notesPill
+                        objectName: "notes-pill"
+                        label: words.i18n("Notes")
+                        glyph: "notes"
+                        visible: root.notesDoor !== null && root.notesDoor.available
+                        onActivated: root.openNotes()
                     }
                 }
                 Rectangle {

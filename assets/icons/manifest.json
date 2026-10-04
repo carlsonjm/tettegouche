@@ -25,6 +25,7 @@
     "media-seek-forward": "rotate-cw",
     "action-eject": "eject",
     "action-show-in-files": "folder-open",
+    "door-notes": "sticky-note",
     "action-show-hidden": "eye",
     "action-keep-hidden": "eye-off",
     "drawer-back": "chevron-left"

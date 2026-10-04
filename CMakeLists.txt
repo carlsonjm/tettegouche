@@ -71,6 +71,8 @@ qt_add_executable(tettegouche
     src/ApplicationCatalog.h
     src/RecentUse.cpp
     src/RecentUse.h
+    src/NotesDoor.cpp
+    src/NotesDoor.h
     src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
     src/FileDetails.cpp src/FileDetails.h
@@ -101,6 +103,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/eye.svg
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
+        assets/icons/lucide/sticky-note.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-context
@@ -224,6 +227,13 @@ if(BUILD_TESTING)
     add_test(NAME recent-use-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:recent-use-test>)
     set_tests_properties(recent-use-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    qt_add_executable(notes-door-test tests/NotesDoorTest.cpp src/NotesDoor.cpp src/NotesDoor.h)
+    target_include_directories(notes-door-test PRIVATE src)
+    target_link_libraries(notes-door-test PRIVATE KF6::KIOGui KF6::Service Qt6::Test)
+    # A private bus, so starting the stand-in reaches no desktop service.
+    add_test(NAME notes-door-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:notes-door-test>)
+    set_tests_properties(notes-door-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     add_test(NAME recent-use-record-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent-use.sh $<TARGET_FILE:recent-use-test>)
     set_tests_properties(recent-use-record-test PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)

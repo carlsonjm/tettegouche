@@ -6,22 +6,38 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 
 ## First screen
 
-Before anything is typed, Search offers two doors, Apps and Files, and beside
-them what was used lately, newest first: at most six, as many as the width
-holds, spaced evenly to the field's width. Its source is KDE's record of use for
-the current activity, read when Search opens; Tettegouche tells that record each
-application it starts and each file it opens, and Plasma's privacy setting
-decides what is kept.
+Before anything is typed, Search offers its doors, Apps and Files, then Notes
+where Gooseberry is installed, and beside them what was used lately, newest
+first: at most six, as many as the width holds, spaced evenly to the field's
+width. Its source is KDE's record of use for the current activity, read when
+Search opens; Tettegouche tells that record each application it starts and
+each file it opens, and Plasma's privacy setting decides what is kept.
 
 - An application is offered unless it is open, pinned in the dock, hidden from
   Apps, hidden from menus, or Tettegouche itself.
 - A file is offered while it exists on this machine; a folder, a hidden file and
   anything remote are not.
 - Nothing is offered while the screen is shared or recorded, so no file's name
-  is on show; the two doors stay.
+  is on show; the doors stay.
 - Typing hands the room to the results.
-- The widget's setting "Show recent files and apps", off, leaves the two doors
+- The widget's setting "Show recent files and apps", off, leaves the doors
   alone, and nothing is read.
+
+### Notes
+
+Notes opens Gooseberry's quick-note sheet. Gooseberry is a separate
+application and Tettegouche never depends on it.
+
+- Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
+  is installed with its Capture action, looked for each time Search opens and
+  whenever KDE's application list changes. Without it, or with an older
+  Gooseberry that lacks the action, the first screen has Apps and Files only.
+- Notes runs the Capture action, `gooseberry --capture`, and Search closes.
+  The sheet lies over the screen and is not a window, so Search does not wait
+  for one: inside Kadunce's Spread, Search ends its guest place at once rather
+  than holding it for an arriving card.
+- The widget's setting "Show Notes when Gooseberry is installed" is on by
+  default; off, Notes is never offered.
 
 ## Eligibility and confidence
 

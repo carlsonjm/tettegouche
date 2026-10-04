@@ -15,6 +15,10 @@ TestCase {
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         recentStub.clear()
         recentStub.opened = []
+        launcher.notesDoor = null
+        notesStub.available = true
+        notesStub.opened = 0
+        controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
         controller.guestMode = false
@@ -36,8 +40,9 @@ TestCase {
         property int activatedRow: -1
         property int activationResult: 1
         function activateIfOpen(row) { activatedRow = row; return activationResult }
-        function beginGuestApplicationLaunch(row, catalog) { return false }
-        function beginGuestRecentLaunch(row) { return false }
+        property int guestLaunches: 0
+        function beginGuestApplicationLaunch(row, catalog) { guestLaunches++; return false }
+        function beginGuestRecentLaunch(row) { guestLaunches++; return false }
         property int catalogActivated: -1
         function activateCatalogIfOpen(row) { catalogActivated = row; return 1 }
         function finishLaunch() { closes++ }
@@ -110,6 +115,13 @@ TestCase {
         id: recentStub
         property var opened: []
         function open(row) { opened = opened.concat([row]); return true }
+    }
+    // Gooseberry's quick note, as the launcher's door offers it.
+    QtObject {
+        id: notesStub
+        property bool available: true
+        property int opened: 0
+        function open() { if (!available) return false; opened++; return true }
     }
     function fillRecent(n) {
         recentStub.clear()
@@ -539,6 +551,86 @@ TestCase {
         verify(findChild(launcher, "recent-0").activeFocus)
         keyClick(Qt.Key_Return)
         compare(recentStub.opened, [1, 2, 0])
+    }
+    // Without Gooseberry, or with Notes off, the first screen is Apps and
+    // Files alone, as before.
+    function test_notesAbsent() {
+        launcher.fileBrowser = filesMock
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const row = findChild(launcher, "first-row")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
+        const notes = findChild(launcher, "notes-pill")
+        verify(!notes.visible)
+        compare(row.pillsWidth, apps.width + row.pillGap + files.width)
+        launcher.notesDoor = notesStub
+        notesStub.available = false
+        verify(!notes.visible)
+        compare(row.pillsWidth, apps.width + row.pillGap + files.width)
+    }
+    // Where Gooseberry is installed, Notes follows Files: the same pill, the
+    // same height and gap, its own glyph and word, and the rest after it.
+    function test_notesOffered() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        fillRecent(8)
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const row = findChild(launcher, "first-row")
+        const files = findChild(launcher, "files-pill")
+        const notes = findChild(launcher, "notes-pill")
+        verify(notes.visible)
+        compare(notes.label, "Notes")
+        compare(notes.height, files.height)
+        compare(notes.mapToItem(row, 0, 0).x - files.mapToItem(row, files.width, 0).x, row.pillGap)
+        verify(findChild(launcher, "recent-0").x > notes.mapToItem(row, notes.width, 0).x)
+        compare(row.pillsWidth, findChild(launcher, "apps-pill").width + files.width + notes.width + 2 * row.pillGap)
+    }
+    // Notes brings the quick-note sheet by a click, a tap or Enter, and Search
+    // closes straight away: nothing waits for a window, in Spread or out.
+    function test_notesOpens() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        controller.closes = 0
+        controller.guestMode = true
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        compare(notesStub.opened, 1)
+        compare(controller.closes, 1)
+        verify(!launcher.applicationLaunchPending)
+        const touch = touchEvent(launcher)
+        touch.press(0, notes, notes.width / 2, notes.height / 2).commit()
+        wait(40)
+        touch.release(0, notes, notes.width / 2, notes.height / 2).commit()
+        tryCompare(notesStub, "opened", 2)
+        compare(controller.closes, 2)
+        launcher.forceActiveFocus()
+        const apps = findChild(launcher, "apps-pill")
+        for (let i = 0; i < 6 && !apps.activeFocus; ++i) keyClick(Qt.Key_Tab)
+        verify(apps.activeFocus)
+        keyClick(Qt.Key_Tab)
+        verify(findChild(launcher, "files-pill").activeFocus)
+        keyClick(Qt.Key_Tab)
+        verify(notes.activeFocus)
+        keyClick(Qt.Key_Return)
+        compare(notesStub.opened, 3)
+        compare(controller.closes, 3)
+        compare(controller.guestLaunches, 0)
+        controller.guestMode = false
+    }
+    // Gooseberry gone between opening Search and the tap: Search stays.
+    function test_notesGoneStaysOpen() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        controller.closes = 0
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        notesStub.available = false
+        verify(!launcher.openNotes())
+        compare(controller.closes, 0)
     }
     // At rest a pull opens nothing: Apps and Files are their own pills. The
     // open drawer's header still pulls down to close (test_drawerTopEdgeCloses).

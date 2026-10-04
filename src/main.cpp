@@ -11,6 +11,7 @@
 #include "TransferActivityBridge.h"
 #include "OmniResults.h"
 #include "RelatedInfo.h"
+#include "NotesDoor.h"
 #include "RecentUse.h"
 #include "ScreenShareProvider.h"
 #include <KIO/ApplicationLauncherJob>
@@ -464,6 +465,7 @@ public Q_SLOTS:
             m_recent->refresh();
             askPinned();
         }
+        if (m_notes) m_notes->refresh();
         m_view->show();
         m_view->requestActivate();
         Q_EMIT opened();
@@ -708,6 +710,7 @@ public:
             if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
         });
     }
+    void setNotesDoor(NotesDoor *notes) { m_notes = notes; }
     // What was used lately leaves out what the dock holds, what is open and
     // what is hidden from Apps, and is withheld while the screen is shared.
     void setRecentUse(RecentUse *recent) {
@@ -937,6 +940,7 @@ private:
     int m_relatedRevision = 0;
     ApplicationCatalog *m_catalog;
     RecentUse *m_recent = nullptr;
+    NotesDoor *m_notes = nullptr;
     QSet<QString> m_pinned;
     ScreenShareProvider m_shares{QDBusConnection::sessionBus()};
     WorkspaceContext m_context;
@@ -1086,6 +1090,10 @@ int main(int argc, char **argv)
         return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
     });
     if (offerRecent) controller.setRecentUse(&recent);
+    // With the setting off, the Notes door is never offered.
+    const bool offerNotes = !application.arguments().contains(QStringLiteral("--no-notes"));
+    NotesDoor notes;
+    if (offerNotes) controller.setNotesDoor(&notes);
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1122,6 +1130,7 @@ int main(int argc, char **argv)
         {QStringLiteral("applicationCatalog"),
          QVariant::fromValue(static_cast<QObject *>(&catalog))},
         {QStringLiteral("recentUse"), offerRecent ? QVariant::fromValue(static_cast<QObject *>(&recent)) : QVariant()},
+        {QStringLiteral("notesDoor"), offerNotes ? QVariant::fromValue(static_cast<QObject *>(&notes)) : QVariant()},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

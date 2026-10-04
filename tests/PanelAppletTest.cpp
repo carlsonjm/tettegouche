@@ -195,6 +195,13 @@ private Q_SLOTS:
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-recent")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
         m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerRecent"), true);
+        // With Notes off, Search is told so as it starts.
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerNotes"), false);
+        m_applet->activated();
+        QTRY_COMPARE(started.count(), 3);
+        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes")});
+        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerNotes"), true);
     }
 
     void repeatedActivationToggles()

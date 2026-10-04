@@ -10,6 +10,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_useKadunceDefault
     property bool cfg_offerRecent
     property bool cfg_offerRecentDefault
+    property bool cfg_offerNotes
+    property bool cfg_offerNotesDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -29,6 +31,12 @@ KCMUtils.SimpleKCM {
             text: i18n("Show recent files and apps")
             checked: cfg_offerRecent
             onToggled: cfg_offerRecent = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show Notes when Gooseberry is installed")
+            checked: cfg_offerNotes
+            onToggled: cfg_offerNotes = checked
         }
 
         QQC2.CheckBox {

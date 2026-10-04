@@ -16,8 +16,9 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click Apps or Files, under the search field | Opens that drawer. |
+| Tap or click Notes, after Files | Opens Gooseberry's quick-note sheet with the cursor in the note, and Search closes. Inside Kadunce's Spread, Spread comes back at once, with the sheet over it. Notes is there only while Gooseberry is installed. |
 | Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
-| Tab, with nothing typed | Moves between Apps, Files and what was used lately; Enter or Space opens the one focused. |
+| Tab, with nothing typed | Moves between Apps, Files, Notes and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
@@ -43,7 +44,8 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Show recent files and apps", off | Search opens with Apps and Files alone under the field, and nothing used lately is read. |
+| Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
+| Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings

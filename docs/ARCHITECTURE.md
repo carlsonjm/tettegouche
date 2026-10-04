@@ -95,6 +95,10 @@ Apps reads visible applications from `KApplicationTrader`, sorts by display
 name, and launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
 service each start. Existing-window matching runs before launch.
 
+`NotesDoor` looks for Gooseberry's Capture action in KDE's application list
+each time Search opens, and runs it through `KIO::ApplicationLauncherJob`
+([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes).
+
 `RecentUse` reads KDE's record of use through PlasmaActivitiesStats when Search
 opens, for the first screen ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § First
 screen). What the dock pins comes from the Bottom Surface's

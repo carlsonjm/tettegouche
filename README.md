@@ -25,9 +25,10 @@ key to Tettegouche there. Every other input is in [docs/INPUT.md](docs/INPUT.md)
 
 ## Search
 
-Tap the dot in the panel. Before you type, Search offers Apps and Files, and
-beside them what you used lately: files, and applications that are not already
-open or pinned in the dock. Start typing and Search can find:
+Tap the dot in the panel. Before you type, Search offers Apps and Files, Notes
+where Gooseberry is installed, and beside them what you used lately: files, and
+applications that are not already open or pinned in the dock. Start typing and
+Search can find:
 
 - Installed applications
 - Indexed files and recent documents
