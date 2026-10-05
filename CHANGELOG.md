@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- The installer restarts the panel, so the new widget runs without a
+  sign-out, and says whether it loaded.
+- A copy of many files no longer writes a line per file to the system
+  journal.
 - Before anything is typed, Search offers Apps and Files as pills under the
   field, and beside them what you used lately: files, and applications that
   are not open, pinned in the dock or hidden. They are spaced evenly to the

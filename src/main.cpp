@@ -49,6 +49,7 @@
 #include <QInputMethod>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QLoggingCategory>
 #include <QLockFile>
 #include <QQmlEngine>
 #include <QQuickView>
@@ -1028,6 +1029,10 @@ int main(int argc, char **argv)
         qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("wayland"));
     }
 
+    // KIO's file worker runs in this process and writes a debug line for each
+    // file it copies, which on a large copy floods the system journal. Its
+    // debug output stays off unless QT_LOGGING_RULES asks for it.
+    QLoggingCategory::setFilterRules(QStringLiteral("kf.kio.*.debug=false"));
     QGuiApplication application(argc, argv);
     // The launcher's words, in C++ and in QML through KI18n, come from this catalog.
     KLocalizedString::setApplicationDomain(QByteArrayLiteral("tettegouche"));
