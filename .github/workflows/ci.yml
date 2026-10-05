@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  arch:
+    # Builds and tests against the KDE and Qt packages Arch ships today.
+    name: Arch (current)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    timeout-minutes: 60
+    steps:
+      - name: Install the build stack
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git base-devel cmake ninja extra-cmake-modules python ripgrep dbus \
+            qt6-base qt6-declarative qt6-svg \
+            kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice \
+            bluez-qt solid kirigami kpackage layer-shell-qt libplasma \
+            plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt
+
+      - uses: actions/checkout@v4
+        with:
+          # The public-text check reads the messages of commits not yet on main.
+          fetch-depth: 0
+
+      - name: Verify
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          CMAKE_GENERATOR=Ninja ./verify.sh
