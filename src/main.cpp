@@ -163,6 +163,9 @@ public:
         , m_guestAllowed(guestAllowed)
     {
         connect(&m_related, &RelatedInfo::changed, this, [this]() { ++m_relatedRevision; Q_EMIT relatedChanged(); });
+        m_lateQuit.setSingleShot(true);
+        m_lateQuit.setInterval(1000);
+        connect(&m_lateQuit, &QTimer::timeout, qApp, &QGuiApplication::quit);
         auto bus = QDBusConnection::sessionBus();
         bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
                     QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("workspaceContextChanged"),
@@ -458,6 +461,7 @@ public Q_SLOTS:
     Q_SCRIPTABLE void open()
     {
         m_quitAfterFiles=false;
+        m_lateQuit.stop();
         m_launchToken.clear();
         endGuestLease();
         tryBeginGuest();
@@ -787,13 +791,15 @@ private:
     }
     FileBrowser *m_fileBrowser=nullptr;
     bool m_quitAfterFiles=false;
+    // The second a failed copy is given to reach Ambient; reopening stops it.
+    QTimer m_lateQuit;
     // Files carried out are offered until the other application takes them.
     bool m_carrying=false;
     void finishOrDeferQuit() {
         m_quitAfterFiles=true;
         if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
         // A copy that just failed is told to Ambient before the launcher goes.
-        if (m_fileBrowser && m_fileBrowser->failedJustNow()) QTimer::singleShot(1000, qApp, &QGuiApplication::quit);
+        if (m_fileBrowser && m_fileBrowser->failedJustNow()) m_lateQuit.start();
         else QGuiApplication::quit();
     }
     static QDBusMessage guestMethod(const QString &method)
