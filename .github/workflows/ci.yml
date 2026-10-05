@@ -20,13 +20,15 @@ jobs:
     steps:
       - name: Install the build stack
         run: |
+          # The last line is what a Plasma desktop opens and draws Files'
+          # fixtures with: a text editor, a PDF viewer, and thumbnailers.
           pacman -Syu --noconfirm --needed \
             git base-devel cmake ninja extra-cmake-modules python ripgrep dbus \
             qt6-base qt6-declarative qt6-svg \
             kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice \
             bluez-qt solid kirigami kpackage layer-shell-qt libplasma \
             plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt \
-            kate
+            kate okular ffmpegthumbs kdegraphics-thumbnailers
           # The words check reads its test catalogs only under a real locale.
           sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
           locale-gen
