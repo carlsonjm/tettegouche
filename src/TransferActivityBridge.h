@@ -1,5 +1,7 @@
 #pragma once
+#include <QJsonArray>
 #include <QObject>
+#include <QTimer>
 class FileBrowser;
 class TransferActivityBridge : public QObject {
     Q_OBJECT
@@ -14,6 +16,11 @@ public Q_SLOTS:
 Q_SIGNALS:
     void changed(const QString &snapshot);
 private:
+    QJsonArray rows() const;
+    void publish();
     FileBrowser *m_files;
+    QTimer m_pending;
+    QJsonArray m_lastRows;
+    bool m_published = false;
     quint64 m_revision = 0;
 };
