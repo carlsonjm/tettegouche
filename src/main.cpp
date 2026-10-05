@@ -730,6 +730,11 @@ public:
         connect(browser,&FileBrowser::operationChanged,this,[this] {
             if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
         });
+        // A copy that meets a name already taken waits for an answer; the
+        // launcher comes back to Files to ask it rather than wait unseen.
+        connect(browser,&FileBrowser::questionChanged,this,[this] {
+            if (!m_view->isVisible() && !m_fileBrowser->question().isEmpty()) showFiles();
+        });
     }
     void setNotesDoor(NotesDoor *notes) { m_notes = notes; }
     // What was used lately leaves out what the dock holds, what is open and
