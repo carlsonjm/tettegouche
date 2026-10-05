@@ -145,7 +145,9 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 ## Lifecycle and activity
 
 - Closing or handing off hides the launcher and releases its Kadunce guest
-  immediately. An outstanding job defers process exit until it finishes.
+  immediately. An outstanding job defers process exit until it finishes. A
+  job that meets a name already taken while the launcher is closed reopens it
+  on Files to ask.
 - Reopening cancels deferred quit and restores current operation status. Late
   errors remain available to the reopened process.
 - The launcher exports a revisioned snapshot of its copies and moves, and
