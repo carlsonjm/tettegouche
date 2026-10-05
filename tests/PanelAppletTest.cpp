@@ -40,10 +40,19 @@ public Q_SLOTS:
 
 #include "LauncherKeys.h"
 
+// Plasma 6.8 numbers screens with uint where 6.7 used int; the test corona
+// overrides screenGeometry with whichever its Plasma declares.
+template<typename> struct CoronaScreenArgument;
+template<typename Class, typename Result, typename Argument>
+struct CoronaScreenArgument<Result (Class::*)(Argument) const> {
+    using type = Argument;
+};
+using CoronaScreenId = CoronaScreenArgument<decltype(&Plasma::Corona::screenGeometry)>::type;
+
 class TestCorona : public Plasma::Corona
 {
 public:
-    QRect screenGeometry(int) const override { return QRect(0, 0, 1280, 800); }
+    QRect screenGeometry(CoronaScreenId) const override { return QRect(0, 0, 1280, 800); }
 };
 
 class PanelAppletTest : public QObject
