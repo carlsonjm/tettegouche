@@ -27,6 +27,8 @@ private:
     };
     void drain();
     void arm();
+    void watchParent();
+    void unwatchParent();
     void touch(const QString &name, bool settling);
     void scheduleExpiry();
     void expire();
