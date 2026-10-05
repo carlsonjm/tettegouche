@@ -144,6 +144,9 @@ Run the repository checks before proposing a build:
 ./verify.sh
 ```
 
+GitHub runs the same checks on every pull request and on `main`, against the
+Qt and KDE packages Arch Linux ships at the time.
+
 ## License
 
 Tettegouche is licensed under GPL-2.0-or-later.
