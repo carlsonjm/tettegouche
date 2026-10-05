@@ -22,9 +22,8 @@ IncomingFileProvider::IncomingFileProvider(const QString &directory, QObject *pa
     connect(&m_expiry, &QTimer::timeout, this, &IncomingFileProvider::expire);
     m_fd = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
     if (m_fd < 0) return;
-    m_parentWatch = inotify_add_watch(m_fd, QFile::encodeName(QFileInfo(m_directory).absolutePath()).constData(),
-                                    IN_CREATE | IN_MOVED_TO | IN_DELETE | IN_MOVED_FROM);
     arm();
+    if (m_watch < 0) watchParent();
     m_notifier = new QSocketNotifier(m_fd, QSocketNotifier::Read, this);
     connect(m_notifier, &QSocketNotifier::activated, this, &IncomingFileProvider::drain);
     // No baseline admission: only subsequent create/move/write events create rows.
@@ -39,6 +38,21 @@ void IncomingFileProvider::arm() {
         IN_CREATE | IN_MODIFY | IN_ATTRIB | IN_CLOSE_WRITE | IN_MOVED_FROM | IN_MOVED_TO
         | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF | IN_ONLYDIR | IN_DONT_FOLLOW);
     m_entries.clear(); m_moves.clear(); m_expiry.stop();
+}
+// The parent (normally the home folder) is watched only while the folder is
+// missing, to see it come back; watching it always would wake the panel for
+// every file saved there.
+void IncomingFileProvider::watchParent() {
+    if (m_parentWatch < 0)
+        m_parentWatch = inotify_add_watch(m_fd, QFile::encodeName(QFileInfo(m_directory).absolutePath()).constData(),
+                                          IN_CREATE | IN_MOVED_TO | IN_ONLYDIR);
+    // The folder may have come back before the parent was watched.
+    arm();
+    if (m_watch >= 0) unwatchParent();
+}
+void IncomingFileProvider::unwatchParent() {
+    if (m_parentWatch >= 0) inotify_rm_watch(m_fd, m_parentWatch);
+    m_parentWatch = -1;
 }
 void IncomingFileProvider::touch(const QString &name, bool settling) {
     const auto path = QDir(m_directory).filePath(name);
@@ -62,14 +76,25 @@ void IncomingFileProvider::drain() {
             const auto *event = reinterpret_cast<const inotify_event *>(buffer + offset);
             offset += sizeof(inotify_event) + event->len;
             const QString name = event->len ? QFile::decodeName(event->name) : QString();
-            if (event->mask & IN_Q_OVERFLOW) { arm(); changed = true; continue; }
+            if (event->mask & IN_Q_OVERFLOW) {
+                arm();
+                if (m_watch < 0) watchParent();
+                changed = true; continue;
+            }
             if (event->wd == m_parentWatch) {
-                if (name == QFileInfo(m_directory).fileName()) { arm(); changed = true; }
+                if (name == QFileInfo(m_directory).fileName()) {
+                    arm();
+                    if (m_watch >= 0) unwatchParent();
+                    changed = true;
+                }
                 continue;
             }
             if (event->wd != m_watch) continue;
             if (event->mask & (IN_DELETE_SELF | IN_MOVE_SELF | IN_UNMOUNT | IN_IGNORED)) {
-                m_watch = -1; m_entries.clear(); m_moves.clear(); changed = true; continue;
+                if (!(event->mask & IN_IGNORED)) inotify_rm_watch(m_fd, m_watch);
+                m_watch = -1; m_entries.clear(); m_moves.clear(); changed = true;
+                watchParent();
+                continue;
             }
             if (name.isEmpty() || (event->mask & IN_ISDIR)) continue;
             if ((event->mask & (IN_ATTRIB | IN_CLOSE_WRITE)) && !m_entries.contains(name)) continue;
