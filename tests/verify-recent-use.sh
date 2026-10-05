@@ -12,7 +12,11 @@ if [[ "${2:-}" != "--inside" ]]; then
         echo "skip: KDE's activity service is not installed here"
         exit 77
     fi
-    work="$(mktemp -d "${TMPDIR:-/tmp}/tette-used.XXXXXX")"
+    # KDE's activity service records nothing under /tmp, so the throwaway home
+    # lives elsewhere.
+    tmp="${TMPDIR:-/tmp}"
+    [[ "${tmp}" == /tmp || "${tmp}" == /tmp/* ]] && tmp=/var/tmp
+    work="$(mktemp -d "${tmp}/tette-used.XXXXXX")"
     trap 'rm -rf -- "${work}"' EXIT
     mkdir -p "${work}/runtime" "${work}/home"
     chmod 700 "${work}/runtime"
