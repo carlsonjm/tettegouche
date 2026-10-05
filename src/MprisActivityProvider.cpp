@@ -187,8 +187,9 @@ private:
 MprisActivityProvider::MprisActivityProvider(const QDBusConnection &bus, QObject *parent)
     : QObject(parent), m_bus(bus) {
     // Watch only player names: every NameOwnerChanged on the bus would wake
-    // the panel for each short-lived client that connects.
-    auto *players = new QDBusServiceWatcher(QStringLiteral("org.mpris.MediaPlayer2.*"), bus,
+    // the panel for each short-lived client that connects. No dot before the
+    // star: Qt drops the star, and the bus refuses a namespace ending in a dot.
+    auto *players = new QDBusServiceWatcher(QStringLiteral("org.mpris.MediaPlayer2*"), bus,
                                             QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(players, &QDBusServiceWatcher::serviceOwnerChanged, this, &MprisActivityProvider::ownerChanged);
     auto *pending = new QDBusPendingCallWatcher(bus.interface()->asyncCall(QStringLiteral("ListNames")), this);
