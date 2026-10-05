@@ -1,5 +1,6 @@
 #pragma once
 #include <QJsonArray>
+#include <QElapsedTimer>
 #include <QObject>
 #include <QTimer>
 class FileBrowser;
@@ -20,6 +21,8 @@ private:
     void publish();
     FileBrowser *m_files;
     QTimer m_pending;
+    QTimer m_later;
+    QElapsedTimer m_sinceTold;
     QJsonArray m_lastRows;
     bool m_published = false;
     quint64 m_revision = 0;
