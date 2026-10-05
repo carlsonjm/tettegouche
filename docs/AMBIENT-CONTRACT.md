@@ -121,7 +121,7 @@ window moving or restacking is not read.
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
-of each copy or move and UUID-checked Cancel, Pause and Resume over its activity
+of each copy or move, one for each change to its rows, and UUID-checked Cancel, Pause and Resume over its activity
 D-Bus interface. A copy or move that failed stays in the snapshots for ten
 seconds as a failed row, which the applet reports once as an end (§ Ends); a
 hidden launcher waits a second after such a failure before it quits. The applet validates

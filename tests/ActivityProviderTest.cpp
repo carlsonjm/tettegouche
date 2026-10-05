@@ -897,6 +897,25 @@ private Q_SLOTS:
         none.invoke(id, generation, QStringLiteral("raise"));
     }
 
+    // Files' news arrives in bursts, a progress tick reporting bytes, files
+    // and folders apart; the launcher tells each burst once, and nothing when
+    // the rows are the same.
+    void tetteBridgeTellsEachChangeOnce() {
+        QTemporaryDir dir;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        FileBrowser files;
+        TransferActivityBridge bridge(&files);
+        QSignalSpy told(&bridge,&TransferActivityBridge::changed);
+        for(int i=0;i<4;++i) Q_EMIT files.operationChanged();
+        QTRY_COMPARE(told.size(),1);
+        const auto first=QJsonDocument::fromJson(told.first().first().toString().toUtf8()).object();
+        Q_EMIT files.operationChanged(); Q_EMIT files.operationChanged();
+        QTest::qWait(50);
+        QCOMPARE(told.size(),1);
+        QCOMPARE(QJsonDocument::fromJson(bridge.snapshot().toUtf8()).object().value(QStringLiteral("revision")),
+                 first.value(QStringLiteral("revision")));
+    }
     void tetteBridgeLifecycle() {
         QTemporaryDir dir;
         QSettings::setDefaultFormat(QSettings::IniFormat);

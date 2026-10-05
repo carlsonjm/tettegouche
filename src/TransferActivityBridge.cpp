@@ -5,11 +5,26 @@
 #include <QJsonArray>
 TransferActivityBridge::TransferActivityBridge(FileBrowser *files, QObject *parent)
     : QObject(parent), m_files(files) {
-    connect(files, &FileBrowser::operationChanged, this, [this] { ++m_revision; Q_EMIT changed(snapshot()); });
+    // KIO reports bytes, files and folders apart in one progress tick, and
+    // Files' other news shares the same signal. One pass of the event loop is
+    // told once, and only when the rows themselves changed.
+    m_pending.setSingleShot(true);
+    m_pending.setInterval(0);
+    connect(&m_pending, &QTimer::timeout, this, &TransferActivityBridge::publish);
+    connect(files, &FileBrowser::operationChanged, &m_pending, qOverload<>(&QTimer::start));
+}
+QJsonArray TransferActivityBridge::rows() const {
+    return QJsonArray::fromVariantList(m_files->activitySnapshot());
+}
+void TransferActivityBridge::publish() {
+    const auto now = rows();
+    if (m_published && now == m_lastRows) return;
+    m_published = true; m_lastRows = now; ++m_revision;
+    Q_EMIT changed(snapshot());
 }
 QString TransferActivityBridge::snapshot() const {
     return QString::fromUtf8(QJsonDocument(QJsonObject{{QStringLiteral("revision"), qint64(m_revision)},
-        {QStringLiteral("activities"), QJsonArray::fromVariantList(m_files->activitySnapshot())}}).toJson(QJsonDocument::Compact));
+        {QStringLiteral("activities"), rows()}}).toJson(QJsonDocument::Compact));
 }
 void TransferActivityBridge::cancel(const QString &id) { m_files->cancelActivity(id); }
 void TransferActivityBridge::suspend(const QString &id) { m_files->suspendActivity(id); }
