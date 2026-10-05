@@ -3,6 +3,7 @@
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -12,7 +13,8 @@ const QString path = QStringLiteral("/Activities");
 const QString iface = QStringLiteral("io.github.carlsonjm.Tettegouche.Activities1");
 }
 TetteTransferProvider::TetteTransferProvider(const QDBusConnection &bus, QObject *parent) : QObject(parent), m_bus(bus) {
-    connect(bus.interface(), &QDBusConnectionInterface::serviceOwnerChanged, this, &TetteTransferProvider::ownerChanged);
+    auto *watcher = new QDBusServiceWatcher(service, bus, QDBusServiceWatcher::WatchForOwnerChange, this);
+    connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &TetteTransferProvider::ownerChanged);
     auto *lookup = new QDBusPendingCallWatcher(bus.interface()->asyncCall(QStringLiteral("GetNameOwner"), service), this);
     const auto generation = m_generation;
     connect(lookup, &QDBusPendingCallWatcher::finished, this, [this,lookup,generation] {

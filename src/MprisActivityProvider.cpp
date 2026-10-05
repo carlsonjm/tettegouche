@@ -5,6 +5,7 @@
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QUrl>
@@ -178,8 +179,11 @@ private:
 
 MprisActivityProvider::MprisActivityProvider(const QDBusConnection &bus, QObject *parent)
     : QObject(parent), m_bus(bus) {
-    connect(bus.interface(), &QDBusConnectionInterface::serviceOwnerChanged,
-            this, &MprisActivityProvider::ownerChanged);
+    // Watch only player names: every NameOwnerChanged on the bus would wake
+    // the panel for each short-lived client that connects.
+    auto *players = new QDBusServiceWatcher(QStringLiteral("org.mpris.MediaPlayer2.*"), bus,
+                                            QDBusServiceWatcher::WatchForOwnerChange, this);
+    connect(players, &QDBusServiceWatcher::serviceOwnerChanged, this, &MprisActivityProvider::ownerChanged);
     auto *pending = new QDBusPendingCallWatcher(bus.interface()->asyncCall(QStringLiteral("ListNames")), this);
     connect(pending, &QDBusPendingCallWatcher::finished, this, [this, pending] {
         const QDBusPendingReply<QStringList> reply = *pending; pending->deleteLater();
