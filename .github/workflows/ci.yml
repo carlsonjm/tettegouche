@@ -25,7 +25,13 @@ jobs:
             qt6-base qt6-declarative qt6-svg \
             kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice \
             bluez-qt solid kirigami kpackage layer-shell-qt libplasma \
-            plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt
+            plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt \
+            kate
+          # The words check reads its test catalogs only under a real locale.
+          sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+          locale-gen
+          # Files' checks need a person who cannot read or write everywhere.
+          useradd --create-home user
 
       - uses: actions/checkout@v4
         with:
@@ -34,5 +40,6 @@ jobs:
 
       - name: Verify
         run: |
-          git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          CMAKE_GENERATOR=Ninja ./verify.sh
+          chown -R user: "$GITHUB_WORKSPACE"
+          runuser -u user -- env HOME=/home/user LANG=en_US.UTF-8 \
+            CMAKE_GENERATOR=Ninja ./verify.sh
