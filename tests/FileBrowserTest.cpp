@@ -124,7 +124,11 @@ private Q_SLOTS:
         browser.refresh(); QTRY_VERIFY(!browser.busy()); browser.setSelectedPath(renamed);
         browser.renameSelected(QStringLiteral("target")); QTRY_VERIFY(!browser.working());
         QVERIFY(QFile::exists(renamed)); QVERIFY(QFileInfo(root.filePath(QStringLiteral("target"))).isDir());
+        // The refused rename can leave a re-listing running, and a paste or
+        // cut while listing is ignored, so both wait for the folder first.
+        QTRY_VERIFY(!browser.busy());
         browser.cutSelected(); QVERIFY(browser.canPaste());
+        QTRY_VERIFY(!browser.busy());
         browser.pasteInto(root.filePath(QStringLiteral("target"))); QTRY_VERIFY(!browser.working());
         const auto moved=root.filePath(QStringLiteral("target/after.txt"));
         QVERIFY(QFile::exists(moved)); QVERIFY(!QFile::exists(renamed)); QVERIFY(!browser.canPaste());
