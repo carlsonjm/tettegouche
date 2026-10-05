@@ -1,5 +1,6 @@
 #include "MprisActivityProvider.h"
 #include "ActivityUtils.h"
+#include <algorithm>
 #include <KLocalizedString>
 #include <QFile>
 #include <QDBusConnectionInterface>
@@ -117,7 +118,13 @@ private Q_SLOTS:
     void propertiesChanged(const QString &iface, const QVariantMap &values, const QStringList &invalid) {
         if (iface != rootInterface && iface != playerInterface) return;
         auto &target = iface == playerInterface ? player : root;
-        if (iface == playerInterface) advance();
+        // The position is a line from (position, sampleTime) at the current
+        // rate. Only a change of status or rate bends that line, so only then
+        // is it re-anchored; any other change leaves the row as it was.
+        static const QStringList bends{QStringLiteral("PlaybackStatus"), QStringLiteral("Rate")};
+        if (iface == playerInterface && std::any_of(bends.cbegin(), bends.cend(), [&](const QString &key) {
+                return values.contains(key) || invalid.contains(key); }))
+            advance();
         for (auto it = values.cbegin(); it != values.cend(); ++it) {
             revisions[iface + it.key()] = ++revision; target[it.key()] = it.value();
         }
