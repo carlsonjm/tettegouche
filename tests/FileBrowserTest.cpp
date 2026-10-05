@@ -524,16 +524,21 @@ private Q_SLOTS:
         QCOMPARE(cleared.count(),1); QCOMPARE(browser.path(),folder);
         QTRY_VERIFY(!browser.busy());
         browser.back(); QTRY_VERIFY_WITH_TIMEOUT(!browser.busy(),10000);
-        QTRY_VERIFY2_WITH_TIMEOUT(listed(browser)==expected,qPrintable(listed(browser).join(QStringLiteral(" | "))),5000);
+        // Opening the folder was a use too. The service stamps uses by the
+        // second, so the folder leads unless it shares a second with the file.
+        auto folderFirst=expected; folderFirst.removeAll(folder); folderFirst.prepend(folder);
+        QTRY_VERIFY2_WITH_TIMEOUT(listed(browser)==expected || listed(browser)==folderFirst,
+            qPrintable(listed(browser).join(QStringLiteral(" | "))),5000);
+        const auto shown=listed(browser);
         // A renamed file stays in its own folder and leaves Recent, which KDE
         // keeps by path.
-        const auto oldest=expected.last();
+        const auto oldest=shown.last();
         const auto renamed=QDir(QFileInfo(oldest).path()).filePath(QStringLiteral("renamed.txt"));
         browser.setSelectedPath(oldest); browser.renameSelected(QStringLiteral("renamed.txt"));
         QTRY_VERIFY(!browser.working());
         QVERIFY(QFile::exists(renamed));
         QTRY_VERIFY_WITH_TIMEOUT(!listed(browser).contains(oldest),10000);
-        QCOMPARE(listed(browser),expected.mid(0,expected.size()-1));
+        QCOMPARE(listed(browser),shown.mid(0,shown.size()-1));
     }
     // Photos, videos, PDFs and documents show KDE's thumbnail; other files and
     // folders keep their icons.
