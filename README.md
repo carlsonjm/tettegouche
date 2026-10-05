@@ -103,9 +103,10 @@ window.
 ./install.sh
 ```
 
-The installer builds and tests Tettegouche, then installs the launcher and Plasma
-widget. Restart Plasma after installation. On a first install, open panel edit mode,
-choose **Add Widgets**, search for **Tettegouche**, and add it to the panel.
+The installer builds and tests Tettegouche, installs the launcher and Plasma
+widget, then restarts the panel so it runs the new widget. On a first install,
+open panel edit mode, choose **Add Widgets**, search for **Tettegouche**, and add
+it to the panel.
 
 ```bash
 ./uninstall.sh
