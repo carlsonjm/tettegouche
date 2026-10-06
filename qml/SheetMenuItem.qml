@@ -1,10 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 import QtQuick
+import org.kde.kirigami as Kirigami
 
 // One line of a SheetMenu: a pill as tall as a fingertip, lighter under the
 // pointer or the keys, darker pressed. A line that can be on shows a check.
 Item {
     id: line
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     readonly property bool isSheetMenuItem: true
     property string text: ""
     property bool checkable: false
@@ -35,7 +38,7 @@ Item {
         radius: height / 2
         color: tap.pressed ? "#333333"
             : (hover.hovered || line.keyed) && line.enabled ? "#242424" : "transparent"
-        Behavior on color { ColorAnimation { duration: 90 } }
+        Behavior on color { ColorAnimation { duration: line.ms(90) } }
     }
     Text {
         id: label

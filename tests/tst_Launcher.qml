@@ -548,6 +548,30 @@ TestCase {
         query.text = ""
         tryCompare(row, "opacity", 1)
     }
+    // The doors arrive in turn, Apps before Files, and what was used lately
+    // after them; typing sends the row away whole, and clearing the field
+    // brings each back in turn.
+    function test_firstRowArrivesInTurn() {
+        launcher.fileBrowser = filesMock
+        fillRecent(3)
+        controller.opened()
+        const row = findChild(launcher, "first-row")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
+        const recent = findChild(launcher, "recent-0")
+        tryVerify(function() { return apps.reveal > files.reveal && files.reveal >= recent.reveal }, 1000)
+        tryCompare(row, "arrival", 1)
+        compare(apps.reveal, 1)
+        compare(recent.reveal, 1)
+        const query = findChild(launcher, "search-query")
+        query.text = "x"
+        tryCompare(row, "rest", 0)
+        compare(apps.reveal, files.reveal)
+        query.text = ""
+        tryVerify(function() { return apps.reveal > files.reveal }, 1000)
+        tryCompare(row, "arrival", 1)
+        compare(row.rest, 1)
+    }
     // A narrower sheet keeps the doors and fewer of the rest.
     function test_firstRowNarrow() {
         launcher.fileBrowser = filesMock

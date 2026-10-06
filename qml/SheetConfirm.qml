@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 import QtQuick
+import org.kde.kirigami as Kirigami
 import org.kde.ki18n
 import QtQuick.Controls as C
 import QtQuick.Layouts
@@ -11,6 +12,8 @@ import QtQuick.Layouts
 // reaches what it lands on.
 C.Dialog {
     id: confirm
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     // Its words come from the launcher's catalog.
     KI18nContext {
         id: words
@@ -66,7 +69,7 @@ C.Dialog {
         border.color: "#5a5a5a"
     }
     enter: Transition {
-        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: confirm.ms(120); easing.type: Easing.OutCubic }
     }
 
     component ConfirmPill: C.Button {
@@ -89,7 +92,7 @@ C.Dialog {
             color: pill.down ? "#4A4A4A" : pill.hovered ? "#333333" : "#242424"
             border.width: pill.visualFocus ? 1 : 0
             border.color: "#F8F8FF"
-            Behavior on color { ColorAnimation { duration: 90 } }
+            Behavior on color { ColorAnimation { duration: confirm.ms(90) } }
         }
         Keys.onReturnPressed: clicked()
         Keys.onEnterPressed: clicked()

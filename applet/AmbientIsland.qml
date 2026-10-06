@@ -12,6 +12,8 @@ import org.kde.kirigami as Kirigami
 // draws it and asks the surface below to act.
 Window {
     id: overlay
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)); }
     // Its words come from the panel widget's catalog, the one Plasma gives
     // the widget, so they translate in the panel and in tests alike.
     KI18nContext {
@@ -58,7 +60,7 @@ Window {
     }
     Timer {
         id: closing
-        interval: 320
+        interval: overlay.ms(320)
         onTriggered: overlay.closed()
     }
     onVisibleChanged: if (visible) opening.restart()
@@ -105,7 +107,7 @@ Window {
             height: button.size
             glyph: button.glyph
             scale: buttonArea.pressed ? 1.2 : 1
-            Behavior on scale { NumberAnimation { duration: 90 } }
+            Behavior on scale { NumberAnimation { duration: overlay.ms(90) } }
         }
         Rectangle {
             anchors.centerIn: parent
@@ -144,7 +146,7 @@ Window {
         Keys.onSpacePressed: activated()
         border.width: activeFocus ? 1 : 0
         border.color: overlay.ink
-        Behavior on scale { NumberAnimation { duration: 90 } }
+        Behavior on scale { NumberAnimation { duration: overlay.ms(90) } }
         Text {
             id: pillText
             anchors.centerIn: parent
@@ -247,10 +249,10 @@ Window {
         border.width: 1
         border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.12)
         clip: true
-        Behavior on x { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on y { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on width { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
-        Behavior on height { NumberAnimation { duration: 320; easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on x { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on y { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on width { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
+        Behavior on height { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
 
         // Taps on the card itself stay on the card.
         MouseArea {
@@ -278,7 +280,7 @@ Window {
                 visible: opacity > 0
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: overlay.expanded ? 260 : 90
+                        duration: overlay.ms(overlay.expanded ? 260 : 90)
                         easing.type: overlay.expanded ? Easing.InQuad : Easing.Linear
                     }
                 }
@@ -307,7 +309,7 @@ Window {
                                 height: 30
                                 opacity: overlay.kind === choice.modelData ? 1 : 0.45
                                 scale: overlay.kind === choice.modelData ? 1.12 : 1
-                                Behavior on scale { NumberAnimation { duration: 160; easing.type: Easing.OutBack } }
+                                Behavior on scale { NumberAnimation { duration: overlay.ms(160); easing.type: Easing.OutBack } }
                                 Art {
                                     anchors.fill: parent
                                     visible: choice.modelData === "media"
@@ -418,7 +420,7 @@ Window {
                                 radius: 6
                                 color: overlay.ink
                                 scale: seekArea.pressed || seek.activeFocus ? 1.5 : 1
-                                Behavior on scale { NumberAnimation { duration: 90 } }
+                                Behavior on scale { NumberAnimation { duration: overlay.ms(90) } }
                             }
                         }
                         Label {
@@ -478,7 +480,7 @@ Window {
                             Accessible.onPressAction: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
                             Keys.onReturnPressed: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
                             Keys.onSpacePressed: overlay.surface.invoke(overlay.activity, playing ? "pause" : "play")
-                            Behavior on scale { NumberAnimation { duration: 90 } }
+                            Behavior on scale { NumberAnimation { duration: overlay.ms(90) } }
                             SuiteIcon {
                                 anchors.centerIn: parent
                                 width: 26
