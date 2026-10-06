@@ -182,6 +182,10 @@ counts follow the language.
 - Labels use sentence case, and OPEN is the one all-caps tag.
 - Motion explains a change of state or place, can be interrupted, and never
   shows progress or success a source has not reported.
+- Motion follows Plasma's animation speed, read through Kirigami's durations.
+  The first screen's arrival in Search and an island's arrival and departure
+  in Ambient keep their own pace, as moments meant to be seen; with animations
+  set to instant they only fade.
 
 ## Verification boundaries
 

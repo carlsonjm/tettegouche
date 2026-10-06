@@ -172,7 +172,7 @@ than repeat it.
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click another island away from its controls | Opens it in place, larger. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
-| Flick an island sideways, or drag it past its first piece | Sets aside what it shows, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now. |
+| Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now. |
 | With an island focused, Delete | Sets it aside. |
 | Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward. |
 | With an island or the bubble focused, Enter or Space | Does what a tap on it does. |

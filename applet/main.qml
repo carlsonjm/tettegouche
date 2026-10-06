@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 import QtQuick
+import org.kde.kirigami as Kirigami
 import QtQuick.Window
 import QtQuick.Layouts
 import org.kde.plasma.core as PlasmaCore
@@ -8,6 +9,8 @@ import org.kde.plasma.plasmoid
 
 PlasmoidItem {
     id: root
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)); }
 
     Plasmoid.icon: "studio.warbler.tettegouche-logo"
     Plasmoid.status: Plasmoid.launcherActive
@@ -94,6 +97,7 @@ PlasmoidItem {
         anchors.bottom: parent.bottom
         activities: Plasmoid.ambientActivities
         opaque: root.bandOpaque
+        rises: Plasmoid.location !== PlasmaCore.Types.TopEdge
         monotonicClock: () => Plasmoid.monotonicNowUs()
         onInvokeRequested: (activityId, generation, action, value) =>
             Plasmoid.invokeActivity(activityId, generation, action, value)
@@ -176,11 +180,11 @@ PlasmoidItem {
             // Ripple outward once, then remain as the open-launcher indicator.
             Behavior on scale {
                 enabled: root.animateIndicator
-                NumberAnimation { duration: 360; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: root.ms(360); easing.type: Easing.OutCubic }
             }
             Behavior on opacity {
                 enabled: root.animateIndicator
-                NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: root.ms(180); easing.type: Easing.OutCubic }
             }
         }
 
@@ -202,7 +206,7 @@ PlasmoidItem {
 
             Behavior on scale {
                 enabled: root.animateIndicator
-                NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
             }
         }
 

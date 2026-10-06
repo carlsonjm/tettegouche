@@ -4,11 +4,14 @@
 */
 
 import QtQuick
+import org.kde.kirigami as Kirigami
 
 // The suite's grey pill inside Search's modes: 30 high in a 42 touch in the
 // header, 44 below; the light one for the main action.
 Item {
     id: pill
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     property string label
     property string glyph: ""
     property bool tall: false
@@ -34,10 +37,10 @@ Item {
         height: pill.tall ? 44 : 30
         radius: height / 2
         scale: pillTap.pressed ? 1.04 : 1
-        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: pill.ms(120); easing.type: Easing.OutCubic } }
         color: pill.light ? (pillTap.pressed ? "#d8d8de" : pill.primaryText)
             : pillTap.pressed ? "#4A4A4A" : pillHover.hovered ? "#333333" : pill.controlColor
-        Behavior on color { ColorAnimation { duration: 90 } }
+        Behavior on color { ColorAnimation { duration: pill.ms(90) } }
         Row {
             id: pillRow
             anchors.centerIn: parent

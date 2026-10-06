@@ -33,6 +33,22 @@ Item {
     // A player picked inside the open island, kept while it lasts.
     property string chosenPlayer: ""
 
+    // Plasma's animation speed, read through Kirigami's durations: 1 at the
+    // default, smaller when faster, 0 for instant. The band's travel, pieces
+    // shedding and returning and the open island, passes through ms(). An
+    // island arriving or leaving keeps its own pace through own(), as a moment
+    // meant to be seen; with animations set to instant it only fades.
+    readonly property real motionFactor: Math.max(0, Kirigami.Units.longDuration / 200)
+    readonly property bool reducedMotion: Kirigami.Units.longDuration <= 1
+    function ms(base) { return motionFactor > 0 ? Math.max(1, Math.round(base * motionFactor)) : 1; }
+    function own(base) { return reducedMotion ? 1 : base; }
+    // An island pops up out of the panel's screen edge and sinks back into
+    // it: from below on a panel at the bottom, from above at the top.
+    property bool rises: true
+    function sunk(pop) {
+        return reducedMotion ? 0 : (rises ? 1 : -1) * (1 - pop) * pillHeight * 0.6;
+    }
+
     signal invokeRequested(string activityId, int generation, string action, var value)
     signal openRequested(string kind)
 
@@ -487,9 +503,68 @@ Item {
 
     // The settled feel: no overshoot, as the mock-up showed it.
     component SettledAnimation: NumberAnimation {
-        duration: 340
+        duration: surface.ms(340)
         easing.type: Easing.BezierSpline
         easing.bezierCurve: [0.22, 0.08, 0.26, 0.92, 1, 1]
+    }
+
+    // How an island or the fold comes and goes. Arriving, its room opens and
+    // it pops up into it out of the panel's edge, a touch past its place and
+    // back; leaving, it sinks back where it stands and its room then closes, so its
+    // neighbours move over only once it has gone. Swiped away, it has already
+    // faded, and only its room closes.
+    component Presence: Item {
+        id: presence
+        property bool wanted: false
+        // Its share of the band, which moves its neighbours.
+        property real slot: 0
+        // The island itself, 0 to 1, past 1 for a moment as it pops up.
+        property real pop: 0
+        // Already faded, swiped away: it leaves without popping down.
+        property bool faded: false
+        signal coming()
+        signal gone()
+        visible: false
+        onWantedChanged: wanted ? arrive() : depart()
+        Component.onCompleted: if (wanted) arrive()
+        function arrive() {
+            leaving.stop();
+            faded = false;
+            coming();
+            arriving.start();
+        }
+        function depart() {
+            arriving.stop();
+            leaving.start();
+        }
+        ParallelAnimation {
+            id: arriving
+            SettledAnimation { target: presence; property: "slot"; to: 1; duration: surface.own(300) }
+            SequentialAnimation {
+                PauseAnimation { duration: surface.own(70) }
+                NumberAnimation {
+                    target: presence
+                    property: "pop"
+                    to: 1
+                    duration: surface.reducedMotion ? 120 : 320
+                    easing.type: surface.reducedMotion ? Easing.Linear : Easing.OutBack
+                    easing.overshoot: 1.6
+                }
+            }
+        }
+        SequentialAnimation {
+            id: leaving
+            NumberAnimation {
+                target: presence
+                property: "pop"
+                to: 0
+                duration: presence.faded ? 1 : surface.reducedMotion ? 90 : 160
+                easing.type: surface.reducedMotion ? Easing.Linear : Easing.InBack
+                easing.overshoot: 1.2
+            }
+            SettledAnimation { target: presence; property: "slot"; to: 0; duration: surface.own(240) }
+            ScriptAction { script: { presence.faded = false; presence.gone(); } }
+        }
     }
 
     // One island. A sideways drag, by finger or mouse, anywhere on it, its
@@ -506,9 +581,19 @@ Item {
         readonly property bool present: surface.plan.shown[kind] !== undefined
         // Set aside, it stays gone while its activity leaves.
         property bool leaving: false
-        property real presence: present && !leaving ? 1 : 0
-        Behavior on presence { SettledAnimation {} }
-        onPresenceChanged: if (presence === 0) leaving = false
+        readonly property real presence: comes.slot
+        readonly property real pop: comes.pop
+        // Swiped away, it fades where the finger left it.
+        property real fade: 1
+        Presence {
+            id: comes
+            wanted: island.present && !island.leaving
+            onComing: island.fade = 1
+            onGone: {
+                island.leaving = false;
+                island.fade = 1;
+            }
+        }
 
         property real peel: 0
         // Its width at rest, held while it is carried.
@@ -535,20 +620,22 @@ Item {
         function release() {
             const flicked = Math.abs(peelVelocity) > 0.6 && Math.sign(peelVelocity) === Math.sign(peel);
             if (peel !== 0 && (Math.abs(peel) >= peelAll || flicked)) {
-                peelAway.to = Math.sign(peel) * (surface.width + restWidth);
                 peelAway.start();
             } else {
                 peelBack.start();
             }
         }
-        SettledAnimation { id: peelBack; target: island; property: "peel"; to: 0; duration: 240 }
+        SettledAnimation { id: peelBack; target: island; property: "peel"; to: 0; duration: surface.ms(240) }
+        // Let go to go aside, it simply fades, then its room closes.
         NumberAnimation {
             id: peelAway
             target: island
-            property: "peel"
-            duration: 160
-            easing.type: Easing.InCubic
+            property: "fade"
+            to: 0
+            duration: surface.own(200)
+            easing.type: Easing.OutCubic
             onFinished: {
+                comes.faded = true;
                 island.leaving = true;
                 surface.setAside(island.kind);
                 island.peel = 0;
@@ -559,7 +646,7 @@ Item {
             id: pill
             objectName: "ambient-band-" + island.kind
             property real lift: pillArea.pressed ? 1.03 : 1
-            Behavior on lift { NumberAnimation { duration: 120 } }
+            Behavior on lift { NumberAnimation { duration: surface.ms(120) } }
             x: (island.width - width) / 2 + island.peel
             width: row.width + 2 * surface.inset
             onWidthChanged: if (!island.peeling) island.restWidth = width
@@ -568,10 +655,11 @@ Item {
             color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
             border.width: 1
             border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
-            opacity: (island.leaving ? 0 : Math.min(1, island.presence * 1.4))
+            opacity: Math.min(1, Math.max(0, island.pop) * 2) * island.fade
                 * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
             visible: opacity > 0 && !surface.opened
-            scale: (0.7 + 0.3 * Math.min(1, island.presence)) * lift
+            scale: (surface.reducedMotion ? 1 : 0.8 + 0.2 * Math.max(0, island.pop)) * lift
+            transform: Translate { y: surface.sunk(island.pop) }
             activeFocusOnTab: visible
             Accessible.role: island.opens ? Accessible.Button : Accessible.StaticText
             Accessible.name: surface.spoken(island.kind)
@@ -580,7 +668,7 @@ Item {
             Keys.onEnterPressed: surface.open(island.kind)
             Keys.onSpacePressed: surface.open(island.kind)
             Keys.onDeletePressed: surface.setAside(island.kind)
-            Behavior on color { ColorAnimation { duration: 200 } }
+            Behavior on color { ColorAnimation { duration: surface.ms(200) } }
 
             // A tap away from the controls opens the island.
             MouseArea {
@@ -653,7 +741,7 @@ Item {
         clip: width < size - 0.5
         opacity: showing ? 1 : 0
         Behavior on width { enabled: !piece.island.peeling; SettledAnimation {} }
-        Behavior on opacity { enabled: !piece.island.peeling; NumberAnimation { duration: 200 } }
+        Behavior on opacity { enabled: !piece.island.peeling; NumberAnimation { duration: surface.ms(200) } }
     }
 
     // A control: the glyph rises under a finger or a press.
@@ -679,7 +767,7 @@ Item {
             height: button.size
             glyph: button.glyph
             scale: buttonArea.pressed ? 1.2 : 1
-            Behavior on scale { NumberAnimation { duration: 90 } }
+            Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
         }
         Rectangle {
             anchors.centerIn: parent
@@ -1116,7 +1204,7 @@ Item {
                 Keys.onSpacePressed: surface.open("drive")
                 border.width: activeFocus ? 1 : 0
                 border.color: "#F8F8FF"
-                Behavior on scale { NumberAnimation { duration: 90 } }
+                Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
                 Label {
                     anchors.centerIn: parent
                     text: surface.openLabel
@@ -1186,7 +1274,7 @@ Item {
                 Keys.onSpacePressed: surface.invoke(surface.screenShown, "stop")
                 border.width: activeFocus ? 1 : 0
                 border.color: "#F8F8FF"
-                Behavior on scale { NumberAnimation { duration: 90 } }
+                Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
                 Label {
                     anchors.centerIn: parent
                     text: surface.stopLabel
@@ -1251,8 +1339,8 @@ Item {
         id: bubble
         objectName: "ambient-bubble"
         readonly property bool shown: surface.folded.length > 0
-        property real presence: shown ? 1 : 0
-        Behavior on presence { SettledAnimation {} }
+        readonly property real presence: bubbleComes.slot
+        Presence { id: bubbleComes; wanted: bubble.shown }
         readonly property real slotWidth: surface.pillHeight * presence
         x: surface.slotX("fold") - (width - slotWidth) / 2
         y: surface.islandY
@@ -1262,9 +1350,10 @@ Item {
         color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
         border.width: 1
         border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
-        opacity: Math.min(1, presence * 1.4)
+        opacity: Math.min(1, Math.max(0, bubbleComes.pop) * 2)
         visible: opacity > 0 && !surface.opened
-        scale: (0.4 + 0.6 * Math.min(1, presence)) * (bubbleArea.pressed ? 1.1 : 1)
+        scale: (surface.reducedMotion ? 1 : 0.8 + 0.2 * Math.max(0, bubbleComes.pop)) * (bubbleArea.pressed ? 1.1 : 1)
+        transform: Translate { y: surface.sunk(bubbleComes.pop) }
         activeFocusOnTab: shown
         Accessible.role: Accessible.Button
         Accessible.name: surface.bubbleKind ? surface.spoken(surface.bubbleKind) : ""
@@ -1272,7 +1361,7 @@ Item {
         Keys.onReturnPressed: surface.open(surface.bubbleKind)
         Keys.onEnterPressed: surface.open(surface.bubbleKind)
         Keys.onSpacePressed: surface.open(surface.bubbleKind)
-        Behavior on color { ColorAnimation { duration: 200 } }
+        Behavior on color { ColorAnimation { duration: surface.ms(200) } }
 
         Art {
             anchors.centerIn: parent

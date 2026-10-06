@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 import QtQuick
+import org.kde.kirigami as Kirigami
 import QtQuick.Controls as C
 
 // A menu drawn as part of the sheet it opens in: it never passes the sheet's
@@ -8,6 +9,8 @@ import QtQuick.Controls as C
 // corner, with lines a finger can hit. Its lines are SheetMenuItems.
 C.Popup {
     id: menu
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     // The item whose edges the menu stays inside.
     property Item bounds: parent
     // How far up from the window's bottom the on-screen keys reach; the
@@ -114,7 +117,7 @@ C.Popup {
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
     }
     enter: Transition {
-        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120; easing.type: Easing.OutCubic }
+        NumberAnimation { property: "opacity"; from: 0; to: 1; duration: menu.ms(120); easing.type: Easing.OutCubic }
     }
     // It goes at once: a fading menu still takes presses, and the tap that
     // follows a choice should reach what it lands on.

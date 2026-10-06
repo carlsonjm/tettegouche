@@ -49,6 +49,16 @@ Item {
     readonly property bool genieOpen: modeOpen && modeShown === "genie"
     readonly property real genieProgress: modeShown === "genie" ? modeProgress : 0
     property bool filesMode: false
+    // Plasma's animation speed, read through Kirigami's durations: 1 at the
+    // default, smaller when faster, 0 for instant. Search's travel, the sheet,
+    // its drawers, modes and presses, passes through ms(), so it keeps step
+    // with the rest of the desktop. The first screen's arrival keeps its own
+    // pace through own(), as a moment meant to be seen; with animations set
+    // to instant it only fades, and the progress sweep keeps its rate.
+    readonly property real motionFactor: Math.max(0, Kirigami.Units.longDuration / 200)
+    readonly property bool reducedMotion: Kirigami.Units.longDuration <= 1
+    function ms(base) { return root.motionFactor > 0 ? Math.max(1, Math.round(base * root.motionFactor)) : 1 }
+    function own(base) { return root.reducedMotion ? 1 : base }
     focus: true
     readonly property color primaryText: "#f2ffffff"
     readonly property color secondaryText: "#a8ffffff"
@@ -119,7 +129,7 @@ Item {
     // the keys come and go.
     property real keysReach: keysUp ? height - keysRect.y + 10 : 0
     Behavior on keysReach {
-        NumberAnimation { id: keysMotion; duration: 220; easing.type: Easing.OutCubic }
+        NumberAnimation { id: keysMotion; duration: root.ms(220); easing.type: Easing.OutCubic }
     }
 
     // Under the finger a piece lifts, as an object would: a little larger, a
@@ -131,7 +141,7 @@ Item {
         anchors.fill: parent
         z: -1
         opacity: lifted ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+        Behavior on opacity { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
         Repeater {
             model: [{ grow: 6, drop: 7, alpha: 0.10 }, { grow: 3, drop: 4, alpha: 0.16 }, { grow: 1, drop: 2, alpha: 0.22 }]
             Rectangle {
@@ -151,9 +161,13 @@ Item {
         id: pill
         property string label
         property string glyph
+        // How far it has arrived, 0 to 1; it rises a little into place,
+        // growing to its size. With animations set to instant it only fades.
+        property real reveal: 1
         signal activated()
         width: pillContent.implicitWidth + 32
         height: 44
+        opacity: reveal
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: label
@@ -166,8 +180,17 @@ Item {
             radius: height / 2
             color: pillTap.pressed ? "#303030" : pillHover.hovered ? "#2a2a2a" : root.controlColor
             scale: pillTap.pressed ? 1.04 : 1
-            Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: 90 } }
+            Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: root.ms(90) } }
+            transform: [
+                Scale {
+                    origin.x: pillFace.width / 2
+                    origin.y: pillFace.height / 2
+                    xScale: root.reducedMotion ? 1 : 0.9 + 0.1 * pill.reveal
+                    yScale: root.reducedMotion ? 1 : 0.9 + 0.1 * pill.reveal
+                },
+                Translate { y: root.reducedMotion ? 0 : (1 - pill.reveal) * 10 }
+            ]
             LiftShadow { lifted: pillTap.pressed; cornerRadius: pillFace.radius }
             Row {
                 id: pillContent
@@ -245,8 +268,8 @@ Item {
             radius: root.paperRadius
             color: tileTap.pressed ? "#262626" : tileHover.hovered ? "#20ffffff" : "transparent"
             scale: tileTap.pressed ? 1.07 : 1
-            Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: 90 } }
+            Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: root.ms(90) } }
             LiftShadow { lifted: tileTap.pressed }
             Item {
                 x: (parent.width - 34) / 2
@@ -309,15 +332,15 @@ Item {
     SequentialAnimation {
         id: openingSequence
         ScriptAction { script: { root.openingText = 0; root.openingControls = 0; root.openingIcon = 0; root.openingShine = 0 } }
-        PauseAnimation { duration: 60 }
-        NumberAnimation { target: root; property: "openingControls"; to: 1; duration: 240; easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "openingIcon"; to: 1; duration: 120; easing.type: Easing.OutCubic }
-        PauseAnimation { duration: 140 }
+        PauseAnimation { duration: root.own(60) }
+        NumberAnimation { target: root; property: "openingControls"; to: 1; duration: root.own(240); easing.type: Easing.OutCubic }
+        NumberAnimation { target: root; property: "openingIcon"; to: 1; duration: root.own(120); easing.type: Easing.OutCubic }
+        PauseAnimation { duration: root.own(140) }
         ParallelAnimation {
-            NumberAnimation { target: root; property: "openingText"; to: 1; duration: 280; easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "openingText"; to: 1; duration: root.own(280); easing.type: Easing.OutCubic }
             SequentialAnimation {
-                PauseAnimation { duration: 180 }
-                NumberAnimation { target: root; property: "openingShine"; to: 1; duration: 460; easing.type: Easing.InOutSine }
+                PauseAnimation { duration: root.own(180) }
+                NumberAnimation { target: root; property: "openingShine"; to: 1; duration: root.own(460); easing.type: Easing.InOutSine }
             }
         }
     }
@@ -669,6 +692,8 @@ Item {
             sheet.opacity = 1
             sheet.scale = 1
             openingSequence.restart()
+            // The doors follow the field's outline in.
+            firstRow.arrive(root.own(140), true)
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
         // Meta+G or Meta+E: that drawer opens, or closes the launcher when it
@@ -762,11 +787,11 @@ Item {
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.round(root.launcherController.availableArea.width * 0.64)
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
-        Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-        Behavior on width { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on width { NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
-        Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+        Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         radius: root.paperRadius
         color: root.surfaceColor
         border.width: 1
@@ -867,20 +892,20 @@ Item {
                 // these ease only changes made while a drawer is shut or open.
                 Behavior on width {
                     enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
-                    NumberAnimation { duration: 240; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.ms(240); easing.type: Easing.OutCubic }
                 }
                 Behavior on y {
                     enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
-                    NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.ms(260); easing.type: Easing.OutCubic }
                 }
                 Behavior on opacity {
                     // The notes pad grows out of the field; its own motion
                     // carries the fade.
                     enabled: root.modeProgress <= 0 || root.modeProgress >= 1
-                    NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
                 }
                 Behavior on color {
-                    ColorAnimation { duration: 150; easing.type: Easing.OutCubic }
+                    ColorAnimation { duration: root.ms(150); easing.type: Easing.OutCubic }
                 }
 
                 Item {
@@ -1061,16 +1086,82 @@ Item {
                     ? (width - pillsWidth - divide) / shownCount : 0
                 readonly property real reach: gap + height
                 readonly property bool fits: parent.height >= 58 + reach
+                // The row arrives a piece at a time: each door in turn, left
+                // to right, then what was used lately as one group. Typing
+                // sends the row away whole, sinking a little, and clearing
+                // the field brings it back the same way it first came.
+                readonly property int doors: 1 + (filesPill.visible ? 1 : 0)
+                    + (notesPill.visible ? 1 : 0) + (geniePill.visible ? 1 : 0)
+                readonly property int step: 260
+                readonly property int stagger: 45
+                readonly property int span: step + doors * stagger
+                // 1 while the first screen rests under the field.
+                property real rest: 1
+                // How far the arrival has come, across every piece.
+                property real arrival: 1
+                function reveal(order) {
+                    if (root.reducedMotion) return arrival
+                    const t = Math.max(0, Math.min(1, (arrival * span - order * stagger) / step))
+                    return 1 - Math.pow(1 - t, 3)
+                }
+                function arrive(delay, again) {
+                    leaving.stop()
+                    // Caught on its way out, it comes straight back.
+                    if (!again && rest > 0 && arrival >= 1) {
+                        returning.restart()
+                        return
+                    }
+                    arriving.stop()
+                    returning.stop()
+                    arrival = 0
+                    rest = 1
+                    arriving.delay = Math.max(1, delay)
+                    arriving.start()
+                }
+                function leave() {
+                    arriving.stop()
+                    returning.stop()
+                    leaving.restart()
+                }
+                SequentialAnimation {
+                    id: arriving
+                    property int delay: 1
+                    PauseAnimation { duration: arriving.delay }
+                    NumberAnimation {
+                        target: firstRow
+                        property: "arrival"
+                        to: 1
+                        duration: root.reducedMotion ? 120 : firstRow.span
+                    }
+                }
+                NumberAnimation {
+                    id: returning
+                    target: firstRow
+                    property: "rest"
+                    to: 1
+                    duration: root.own(140)
+                    easing.type: Easing.OutCubic
+                }
+                NumberAnimation {
+                    id: leaving
+                    target: firstRow
+                    property: "rest"
+                    to: 0
+                    duration: root.reducedMotion ? 90 : 150
+                    easing.type: Easing.InCubic
+                }
+                readonly property bool resting: searchField.idle
+                onRestingChanged: resting ? arrive(1) : leave()
                 x: (parent.width - width) / 2
                 y: searchField.y + searchField.height + gap
                 width: searchField.compactWidth
                 height: 64
-                opacity: searchField.idle && fits && !root.applicationLaunchPending
-                    ? root.openingControls * Math.max(0, 1 - root.drawerProgress * 3)
+                opacity: fits && !root.applicationLaunchPending
+                    ? rest * Math.max(0, 1 - root.drawerProgress * 3)
                         * Math.max(0, 1 - root.modeProgress * 3) : 0
                 visible: opacity > 0
-                enabled: opacity > 0.5 && !root.drawerOpen && !root.modeOpen
-                transform: Translate { y: (1 - root.openingControls) * 10 }
+                enabled: resting && opacity > 0.5 && !root.drawerOpen && !root.modeOpen
+                transform: Translate { y: root.reducedMotion ? 0 : (1 - firstRow.rest) * 6 }
 
                 Row {
                     x: firstRow.shownCount > 0 ? 0 : (firstRow.width - firstRow.pillsWidth) / 2
@@ -1078,6 +1169,7 @@ Item {
                     spacing: firstRow.pillGap
                     FirstPill {
                         id: appsPill
+                        reveal: firstRow.reveal(0)
                         objectName: "apps-pill"
                         label: words.i18n("Apps")
                         glyph: "apps"
@@ -1085,6 +1177,7 @@ Item {
                     }
                     FirstPill {
                         id: filesPill
+                        reveal: firstRow.reveal(1)
                         objectName: "files-pill"
                         label: words.i18n("Files")
                         glyph: "files"
@@ -1093,6 +1186,7 @@ Item {
                     }
                     FirstPill {
                         id: notesPill
+                        reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0))
                         objectName: "notes-pill"
                         label: words.i18n("Notes")
                         glyph: "notes"
@@ -1101,6 +1195,7 @@ Item {
                     }
                     FirstPill {
                         id: geniePill
+                        reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0) + (notesPill.visible ? 1 : 0))
                         objectName: "genie-pill"
                         label: words.i18n("Genie")
                         glyph: "genie"
@@ -1110,6 +1205,7 @@ Item {
                 }
                 Rectangle {
                     visible: firstRow.shownCount > 0
+                    opacity: firstRow.reveal(firstRow.doors)
                     x: firstRow.pillsWidth + Math.floor(firstRow.divide / 2)
                     anchors.verticalCenter: parent.verticalCenter
                     width: 1
@@ -1119,10 +1215,14 @@ Item {
                 Repeater {
                     model: root.recentUse
                     delegate: RecentTile {
+                        id: recentTile
+                        readonly property real reveal: firstRow.reveal(firstRow.doors)
                         x: firstRow.pillsWidth + firstRow.divide + index * firstRow.cellWidth
                         y: (firstRow.height - height) / 2
                         width: firstRow.cellWidth
                         visible: index < firstRow.shownCount
+                        opacity: reveal
+                        transform: Translate { y: root.reducedMotion ? 0 : (1 - recentTile.reveal) * 10 }
                     }
                 }
             }
@@ -1204,7 +1304,7 @@ Item {
                 }
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 120; easing.type: Easing.OutCubic }
+                    NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic }
                 }
 
                 ListView {
@@ -1465,7 +1565,7 @@ Item {
                         radius: height / 2
                         color: backTap.pressed ? "#4A4A4A"
                             : backHover.hovered ? "#333333" : root.controlColor
-                        Behavior on color { ColorAnimation { duration: 90 } }
+                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
                         SuiteIcon {
                             glyph: "chevron-left"
                             width: 14; height: 14
@@ -1526,7 +1626,7 @@ Item {
                         color: hiddenPress.pressed ? "#4A4A4A"
                             : hiddenButton.showing ? "#333333"
                             : hiddenHover.hovered ? root.controlColor : "transparent"
-                        Behavior on color { ColorAnimation { duration: 90 } }
+                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
                     }
                     SuiteIcon {
                         anchors.centerIn: parent
@@ -1580,7 +1680,7 @@ Item {
                         radius: height / 2
                         color: sortPress.pressed || fileSort.visible ? "#4A4A4A"
                             : sortHover.hovered ? "#333333" : root.controlColor
-                        Behavior on color { ColorAnimation { duration: 90 } }
+                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
                         Text {
                             id: sortLabel
                             anchors.verticalCenter: parent.verticalCenter
@@ -1765,7 +1865,7 @@ Item {
                 displaced: Transition {
                     NumberAnimation {
                         properties: "x,y"
-                        duration: 180
+                        duration: root.ms(180)
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -1795,7 +1895,7 @@ Item {
                         opacity: catalogDelegate.model.hidden ? 0.45 : 1
                         // The chosen application rises, as a touched one does.
                         scale: catalogDelegate.chosen ? 1.04 : 1
-                        Behavior on scale { NumberAnimation { duration: 120 } }
+                        Behavior on scale { NumberAnimation { duration: root.ms(120) } }
 
                         Kirigami.Icon {
                             anchors.horizontalCenter: parent.horizontalCenter
@@ -1909,7 +2009,7 @@ Item {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 120
+                        duration: root.ms(120)
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -1939,7 +2039,7 @@ Item {
                             color: selected ? root.controlColor : "transparent"
                             border.width: !selected && choiceHover.hovered ? 1 : 0
                             border.color: root.surfaceOutline
-                            Behavior on color { ColorAnimation { duration: 100 } }
+                            Behavior on color { ColorAnimation { duration: root.ms(100) } }
 
                             Text {
                                 anchors.centerIn: parent
@@ -2031,7 +2131,7 @@ Item {
         id: modeSettle
         target: root
         property: "modeProgress"
-        duration: 260
+        duration: root.ms(260)
         easing.type: Easing.OutCubic
         onFinished: if (!root.modeOpen && root.modeProgress <= 0) root.modeShown = ""
     }
@@ -2051,7 +2151,7 @@ Item {
         target: sheet
         property: "opacity"
         to: 0
-        duration: 140
+        duration: root.ms(140)
         easing.type: Easing.OutCubic
         onFinished: root.launcherController.finishLaunch()
     }
@@ -2084,7 +2184,7 @@ Item {
         id: drawerSettle
         target: root
         property: "drawerProgress"
-        duration: 260
+        duration: root.ms(260)
         easing.type: Easing.OutCubic
     }
 
@@ -2093,7 +2193,7 @@ Item {
         target: root
         property: "guestDrag"
         to: 0
-        duration: 210
+        duration: root.ms(210)
         easing.type: Easing.OutBack
         onFinished: root.guestDragged = false
     }
@@ -2104,14 +2204,14 @@ Item {
             target: sheet
             property: "scale"
             to: 0.96
-            duration: 190
+            duration: root.ms(190)
             easing.type: Easing.OutCubic
         }
         NumberAnimation {
             target: sheet
             property: "opacity"
             to: 0
-            duration: 190
+            duration: root.ms(190)
             easing.type: Easing.OutCubic
         }
         onFinished: root.launcherController.completeGuestHandoff()
@@ -2124,21 +2224,21 @@ Item {
             target: root
             property: "guestDrag"
             to: guestExit.to
-            duration: 220
+            duration: root.ms(220)
             easing.type: Easing.InCubic
         }
         NumberAnimation {
             target: sheet
             property: "scale"
             to: 0.72
-            duration: 220
+            duration: root.ms(220)
             easing.type: Easing.InCubic
         }
         NumberAnimation {
             target: sheet
             property: "opacity"
             to: 0
-            duration: 220
+            duration: root.ms(220)
             easing.type: Easing.InCubic
         }
         onFinished: root.launcherController.completeGuestHandoff()

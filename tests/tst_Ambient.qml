@@ -720,6 +720,40 @@ TestCase {
         tryVerify(() => !surface.clip); // at rest, its focus ring and press may reach past
     }
 
+    // An island pops up into its place, a touch past its size and back, and
+    // pops down where it stands before its neighbour moves over.
+    function test_island_pops_up_and_down() {
+        const surface = createSurface(460, [transfer]);
+        settle();
+        surface.activities = [transfer, media];
+        const music = island(surface, "media");
+        tryVerify(() => music.scale > 1.001, 1000);
+        settle();
+        compare(music.scale, 1);
+        surface.activities = [transfer];
+        // While it pops down, it keeps its room in the band.
+        wait(60);
+        compare(carrier(surface, "media").presence, 1);
+        tryVerify(() => !music.visible, 1000);
+        settle();
+        fuzzyCompare(centreOf(surface, "transfer").x, surface.width / 2, 1);
+    }
+
+    // Let go past its least, the island fades where it was let go rather than
+    // travelling on.
+    function test_set_aside_fades_where_let_go() {
+        const surface = createSurface(460, [media, transfer]);
+        settle();
+        const music = carrier(surface, "media");
+        const at = slowDrag(surface, "media", -(music.peelAll + 20));
+        const held = music.peel;
+        mouseRelease(surface, at.x - music.peelAll - 20, at.y);
+        tryVerify(() => music.fade < 1, 1000);
+        fuzzyCompare(music.peel, held, 1);
+        tryCompare(music, "peel", 0);
+        verify(!island(surface, "media").visible);
+    }
+
     // Peeled past its least, the island goes aside: the player it shows, and
     // only that; its neighbour holds its place while it is carried.
     function test_drag_past_its_least_sets_it_aside() {

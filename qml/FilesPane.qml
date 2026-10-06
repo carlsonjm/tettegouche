@@ -6,6 +6,8 @@ import org.kde.kirigami as Kirigami
 
 Item {
     id: pane
+    // A duration at Plasma's animation speed: 1 ms when it is instant.
+    function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     // Its words come from the launcher's catalog.
     KI18nContext {
         id: words
@@ -475,7 +477,7 @@ Item {
         radius: pane.paperRadius
         visible: opacity > 0
         opacity: trashConfirm.visible || emptyTrashConfirm.visible ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 120 } }
+        Behavior on opacity { NumberAnimation { duration: pane.ms(120) } }
     }
     component Action: C.Button {
         id: action
@@ -566,7 +568,7 @@ Item {
                     height: 54
                     PointHandler { id: placeFinger; acceptedDevices: PointerDevice.TouchScreen }
                     scale: placeFinger.active ? 1.04 : 1
-                    Behavior on scale { NumberAnimation { duration: placeFinger.active ? 160 : 120; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: pane.ms(placeFinger.active ? 160 : 120); easing.type: Easing.OutCubic } }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 3; radius: pane.paperRadius
                         color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? "#2C2C2C" : "transparent"
@@ -829,8 +831,8 @@ Item {
                             height: parent.height
                             radius: width / 2
                             color: filesScroll.pressed ? "#8A8A8A" : filesScroll.hovered ? "#6A6A6A" : "#4A4A4A"
-                            Behavior on width { NumberAnimation { duration: 90 } }
-                            Behavior on color { ColorAnimation { duration: 90 } }
+                            Behavior on width { NumberAnimation { duration: pane.ms(90) } }
+                            Behavior on color { ColorAnimation { duration: pane.ms(90) } }
                         }
                     }
                     background: Item {}
@@ -1014,7 +1016,7 @@ Item {
                     PointHandler { id: tileFinger; acceptedDevices: PointerDevice.TouchScreen }
                     scale: tileFinger.active ? 1.05 : 1
                     z: tileFinger.active ? 1 : 0
-                    Behavior on scale { NumberAnimation { duration: tileFinger.active ? 160 : 120; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: pane.ms(tileFinger.active ? 160 : 120); easing.type: Easing.OutCubic } }
                     width: files.cellWidth; height: files.cellHeight
                     Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: parent.selected ? "#333333" : "transparent" }
                     Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: "#30444444"; border.color: "#F8F8FF"; border.width: 2; visible: (pane.draggingFiles || pane.incoming) && pane.dropFolder===modelData.path }
