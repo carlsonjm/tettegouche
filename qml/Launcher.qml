@@ -210,7 +210,7 @@ Item {
                 SuiteIcon {
                     visible: pill.glyph === "files" || pill.glyph === "notes" || pill.glyph === "genie"
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: pill.glyph === "notes" ? "sticky-note" : pill.glyph === "genie" ? "genie" : "folder-open"
+                    glyph: pill.glyph === "notes" || pill.glyph === "genie" ? pill.glyph : "folder-open"
                     width: 18
                     height: 18
                 }
@@ -1197,7 +1197,7 @@ Item {
                         id: geniePill
                         reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0) + (notesPill.visible ? 1 : 0))
                         objectName: "genie-pill"
-                        label: words.i18n("Genie")
+                        label: words.i18n("Ask")
                         glyph: "genie"
                         visible: root.genie !== null && root.genie.available
                         onActivated: root.openGenie()

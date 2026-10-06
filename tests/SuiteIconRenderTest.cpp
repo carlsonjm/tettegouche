@@ -33,7 +33,7 @@ private Q_SLOTS:
             QStringLiteral("refresh-cw"), QStringLiteral("ellipsis-vertical"), QStringLiteral("check"),
             QStringLiteral("chevron-down"), QStringLiteral("chevron-left"), QStringLiteral("square"),
             QStringLiteral("circle"), QStringLiteral("eye"), QStringLiteral("eye-off"),
-            QStringLiteral("sticky-note")
+            QStringLiteral("sticky-note"), QStringLiteral("genie"), QStringLiteral("notes")
         };
         for (const QString &glyph : glyphs) {
             QScopedPointer<QObject> icon(component.createWithInitialProperties(

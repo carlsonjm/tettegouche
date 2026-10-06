@@ -9,7 +9,7 @@ Item {
     Image {
         anchors.fill: parent
         // Lucide's glyphs, and the suite's own marks beside them.
-        source: Qt.resolvedUrl("../assets/icons/" + (parent.glyph === "genie" ? "suite/" : "lucide/")
+        source: Qt.resolvedUrl("../assets/icons/" + (parent.glyph === "genie" || parent.glyph === "notes" ? "suite/" : "lucide/")
             + parent.glyph + ".svg")
         fillMode: Image.PreserveAspectFit
         smooth: true

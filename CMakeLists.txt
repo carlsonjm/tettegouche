@@ -94,6 +94,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/chevron-left.svg
         assets/icons/lucide/maximize-2.svg
         assets/icons/suite/genie.svg
+        assets/icons/suite/notes.svg
         assets/icons/lucide/square.svg
         assets/icons/lucide/skip-back.svg
         assets/icons/lucide/play.svg
