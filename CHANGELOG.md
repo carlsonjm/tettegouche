@@ -11,8 +11,8 @@ provenance.
 - Search's pills arrive one at a time, left to right, each rising a little
   into place, with what was used lately following as one group. Typing sends
   them away together, and clearing the field brings them back.
-- An Ambient island pops up into its place and pops down where it stands
-  before its neighbours move over. One flicked or dragged aside fades out
+- An Ambient island pops up out of the panel's edge into its place and sinks
+  back where it stands before its neighbours move over. One flicked or dragged aside fades out
   where it was let go.
 - A screen reader names Files' places, tabs, files, transfers and Open With
   choices, and Search's results, applications, sort choices and controls.

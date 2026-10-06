@@ -42,6 +42,12 @@ Item {
     readonly property bool reducedMotion: Kirigami.Units.longDuration <= 1
     function ms(base) { return motionFactor > 0 ? Math.max(1, Math.round(base * motionFactor)) : 1; }
     function own(base) { return reducedMotion ? 1 : base; }
+    // An island pops up out of the panel's screen edge and sinks back into
+    // it: from below on a panel at the bottom, from above at the top.
+    property bool rises: true
+    function sunk(pop) {
+        return reducedMotion ? 0 : (rises ? 1 : -1) * (1 - pop) * pillHeight * 0.6;
+    }
 
     signal invokeRequested(string activityId, int generation, string action, var value)
     signal openRequested(string kind)
@@ -503,8 +509,8 @@ Item {
     }
 
     // How an island or the fold comes and goes. Arriving, its room opens and
-    // it pops up into it from its centre, a touch past its size and back;
-    // leaving, it pops down where it stands and its room then closes, so its
+    // it pops up into it out of the panel's edge, a touch past its place and
+    // back; leaving, it sinks back where it stands and its room then closes, so its
     // neighbours move over only once it has gone. Swiped away, it has already
     // faded, and only its room closes.
     component Presence: Item {
@@ -626,7 +632,7 @@ Item {
             target: island
             property: "fade"
             to: 0
-            duration: surface.ms(160)
+            duration: surface.own(200)
             easing.type: Easing.OutCubic
             onFinished: {
                 comes.faded = true;
@@ -652,7 +658,8 @@ Item {
             opacity: Math.min(1, Math.max(0, island.pop) * 2) * island.fade
                 * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
             visible: opacity > 0 && !surface.opened
-            scale: (surface.reducedMotion ? 1 : 0.5 + 0.5 * Math.max(0, island.pop)) * lift
+            scale: (surface.reducedMotion ? 1 : 0.8 + 0.2 * Math.max(0, island.pop)) * lift
+            transform: Translate { y: surface.sunk(island.pop) }
             activeFocusOnTab: visible
             Accessible.role: island.opens ? Accessible.Button : Accessible.StaticText
             Accessible.name: surface.spoken(island.kind)
@@ -1345,7 +1352,8 @@ Item {
         border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
         opacity: Math.min(1, Math.max(0, bubbleComes.pop) * 2)
         visible: opacity > 0 && !surface.opened
-        scale: (surface.reducedMotion ? 1 : 0.4 + 0.6 * Math.max(0, bubbleComes.pop)) * (bubbleArea.pressed ? 1.1 : 1)
+        scale: (surface.reducedMotion ? 1 : 0.8 + 0.2 * Math.max(0, bubbleComes.pop)) * (bubbleArea.pressed ? 1.1 : 1)
+        transform: Translate { y: surface.sunk(bubbleComes.pop) }
         activeFocusOnTab: shown
         Accessible.role: Accessible.Button
         Accessible.name: surface.bubbleKind ? surface.spoken(surface.bubbleKind) : ""

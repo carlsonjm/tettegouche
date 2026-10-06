@@ -97,6 +97,7 @@ PlasmoidItem {
         anchors.bottom: parent.bottom
         activities: Plasmoid.ambientActivities
         opaque: root.bandOpaque
+        rises: Plasmoid.location !== PlasmaCore.Types.TopEdge
         monotonicClock: () => Plasmoid.monotonicNowUs()
         onInvokeRequested: (activityId, generation, action, value) =>
             Plasmoid.invokeActivity(activityId, generation, action, value)
