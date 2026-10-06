@@ -4,8 +4,7 @@ What is planned for Tettegouche, and what is not.
 
 ## Next
 
-- **Scaling.** One installed pass at a larger display scale and a taller
-  panel.
+- Nothing is scheduled; the next items come from Later.
 
 ## Later
 
