@@ -885,6 +885,9 @@ Item {
 
                 Item {
                     id: trailingAction
+                    Accessible.role: Accessible.Button
+                    Accessible.name: query.text.length > 0 ? words.i18n("Clear search") : words.i18n("Search")
+                    Accessible.onPressAction: { root.searchEngaged = true; query.text = ""; query.forceActiveFocus() }
                     anchors.right: parent.right
                     anchors.rightMargin: 9
                     anchors.verticalCenter: parent.verticalCenter
@@ -1136,6 +1139,8 @@ Item {
                     spacing: 20
                     Text {
                         objectName: "file-scope-toggle"
+                        Accessible.role: Accessible.Button
+                        Accessible.name: text
                         text: root.searchResults.allFiles ? words.i18n("All files ⇄") : words.i18n("Everyday search ⇄")
                         color: root.primaryText
                         font.pixelSize: 12
@@ -1153,6 +1158,9 @@ Item {
                     }
                     Text {
                         objectName: "quiet-folders-button"
+                        Accessible.role: Accessible.Button
+                        Accessible.name: text
+                        Accessible.onPressAction: { quietPaths.text = root.searchResults.quietFolders || ""; quietPopup.open() }
                         text: words.i18n("Quiet folders…")
                         color: root.secondaryText
                         font.pixelSize: 12
@@ -1237,6 +1245,11 @@ Item {
                     delegate: Rectangle {
                         id: resultDelegate
                         objectName: "result-" + index
+                        Accessible.role: Accessible.ListItem
+                        Accessible.name: model.display || ""
+                        Accessible.description: model.subtext || ""
+                        Accessible.selected: ListView.isCurrentItem
+                        Accessible.onPressAction: root.runResult(index)
                         required property int index
                         required property var model
                         readonly property var connectedDevices: {
@@ -1328,6 +1341,8 @@ Item {
                                     required property var modelData
                                     required property int index
                                     objectName: "child-" + resultDelegate.index + "-" + index
+                                    Accessible.role: Accessible.Button
+                                    Accessible.name: modelData.status ? words.i18nc("a setting, then its state", "%1 · %2", modelData.label, modelData.status) : modelData.label
                                     width: deviceChildren.width
                                     height: 40
                                     radius: height / 2
@@ -1384,6 +1399,9 @@ Item {
                         && !root.searchResults.querying
                         && resultList.count === 0
                     objectName: "web-fallback"
+                    Accessible.role: Accessible.Button
+                    Accessible.name: text
+                    Accessible.onPressAction: root.submit()
                     text: words.i18n("Search the web for “%1”", query.text)
                     color: root.secondaryText
                     font.pixelSize: 15
@@ -1531,6 +1549,8 @@ Item {
                 Item {
                 id: sortButton
                     objectName: "sort-button"
+                    Accessible.role: Accessible.ButtonMenu
+                    Accessible.name: root.filesMode ? words.i18n("Sort: %1", sortLabel.text) : words.i18n("Sort")
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
@@ -1753,6 +1773,10 @@ Item {
                 delegate: Item {
                     id: catalogDelegate
                     objectName: "application-tile-" + index
+                    Accessible.role: Accessible.Button
+                    Accessible.name: model.name
+                    Accessible.focused: chosen
+                    Accessible.onPressAction: root.runCatalogApplication(index, model.name)
                     required property int index
                     required property var model
                     readonly property bool chosen: applicationGrid.keyChosen
@@ -1904,6 +1928,9 @@ Item {
                         delegate: Rectangle {
                             id: sortChoice
                             required property var modelData
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.name: modelData.label
+                            Accessible.checked: selected
                             width: parent.width
                             height: 38
                             radius: height / 2
