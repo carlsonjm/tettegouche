@@ -60,7 +60,7 @@ PlasmoidItem {
     Layout.preferredHeight: implicitHeight
     Layout.maximumHeight: implicitHeight
 
-    toolTipMainText: i18n("Tettegouche")
+    toolTipMainText: Plasmoid.productName
     toolTipSubText: Plasmoid.launcherActive
         ? i18n("Launcher is open")
         : i18n("Find an application")
@@ -158,7 +158,7 @@ PlasmoidItem {
         anchors.bottom: parent.bottom
         width: root.endpointWidth
         activeFocusOnTab: true
-        Accessible.name: i18n("Open Tettegouche")
+        Accessible.name: i18nc("@action:button %1 is the widget's name", "Open %1", Plasmoid.productName)
         Accessible.role: Accessible.Button
         Accessible.onPressAction: Plasmoid.launch(Plasmoid.configuration.useKadunce)
         Keys.onReturnPressed: Plasmoid.launch(Plasmoid.configuration.useKadunce)

@@ -53,7 +53,7 @@ than repeat it.
 | With the dot focused, Enter or Space | Opens or closes Search. |
 | Meta, once set as the widget's shortcut in Plasma | Opens or closes Search. Tettegouche does not set it; Plasma's own default for Meta opens Kickoff, Plasma's application menu. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
-| Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings. |
+| Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
 | Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
@@ -83,7 +83,7 @@ than repeat it.
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
-| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
+| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
 

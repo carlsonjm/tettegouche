@@ -14,6 +14,7 @@
 #include "NotesDoor.h"
 #include "QuickNote.h"
 #include "GenieChat.h"
+#include "ProductName.h"
 
 #include <memory>
 #include "RecentUse.h"
@@ -1110,7 +1111,7 @@ int main(int argc, char **argv)
     }
 
     QQuickView view;
-    view.setTitle(QStringLiteral("Tettegouche"));
+    view.setTitle(tettegouche::productName());
     view.engine()->addImageProvider(QStringLiteral("thumbnail"), new FileThumbnails);
     configureSurface(&view, screen);
     LauncherController controller(&view, &runnerManager, &results, &catalog,

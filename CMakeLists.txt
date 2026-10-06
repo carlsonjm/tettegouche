@@ -68,6 +68,7 @@ target_compile_definitions(tettegouche-related PRIVATE TRANSLATION_DOMAIN="tette
 
 qt_add_executable(tettegouche
     src/main.cpp
+    src/ProductName.h
     src/OmniResults.h
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
@@ -164,6 +165,8 @@ plasma_add_applet(studio.warbler.tettegouche
         src/TettegoucheApplet.h
         src/LauncherKeys.cpp
         src/LauncherKeys.h
+        src/ProductName.h
+        src/SuiteSettings.h
     QML_SOURCES
         applet/main.qml
         applet/AmbientSurface.qml
@@ -192,6 +195,8 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     KF6::CoreAddons
     KF6::GlobalAccel
     KF6::I18n
+    KF6::KIOGui
+    KF6::Service
     Plasma::Plasma
     Plasma::PlasmaQuick
 )
@@ -291,7 +296,7 @@ if(BUILD_TESTING)
         tettegouche-context Qt6::Test)
     add_test(NAME workspace-context-test COMMAND workspace-context-test)
 
-    qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp src/LauncherKeys.cpp src/LauncherKeys.h)
+    qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp src/LauncherKeys.cpp src/LauncherKeys.h src/ProductName.h)
     target_include_directories(panel-applet-test PRIVATE src)
     target_link_libraries(panel-applet-test PRIVATE
         Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::Package KF6::GlobalAccel KF6::I18n)

@@ -19,9 +19,9 @@ touch, a pointer, or a keyboard. No background service is required.
 | Files | Tap Files in Search | `Meta+E` |
 | Ambient | Tap the island | — |
 
-`Meta+G` and `Meta+E` are listed under Tettegouche in System Settings' Shortcuts,
-where you can change them. Dolphin takes `Meta+E` when it is installed; give the
-key to Tettegouche there. Every other input is in [docs/INPUT.md](docs/INPUT.md).
+`Meta+G` and `Meta+E` are listed under Tettegouche, or Search where Shuffle is
+installed, in System Settings' Shortcuts, where you can change them. Dolphin
+takes `Meta+E` when it is installed; give the key to Tettegouche there. Every other input is in [docs/INPUT.md](docs/INPUT.md).
 
 ## Search
 

@@ -35,6 +35,11 @@ settings, under Tettegouche, by whichever Tettegouche widget came first. A
 press starts the launcher with `--drawer apps` or `--drawer files`, or asks a
 running one through `openDrawer` on its D-Bus interface.
 
+Where Shuffle is installed, Tettegouche names itself Search: in its tooltip,
+its widget title, its launcher window and its Shortcuts entry. Each process
+looks for Shuffle's bottom surface when it starts. Identifiers, D-Bus names and
+settings keys keep the Tettegouche name.
+
 A folder KDE opens in Files starts the launcher with `--folder`. The launcher
 answers `org.freedesktop.FileManager1` only when D-Bus starts it for that name,
 with `--file-manager`, from the service file placed where it looks. It then owns the
@@ -146,6 +151,15 @@ keyboard so Esc closes it, and is destroyed when it closes.
 the live sources with one sample transfer and one media row for tests and
 demonstrations. Normal startup uses live sources only and leaves the island
 absent when no activity qualifies.
+
+## Settings
+
+The widget's own settings page stays and works everywhere. Where Shuffle
+Settings is installed (desktop entry `studio.warbler.Shuffle.Settings`),
+Configure opens it at this widget's page instead, passing the page's name, `search`,
+as its one argument. The entry is looked for at each press, so there is one
+build and no switch, and a Plasma that wires Configure some other way keeps the
+widget's own page.
 
 ## Related settings
 
