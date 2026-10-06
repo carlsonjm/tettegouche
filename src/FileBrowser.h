@@ -352,7 +352,8 @@ public:
                 {QStringLiteral("kind"), QStringLiteral("transfer")}, {QStringLiteral("state"), QStringLiteral("failed")},
                 {QStringLiteral("source"), i18n("Files")}, {QStringLiteral("icon"), QStringLiteral("folder-download-symbolic")},
                 {QStringLiteral("title"), failure.title}, {QStringLiteral("description"), failure.why},
-                {QStringLiteral("evidence"), QStringLiteral("job")}, {QStringLiteral("capabilities"), QVariantMap{}}});
+                {QStringLiteral("evidence"), QStringLiteral("job")}, {QStringLiteral("capabilities"), QVariantMap{}},
+                {QStringLiteral("partial"), failure.partial}});
         }
         for (const auto &op : m_operations) {
             if (!op.job || !op.copying) continue;
@@ -1221,7 +1222,7 @@ private:
     QSet<QString> m_ejectAfter;
     // Operations run side by side; each keeps its own job and identity.
     struct Operation { QPointer<KJob> job; QString id; QString label; bool copying=false; bool percentKnown=false; QUrl destination; };
-    struct Failure { QString id, title, why; qint64 until=0; };
+    struct Failure { QString id, title, why; qint64 until=0; bool partial=false; };
     QList<Failure> m_failures;
     struct Question { QPointer<FileQuestions> asker; QPointer<KJob> job; QUrl destination; QVariantMap shown; };
     QList<Question> m_questions;
@@ -1321,7 +1322,7 @@ private:
             m_failures.removeIf([now](const Failure &f) { return f.until<now; });
             if (copying && !endedId.isEmpty()
                     && ((finished->error() && finished->error()!=KIO::ERR_USER_CANCELED) || !skipped.isEmpty()))
-                m_failures.append({endedId, endedTitle, m_operationStatus, now+10000});
+                m_failures.append({endedId, endedTitle, m_operationStatus, now+10000, !finished->error()});
             Q_EMIT changed(); // Keep full failure details visible, not elided status only.
             QSettings s;
             if (finished->error()) s.setValue(QStringLiteral("Files/lastOperationError"),m_operationStatus);

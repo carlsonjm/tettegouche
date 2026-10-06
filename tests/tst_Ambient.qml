@@ -579,6 +579,16 @@ TestCase {
         compare(invoked.count, 1);
         compare(invoked.signalArguments[0][2], "seekTo");
         fuzzyCompare(invoked.signalArguments[0][3], 135000000, 1000000);
+        // Focused, the track moves five seconds with the arrows.
+        opened.requestActivate();
+        tryVerify(() => opened.active);
+        seek.forceActiveFocus();
+        verify(seek.activeFocus);
+        const before = seek.positionUs;
+        keyClick(Qt.Key_Right);
+        compare(invoked.count, 2);
+        compare(invoked.signalArguments[1][2], "seekTo");
+        fuzzyCompare(invoked.signalArguments[1][3], before + 5000000, 1000000);
         // Back and forward ten seconds have left the island.
         compare(findChild(opened.contentItem, "ambient-island-seek-back"), null);
         compare(findChild(opened.contentItem, "ambient-island-seek-forward"), null);
@@ -587,13 +597,13 @@ TestCase {
         const otherToggle = findChild(opened.contentItem, "ambient-island-other-toggle-media-2");
         verify(otherToggle.visible);
         mouseClick(otherToggle, otherToggle.width / 2, otherToggle.height / 2);
-        compare(invoked.signalArguments[1][0], "media-2");
-        compare(invoked.signalArguments[1][2], "play");
+        compare(invoked.signalArguments[2][0], "media-2");
+        compare(invoked.signalArguments[2][2], "play");
         verify(opened.expanded);
         const raise = findChild(opened.contentItem, "ambient-island-raise");
         verify(raise.visible);
         mouseClick(raise, raise.width / 2, raise.height / 2);
-        compare(invoked.signalArguments[2][2], "raise");
+        compare(invoked.signalArguments[3][2], "raise");
         tryVerify(() => !opened.expanded);
     }
 

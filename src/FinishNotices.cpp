@@ -31,7 +31,9 @@ void FinishNotices::report(const QVariantMap &job) {
             {}, {}, {}, job.value(QStringLiteral("generation")).toInt()};
     if (error != 0 && error != Cancelled) {
         end.failed = true;
-        end.title = i18n("Transfer failed");
+        // A copy that carried all but what it could not read says so, not
+        // that it failed.
+        end.title = job.value(QStringLiteral("partial")).toBool() ? i18n("Transfer incomplete") : i18n("Transfer failed");
         end.body = job.value(QStringLiteral("errorText")).toString();
         if (end.body.isEmpty()) end.body = job.value(QStringLiteral("summary")).toString();
     } else if (error == 0 && !path.isEmpty() && QFileInfo(path).absolutePath() == m_downloads) {

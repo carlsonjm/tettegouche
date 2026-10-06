@@ -5,6 +5,12 @@ provenance.
 
 ## Unreleased
 
+- With the open island's track focused, Left and Right move the media five
+  seconds.
+- A copy that left unreadable files behind ends in Ambient as "Transfer
+  incomplete" rather than "Transfer failed".
+- Ambient no longer looks at files on network mounts, so a server that went
+  away cannot freeze the panel.
 - The installer restarts the panel, so the new widget runs without a
   sign-out, and says whether it loaded.
 - A copy of many files no longer writes a line per file to the system

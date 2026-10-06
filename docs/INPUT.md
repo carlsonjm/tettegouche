@@ -177,6 +177,7 @@ than repeat it.
 | Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward. |
 | With an island or the bubble focused, Enter or Space | Does what a tap on it does. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |
+| In the open island, with the track focused, Left or Right | Moves the media five seconds back or ahead, when the player allows it. |
 | In the open island, tap or click previous, play or pause, or next | Acts on the media. Each shows only when the player supports it. |
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island, tap or click Show and the player's name | Brings the player forward and closes the island. It shows only when the player can be raised. |

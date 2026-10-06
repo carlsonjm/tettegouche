@@ -389,6 +389,14 @@ Window {
                         height: 40
                         Accessible.role: Accessible.Slider
                         Accessible.name: words.i18n("Position")
+                        // Focused, the arrows move the media five seconds at a time.
+                        activeFocusOnTab: movable
+                        function step(byUs) {
+                            overlay.surface.invoke(overlay.activity, "seekTo",
+                                Math.round(Math.max(0, Math.min(lengthUs, positionUs + byUs))));
+                        }
+                        Keys.onLeftPressed: if (movable) step(-5000000)
+                        Keys.onRightPressed: if (movable) step(5000000)
                         Rectangle {
                             y: 12
                             width: parent.width
@@ -409,7 +417,7 @@ Window {
                                 height: 12
                                 radius: 6
                                 color: overlay.ink
-                                scale: seekArea.pressed ? 1.5 : 1
+                                scale: seekArea.pressed || seek.activeFocus ? 1.5 : 1
                                 Behavior on scale { NumberAnimation { duration: 90 } }
                             }
                         }
