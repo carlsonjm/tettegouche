@@ -164,6 +164,7 @@ plasma_add_applet(studio.warbler.tettegouche
         src/TettegoucheApplet.h
         src/LauncherKeys.cpp
         src/LauncherKeys.h
+        src/SuiteSettings.h
     QML_SOURCES
         applet/main.qml
         applet/AmbientSurface.qml
@@ -192,6 +193,8 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     KF6::CoreAddons
     KF6::GlobalAccel
     KF6::I18n
+    KF6::KIOGui
+    KF6::Service
     Plasma::Plasma
     Plasma::PlasmaQuick
 )

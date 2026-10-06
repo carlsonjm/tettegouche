@@ -3,6 +3,7 @@
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
 #include "LauncherKeys.h"
+#include "SuiteSettings.h"
 
 #include <KConfigGroup>
 #include <KPluginFactory>
@@ -31,6 +32,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     , m_process(new QProcess(this))
 {
     setHasConfigurationInterface(true);
+    openConfigureInSuiteSettings(this, QStringLiteral("search"));
 
     connect(m_process, &QProcess::stateChanged, this,
             [this] { Q_EMIT launcherActiveChanged(); });

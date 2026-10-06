@@ -147,6 +147,15 @@ the live sources with one sample transfer and one media row for tests and
 demonstrations. Normal startup uses live sources only and leaves the island
 absent when no activity qualifies.
 
+## Settings
+
+The widget's own settings page stays and works everywhere. Where Shuffle
+Settings is installed (desktop entry `studio.warbler.Shuffle.Settings`),
+Configure opens it at this widget's page instead, passing the page's name, `search`,
+as its one argument. The entry is looked for at each press, so there is one
+build and no switch, and a Plasma that wires Configure some other way keeps the
+widget's own page.
+
 ## Related settings
 
 Related-setting children are read-only context under a settings result, owned by
