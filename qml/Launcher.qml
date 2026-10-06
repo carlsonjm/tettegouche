@@ -1197,7 +1197,7 @@ Item {
                         id: geniePill
                         reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0) + (notesPill.visible ? 1 : 0))
                         objectName: "genie-pill"
-                        label: words.i18n("Genie")
+                        label: words.i18n("Ask")
                         glyph: "genie"
                         visible: root.genie !== null && root.genie.available
                         onActivated: root.openGenie()

@@ -2148,7 +2148,7 @@ TestCase {
         verify(!genie.visible)
         launcher.genie = genieStub
         verify(genie.visible)
-        compare(genie.label, "Genie")
+        compare(genie.label, "Ask")
         compare(row.pillsWidth, findChild(launcher, "apps-pill").width + findChild(launcher, "files-pill").width
             + genie.width + 2 * row.pillGap)
         genieStub.available = false
