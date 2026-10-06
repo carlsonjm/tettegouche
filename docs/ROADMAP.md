@@ -4,10 +4,8 @@ What is planned for Tettegouche, and what is not.
 
 ## Next
 
-- **Release validation.** One installed pass over media, Plasma jobs, Files
-  transfers, downloads, and the island at tablet and monitor widths by touch,
-  mouse and keyboard. Then a keyboard and accessibility review, large folders,
-  interrupted and partly failed copies, unavailable destinations, and scaling.
+- **Scaling.** One installed pass at a larger display scale and a taller
+  panel.
 
 ## Later
 

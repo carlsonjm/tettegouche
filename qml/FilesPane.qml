@@ -362,6 +362,10 @@ Item {
                     required property var modelData
                     objectName: "open-with-" + modelData.id
                     width: ListView.view.width; height: 48; radius: pane.paperRadius
+                    Accessible.role: Accessible.Button
+                    Accessible.name: modelData.name
+                    Accessible.description: modelData.isDefault ? words.i18n("Default") : ""
+                    Accessible.onPressAction: { pane.browser.openWith(openWithSheet.choices.path, modelData.id, alwaysUse.checked); openWithSheet.close() }
                     color: pick.pressed ? Qt.rgba(1, 1, 1, 0.16) : pickHover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
                     Row {
                         x: 12; spacing: 12; anchors.verticalCenter: parent.verticalCenter
@@ -584,9 +588,15 @@ Item {
                     }
                     Item {
                         anchors { left: parent.left; top: parent.top; bottom: parent.bottom; right: place.ejectable ? eject.left : parent.right }
+                        Accessible.role: Accessible.Button
+                        Accessible.name: place.modelData.label
+                        Accessible.description: place.modelData.note || ""
+                        Accessible.selected: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path
+                        Accessible.onPressAction: if (!place.busy) open()
+                        function open() { place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path) }
                         TapHandler {
                             enabled: !place.busy
-                            onTapped: place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path)
+                            onTapped: parent.open()
                         }
                     }
                     Action {
@@ -618,6 +628,10 @@ Item {
                         required property int index
                         width: 180; height: 42; radius: 12
                         color: "transparent"
+                        Accessible.role: Accessible.PageTab
+                        Accessible.name: modelData.label
+                        Accessible.selected: pane.browser.currentTab===index
+                        Accessible.onPressAction: pane.browser.selectTab(index)
                         Rectangle { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: parent.width-24; height: 2; radius: 1; color: pane.browser.currentTab===index ? "#888888" : "transparent" }
                         Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: "#F8F8FF"; elide: Text.ElideRight }
                         TapHandler { onTapped: pane.browser.selectTab(index) }
@@ -749,6 +763,8 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 4; radius: 2
                         color: "#333333"
+                        Accessible.role: Accessible.ProgressBar
+                        Accessible.name: operationRow.operation ? (operationRow.operation.title || operationRow.operation.label) : ""
                         Rectangle {
                             height: parent.height; radius: 2; color: "#F8F8FF"
                             visible: operationRow.known
@@ -791,6 +807,8 @@ Item {
             GridView {
                 id: files
                 objectName: "files-grid"
+                Accessible.role: Accessible.List
+                Accessible.name: pane.browser ? pane.browser.path.split("/").pop() || "/" : ""
                 interactive: !pane.draggingFiles
                 // A handle on the right edge for a long folder: slim at rest,
                 // wide enough for a finger to take, broader while held.
@@ -983,6 +1001,13 @@ Item {
                     id: tile
                     required property var modelData
                     objectName: "file-entry-"+modelData.name
+                    Accessible.role: Accessible.ListItem
+                    Accessible.name: modelData.name
+                    Accessible.description: modelData.detail || ""
+                    Accessible.selectable: true
+                    Accessible.selected: selected
+                    Accessible.focused: files.activeFocus && pane.browser.focusedPath===modelData.path
+                    Accessible.onPressAction: { pane.browser.selectedPath=modelData.path; pane.browser.openSelected() }
                     readonly property bool selected: pane.selectedPaths ? pane.selectedPaths.indexOf(modelData.path)>=0 : false
                     // A finger on a file lifts it, as a touched piece lifts
                     // across the suite.

@@ -5,6 +5,8 @@ provenance.
 
 ## Unreleased
 
+- A screen reader names Files' places, tabs, files, transfers and Open With
+  choices, and Search's results, applications, sort choices and controls.
 - With the open island's track focused, Left and Right move the media five
   seconds.
 - A copy that left unreadable files behind ends in Ambient as "Transfer
