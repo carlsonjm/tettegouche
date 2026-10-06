@@ -210,7 +210,7 @@ Item {
                 SuiteIcon {
                     visible: pill.glyph === "files" || pill.glyph === "notes" || pill.glyph === "genie"
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: pill.glyph === "notes" ? "sticky-note" : pill.glyph === "genie" ? "genie" : "folder-open"
+                    glyph: pill.glyph === "notes" || pill.glyph === "genie" ? pill.glyph : "folder-open"
                     width: 18
                     height: 18
                 }
