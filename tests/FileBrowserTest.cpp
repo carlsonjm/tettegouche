@@ -1035,7 +1035,10 @@ private Q_SLOTS:
         QVERIFY(browser.error().contains(QStringLiteral("b.txt")));
         bool told=false;
         for (const auto &row : browser.activitySnapshot())
-            if (row.toMap().value(QStringLiteral("state")) == QStringLiteral("failed")) told=true;
+            if (row.toMap().value(QStringLiteral("state")) == QStringLiteral("failed")) {
+                told=true;
+                QVERIFY(row.toMap().value(QStringLiteral("partial")).toBool());
+            }
         QVERIFY(told);
     }
 

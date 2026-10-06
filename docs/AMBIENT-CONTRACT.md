@@ -70,6 +70,10 @@ controls supplied by that model. Zero percent without a total is unknown
 progress. A job's file is its destination when that is a file; a destination
 folder counts only with a description value naming a regular file directly
 inside it, as KDE Connect reports one. Descriptions' labels are never read.
+A destination on a network or user-space mount is never looked at on disk,
+since its server can go away and a look there would hold the panel; such a
+job shows from its reported progress alone. A job whose producer goes away
+ends as a failure.
 
 ### Ends
 
@@ -80,7 +84,8 @@ its job's place for a minute and says how it ended, an arrival with Show in
 Files. Then it is filed as a notification in the freedesktop transfer
 categories, `transfer.complete` or `transfer.error`, which the history keeps
 and Temperance's ticker does not play. One used in Ambient is filed at once.
-A copy or move in Files ends the same way when it fails; one the person stops
+A copy or move in Files ends the same way when it fails, titled as incomplete
+when it carried everything but files it could not read; one the person stops
 or cancels ends quietly. Filesystem evidence alone never files anything.
 
 ### Drives

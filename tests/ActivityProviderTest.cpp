@@ -579,6 +579,40 @@ private Q_SLOTS:
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-notifications"));
     }
 
+    // A job whose producer goes away while Ambient holds the service leaves
+    // Ambient as a failure, not a transfer running forever.
+    void heldJobOwnerVanishes() {
+        DesktopJobProvider provider;
+        QSignalSpy ends(&provider,&DesktopJobProvider::finished);
+        QTRY_VERIFY(provider.holding());
+        QProcess producer;
+        producer.start(QCoreApplication::applicationFilePath(),{QStringLiteral("--job-producer-v2")});
+        QVERIFY(producer.waitForStarted());
+        QTRY_COMPARE_WITH_TIMEOUT(provider.activities().size(),1,5000);
+        producer.kill(); producer.waitForFinished();
+        QTRY_VERIFY_WITH_TIMEOUT(provider.activities().isEmpty(),5000);
+        QTRY_COMPARE(ends.size(),1);
+        const auto error=ends.first().first().toMap().value(QStringLiteral("error")).toInt();
+        QVERIFY2(error!=0 && error!=1,qPrintable(QString::number(error)));
+    }
+
+    // Files on a network or user-space mount are never looked at, so a
+    // server that went away cannot hold the panel; the deepest mount decides.
+    void remoteMountsAreNotLookedAt() {
+        const QByteArray mounts=
+            "/dev/nvme0n1p2 / btrfs rw 0 0\n"
+            "server:/share /mnt/nas nfs4 rw 0 0\n"
+            "/dev/sda1 /mnt/nas/usb ext4 rw 0 0\n"
+            "user@host:/ /home/user/My\\040Phone fuse.sshfs rw 0 0\n"
+            "/dev/sdb1 /media/disk fuseblk rw 0 0\n";
+        QVERIFY(!Ambient::onRemoteMount(QStringLiteral("/home/user/Downloads/a.png"),mounts));
+        QVERIFY(Ambient::onRemoteMount(QStringLiteral("/mnt/nas/movie.mkv"),mounts));
+        QVERIFY(!Ambient::onRemoteMount(QStringLiteral("/mnt/nas/usb/movie.mkv"),mounts));
+        QVERIFY(!Ambient::onRemoteMount(QStringLiteral("/mnt/nasty/movie.mkv"),mounts));
+        QVERIFY(Ambient::onRemoteMount(QStringLiteral("/home/user/My Phone/DCIM/a.jpg"),mounts));
+        QVERIFY(!Ambient::onRemoteMount(QStringLiteral("/media/disk/a.jpg"),mounts));
+    }
+
     // A drive plugged in and not mounted waits its minute in Ambient with
     // Open. Tapped, it leaves and Files is asked to open it; ignored or set
     // aside, it is filed quietly with Open in Files; mounted elsewhere, it
@@ -753,6 +787,7 @@ private Q_SLOTS:
         QVERIFY(job.value(QStringLiteral("id")).toString().startsWith(QStringLiteral("tette:")));
         QVERIFY(job.value(QStringLiteral("error")).toInt()>1);
         QVERIFY(job.value(QStringLiteral("errorText")).toString().startsWith(QStringLiteral("Stopped")));
+        QVERIFY(!job.value(QStringLiteral("partial")).toBool());
         QVERIFY(provider.activities().isEmpty());
         // Heard once, however many snapshots still carry it.
         Q_EMIT files.operationChanged();

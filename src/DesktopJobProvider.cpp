@@ -19,7 +19,7 @@ const QString JobService = QStringLiteral("org.kde.JobViewServer");
 // values' labels are translated and never read.
 QString writtenFile(const NotificationManager::Job &job) {
     const auto url = job.destUrl();
-    if (!url.isLocalFile()) return {};
+    if (!url.isLocalFile() || Ambient::onRemoteMount(url.toLocalFile())) return {};
     const QFileInfo destination(url.toLocalFile());
     if (destination.isFile()) return destination.absoluteFilePath();
     if (!destination.isDir() || job.totalFiles() > 1) return {};

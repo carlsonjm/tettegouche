@@ -58,7 +58,8 @@ void TetteTransferProvider::apply(const QString &json) {
                 {QStringLiteral("application"), i18n("Files")}, {QStringLiteral("icon"), row.value(QStringLiteral("icon"))},
                 {QStringLiteral("desktopEntry"), QStringLiteral("io.github.carlsonjm.Tettegouche.Files")},
                 {QStringLiteral("summary"), row.value(QStringLiteral("title"))},
-                {QStringLiteral("errorText"), row.value(QStringLiteral("description"))}, {QStringLiteral("error"), 2}});
+                {QStringLiteral("errorText"), row.value(QStringLiteral("description"))}, {QStringLiteral("error"), 2},
+                {QStringLiteral("partial"), row.value(QStringLiteral("partial")).toBool()}});
             continue;
         }
         m_rows.append(row);
