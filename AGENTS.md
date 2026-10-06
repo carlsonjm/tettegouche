@@ -7,8 +7,8 @@
 3. Read `docs/ROADMAP.md`. Suite block order, cross-repository dependencies,
    open product decisions and this component's task detail belong to the suite
    record, kept privately in the Shuffle repository:
-   `../shuffle/docs/suite/ROADMAP-CC.md` and
-   `../shuffle/docs/suite/roadmaps/TETTEGOUCHE.md`. Read them when that checkout
+   `../shuffle/docs/suite/ROADMAP-CC.md` (only § Current target and Block 6)
+   and `../shuffle/docs/suite/roadmaps/TETTEGOUCHE.md`. Read them when that checkout
    is present, and say so when it is not.
 4. Open only the other documents the work touches; `docs/README.md` routes to
    them.
