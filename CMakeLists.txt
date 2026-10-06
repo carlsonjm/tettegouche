@@ -20,6 +20,8 @@ find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
 find_package(Plasma 6.7 REQUIRED)
+# The applet links PlasmaQuick, so a build without tests needs it too.
+find_package(PlasmaQuick REQUIRED)
 find_package(LibNotificationManager REQUIRED)
 find_package(LibTaskManager REQUIRED)
 find_package(PlasmaActivitiesStats REQUIRED)
