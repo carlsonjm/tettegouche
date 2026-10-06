@@ -730,12 +730,10 @@ TestCase {
         tryVerify(() => music.scale > 1.001, 1000);
         settle();
         compare(music.scale, 1);
-        const neighbour = island(surface, "transfer");
-        const standing = leftOf(surface, neighbour);
         surface.activities = [transfer];
-        // While it pops down, its neighbour holds its place.
+        // While it pops down, it keeps its room in the band.
         wait(60);
-        fuzzyCompare(leftOf(surface, neighbour), standing, 0.5);
+        compare(carrier(surface, "media").presence, 1);
         tryVerify(() => !music.visible, 1000);
         settle();
         fuzzyCompare(centreOf(surface, "transfer").x, surface.width / 2, 1);
