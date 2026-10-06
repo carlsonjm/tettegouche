@@ -3,6 +3,7 @@
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
 #include "LauncherKeys.h"
+#include "ProductName.h"
 #include "SuiteSettings.h"
 
 #include <KConfigGroup>
@@ -30,7 +31,13 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
                                      const QVariantList &args)
     : Plasma::Applet(parent, data, args)
     , m_process(new QProcess(this))
+    , m_productName(tettegouche::productName())
 {
+    // Menus and the widget's title read the shown name; where Shuffle is
+    // absent, the title stays the one metadata.json gives.
+    if (tettegouche::shuffleInstalled()) {
+        setTitle(m_productName);
+    }
     setHasConfigurationInterface(true);
     openConfigureInSuiteSettings(this, QStringLiteral("search"));
 
@@ -90,6 +97,11 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         });
         setAmbientActivities(m_activities->activities());
     }
+}
+
+QString TettegoucheApplet::productName() const
+{
+    return m_productName;
 }
 
 bool TettegoucheApplet::launcherActive() const

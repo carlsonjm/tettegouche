@@ -83,7 +83,7 @@ than repeat it.
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
-| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
+| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
 

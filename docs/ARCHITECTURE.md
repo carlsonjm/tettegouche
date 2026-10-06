@@ -35,6 +35,11 @@ settings, under Tettegouche, by whichever Tettegouche widget came first. A
 press starts the launcher with `--drawer apps` or `--drawer files`, or asks a
 running one through `openDrawer` on its D-Bus interface.
 
+Where Shuffle is installed, Tettegouche names itself Search: in its tooltip,
+its widget title, its launcher window and its Shortcuts entry. Each process
+looks for Shuffle's bottom surface when it starts. Identifiers, D-Bus names and
+settings keys keep the Tettegouche name.
+
 A folder KDE opens in Files starts the launcher with `--folder`. The launcher
 answers `org.freedesktop.FileManager1` only when D-Bus starts it for that name,
 with `--file-manager`, from the service file placed where it looks. It then owns the

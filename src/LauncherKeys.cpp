@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 #include "LauncherKeys.h"
+#include "ProductName.h"
 
 #include <KGlobalAccel>
 #include <KLocalizedString>
@@ -15,7 +16,7 @@ QAction *drawerAction(QObject *parent, const QString &name, const QString &text,
     action->setObjectName(name);
     // Its own entry in System Settings, not one more line under Plasma.
     action->setProperty("componentName", QStringLiteral("tettegouche"));
-    action->setProperty("componentDisplayName", QStringLiteral("Tettegouche"));
+    action->setProperty("componentDisplayName", tettegouche::productName());
     // A key the person chose in System Settings is kept over this default.
     KGlobalAccel::self()->setGlobalShortcut(action, key);
     return action;

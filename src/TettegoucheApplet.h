@@ -20,6 +20,8 @@ class TettegoucheApplet final : public Plasma::Applet
 {
     Q_OBJECT
     Q_PROPERTY(bool launcherActive READ launcherActive NOTIFY launcherActiveChanged)
+    // Search where Shuffle is installed, Tettegouche elsewhere.
+    Q_PROPERTY(QString productName READ productName CONSTANT)
     Q_PROPERTY(QVariantList ambientActivities READ ambientActivities WRITE setAmbientActivities
                NOTIFY ambientActivitiesChanged)
 
@@ -28,6 +30,7 @@ public:
                       const QVariantList &args);
 
     bool launcherActive() const;
+    QString productName() const;
     QVariantList ambientActivities() const;
     void setAmbientActivities(const QVariantList &activities);
     Q_INVOKABLE void launch(bool useKadunce);
@@ -57,6 +60,7 @@ private:
                        const QString &drive = {});
 
     QProcess *m_process = nullptr;
+    QString m_productName;
     QVariantList m_ambientActivities;
     QList<QPointer<QQuickItem>> m_watchedGeometryItems;
     bool m_watchingContainment = false;
