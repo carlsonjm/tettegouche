@@ -29,6 +29,15 @@ class QuickNote : public QObject
     Q_PROPERTY(QStringList colourHexes READ colourHexes NOTIFY noteChanged)
     Q_PROPERTY(QString colourHex READ colourHex NOTIFY noteChanged)
     Q_PROPERTY(QVariantList choices READ choices NOTIFY noteChanged)
+    // Folder and Stuck to, from an application that offers them; one that
+    // does not offers only Belongs to, in choices.
+    Q_PROPERTY(bool offersFolders READ offersFolders NOTIFY noteChanged)
+    Q_PROPERTY(QString folder READ folder NOTIFY noteChanged)
+    Q_PROPERTY(QString folderLabel READ folderLabel NOTIFY noteChanged)
+    Q_PROPERTY(QVariantList folders READ folders NOTIFY noteChanged)
+    Q_PROPERTY(bool stuck READ stuck NOTIFY noteChanged)
+    Q_PROPERTY(QString stuckWindow READ stuckWindow NOTIFY noteChanged)
+    Q_PROPERTY(QVariantList windows READ windows NOTIFY noteChanged)
     Q_PROPERTY(QString noteId READ noteId NOTIFY noteChanged)
     Q_PROPERTY(bool kept READ kept NOTIFY noteChanged)
     Q_PROPERTY(bool readOnly READ readOnly NOTIFY noteChanged)
@@ -55,6 +64,13 @@ public:
     QStringList colourHexes() const { return m_state.value(QStringLiteral("colourHexes")).toStringList(); }
     QString colourHex() const;
     QVariantList choices() const;
+    bool offersFolders() const { return m_state.contains(QStringLiteral("folders")); }
+    QString folder() const { return m_state.value(QStringLiteral("folder")).toString(); }
+    QString folderLabel() const { return m_state.value(QStringLiteral("folderLabel")).toString(); }
+    QVariantList folders() const { return m_state.value(QStringLiteral("folders")).toList(); }
+    bool stuck() const { return m_state.value(QStringLiteral("stuck")).toBool(); }
+    QString stuckWindow() const { return m_state.value(QStringLiteral("window")).toString(); }
+    QVariantList windows() const { return m_state.value(QStringLiteral("windows")).toList(); }
     QString noteId() const { return m_state.value(QStringLiteral("id")).toString(); }
     bool kept() const { return m_state.value(QStringLiteral("kept")).toBool(); }
     bool readOnly() const { return m_state.value(QStringLiteral("readOnly")).toBool(); }
@@ -70,6 +86,10 @@ public:
     Q_INVOKABLE void flush();
     Q_INVOKABLE void setColour(const QString &name);
     Q_INVOKABLE void setBelongs(const QString &kind, const QString &project);
+    // Keeps the note in that folder, made when new; empty is Inbox.
+    Q_INVOKABLE void setFolder(const QString &name);
+    // Sticks the note to that window, as windows gives it; empty unsticks it.
+    Q_INVOKABLE void setStuck(const QString &window, const QString &app);
     Q_INVOKABLE void done();
     Q_INVOKABLE void tuckAway();
     Q_INVOKABLE void remove();

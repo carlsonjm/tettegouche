@@ -150,6 +150,16 @@ TestCase {
         readonly property string colourHex: colourHexes[colours.indexOf(colour)] || ""
         property var choices: [{ kind: "window", label: "This window · Kate", project: "", chosen: false },
                                { kind: "loose", label: "Loose", project: "", chosen: true }]
+        // Folder and Stuck to, from a Gooseberry that offers them.
+        property bool offersFolders: true
+        property string folder: ""
+        property string folderLabel: ""
+        property var folders: []
+        property bool stuck: false
+        property string stuckWindow: ""
+        property var windows: []
+        property var folderSets: []
+        property var stucks: []
         property string noteId: "note-1"
         property bool kept: false
         property bool readOnly: false
@@ -167,6 +177,14 @@ TestCase {
         function reset() {
             available = true; open = false; text = ""; colour = "yellow"; starts = 0; texts = []
             flushes = 0; belongs = ""; dones = 0; tucks = 0; boards = []; boardOpens = true
+            offersFolders = true; folderSets = []; stucks = []
+            folder = "Kitchen"; folderLabel = "Kitchen"
+            folders = [{ name: "Kitchen", label: "Kitchen", chosen: true, workspace: true },
+                       { name: "", label: "Inbox", chosen: false, workspace: false },
+                       { name: "Taxes", label: "Taxes", chosen: false, workspace: false }]
+            stuck = true; stuckWindow = "plan.txt"
+            windows = [{ window: "plan.txt", app: "org.kde.kate", label: "Kate · plan.txt", chosen: true },
+                       { window: "Inbox", app: "org.kde.kmail2", label: "KMail · Inbox", chosen: false }]
         }
         function refresh() {}
         function start() { starts++; open = true; noteChanged() }
@@ -174,6 +192,20 @@ TestCase {
         function flush() { flushes++ }
         function setColour(name) { colour = name; noteChanged() }
         function setBelongs(kind, project) { belongs = kind; noteChanged() }
+        function setFolder(name) {
+            folderSets = folderSets.concat([name])
+            folder = name
+            folderLabel = name === "" ? "Inbox" : name
+            noteChanged()
+        }
+        function setStuck(window, app) {
+            stucks = stucks.concat([[window, app]])
+            stuck = window !== ""
+            stuckWindow = window
+            windows = windows.map(w => ({ window: w.window, app: w.app, label: w.label,
+                                          chosen: w.window === window && w.app === app }))
+            noteChanged()
+        }
         function done() { dones++; open = false }
         function tuckAway() { tucks++; open = false }
         function remove() {}
@@ -2063,8 +2095,7 @@ TestCase {
         keyClick(Qt.Key_Escape)
         compare(controller.closes, 1)
     }
-    // Typing goes to the note, not to search; colours and Belongs to are the
-    // note's; Done finishes it and Search closes.
+    // Typing goes to the note, not to search; colours are the note's; Done finishes it and Search closes.
     function test_notesModeWrites() {
         openNotesMode()
         const pad = findChild(launcher, "notes-pad")
@@ -2081,6 +2112,80 @@ TestCase {
         mouseClick(done, done.width / 2, done.height / 2)
         compare(quickStub.dones, 1)
         compare(controller.closes, 1)
+    }
+    // Folder and Stuck to take Belongs to's place, as on Gooseberry's own
+    // card, each chip saying what is chosen and opening its choices under it.
+    function test_notesFolderChip() {
+        openNotesMode()
+        verify(!findChild(launcher, "notes-belongs").visible)
+        const chip = findChild(launcher, "notes-folder")
+        verify(chip.visible)
+        compare(chip.label, "Folder · Kitchen ▾")
+        const choices = findChild(launcher, "notes-folder-choices")
+        verify(!choices.visible)
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        verify(choices.visible)
+        compare(findChild(launcher, "notes-folder-Kitchen").label, "Kitchen · this workspace")
+        verify(findChild(launcher, "notes-folder-Kitchen").chosen)
+        const inbox = findChild(launcher, "notes-folder-inbox")
+        verify(inbox.x > findChild(launcher, "notes-folder-Kitchen").x)
+        verify(findChild(launcher, "notes-folder-Taxes").x > inbox.x)
+        mouseClick(inbox, inbox.width / 2, inbox.height / 2)
+        compare(quickStub.folderSets, [""])
+        compare(chip.label, "Folder · Inbox ▾")
+        verify(!choices.visible)
+        verify(findChild(launcher, "notes-pad").activeFocus)
+        // A new folder, by name.
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        const field = findChild(launcher, "notes-new-folder")
+        verify(field.visible)
+        field.forceActiveFocus()
+        field.text = "  Garden "
+        keyClick(Qt.Key_Return)
+        compare(quickStub.folderSets, ["", "Garden"])
+        compare(chip.label, "Folder · Garden ▾")
+        verify(!choices.visible)
+        compare(controller.closes, 0)
+    }
+    function test_notesStuckChip() {
+        openNotesMode()
+        const chip = findChild(launcher, "notes-stuck")
+        compare(chip.label, "Stuck to · Kate · plan.txt ▾")
+        const choices = findChild(launcher, "notes-window-choices")
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        verify(choices.visible)
+        verify(!findChild(launcher, "notes-folder-choices").visible)
+        compare(findChild(launcher, "notes-window-0").label, "Kate · plan.txt")
+        const mail = findChild(launcher, "notes-window-1")
+        compare(mail.label, "KMail · Inbox")
+        mouseClick(mail, mail.width / 2, mail.height / 2)
+        compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"]])
+        compare(chip.label, "Stuck to · KMail · Inbox ▾")
+        verify(!choices.visible)
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        const loose = findChild(launcher, "notes-dont-stick")
+        verify(!loose.chosen)
+        mouseClick(loose, loose.width / 2, loose.height / 2)
+        compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"], ["", ""]])
+        compare(chip.label, "Not stuck to a window ▾")
+        // Esc closes open choices first, and leaves the note open.
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        verify(choices.visible)
+        keyClick(Qt.Key_Escape)
+        verify(!choices.visible)
+        compare(launcher.notesProgress, 1)
+        compare(controller.closes, 0)
+    }
+    // An older Gooseberry offers no folders: Belongs to stays as it was.
+    function test_notesOlderGooseberryBelongsTo() {
+        quickStub.offersFolders = false
+        openNotesMode()
+        verify(!findChild(launcher, "notes-chips").visible)
+        verify(findChild(launcher, "notes-belongs").visible)
+        const belongs = findChild(launcher, "notes-belongs-0")
+        mouseClick(belongs, belongs.width / 2, belongs.height / 2)
+        compare(quickStub.belongs, "window")
+        compare(quickStub.folderSets, [])
     }
     // Over an Active card, All notes grows the window as Apps does, opens the
     // board, and fades once the board has drawn in the card's place.

@@ -36,9 +36,16 @@ application and Tettegouche never depends on it.
 - Notes opens in the same window with the drawer's motion: the field becomes
   the note pad, the pills fade, and Back, the note's five colours and All notes
   come into the header where Apps has Back and its sort button. The window
-  keeps its size. Belongs to, Saved as you go, Tuck away and Done sit under the
-  pad. Back or `Esc` returns to Search and the note stays open, so Notes
-  resumes it; Done and Tuck away finish it and Search closes.
+  keeps its size. Folder, Stuck to, Saved as you go, Tuck away and Done sit
+  under the pad. Back or `Esc` returns to Search and the note stays open, so
+  Notes resumes it; Done and Tuck away finish it and Search closes.
+- Folder and Stuck to are Gooseberry's own card's two chips, each showing
+  what is chosen and opening its choices in a row under it. Folder offers
+  Gooseberry's folders in its order, the workspace's own marked, and a field
+  for a new one; Stuck to offers the windows Gooseberry gives, in its order,
+  and Don't stick to a window. A choice closes the row and returns to the pad,
+  and `Esc` closes an open row before it leaves the note. A Gooseberry that
+  offers no folders gets its Belongs to row instead, as it offers it.
 - The note is Gooseberry's quick note over its session-bus interface, version
   1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search). Typing is sent
   half a second after it pauses and at least every three seconds, and on

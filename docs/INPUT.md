@@ -19,7 +19,8 @@ than repeat it.
 | Tap or click Notes, after Files | The field becomes the note pad in the same window, with the cursor in it. Notes is there only while Gooseberry is installed. |
 | Type, in Notes | Writes the note; Gooseberry keeps it as you go. |
 | Tap or click Back, or `Esc`, in Notes | Returns to Search; Notes resumes the same note. |
-| Tap or click a colour or a place under Belongs to, in Notes | Sets the note's colour, or what it belongs to. |
+| Tap or click a colour, in Notes | Sets the note's colour. |
+| Tap or click Folder or Stuck to, in Notes | Opens its choices under it: the folders and a field for a new one, or the windows and Don't stick to a window. A choice, or Enter in the field, sets it and returns to the pad; `Esc` closes the choices. With an older Gooseberry, Belongs to is there instead, and a place under it sets what the note belongs to. |
 | Tap or click All notes, in Notes | Search grows and Gooseberry's board takes its place. |
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click Ask, after Notes | Genie opens: the field travels into the header for the question, in the same window. Ask is there only while Split Rock answers. |
