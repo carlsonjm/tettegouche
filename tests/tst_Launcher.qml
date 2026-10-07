@@ -2113,6 +2113,13 @@ TestCase {
         compare(quickStub.dones, 1)
         compare(controller.closes, 1)
     }
+    // A chip's row of choices takes its place under the chip at the next
+    // layout; a tap before then would be let go where the row no longer is.
+    function tapChip(chip) {
+        mouseClick(chip, chip.width / 2, chip.height / 2)
+        waitForItemPolished(findChild(launcher, "notes-chips"))
+        waitForRendering(launcher)
+    }
     // Folder and Stuck to take Belongs to's place, as on Gooseberry's own
     // card, each chip saying what is chosen and opening its choices under it.
     function test_notesFolderChip() {
@@ -2123,7 +2130,7 @@ TestCase {
         compare(chip.label, "Folder · Kitchen ▾")
         const choices = findChild(launcher, "notes-folder-choices")
         verify(!choices.visible)
-        mouseClick(chip, chip.width / 2, chip.height / 2)
+        tapChip(chip)
         verify(choices.visible)
         compare(findChild(launcher, "notes-folder-Kitchen").label, "Kitchen · this workspace")
         verify(findChild(launcher, "notes-folder-Kitchen").chosen)
@@ -2136,7 +2143,7 @@ TestCase {
         verify(!choices.visible)
         verify(findChild(launcher, "notes-pad").activeFocus)
         // A new folder, by name.
-        mouseClick(chip, chip.width / 2, chip.height / 2)
+        tapChip(chip)
         const field = findChild(launcher, "notes-new-folder")
         verify(field.visible)
         field.forceActiveFocus()
@@ -2152,7 +2159,7 @@ TestCase {
         const chip = findChild(launcher, "notes-stuck")
         compare(chip.label, "Stuck to · Kate · plan.txt ▾")
         const choices = findChild(launcher, "notes-window-choices")
-        mouseClick(chip, chip.width / 2, chip.height / 2)
+        tapChip(chip)
         verify(choices.visible)
         verify(!findChild(launcher, "notes-folder-choices").visible)
         compare(findChild(launcher, "notes-window-0").label, "Kate · plan.txt")
@@ -2162,14 +2169,14 @@ TestCase {
         compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"]])
         compare(chip.label, "Stuck to · KMail · Inbox ▾")
         verify(!choices.visible)
-        mouseClick(chip, chip.width / 2, chip.height / 2)
+        tapChip(chip)
         const loose = findChild(launcher, "notes-dont-stick")
         verify(!loose.chosen)
         mouseClick(loose, loose.width / 2, loose.height / 2)
         compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"], ["", ""]])
         compare(chip.label, "Not stuck to a window ▾")
         // Esc closes open choices first, and leaves the note open.
-        mouseClick(chip, chip.width / 2, chip.height / 2)
+        tapChip(chip)
         verify(choices.visible)
         keyClick(Qt.Key_Escape)
         verify(!choices.visible)
