@@ -41,14 +41,48 @@ Item {
 
     readonly property real headerHeight: 44
     readonly property real padTop: headerHeight + 14
-    // Belongs to, its choices and the footer, under the pad.
-    readonly property real bottomHeight: 14 + 17 + 6 + 40 + 14 + 44
+    // Folder and Stuck to, as Gooseberry's own card has them, where it
+    // offers them; an older Gooseberry offers Belongs to instead.
+    readonly property bool chips: !!quickNote && quickNote.offersFolders
+    // The chip whose choices are open under it: "folder", "window" or none.
+    property string choosing: ""
+    readonly property string stuckLabel: {
+        if (!quickNote || !quickNote.stuck) return ""
+        const windows = quickNote.windows || []
+        for (let i = 0; i < windows.length; ++i)
+            if (windows[i].chosen) return windows[i].label || windows[i].window || ""
+        return quickNote.stuckWindow
+    }
+    function choose(which) {
+        choosing = choosing === which ? "" : which
+        newFolder.text = ""
+    }
+    function closeChoices() {
+        choosing = ""
+        newFolder.text = ""
+        focusPad()
+    }
+    // The chips, or Belongs to, with their choices, and the footer, under
+    // the pad.
+    readonly property real placeHeight: chips ? 40 + (choosing !== "" ? 6 + 40 : 0) : 17 + 6 + 40
+    readonly property real bottomHeight: 14 + placeHeight + 14 + 44
     readonly property rect padEnd: Qt.rect(0, padTop, width,
         Math.max(60, height - padTop - bottomHeight))
     readonly property string noteHex: quickNote && quickNote.colourHex !== "" ? quickNote.colourHex : "#F2D98A"
 
     visible: progress > 0.001
     enabled: progress > 0.9 && !growing
+    onProgressChanged: if (progress < 0.001) choosing = ""
+    onChipsChanged: if (!chips) choosing = ""
+
+    // Esc first closes a chip's choices, and then is Search's.
+    Keys.onEscapePressed: event => {
+        if (choosing === "") {
+            event.accepted = false
+            return
+        }
+        closeChoices()
+    }
 
     // The pad: from the field's place and shape to its own.
     Item {
@@ -179,7 +213,8 @@ Item {
         }
     }
 
-    // Belongs to and the footer settle 20 px upward as the mode opens.
+    // The chips, or Belongs to, and the footer settle 20 px upward as the
+    // mode opens.
     Column {
         id: lower
         x: 0
@@ -189,9 +224,137 @@ Item {
         opacity: pane.progress
         transform: Translate { y: 20 * (1 - pane.progress) }
 
+        // Where the note is kept, and the window it is stuck to: two chips,
+        // both already filled in, each opening its choices under it.
         Column {
+            objectName: "notes-chips"
             width: parent.width
             spacing: 6
+            visible: pane.chips
+            enabled: !!pane.quickNote && !pane.quickNote.readOnly
+            opacity: pane.quickNote && pane.quickNote.readOnly ? 0.45 : 1
+            Row {
+                spacing: 8
+                Chip {
+                    objectName: "notes-folder"
+                    maxWidth: (pane.width - 8) / 2
+                    label: pane.quickNote ? words.i18n("Folder · %1 ▾", pane.quickNote.folderLabel) : ""
+                    spokenLabel: pane.quickNote ? words.i18n("Folder: %1", pane.quickNote.folderLabel) : ""
+                    chosen: pane.choosing === "folder"
+                    onActivated: pane.choose("folder")
+                }
+                Chip {
+                    objectName: "notes-stuck"
+                    maxWidth: (pane.width - 8) / 2
+                    label: pane.quickNote && pane.quickNote.stuck ? words.i18n("Stuck to · %1 ▾", pane.stuckLabel)
+                        : words.i18n("Not stuck to a window ▾")
+                    spokenLabel: pane.quickNote && pane.quickNote.stuck ? words.i18n("Stuck to %1", pane.stuckLabel)
+                        : words.i18n("Not stuck to a window")
+                    chosen: pane.choosing === "window"
+                    onActivated: pane.choose("window")
+                }
+            }
+            Flickable {
+                objectName: "notes-folder-choices"
+                visible: pane.choosing === "folder"
+                width: parent.width
+                height: 40
+                contentWidth: folderRow.width
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
+                Row {
+                    id: folderRow
+                    spacing: 8
+                    Repeater {
+                        model: pane.quickNote ? pane.quickNote.folders : []
+                        delegate: Chip {
+                            required property var modelData
+                            objectName: "notes-folder-" + (modelData.name || "inbox")
+                            label: modelData.workspace ? words.i18n("%1 · this workspace", modelData.label || "")
+                                : (modelData.label || "")
+                            radio: true
+                            chosen: !!modelData.chosen
+                            onActivated: {
+                                pane.quickNote.setFolder(modelData.name || "")
+                                pane.closeChoices()
+                            }
+                        }
+                    }
+                    QQC2.TextField {
+                        id: newFolder
+                        objectName: "notes-new-folder"
+                        width: 200
+                        height: 40
+                        leftPadding: 16
+                        rightPadding: 16
+                        color: pane.primaryText
+                        font.pixelSize: 13
+                        font.weight: Font.DemiBold
+                        placeholderText: words.i18n("New folder")
+                        placeholderTextColor: "#8A8A90"
+                        Accessible.name: words.i18n("New folder")
+                        background: Rectangle {
+                            radius: 20
+                            color: pane.controlColor
+                            border.width: 1
+                            border.color: newFolder.activeFocus ? pane.primaryText : pane.surfaceOutline
+                        }
+                        onAccepted: {
+                            const name = text.trim()
+                            if (name === "") return
+                            pane.quickNote.setFolder(name)
+                            pane.closeChoices()
+                        }
+                    }
+                }
+            }
+            Flickable {
+                objectName: "notes-window-choices"
+                visible: pane.choosing === "window"
+                width: parent.width
+                height: 40
+                contentWidth: windowRow.width
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.HorizontalFlick
+                Row {
+                    id: windowRow
+                    spacing: 8
+                    Repeater {
+                        model: pane.quickNote ? pane.quickNote.windows : []
+                        delegate: Chip {
+                            required property var modelData
+                            required property int index
+                            objectName: "notes-window-" + index
+                            label: modelData.label || modelData.window || ""
+                            radio: true
+                            chosen: !!modelData.chosen
+                            onActivated: {
+                                pane.quickNote.setStuck(modelData.window || "", modelData.app || "")
+                                pane.closeChoices()
+                            }
+                        }
+                    }
+                    Chip {
+                        objectName: "notes-dont-stick"
+                        label: words.i18n("Don't stick to a window")
+                        radio: true
+                        chosen: !!pane.quickNote && !pane.quickNote.stuck
+                        onActivated: {
+                            pane.quickNote.setStuck("", "")
+                            pane.closeChoices()
+                        }
+                    }
+                }
+            }
+        }
+
+        Column {
+            objectName: "notes-belongs"
+            width: parent.width
+            spacing: 6
+            visible: !pane.chips
             Text {
                 text: words.i18n("Belongs to").toUpperCase()
                 color: "#8A8A90"
@@ -214,6 +377,8 @@ Item {
                         delegate: Rectangle {
                             id: chip
                             required property var modelData
+                            required property int index
+                            objectName: "notes-belongs-" + index
                             readonly property bool chosen: !!modelData.chosen
                             height: 40
                             width: chipLabel.implicitWidth + 32
@@ -279,6 +444,47 @@ Item {
                     onActivated: { pane.quickNote.done(); pane.finished() }
                 }
             }
+        }
+    }
+
+    // A choice under the pad, filled when chosen or open.
+    component Chip: Rectangle {
+        id: chipItem
+        property string label
+        property string spokenLabel: label
+        property bool chosen: false
+        // A choice among others rather than a chip that opens them.
+        property bool radio: false
+        // A long label ends in an ellipsis rather than pushing past the pane.
+        property real maxWidth: pane.width
+        signal activated()
+        height: 40
+        width: Math.min(chipText.implicitWidth + 32, maxWidth)
+        radius: 20
+        color: chosen ? pane.primaryText : pane.controlColor
+        border.width: activeFocus ? 2 : 1
+        border.color: chosen || activeFocus ? pane.primaryText : pane.surfaceOutline
+        activeFocusOnTab: true
+        Accessible.role: radio ? Accessible.RadioButton : Accessible.Button
+        Accessible.name: spokenLabel
+        Accessible.checked: chosen
+        Accessible.onPressAction: chipItem.activated()
+        Keys.onReturnPressed: chipItem.activated()
+        Keys.onEnterPressed: chipItem.activated()
+        Keys.onSpacePressed: chipItem.activated()
+        Text {
+            id: chipText
+            anchors.centerIn: parent
+            width: Math.min(implicitWidth, chipItem.width - 32)
+            elide: Text.ElideRight
+            text: chipItem.label
+            color: chipItem.chosen ? pane.surfaceColor : pane.primaryText
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
+        }
+        TapHandler {
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: chipItem.activated()
         }
     }
 

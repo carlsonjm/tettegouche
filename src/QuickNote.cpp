@@ -133,6 +133,18 @@ void QuickNote::setBelongs(const QString &kind, const QString &project)
     call(QStringLiteral("SetBelongs"), {kind, project});
 }
 
+void QuickNote::setFolder(const QString &name)
+{
+    flush();
+    call(QStringLiteral("SetFolder"), {name});
+}
+
+void QuickNote::setStuck(const QString &window, const QString &app)
+{
+    flush();
+    call(QStringLiteral("SetStuck"), {window, app});
+}
+
 void QuickNote::done()
 {
     flush();

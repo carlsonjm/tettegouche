@@ -78,6 +78,19 @@ private Q_SLOTS:
         QTRY_COMPARE_WITH_TIMEOUT(note.colour(), other, 3000);
         QCOMPARE(note.colourHex(), note.colourHexes().at(2));
 
+        // Folder and Stuck to, where the application offers them.
+        if (note.offersFolders()) {
+            QVERIFY(!note.folders().isEmpty());
+            QVERIFY(note.folders().first().toMap().contains(QStringLiteral("chosen")));
+            note.setFolder(QStringLiteral("Framing"));
+            QTRY_COMPARE_WITH_TIMEOUT(note.folder(), QStringLiteral("Framing"), 3000);
+            QVERIFY(!note.folderLabel().isEmpty());
+            note.setFolder(QString());
+            QTRY_VERIFY_WITH_TIMEOUT(note.folder().isEmpty(), 3000);
+            note.setStuck(QString(), QString());
+            QTRY_VERIFY_WITH_TIMEOUT(!note.stuck(), 3000);
+        }
+
         // Typing past the longest wait is written without a pause.
         for (int i = 0; i < 40; ++i) {
             note.setText(QStringLiteral("Call the framer") + QString(i, QLatin1Char('.')));

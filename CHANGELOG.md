@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Notes offers Folder and Stuck to under the note, as Gooseberry's own card
+  does: where the note is kept, with a field for a new folder, and the window
+  it is stuck to. An older Gooseberry keeps its Belongs to row.
 - Search and Ambient follow Plasma's animation speed. The arrivals and
   departures below keep their own pace so they stay visible at a fast
   setting, and with animations set to instant they only fade.
