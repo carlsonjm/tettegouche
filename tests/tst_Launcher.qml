@@ -52,6 +52,14 @@ TestCase {
         property int catalogActivated: -1
         function activateCatalogIfOpen(row) { catalogActivated = row; return 1 }
         function finishLaunch() { closes++ }
+        property bool dockPresent: false
+        property var pinnedRows: []
+        function catalogPinned(row) { return pinnedRows.indexOf(row) >= 0 }
+        property var pinAsks: []
+        function pinCatalog(row, pin) {
+            pinAsks = pinAsks.concat([[row, pin]])
+            pinnedRows = pin ? pinnedRows.concat([row]) : pinnedRows.filter(r => r !== row)
+        }
         property int webSearches: 0
         property bool bluetoothResult: false
         property int relatedRevision: 0
@@ -343,6 +351,7 @@ TestCase {
         const lines = []
         for (const line of sheet.contentItem.children) if (line.isSheetMenuItem && line.visible) lines.push(line.text)
         compare(lines, ["New Window", "New Private Window", "Hide", "Uninstall…"])
+        verify(!findChild(launcher, "application-sheet-pin").visible)
         let privateWindow = null
         for (const line of sheet.contentItem.children) if (line.text === "New Private Window") privateWindow = line
         const closes = controller.closes
@@ -363,6 +372,26 @@ TestCase {
         mouseClick(uninstall, uninstall.width / 2, uninstall.height / 2)
         compare(catalog.uninstalled, 1)
         tryCompare(sheet, "opened", false)
+
+        // With Shuffle's dock there, the sheet pins to it and then unpins.
+        controller.dockPresent = true
+        const pin = findChild(launcher, "application-sheet-pin")
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        verify(pin.visible)
+        compare(pin.text, "Pin to dock")
+        mouseClick(pin, pin.width / 2, pin.height / 2)
+        compare(controller.pinAsks, [[1, true]])
+        tryCompare(sheet, "opened", false)
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        compare(pin.text, "Unpin from dock")
+        mouseClick(pin, pin.width / 2, pin.height / 2)
+        compare(controller.pinAsks, [[1, true], [1, false]])
+        tryCompare(sheet, "opened", false)
+        controller.dockPresent = false
+        controller.pinAsks = []
+        controller.pinnedRows = []
 
         catalog.clear()
         catalog.hiddenSet = ({})

@@ -424,6 +424,8 @@ Item {
         applicationSheet.row = index
         applicationSheet.actions = root.applicationCatalog.actions(index)
         applicationSheet.hidden = root.applicationCatalog.isHidden(index)
+        applicationSheet.pinned = root.launcherController.dockPresent
+            && root.launcherController.catalogPinned(index)
         const at = tile.mapToItem(sheet, point.x, point.y)
         applicationSheet.openNear(at.x, at.y)
     }
@@ -1937,7 +1939,8 @@ Item {
                 }
             }
 
-            // An application's sheet: its own actions, then Hide or Unhide,
+            // An application's sheet: its own actions, then Pin to dock or
+            // Unpin from dock where Shuffle's dock is there, Hide or Unhide,
             // and Uninstall where the software centre can show it.
             SheetMenu {
                 id: applicationSheet
@@ -1948,6 +1951,7 @@ Item {
                 property int row: -1
                 property var actions: []
                 property bool hidden: false
+                property bool pinned: false
                 Repeater {
                     model: applicationSheet.actions
                     // Made after the menu, so each line is given its menu here.
@@ -1958,6 +1962,12 @@ Item {
                         text: modelData.name
                         onTriggered: root.runCatalogAction(applicationSheet.row, modelData.index)
                     }
+                }
+                SheetMenuItem {
+                    objectName: "application-sheet-pin"
+                    text: applicationSheet.pinned ? words.i18n("Unpin from dock") : words.i18n("Pin to dock")
+                    visible: root.launcherController.dockPresent
+                    onTriggered: root.launcherController.pinCatalog(applicationSheet.row, !applicationSheet.pinned)
                 }
                 SheetMenuItem {
                     objectName: "application-sheet-hide"

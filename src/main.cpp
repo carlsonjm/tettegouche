@@ -149,6 +149,8 @@ class LauncherController final : public QObject
     Q_PROPERTY(int guestHeight READ guestHeight NOTIFY guestChanged)
     Q_PROPERTY(QRect availableArea READ availableArea NOTIFY guestChanged)
     Q_PROPERTY(int relatedRevision READ relatedRevision NOTIFY relatedChanged)
+    // Whether Shuffle's dock answered when Search last asked what it pins.
+    Q_PROPERTY(bool dockPresent READ dockPresent NOTIFY pinnedChanged)
 
 public:
     LauncherController(QQuickView *view,
@@ -175,6 +177,9 @@ public:
         bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
                     QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("bridgeUnavailable"),
                     this, SLOT(bridgeLost()));
+        bus.connect(QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
+                    QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("pinnedApplicationsChanged"),
+                    this, SLOT(askPinned()));
         auto *owner = new QDBusServiceWatcher(QStringLiteral("org.kde.KWin"), bus,
             QDBusServiceWatcher::WatchForOwnerChange, this);
         connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
@@ -196,6 +201,29 @@ public:
 
     bool contextAvailable() const { return m_context.available(); }
     int relatedRevision() const { return m_relatedRevision; }
+    bool dockPresent() const { return m_dockPresent; }
+    Q_INVOKABLE bool catalogPinned(int row) const
+    {
+        return m_catalog && m_pinned.contains(m_catalog->applicationId(row));
+    }
+    // Asks Shuffle's dock to pin an application from Apps, or to unpin it.
+    // The dock does it as its own sheet does and says so with its change
+    // signal; until then Search holds what it asked for.
+    Q_INVOKABLE void pinCatalog(int row, bool pin)
+    {
+        const QString id = m_catalog ? m_catalog->applicationId(row) : QString();
+        if (id.isEmpty() || !m_dockPresent) return;
+        QDBusMessage request = QDBusMessage::createMethodCall(
+            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
+            QStringLiteral("studio.warbler.BottomSurface"),
+            pin ? QStringLiteral("pinApplication") : QStringLiteral("unpinApplication"));
+        request << id;
+        QDBusConnection::sessionBus().asyncCall(request, 500);
+        if (pin) m_pinned.insert(id);
+        else m_pinned.remove(id);
+        if (m_recent) m_recent->refilter();
+        Q_EMIT pinnedChanged();
+    }
     Q_INVOKABLE QString relatedOptionLabel(int row) {
         const auto match = m_results->getQueryMatch(m_results->index(row, 0));
         const auto key = RelatedInfo::keyForSetting(match.id());
@@ -364,6 +392,7 @@ public Q_SLOTS:
         connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
             watcher->deleteLater();
             const QDBusPendingReply<QStringList> reply = *watcher;
+            const bool present = !reply.isError();
             QSet<QString> pinned;
             if (!reply.isError()) {
                 for (QString id : reply.value()) {
@@ -371,9 +400,11 @@ public Q_SLOTS:
                     pinned.insert(id);
                 }
             }
-            if (pinned == m_pinned) return;
+            if (pinned == m_pinned && present == m_dockPresent) return;
+            m_dockPresent = present;
             m_pinned = pinned;
             if (m_recent) m_recent->refilter();
+            Q_EMIT pinnedChanged();
         });
     }
 
@@ -473,8 +504,8 @@ public Q_SLOTS:
         if (m_recent) {
             m_recent->setWithheld(!m_shares.activities().isEmpty());
             m_recent->refresh();
-            askPinned();
         }
+        askPinned();
         if (m_notes) m_notes->refresh();
         m_view->show();
         m_view->requestActivate();
@@ -719,6 +750,7 @@ Q_SIGNALS:
     void filesRequested();
     void drawerRequested(const QString &drawer);
     void relatedChanged();
+    void pinnedChanged();
     void opened();
     void contextChanged();
     void guestChanged();
@@ -751,9 +783,6 @@ public:
         connect(&m_shares, &ScreenShareProvider::changed, recent, [this] {
             m_recent->setWithheld(!m_shares.activities().isEmpty());
         });
-        QDBusConnection::sessionBus().connect(QStringLiteral("studio.warbler.BottomSurface"),
-            QStringLiteral("/BottomSurface"), QStringLiteral("studio.warbler.BottomSurface"),
-            QStringLiteral("pinnedApplicationsChanged"), this, SLOT(askPinned()));
     }
     // A recent application, or a recent file's usual one, is awaited as a card
     // as any launch from Search is.
@@ -972,6 +1001,7 @@ private:
     RecentUse *m_recent = nullptr;
     NotesDoor *m_notes = nullptr;
     QSet<QString> m_pinned;
+    bool m_dockPresent = false;
     ScreenShareProvider m_shares{QDBusConnection::sessionBus()};
     WorkspaceContext m_context;
     QRect m_guestRect;
