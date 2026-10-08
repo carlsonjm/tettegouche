@@ -286,7 +286,7 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
     // The values Plasmoid.configuration and Plasma's scripting both change,
     // kept under the applet's Configuration group rather than beside it.
     if (KConfigLoader *scheme = configScheme()) {
-        if (KConfigSkeletonItem *item = scheme->findItem(key)) return item->property().toBool();
+        if (KConfigSkeletonItem *item = scheme->findItem(QStringLiteral("General"), key)) return item->property().toBool();
     }
     return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
