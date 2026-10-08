@@ -29,7 +29,7 @@ than repeat it.
 | Tap or click Remember or Not now, in Genie | Genie writes down what it offered to remember about you, or leaves it. |
 | Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
 | Tap or click Expand, in Genie | Search grows and Genie's own window takes its place. |
-| Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
+| Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tab, with nothing typed | Moves between Apps, Files, Notes, Ask and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |

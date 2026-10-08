@@ -26,7 +26,7 @@ takes `Meta+E` when it is installed; give the key to Tettegouche there. Every ot
 ## Search
 
 Tap the dot in the panel. Before you type, Search offers Apps and Files, Notes
-where Gooseberry is installed, and beside them what you used lately: files, and
+where Gooseberry is installed, and below them what you used lately: files, and
 applications that are not already open or pinned in the dock. Start typing and
 Search can find:
 

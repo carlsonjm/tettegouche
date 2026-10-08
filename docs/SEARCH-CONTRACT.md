@@ -7,9 +7,10 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 ## First screen
 
 Before anything is typed, Search offers its doors, Apps and Files, then Notes
-where Gooseberry is installed, and beside them what was used lately, newest
-first: at most six, as many as the width holds, spaced evenly to the field's
-width. Its source is KDE's record of use for the current activity, read when
+where Gooseberry is installed, centred under the field, and on a row below them
+what was used lately, newest first: at most six, as many as the field's width
+holds, centred as one group. A sheet too short for the second row keeps the
+doors alone. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
 
