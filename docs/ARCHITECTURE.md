@@ -96,8 +96,18 @@ The compact search model combines an allowlisted set of KRunner providers and a
 Tettegouche-owned confidence policy. Its behavior is owned by
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
-Apps reads visible applications from `KApplicationTrader`, sorts by display
-name, and launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
+Apps reads visible applications from `KApplicationTrader` and orders them by
+display name either way, by use, or by when each desktop file arrived. Use is
+KDE's own score from the activity service, summed over every activity and read
+again each time Apps opens while it decides the order; the order chosen is kept
+in Tettegouche's settings. Its folders live there too, as {id, name, apps}
+by desktop file id; a folder is drawn while two or more of its applications are
+here and shown. An application carried from Apps carries its desktop file and
+`application/x-tettegouche-application` with its id, which a tile reads to make
+a folder; a folder carried carries its applications' desktop files and
+`application/x-tettegouche-folder` with `{"name": …}`, which Shuffle's dock reads
+to pin them as one folder, while any other launcher pins them one by one. Apps
+launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
 service each start. Existing-window matching runs before launch.
 
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list

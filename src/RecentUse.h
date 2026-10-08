@@ -6,6 +6,7 @@
 #pragma once
 
 #include <QAbstractListModel>
+#include <QHash>
 #include <QList>
 #include <QString>
 #include <QVector>
@@ -69,6 +70,9 @@ public:
 
     // KDE's record of use, newest first, under the current activity.
     static QList<Used> readRecord();
+    // How much each application has been used, in every activity, by desktop
+    // file id: KDE's own score, which favours both often and lately.
+    static QHash<QString, double> readApplicationUse();
 
 Q_SIGNALS:
     void countChanged();
