@@ -1145,6 +1145,7 @@ int main(int argc, char **argv)
     results.setRunnerManager(&runnerManager);
     results.setLimit(0);
     ApplicationCatalog catalog;
+    catalog.setUseReader(&RecentUse::readApplicationUse);
     FileDevices fileDevices;
     FileBrowser fileBrowser;
     fileBrowser.setDevices(&fileDevices);

@@ -361,6 +361,7 @@ Item {
         if (open) {
             root.searchEngaged = false
             root.forceActiveFocus()
+            if (!root.filesMode) root.applicationCatalog.refreshUse()
             // Request the shared presentation first; listing must not precede
             // the drawer handshake or run at launcher construction time.
             if (root.filesMode && root.fileBrowser) Qt.callLater(function() {
@@ -1671,7 +1672,7 @@ Item {
                         visible: !root.filesMode
                         width: 20
                         height: 20
-                        source: root.applicationCatalog.descending
+                        source: root.applicationCatalog.sortOrder === 1
                             ? "view-sort-descending-symbolic"
                             : "view-sort-ascending-symbolic"
                         color: root.primaryText
@@ -2032,8 +2033,8 @@ Item {
                 objectName: "sort-menu"
                 anchors.right: parent.right
                 y: drawerHandle.y + drawerHandle.height + 4
-                width: 132
-                height: 92
+                width: 160
+                height: sortChoices.implicitHeight + 12
                 radius: root.noteRadius
                 color: root.surfaceColor
                 border.width: 1
@@ -2051,14 +2052,18 @@ Item {
                 }
 
                 Column {
+                    id: sortChoices
                     anchors.fill: parent
                     anchors.margins: 6
                     spacing: 4
 
+                    // Each order's number is the catalog's own.
                     Repeater {
                         model: [
-                            { "label": words.i18n("A to Z"), "descending": false },
-                            { "label": words.i18n("Z to A"), "descending": true }
+                            { "label": words.i18n("A to Z"), "order": 0 },
+                            { "label": words.i18n("Z to A"), "order": 1 },
+                            { "label": words.i18n("Most used"), "order": 2 },
+                            { "label": words.i18n("Newest installed"), "order": 3 }
                         ]
 
                         delegate: Rectangle {
@@ -2070,8 +2075,8 @@ Item {
                             width: parent.width
                             height: 38
                             radius: height / 2
-                            readonly property bool selected: root.applicationCatalog.descending
-                                === sortChoice.modelData.descending
+                            readonly property bool selected: root.applicationCatalog.sortOrder
+                                === sortChoice.modelData.order
                             color: selected ? root.controlColor : "transparent"
                             border.width: !selected && choiceHover.hovered ? 1 : 0
                             border.color: root.surfaceOutline
@@ -2089,8 +2094,8 @@ Item {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    root.applicationCatalog.descending =
-                                        sortChoice.modelData.descending
+                                    root.applicationCatalog.sortOrder =
+                                        sortChoice.modelData.order
                                     applicationGrid.currentIndex =
                                         applicationGrid.count > 0 ? 0 : -1
                                     root.sortMenuOpen = false

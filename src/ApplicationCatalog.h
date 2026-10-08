@@ -8,10 +8,13 @@
 #include <KService>
 
 #include <QAbstractListModel>
+#include <QDateTime>
+#include <QHash>
 #include <QSet>
 #include <QUrl>
 #include <QVector>
 
+#include <functional>
 #include <memory>
 
 namespace AppStream
@@ -23,7 +26,8 @@ class ApplicationCatalog final : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
-    Q_PROPERTY(bool descending READ descending WRITE setDescending NOTIFY descendingChanged)
+    // Apps' order, one of Order; the choice is kept for the next time.
+    Q_PROPERTY(int sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
     // Hidden applications leave Apps; this shows them again.
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY showHiddenChanged)
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY hiddenCountChanged)
@@ -38,6 +42,18 @@ public:
         HiddenRole,
     };
     Q_ENUM(Role)
+
+    enum Order {
+        NameAscending,
+        NameDescending,
+        MostUsed,
+        NewestInstalled,
+    };
+    Q_ENUM(Order)
+
+    // How much each application has been used, by desktop file id; the
+    // higher, the more. An application missing from it has not been used.
+    using UseReader = std::function<QHash<QString, double>()>;
 
     explicit ApplicationCatalog(QObject *parent = nullptr);
     ~ApplicationCatalog() override;
@@ -69,8 +85,12 @@ public:
 
     [[nodiscard]] QString filterText() const;
     void setFilterText(const QString &filterText);
-    [[nodiscard]] bool descending() const;
-    void setDescending(bool descending);
+    [[nodiscard]] int sortOrder() const;
+    void setSortOrder(int sortOrder);
+    void setUseReader(UseReader reader);
+    // Reads how much each application has been used again, while Most used is
+    // the order, so it is current each time Apps opens.
+    Q_INVOKABLE void refreshUse();
     [[nodiscard]] bool showHidden() const;
     void setShowHidden(bool showHidden);
     [[nodiscard]] int hiddenCount() const;
@@ -78,7 +98,7 @@ public:
 
 Q_SIGNALS:
     void filterTextChanged();
-    void descendingChanged();
+    void sortOrderChanged();
     void showHiddenChanged();
     void hiddenCountChanged();
     void softwareReadyChanged();
@@ -89,6 +109,8 @@ private:
         QString name;
         QString icon;
         QString applicationId;
+        // When its desktop file arrived, as near as the file system says.
+        QDateTime installed;
     };
 
     void rebuildVisibleRows();
@@ -98,7 +120,9 @@ private:
     QVector<Entry> m_entries;
     QVector<int> m_visibleRows;
     QString m_filterText;
-    bool m_descending = false;
+    int m_sortOrder = NameAscending;
+    UseReader m_useReader;
+    QHash<QString, double> m_use;
     QSet<QString> m_hidden;
     bool m_showHidden = false;
     std::unique_ptr<AppStream::Pool> m_software;

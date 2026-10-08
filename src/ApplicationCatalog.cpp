@@ -15,6 +15,7 @@
 
 #include <QSettings>
 #include <QDir>
+#include <QFileInfo>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -24,6 +25,17 @@ namespace
 {
 // The applications hidden from Apps, by desktop file id.
 const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
+const QString OrderKey = QStringLiteral("Browse/sortOrder");
+
+QDateTime installedAt(const KService::Ptr &service)
+{
+    QString path = service->entryPath();
+    if (QDir::isRelativePath(path))
+        path = QStandardPaths::locate(QStandardPaths::ApplicationsLocation, path);
+    const QFileInfo file(path);
+    const QDateTime born = file.birthTime();
+    return born.isValid() ? born : file.lastModified();
+}
 }
 
 ApplicationCatalog::ApplicationCatalog(QObject *parent)
@@ -46,7 +58,7 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
         }
         seen.insert(id);
         m_entries.append({service, service->name().trimmed(),
-                          service->icon().trimmed(), id});
+                          service->icon().trimmed(), id, installedAt(service)});
     }
     std::sort(m_entries.begin(), m_entries.end(),
               [](const Entry &left, const Entry &right) {
@@ -54,6 +66,8 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     });
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
+    const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
+    m_sortOrder = order >= NameAscending && order <= NewestInstalled ? order : NameAscending;
     rebuildVisibleRows();
 }
 
@@ -299,19 +313,40 @@ void ApplicationCatalog::setFilterText(const QString &filterText)
     Q_EMIT filterTextChanged();
 }
 
-bool ApplicationCatalog::descending() const
+int ApplicationCatalog::sortOrder() const
 {
-    return m_descending;
+    return m_sortOrder;
 }
 
-void ApplicationCatalog::setDescending(bool descending)
+void ApplicationCatalog::setSortOrder(int sortOrder)
 {
-    if (m_descending == descending) {
+    if (sortOrder < NameAscending || sortOrder > NewestInstalled
+        || m_sortOrder == sortOrder) {
         return;
     }
-    m_descending = descending;
+    m_sortOrder = sortOrder;
+    QSettings().setValue(OrderKey, sortOrder);
+    if (m_sortOrder == MostUsed && m_useReader) {
+        m_use = m_useReader();
+    }
     rebuildVisibleRows();
-    Q_EMIT descendingChanged();
+    Q_EMIT sortOrderChanged();
+}
+
+void ApplicationCatalog::setUseReader(UseReader reader)
+{
+    m_useReader = std::move(reader);
+    refreshUse();
+}
+
+void ApplicationCatalog::refreshUse()
+{
+    // The record is read only while it decides the order.
+    if (!m_useReader || m_sortOrder != MostUsed) {
+        return;
+    }
+    m_use = m_useReader();
+    rebuildVisibleRows();
 }
 
 void ApplicationCatalog::rebuildVisibleRows()
@@ -325,18 +360,29 @@ void ApplicationCatalog::rebuildVisibleRows()
             && (m_filterText.isEmpty()
                 || entry.name.contains(m_filterText, Qt::CaseInsensitive));
     };
-    if (m_descending) {
-        for (int row = m_entries.size() - 1; row >= 0; --row) {
-            if (matches(m_entries.at(row))) {
-                m_visibleRows.append(row);
-            }
+    for (int row = 0; row < m_entries.size(); ++row) {
+        if (matches(m_entries.at(row))) {
+            m_visibleRows.append(row);
         }
-    } else {
-        for (int row = 0; row < m_entries.size(); ++row) {
-            if (matches(m_entries.at(row))) {
-                m_visibleRows.append(row);
-            }
-        }
+    }
+    // m_entries is already A to Z, so a stable sort keeps it among equals.
+    switch (m_sortOrder) {
+    case NameDescending:
+        std::reverse(m_visibleRows.begin(), m_visibleRows.end());
+        break;
+    case MostUsed:
+        std::stable_sort(m_visibleRows.begin(), m_visibleRows.end(), [this](int left, int right) {
+            return m_use.value(m_entries.at(left).applicationId)
+                > m_use.value(m_entries.at(right).applicationId);
+        });
+        break;
+    case NewestInstalled:
+        std::stable_sort(m_visibleRows.begin(), m_visibleRows.end(), [this](int left, int right) {
+            return m_entries.at(left).installed > m_entries.at(right).installed;
+        });
+        break;
+    default:
+        break;
     }
     endResetModel();
 }

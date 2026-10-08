@@ -3,8 +3,8 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-// Apps' catalog, over two applications of its own: one with
-// actions of its own, one without. The applications, their database and the
+// Apps' catalog, over three applications of its own: one with
+// actions of its own, one without, and one that arrived after both. The applications, their database and the
 // settings live in a temporary home, so nothing of the person's is read or
 // written.
 
@@ -13,6 +13,7 @@
 #include <KSycoca>
 
 #include <QCoreApplication>
+#include <QStringList>
 #include <QDir>
 #include <QFile>
 #include <QSignalSpy>
@@ -27,6 +28,15 @@ void write(const QString &path, const QByteArray &text)
     QFile file(path);
     QVERIFY(file.open(QIODevice::WriteOnly));
     file.write(text);
+}
+
+QStringList order(const ApplicationCatalog &catalog)
+{
+    QStringList ids;
+    for (int row = 0; row < catalog.rowCount(); ++row) {
+        ids.append(catalog.applicationId(row));
+    }
+    return ids;
 }
 
 int rowOf(const ApplicationCatalog &catalog, const QString &id)
@@ -54,6 +64,10 @@ private Q_SLOTS:
               "[Desktop Action private-window]\nName=New Private Window\nIcon=view-private\nExec=true\n");
         write(applications + QStringLiteral("beta.desktop"),
               "[Desktop Entry]\nType=Application\nName=Beta\nExec=true\n");
+        // Past the coarsest file system clock, so Zulu is plainly newer.
+        QTest::qSleep(1100);
+        write(applications + QStringLiteral("zulu.desktop"),
+              "[Desktop Entry]\nType=Application\nName=Zulu\nExec=true\n");
         KSycoca::self()->ensureCacheValid();
     }
 
@@ -119,6 +133,48 @@ private Q_SLOTS:
         QVERIFY(!catalog.softwareReady());
         QVERIFY(!catalog.canUninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
         QVERIFY(!catalog.uninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
+    }
+
+    // Each order, over the same applications; an unused application follows
+    // the used ones A to Z, and the order chosen is the next catalog's.
+    void ordersFourWaysAndKeepsTheChoice()
+    {
+        const QString alpha = QStringLiteral("alpha.desktop");
+        const QString beta = QStringLiteral("beta.desktop");
+        const QString zulu = QStringLiteral("zulu.desktop");
+        int reads = 0;
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.sortOrder(), int(ApplicationCatalog::NameAscending));
+        catalog.setUseReader([&reads, beta, zulu] {
+            ++reads;
+            return QHash<QString, double>{{zulu, 2.0}, {beta, 5.0}};
+        });
+        // Nothing is read while names decide the order.
+        QCOMPARE(reads, 0);
+        QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
+
+        QSignalSpy changed(&catalog, &ApplicationCatalog::sortOrderChanged);
+        catalog.setSortOrder(ApplicationCatalog::NameDescending);
+        QCOMPARE(order(catalog), (QStringList{zulu, beta, alpha}));
+        catalog.setSortOrder(ApplicationCatalog::MostUsed);
+        QCOMPARE(reads, 1);
+        QCOMPARE(order(catalog), (QStringList{beta, zulu, alpha}));
+        catalog.refreshUse();
+        QCOMPARE(reads, 2);
+        catalog.setFilterText(QStringLiteral("a"));
+        QCOMPARE(order(catalog), (QStringList{beta, alpha}));
+        catalog.setFilterText({});
+        catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
+        QCOMPARE(order(catalog).constFirst(), zulu);
+        catalog.setSortOrder(7);
+        QCOMPARE(catalog.sortOrder(), int(ApplicationCatalog::NewestInstalled));
+        QCOMPARE(changed.size(), 3);
+
+        ApplicationCatalog next;
+        QCOMPARE(next.sortOrder(), int(ApplicationCatalog::NewestInstalled));
+        next.setSortOrder(ApplicationCatalog::NameAscending);
+        ApplicationCatalog last;
+        QCOMPARE(last.sortOrder(), int(ApplicationCatalog::NameAscending));
     }
 };
 

@@ -119,7 +119,9 @@ TestCase {
     ListModel {
         id: catalog
         property string filterText: ""
-        property bool descending: false
+        property int sortOrder: 0
+        property int useReads: 0
+        function refreshUse() { useReads++ }
         property bool showHidden: false
         property bool softwareReady: false
         property bool softwareAsked: false
@@ -2066,7 +2068,8 @@ TestCase {
     function test_browseAndSort(data) {
         controller.guestMode = data.guest
         controller.closes = 0
-        catalog.descending = false
+        catalog.sortOrder = 0
+        catalog.useReads = 0
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const label = findChild(launcher, "apps-pill")
@@ -2081,10 +2084,22 @@ TestCase {
         compare(controller.closes, 0)
         const menu = findChild(launcher, "sort-menu")
         tryCompare(menu, "opacity", 1)
-        compare(menu.width, 132)
-        mouseClick(menu, 50, 66)
-        tryCompare(catalog, "descending", true)
-        compare(launcher.sortMenuOpen, false)
+        compare(menu.width, 160)
+        // Four rows of 38 with 4 between, inside 6 on each side.
+        compare(menu.height, 176)
+        verify(catalog.useReads >= 1)
+        const rows = [["Z to A", 1], ["Most used", 2], ["Newest installed", 3], ["A to Z", 0]]
+        for (let i = 0; i < rows.length; ++i) {
+            if (i > 0) {
+                mouseClick(sort, sort.width / 2, sort.height / 2)
+                tryCompare(launcher, "sortMenuOpen", true)
+                tryCompare(menu, "opacity", 1)
+            }
+            const order = rows[i][1]
+            mouseClick(menu, menu.width / 2, 6 + order * 42 + 19)
+            tryCompare(catalog, "sortOrder", order)
+            compare(launcher.sortMenuOpen, false)
+        }
         compare(controller.closes, 0)
     }
     function openNotesMode() {

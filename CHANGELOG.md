@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Apps sorts four ways: A to Z, Z to A, Most used and Newest installed, and
+  keeps the choice. Most used follows KDE's record of what is opened, from
+  anywhere; Newest installed goes by when each application arrived.
 - Typing in Search finds notes: up to five notes with the words are listed
   among the results, each with its colour and its folder or window, and a tap
   opens the note in Gooseberry. Only while Gooseberry is running.
