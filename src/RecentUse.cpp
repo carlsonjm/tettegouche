@@ -223,3 +223,19 @@ QList<RecentUse::Used> RecentUse::readRecord()
     }
     return record;
 }
+
+QHash<QString, double> RecentUse::readApplicationUse()
+{
+    using namespace KActivities::Stats;
+    using namespace KActivities::Stats::Terms;
+    const Query query = UsedResources | HighScoredFirst | Agent::any() | Type::any()
+        | Activity::any() | Url::startsWith(ApplicationScheme) | Limit(500);
+    QHash<QString, double> use;
+    for (const ResultSet::Result &result : ResultSet(query)) {
+        const QString id = result.resource().mid(ApplicationScheme.size());
+        if (!id.isEmpty()) {
+            use[id] += result.score();
+        }
+    }
+    return use;
+}

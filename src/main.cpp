@@ -545,8 +545,27 @@ public Q_SLOTS:
         if (!url.isValid()) return;
         auto *mime = new QMimeData;
         mime->setUrls({url});
+        // Apps itself reads which application it is, to make a folder.
+        mime->setData(QStringLiteral("application/x-tettegouche-application"),
+                      m_catalog->applicationId(row).toUtf8());
         carry(mime, QIcon::fromTheme(m_catalog->applicationIcon(row),
             QIcon::fromTheme(QStringLiteral("application-x-executable"))), sheet);
+    }
+
+    // A folder carried from Apps leaves as its applications' desktop files,
+    // which any launcher pins, with the folder's name beside them, which
+    // Shuffle's dock reads to pin them as one folder.
+    Q_INVOKABLE void carryFolder(int row, const QRectF &sheet)
+    {
+        if (m_carrying || !m_catalog) return;
+        const QList<QUrl> urls = m_catalog->folderUrls(row);
+        if (urls.isEmpty()) return;
+        auto *mime = new QMimeData;
+        mime->setUrls(urls);
+        mime->setData(QStringLiteral("application/x-tettegouche-folder"),
+                      QJsonDocument(QJsonObject{{QStringLiteral("name"), m_catalog->folderName(row)}})
+                          .toJson(QJsonDocument::Compact));
+        carry(mime, QIcon::fromTheme(QStringLiteral("folder")), sheet);
     }
 
     // Starts a carry while the press that began it is still held, which the
@@ -1145,6 +1164,7 @@ int main(int argc, char **argv)
     results.setRunnerManager(&runnerManager);
     results.setLimit(0);
     ApplicationCatalog catalog;
+    catalog.setUseReader(&RecentUse::readApplicationUse);
     FileDevices fileDevices;
     FileBrowser fileBrowser;
     fileBrowser.setDevices(&fileDevices);

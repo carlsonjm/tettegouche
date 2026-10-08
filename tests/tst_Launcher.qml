@@ -87,6 +87,8 @@ TestCase {
         function carryOut(paths, sheet) { carried = paths; carriedSheet = sheet }
         property int carriedApplication: -1
         function carryApplication(row, sheet) { carriedApplication = row; carriedSheet = sheet }
+        property int carriedFolder: -1
+        function carryFolder(row, sheet) { carriedFolder = row; carriedSheet = sheet }
         function beginGuestWebLaunch() { return false }
         property int notesLaunches: 0
         property bool notesLaunchAccepted: true
@@ -119,7 +121,9 @@ TestCase {
     ListModel {
         id: catalog
         property string filterText: ""
-        property bool descending: false
+        property int sortOrder: 0
+        property int useReads: 0
+        function refreshUse() { useReads++ }
         property bool showHidden: false
         property bool softwareReady: false
         property bool softwareAsked: false
@@ -134,6 +138,32 @@ TestCase {
         function prepareSoftware() { softwareAsked = true }
         function canUninstall(row) { return softwareReady && row === 1 }
         function uninstall(row) { uninstalled = row; return true }
+        // Folders: a row whose isFolder is true is one, by its folderId.
+        property string openFolder: ""
+        property string openFolderName: ""
+        property var renamed: []
+        property string removed: ""
+        property var putIn: []
+        property int takenOut: -1
+        readonly property int folderCount: 0
+        function isFolder(row) { return row >= 0 && row < count && get(row).isFolder === true }
+        function folderId(row) { return isFolder(row) ? get(row).folderId : "" }
+        function folderName(row) { return isFolder(row) ? get(row).name : "" }
+        function folderOf(row) { return row >= 0 && row < count && !isFolder(row) ? (get(row).inFolder || "") : "" }
+        function folderList() {
+            const list = []
+            for (let i = 0; i < count; ++i) if (isFolder(i)) list.push({id: get(i).folderId, name: get(i).name})
+            return list
+        }
+        onOpenFolderChanged: {
+            openFolderName = ""
+            for (let i = 0; i < count; ++i) if (get(i).folderId === openFolder) openFolderName = get(i).name
+        }
+        function gather(row, id) { return "" }
+        function putInFolder(row, id) { putIn = [row, id] }
+        function takeOut(row) { takenOut = row }
+        function renameFolder(id, name) { renamed = [id, name] }
+        function removeFolder(id) { removed = id }
     }
     // What was used lately, as the launcher's model offers it.
     ListModel {
@@ -499,6 +529,102 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         compare(controller.carriedSheet.width, sheet.width)
         controller.carriedApplication = -1
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // A folder opens in place of Apps from a tap, and Back or Esc returns;
+    // its sheet renames it in place or removes it. An application's sheet puts
+    // it in a folder, or takes it out of the one it is in. A folder carried
+    // leaves as one.
+    function test_folders() {
+        controller.opened()
+        controller.catalogActivated = -1
+        catalog.append({name: "Games", icon: "", isFolder: true, folderId: "f1", inFolder: ""})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "App " + i, icon: "application-x-executable", isFolder: false, folderId: "", inFolder: i === 2 ? "f1" : ""})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(600)
+        const grid = findChild(launcher, "application-grid")
+        const header = findChild(launcher, "apps-folder-header")
+        const folder = findChild(grid, "application-tile-0")
+        verify(findChild(folder, "apps-folder-tile").visible)
+        compare(header.height, 0)
+        const gridTop = grid.y
+        mouseClick(folder, folder.width / 2, folder.height / 2)
+        compare(catalog.openFolder, "f1")
+        verify(launcher.folderOpen)
+        compare(controller.catalogActivated, -1)
+        compare(header.height, 40)
+        compare(grid.y, gridTop + 40)
+        compare(findChild(launcher, "apps-folder-name").text, "Games")
+        const back = findChild(launcher, "drawer-back")
+        mouseClick(back, back.width / 2, back.height / 2)
+        compare(catalog.openFolder, "")
+        verify(launcher.drawerOpen)
+        mouseClick(folder, folder.width / 2, folder.height / 2)
+        compare(catalog.openFolder, "f1")
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(catalog.openFolder, "")
+        verify(launcher.drawerOpen)
+
+        // The folder's sheet.
+        const folderSheet = findChild(launcher, "apps-folder-sheet")
+        mouseClick(folder, folder.width / 2, folder.height / 2, Qt.RightButton)
+        tryCompare(folderSheet, "opened", true)
+        const rename = findChild(launcher, "apps-folder-sheet-rename")
+        mouseClick(rename, rename.width / 2, rename.height / 2)
+        compare(catalog.openFolder, "f1")
+        const name = findChild(launcher, "apps-folder-name")
+        tryCompare(name, "activeFocus", true)
+        for (const letter of "play") keyClick(letter)
+        keyClick(Qt.Key_Return)
+        compare(catalog.renamed, ["f1", "play"])
+        catalog.openFolder = ""
+        tryCompare(folderSheet, "opened", false)
+        mouseClick(folder, folder.width / 2, folder.height / 2, Qt.RightButton)
+        tryCompare(folderSheet, "opened", true)
+        const remove = findChild(launcher, "apps-folder-sheet-remove")
+        mouseClick(remove, remove.width / 2, remove.height / 2)
+        compare(catalog.removed, "f1")
+        tryCompare(folderSheet, "opened", false)
+
+        // An application's sheet: Put in the folder, or Take out of it.
+        const sheet = findChild(launcher, "application-sheet")
+        const loose = findChild(grid, "application-tile-1")
+        mouseClick(loose, loose.width / 2, loose.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        let putIn = null
+        for (const line of sheet.contentItem.children) if (line.text === "Put in “Games”") putIn = line
+        verify(putIn && putIn.visible)
+        verify(!findChild(launcher, "application-sheet-take-out").visible)
+        mouseClick(putIn, putIn.width / 2, putIn.height / 2)
+        compare(catalog.putIn, [1, "f1"])
+        tryCompare(sheet, "opened", false)
+        const inside = findChild(grid, "application-tile-3")
+        mouseClick(inside, inside.width / 2, inside.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        const takeOut = findChild(launcher, "application-sheet-take-out")
+        verify(takeOut.visible)
+        for (const line of sheet.contentItem.children) verify(line.text !== "Put in “Games”" || !line.visible)
+        mouseClick(takeOut, takeOut.width / 2, takeOut.height / 2)
+        compare(catalog.takenOut, 3)
+        tryCompare(sheet, "opened", false)
+
+        // Carried, the folder leaves as one.
+        controller.carriedFolder = -1
+        controller.carriedApplication = -1
+        mouseDrag(folder, folder.width / 2, folder.height / 2, 0, 120)
+        tryCompare(controller, "carriedFolder", 0)
+        compare(controller.carriedApplication, -1)
+
+        controller.carriedFolder = -1
+        catalog.renamed = []
+        catalog.removed = ""
+        catalog.putIn = []
+        catalog.takenOut = -1
         catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
@@ -2144,7 +2270,8 @@ TestCase {
     function test_browseAndSort(data) {
         controller.guestMode = data.guest
         controller.closes = 0
-        catalog.descending = false
+        catalog.sortOrder = 0
+        catalog.useReads = 0
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const label = findChild(launcher, "apps-pill")
@@ -2159,10 +2286,22 @@ TestCase {
         compare(controller.closes, 0)
         const menu = findChild(launcher, "sort-menu")
         tryCompare(menu, "opacity", 1)
-        compare(menu.width, 132)
-        mouseClick(menu, 50, 66)
-        tryCompare(catalog, "descending", true)
-        compare(launcher.sortMenuOpen, false)
+        compare(menu.width, 160)
+        // Four rows of 38 with 4 between, inside 6 on each side.
+        compare(menu.height, 176)
+        verify(catalog.useReads >= 1)
+        const rows = [["Z to A", 1], ["Most used", 2], ["Newest installed", 3], ["A to Z", 0]]
+        for (let i = 0; i < rows.length; ++i) {
+            if (i > 0) {
+                mouseClick(sort, sort.width / 2, sort.height / 2)
+                tryCompare(launcher, "sortMenuOpen", true)
+                tryCompare(menu, "opacity", 1)
+            }
+            const order = rows[i][1]
+            mouseClick(menu, menu.width / 2, 6 + order * 42 + 19)
+            tryCompare(catalog, "sortOrder", order)
+            compare(launcher.sortMenuOpen, false)
+        }
         compare(controller.closes, 0)
     }
     function openNotesMode() {

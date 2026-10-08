@@ -73,7 +73,7 @@ if rg -Fq 'Close drawer' "${project_root}/qml/Launcher.qml"; then
     echo "An open drawer closes by Back or its top edge, not a Close drawer pill" >&2
     exit 1
 fi
-rg -q 'Q_PROPERTY\(bool descending' \
+rg -q 'Q_PROPERTY\(int sortOrder' \
     "${project_root}/src/ApplicationCatalog.h"
 rg -q 'setFilterText' "${project_root}/src/ApplicationCatalog.cpp"
 rg -q 'view-sort-descending-symbolic' \
