@@ -135,6 +135,71 @@ private Q_SLOTS:
         QVERIFY(!catalog.uninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
     }
 
+    // Folders come first and keep their applications out of Apps; one opens
+    // in place of Apps, typing finds what is in them, and a folder left with
+    // one application is no longer one. Folders are kept for the next catalog.
+    void gathersApplicationsIntoFolders()
+    {
+        const QString alpha = QStringLiteral("alpha.desktop");
+        const QString beta = QStringLiteral("beta.desktop");
+        const QString zulu = QStringLiteral("zulu.desktop");
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.folderCount(), 0);
+        QVERIFY(catalog.gather(rowOf(catalog, alpha), alpha).isEmpty());
+        const QString folder = catalog.gather(rowOf(catalog, alpha), beta);
+        QVERIFY(!folder.isEmpty());
+        QCOMPARE(catalog.folderCount(), 1);
+        QCOMPARE(catalog.rowCount(), 2);
+        QVERIFY(catalog.isFolder(0));
+        QCOMPARE(catalog.folderId(0), folder);
+        QCOMPARE(catalog.folderName(0), QStringLiteral("Folder"));
+        QCOMPARE(catalog.data(catalog.index(0), ApplicationCatalog::FolderIconsRole).toStringList().size(), 2);
+        QVERIFY(catalog.applicationId(0).isEmpty());
+        QVERIFY(!catalog.launch(0));
+        QCOMPARE(catalog.applicationId(1), zulu);
+        // Folders stay first, whatever the order.
+        catalog.setSortOrder(ApplicationCatalog::NameDescending);
+        QVERIFY(catalog.isFolder(0));
+        catalog.setSortOrder(ApplicationCatalog::NameAscending);
+
+        QSignalSpy opened(&catalog, &ApplicationCatalog::openFolderChanged);
+        catalog.setOpenFolder(folder);
+        QCOMPARE(opened.size(), 1);
+        QCOMPARE(order(catalog), (QStringList{alpha, beta}));
+        QCOMPARE(catalog.folderOf(0), folder);
+        catalog.setOpenFolder({});
+        catalog.setFilterText(QStringLiteral("eta"));
+        QCOMPARE(order(catalog), QStringList{beta});
+        QCOMPARE(catalog.folderOf(0), folder);
+        catalog.setFilterText({});
+
+        catalog.putInFolder(rowOf(catalog, zulu), folder);
+        QCOMPARE(catalog.rowCount(), 1);
+        catalog.renameFolder(folder, QStringLiteral(" Work "));
+        QCOMPARE(catalog.folderName(0), QStringLiteral("Work"));
+        QCOMPARE(catalog.folderUrls(0).size(), 3);
+
+        ApplicationCatalog next;
+        QCOMPARE(next.rowCount(), 1);
+        QCOMPARE(next.folderName(0), QStringLiteral("Work"));
+
+        catalog.setOpenFolder(folder);
+        catalog.takeOut(rowOf(catalog, zulu));
+        QCOMPARE(order(catalog), (QStringList{alpha, beta}));
+        catalog.takeOut(rowOf(catalog, beta));
+        // One left is no folder: Apps shows itself again.
+        QVERIFY(catalog.openFolder().isEmpty());
+        QCOMPARE(catalog.folderCount(), 0);
+        QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
+
+        const QString again = catalog.gather(rowOf(catalog, zulu), alpha);
+        QCOMPARE(catalog.rowCount(), 2);
+        catalog.removeFolder(again);
+        QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
+        ApplicationCatalog last;
+        QCOMPARE(last.folderCount(), 0);
+    }
+
     // Each order, over the same applications; an unused application follows
     // the used ones A to Z, and the order chosen is the next catalog's.
     void ordersFourWaysAndKeepsTheChoice()

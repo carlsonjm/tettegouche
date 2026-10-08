@@ -8,6 +8,11 @@ provenance.
 - Apps sorts four ways: A to Z, Z to A, Most used and Newest installed, and
   keeps the choice. Most used follows KDE's record of what is opened, from
   anywhere; Newest installed goes by when each application arrived.
+- Apps has folders. Drag one application onto another to make one, named
+  for what they share; drag more in, or use Put in from an application's
+  sheet. Folders come first, A to Z; a tap opens one, its name renames it,
+  and its sheet offers Rename and Remove folder. Typing still finds what is
+  inside. Dragged onto Shuffle's dock, a folder is pinned there as one.
 - Typing in Search finds notes: up to five notes with the words are listed
   among the results, each with its colour and its folder or window, and a tap
   opens the note in Gooseberry. Only while Gooseberry is running.

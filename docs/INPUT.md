@@ -79,13 +79,18 @@ than repeat it.
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
-| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
+| Tap or click a folder, or Enter on it | Opens it in place of Apps, with its name above its applications. Folders come first in Apps, A to Z; the applications in a folder follow the sort. Typing finds applications in folders too. |
+| Tap or click an open folder's name | Renames it; Enter or a tap elsewhere keeps the name, Esc keeps the old one. |
+| Touch and hold a folder, or right-click it | Opens its sheet: Rename, and Remove folder, which puts its applications back in Apps. |
+| Drag an application onto another, or onto a folder | Makes a folder of the two, named for what they share where they share a kind, or puts it in the folder. |
+| Drag a folder out of Apps, or touch and hold it, then move | Carries its applications out of Search. Let go on Shuffle's dock and they are pinned there as one folder of the same name; anywhere else takes them as applications. |
+| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
 | Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
 | Tap or click the sort button | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
 | Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
-| Tap or click Back, at the header's left | Returns to search, with what is typed. |
+| Tap or click Back, at the header's left | Leaves an open folder for Apps; otherwise returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
-| Esc | Closes the sort menu if it is open, otherwise the drawer. |
+| Esc | Closes the sort menu if it is open, then an open folder, otherwise the drawer. |
 | Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
