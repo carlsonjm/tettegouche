@@ -1980,7 +1980,7 @@ Item {
                     id: catalogDelegate
                     objectName: "application-tile-" + index
                     Accessible.role: Accessible.Button
-                    Accessible.name: model.isFolder === true ? words.i18n("%1, folder", model.name) : model.name
+                    Accessible.name: isFolder ? words.i18n("%1, folder", model.name) : model.name
                     Accessible.focused: chosen
                     function carry() {
                         if (isFolder) root.carryFolder(index)
@@ -1991,7 +1991,9 @@ Item {
                     required property var model
                     readonly property bool chosen: applicationGrid.keyChosen
                         && applicationGrid.currentIndex === index
-                    readonly property bool isFolder: model.isFolder === true
+                    // Asked of the catalog, as a delegate's row never changes
+                    // kind without the catalog drawing it again.
+                    readonly property bool isFolder: root.applicationCatalog.isFolder(index)
                     width: applicationGrid.cellWidth
                     height: applicationGrid.cellHeight
 
