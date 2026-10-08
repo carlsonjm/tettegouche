@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Search, Files, Notes, Genie and Ambient follow a light colour scheme or
+  Plasma style: a light ground with dark words, glyphs and controls. A dark
+  one looks as before.
 - Typing in Search finds notes: up to five notes with the words are listed
   among the results, each with its colour and its folder or window, and a tap
   opens the note in Gooseberry. Only while Gooseberry is running.

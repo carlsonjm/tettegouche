@@ -139,8 +139,9 @@ manager, and Ambient asks it, not Kadunce, to bring one forward; this is
 neither KWin discovery nor a task manager of Tettegouche's own.
 
 The panel shows Ambient as one island per kind of activity
-(`AmbientSurface.qml`), clear over the panel and the suite's black while the
-containment sets Plasma's `ContainmentPrefersOpaqueBackground` hint.
+(`AmbientSurface.qml`), clear over the panel and in the Plasma style's own
+ground, the suite's black on a dark style, while the containment sets Plasma's
+`ContainmentPrefersOpaqueBackground` hint.
 `IslandRoom.js` decides, from each island's measured pieces, what each shows in
 the width it has; the surface draws that and animates the change.
 `DriveRules.h` holds KDE's rule for which storage is a drive, which Files and
@@ -184,9 +185,16 @@ counts follow the language.
   lit from above and a shade deeper toward its lower edge, centred in a 44 px
   touch square at the panel's start, with a thin ring round it while the
   launcher is open. No icon family replaces or redraws it.
+- Search follows the window's colour scheme, and Ambient the Plasma style's
+  colours. On a dark one they keep the suite's dark values; on a light one
+  their ground and text are the theme's, and every wash, control and line is
+  that text laid over the ground (`qml/SearchColors.qml`,
+  `applet/AmbientColors.qml`). Colours come from the theme alone. The Tette
+  Dot, a note's paper and a recording's red dot keep their own colours.
 - Action glyphs come from a pinned, vendored Lucide subset
-  ([THIRD_PARTY.md](../assets/icons/THIRD_PARTY.md)), drawn in Ghost White.
-  Applications, files and devices keep their own icons.
+  ([THIRD_PARTY.md](../assets/icons/THIRD_PARTY.md)), drawn in Ghost White and
+  recoloured to the theme's text on a light ground. Applications, files and
+  devices keep their own icons.
 - Menus and questions are drawn inside the sheet they open in, never past its
   edge, in the sheet's colours with lines a finger can hit; a question names
   its action ("Move to Trash") and darkens only the sheet. Pressed controls

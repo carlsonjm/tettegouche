@@ -157,7 +157,9 @@ screen (§ Shared screen) and applications waiting (§ Waiting applications). Th
 they arrived, an end in its transfer's place, the group centred in the width
 the panel hands Ambient. They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
-black, they take the suite's black, `#141414`, the band's own, and melt into it.
+black, they take the Plasma style's ground, on a dark style the suite's black,
+`#141414`, the band's own, and melt into it. Their words and glyphs are the
+style's text colour, Ghost White on a dark style.
 An island is 44 px tall in a 64 px band and shorter on a shorter panel. Each
 control reaches the island's full height and, where the panel allows, 44 px
 across.
@@ -191,7 +193,7 @@ transfers show their count, and several ends theirs.
 
 A tap away from the controls opens the island in place. It opens on a clear
 surface over the whole display, the island growing out of its place into a
-black card, and a tap outside the card or Esc closes it back into the band. The
+card in the style's ground, black on a dark style, and a tap outside the card or Esc closes it back into the band. The
 card holds the media's art, position, previous, play or pause, next, the other
 players, and a button that brings the player forward when the player can be
 raised. For transfers, ended ones included, it lists each one with its own

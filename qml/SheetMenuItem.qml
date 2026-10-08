@@ -14,6 +14,10 @@ Item {
     property bool checked: false
     property var menu: null
     signal triggered()
+    SearchColors {
+        id: tone
+        theme: line.Kirigami.Theme
+    }
 
     // Chosen by a tap, a click or Enter: the line acts, then the menu closes.
     // A check shows what its setting holds; the line's action changes that.
@@ -36,8 +40,8 @@ Item {
     Rectangle {
         anchors.fill: parent
         radius: height / 2
-        color: tap.pressed ? "#333333"
-            : (hover.hovered || line.keyed) && line.enabled ? "#242424" : "transparent"
+        color: tap.pressed ? tone.controlHover
+            : (hover.hovered || line.keyed) && line.enabled ? tone.control : "transparent"
         Behavior on color { ColorAnimation { duration: line.ms(90) } }
     }
     Text {
@@ -46,7 +50,7 @@ Item {
         x: 14
         width: parent.width - 28 - (line.checkable ? 26 : 0)
         text: line.text
-        color: line.enabled ? "#F8F8FF" : "#6BF8F8FF"
+        color: line.enabled ? tone.text : tone.disabledText
         font.pixelSize: 14
         elide: Text.ElideMiddle
     }

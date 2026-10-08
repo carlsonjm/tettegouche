@@ -267,6 +267,27 @@ TestCase {
         for (let i = 0; i < n; ++i)
             recentStub.append({name: "Used " + i, icon: "application-x-executable", thumbnail: "", kind: i % 2 ? "file" : "application"})
     }
+    // Stand-ins for a dark and a light colour scheme, so the colours do not
+    // depend on the scheme the test happens to run under.
+    QtObject {
+        id: darkScheme
+        property color backgroundColor: "#141414"
+        property color textColor: "#E0E0E0"
+    }
+    QtObject {
+        id: lightScheme
+        property color backgroundColor: "#F2F2F2"
+        property color textColor: "#102729"
+        property color negativeTextColor: "#C0392B"
+        property color positiveTextColor: "#1E7A4C"
+        property color neutralTextColor: "#B65C00"
+        property color highlightColor: "#2A6FB0"
+        property color highlightedTextColor: "#FFFFFF"
+    }
+    Component {
+        id: colorsComponent
+        App.SearchColors {}
+    }
     App.Launcher {
         id: launcher
         anchors.fill: parent
@@ -275,6 +296,63 @@ TestCase {
         applicationCatalog: catalog
         recentUse: recentStub
     }
+    // On a dark scheme Search keeps the suite's values; on a light one its
+    // ground and ink are the scheme's, and every wash and grey is that ink.
+    function test_coloursFollowTheScheme() {
+        const dark = createTemporaryObject(colorsComponent, test, {theme: darkScheme})
+        verify(dark.dark)
+        const kept = {
+            text: "#F8F8FF", primaryText: "#f2ffffff", secondaryText: "#A8FFFFFF",
+            bodyText: "#A8F8F8FF", edgeText: "#88ffffff", placeholderText: "#86ffffff",
+            disabledText: "#6BF8F8FF", surface: "#141414", sheet: "#1B1B1B",
+            outline: "#5a5a5a", line: "#333333", control: "#242424",
+            controlHover: "#333333", controlPressed: "#4A4A4A", hover: "#22ffffff",
+            current: "#3dffffff", focusRing: "#b0ffffff", openTag: "#ff71e6be",
+            errorText: "#ffb5a8", troubleText: "#E08A80", answerSurface: "#1C1C1C",
+            answerText: "#E4E4EA", selection: "#6da9ddff", textOnInk: "#141414"
+        }
+        for (const role in kept)
+            verify(Qt.colorEqual(dark[role], kept[role]), role + " is " + dark[role])
+
+        const light = createTemporaryObject(colorsComponent, test, {theme: lightScheme})
+        verify(!light.dark)
+        verify(Qt.colorEqual(light.text, "#102729"))
+        verify(Qt.colorEqual(light.primaryText, "#102729"))
+        verify(Qt.colorEqual(light.surface, "#F2F2F2"))
+        verify(Qt.colorEqual(light.textOnInk, "#F2F2F2"))
+        verify(Qt.colorEqual(light.troubleText, "#C0392B"))
+        verify(Qt.colorEqual(light.openTag, "#1E7A4C"))
+        verify(Qt.colorEqual(light.selection, "#2A6FB0"))
+        // Washes are the ink, see-through; greys are the ink laid on the
+        // ground, darker than it and lighter than the ink.
+        for (const role of ["secondaryText", "edgeText", "hover", "current", "focusRing"]) {
+            const wash = light[role]
+            verify(Qt.colorEqual(Qt.rgba(wash.r, wash.g, wash.b, 1), "#102729"), role)
+            verify(wash.a > 0 && wash.a < 1, role)
+        }
+        let previous = light.surface.hslLightness
+        for (const role of ["control", "controlHover", "controlPressed", "outline"]) {
+            const grey = light[role]
+            compare(grey.a, 1, role)
+            verify(grey.hslLightness < previous && grey.hslLightness > 0.4, role)
+            previous = grey.hslLightness
+        }
+
+        // Search's sheet follows the colours it is given.
+        const tone = findChild(launcher, "searchColors")
+        verify(tone)
+        const ambient = tone.theme
+        tone.theme = lightScheme
+        verify(Qt.colorEqual(launcher.surfaceColor, "#F2F2F2"))
+        verify(Qt.colorEqual(launcher.primaryText, "#102729"))
+        tone.theme = darkScheme
+        verify(Qt.colorEqual(launcher.surfaceColor, "#141414"))
+        verify(Qt.colorEqual(launcher.surfaceOutline, "#5a5a5a"))
+        verify(Qt.colorEqual(launcher.controlColor, "#242424"))
+        verify(Qt.colorEqual(launcher.primaryText, "#f2ffffff"))
+        tone.theme = ambient
+    }
+
     // The arrow keys choose an application in Apps, which Enter
     // opens: the chosen one rises and stays in view as the choice moves on.
     // The arrow keys choose an application in Apps, typed into

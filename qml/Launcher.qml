@@ -60,12 +60,18 @@ Item {
     function ms(base) { return root.motionFactor > 0 ? Math.max(1, Math.round(base * root.motionFactor)) : 1 }
     function own(base) { return root.reducedMotion ? 1 : base }
     focus: true
-    readonly property color primaryText: "#f2ffffff"
-    readonly property color secondaryText: "#a8ffffff"
-    readonly property color edgeText: "#88ffffff"
-    readonly property color surfaceColor: "#141414"
-    readonly property color surfaceOutline: "#5a5a5a"
-    readonly property color controlColor: "#242424"
+    // Search follows the window's colour scheme: the suite's dark look on a
+    // dark one, the scheme's own ground and ink on a light one.
+    SearchColors {
+        id: tone
+        theme: root.Kirigami.Theme
+    }
+    readonly property color primaryText: tone.primaryText
+    readonly property color secondaryText: tone.secondaryText
+    readonly property color edgeText: tone.edgeText
+    readonly property color surfaceColor: tone.surface
+    readonly property color surfaceOutline: tone.outline
+    readonly property color controlColor: tone.control
     // Shuffle's corner tiers: paper for the sheet and all laid in it, notes for
     // what floats above and closes; anything pressed is a pill.
     readonly property int paperRadius: 8
@@ -151,6 +157,7 @@ Item {
                 width: shadow.width + 2 * modelData.grow
                 height: shadow.height + 2 * modelData.grow
                 radius: shadow.cornerRadius + modelData.grow
+                // A shadow is dark on any ground.
                 color: Qt.rgba(0, 0, 0, modelData.alpha)
             }
         }
@@ -178,7 +185,7 @@ Item {
             id: pillFace
             anchors.fill: parent
             radius: height / 2
-            color: pillTap.pressed ? "#303030" : pillHover.hovered ? "#2a2a2a" : root.controlColor
+            color: pillTap.pressed ? tone.doorPressed : pillHover.hovered ? tone.doorHover : root.controlColor
             scale: pillTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
@@ -230,7 +237,7 @@ Item {
             radius: height / 2
             color: "transparent"
             border.width: 1.5
-            border.color: "#b0ffffff"
+            border.color: tone.focusRing
             visible: pill.activeFocus
         }
         HoverHandler {
@@ -266,7 +273,7 @@ Item {
             width: Math.min(parent.width, 68)
             height: parent.height
             radius: root.paperRadius
-            color: tileTap.pressed ? "#262626" : tileHover.hovered ? "#20ffffff" : "transparent"
+            color: tileTap.pressed ? tone.tilePressed : tileHover.hovered ? tone.tileHover : "transparent"
             scale: tileTap.pressed ? 1.07 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
@@ -313,7 +320,7 @@ Item {
             radius: root.paperRadius + 2
             color: "transparent"
             border.width: 1.5
-            border.color: "#b0ffffff"
+            border.color: tone.focusRing
             visible: tile.activeFocus
         }
         HoverHandler {
@@ -960,8 +967,8 @@ Item {
                     anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     color: root.primaryText
-                    selectionColor: "#6da9ddff"
-                    selectedTextColor: "#ffffffff"
+                    selectionColor: tone.selection
+                    selectedTextColor: tone.selectedText
                     font.pixelSize: 18
                     clip: true
                     inputMethodHints: Qt.ImhNoPredictiveText
@@ -1027,7 +1034,7 @@ Item {
                         verticalAlignment: Text.AlignVCenter
                         visible: query.text.length === 0
                         text: words.i18n("Just type")
-                        color: "#86ffffff"
+                        color: tone.placeholderText
                         font.pixelSize: 12
                         opacity: root.openingText
                         transform: Translate { y: (1 - root.openingText) * 3 }
@@ -1051,7 +1058,7 @@ Item {
                                     verticalAlignment: Text.AlignVCenter
                                     text: placeholder.text
                                     font: placeholder.font
-                                    color: "#ffffff"
+                                    color: tone.shine
                                 }
                             }
                         }
@@ -1373,7 +1380,7 @@ Item {
                             objectName: "parent-highlight-" + resultDelegate.index
                             width: parent.width; height: 62; radius: root.paperRadius
                             color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === ""
-                                ? "#3dffffff" : (hover.hovered ? "#22ffffff" : "transparent")
+                                ? tone.current : (hover.hovered ? tone.hover : "transparent")
                         }
 
                         Row {
@@ -1416,7 +1423,7 @@ Item {
                                         anchors.verticalCenter: parent.verticalCenter
                                         text: words.i18n("OPEN")
                                         visible: resultDelegate.alreadyOpen
-                                        color: "#ff71e6be"
+                                        color: tone.openTag
                                         font.pixelSize: 10
                                         font.weight: Font.Bold
                                     }
@@ -1452,7 +1459,7 @@ Item {
                                     height: 40
                                     radius: height / 2
                                     color: resultDelegate.ListView.isCurrentItem && root.selectedChildKey === root.childKey(modelData)
-                                        ? "#3dffffff" : (childHover.hovered ? "#22ffffff" : "transparent")
+                                        ? tone.current : (childHover.hovered ? tone.hover : "transparent")
                                     Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: root.secondaryText }
                                     Text {
                                         x: 27; width: parent.width - x - 12; height: parent.height
@@ -1568,8 +1575,8 @@ Item {
                         width: parent.width
                         height: 30
                         radius: height / 2
-                        color: backTap.pressed ? "#4A4A4A"
-                            : backHover.hovered ? "#333333" : root.controlColor
+                        color: backTap.pressed ? tone.controlPressed
+                            : backHover.hovered ? tone.controlHover : root.controlColor
                         Behavior on color { ColorAnimation { duration: root.ms(90) } }
                         SuiteIcon {
                             glyph: "chevron-left"
@@ -1628,8 +1635,8 @@ Item {
                         width: 30
                         height: 30
                         radius: height / 2
-                        color: hiddenPress.pressed ? "#4A4A4A"
-                            : hiddenButton.showing ? "#333333"
+                        color: hiddenPress.pressed ? tone.controlPressed
+                            : hiddenButton.showing ? tone.controlHover
                             : hiddenHover.hovered ? root.controlColor : "transparent"
                         Behavior on color { ColorAnimation { duration: root.ms(90) } }
                     }
@@ -1683,8 +1690,8 @@ Item {
                         width: parent.width
                         height: 30
                         radius: height / 2
-                        color: sortPress.pressed || fileSort.visible ? "#4A4A4A"
-                            : sortHover.hovered ? "#333333" : root.controlColor
+                        color: sortPress.pressed || fileSort.visible ? tone.controlPressed
+                            : sortHover.hovered ? tone.controlHover : root.controlColor
                         Behavior on color { ColorAnimation { duration: root.ms(90) } }
                         Text {
                             id: sortLabel
@@ -1895,7 +1902,7 @@ Item {
                         anchors.margins: 5
                         radius: root.paperRadius
                         color: catalogHover.hovered || catalogDelegate.chosen
-                            ? "#20ffffff" : "transparent"
+                            ? tone.tileHover : "transparent"
                         // A hidden application, shown by the eye, is dimmed.
                         opacity: catalogDelegate.model.hidden ? 0.45 : 1
                         // The chosen application rises, as a touched one does.
@@ -2132,14 +2139,14 @@ Item {
                     width: 84
                     height: 3
                     radius: height / 2
-                    color: "#24ffffff"
+                    color: tone.track
 
                     Rectangle {
                         id: launchProgress
                         width: 28
                         height: parent.height
                         radius: height / 2
-                        color: "#d9ffffff"
+                        color: tone.progress
 
                         SequentialAnimation on x {
                             running: root.applicationLaunchPending
