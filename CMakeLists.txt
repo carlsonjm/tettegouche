@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
+find_package(KF6 6.26 REQUIRED COMPONENTS Config CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -192,6 +192,7 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     tettegouche-activities
     Qt6::Core
     Qt6::DBus
+    KF6::ConfigGui
     KF6::CoreAddons
     KF6::GlobalAccel
     KF6::I18n
@@ -299,7 +300,7 @@ if(BUILD_TESTING)
     qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp src/LauncherKeys.cpp src/LauncherKeys.h src/ProductName.h)
     target_include_directories(panel-applet-test PRIVATE src)
     target_link_libraries(panel-applet-test PRIVATE
-        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::Package KF6::GlobalAccel KF6::I18n)
+        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::ConfigGui KF6::Package KF6::GlobalAccel KF6::I18n)
     target_compile_definitions(panel-applet-test PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
     add_dependencies(panel-applet-test studio.warbler.tettegouche)
     add_test(NAME panel-applet-test
