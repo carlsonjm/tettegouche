@@ -499,7 +499,7 @@ private:
     // configuration main.xml declares.
     void configure(const QString &key, bool value)
     {
-        auto *item = m_applet->configScheme()->findItem(QStringLiteral("General"), key);
+        auto *item = static_cast<KCoreConfigSkeleton *>(m_applet->configScheme())->findItem(key);
         QVERIFY(item);
         item->setProperty(value);
         m_applet->configScheme()->save();
