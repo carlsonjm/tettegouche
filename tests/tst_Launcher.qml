@@ -462,6 +462,7 @@ TestCase {
     // leaves as one.
     function test_folders() {
         controller.opened()
+        controller.catalogActivated = -1
         catalog.append({name: "Games", icon: "", isFolder: true, folderId: "f1", inFolder: ""})
         for (let i = 0; i < 3; ++i) catalog.append({name: "App " + i, icon: "application-x-executable", isFolder: false, folderId: "", inFolder: i === 2 ? "f1" : ""})
         launcher.setDrawerOpen(true)
