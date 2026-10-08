@@ -1224,10 +1224,12 @@ int main(int argc, char **argv)
          QVariant::fromValue(static_cast<QObject *>(&results))},
         {QStringLiteral("applicationCatalog"),
          QVariant::fromValue(static_cast<QObject *>(&catalog))},
-        {QStringLiteral("recentUse"), offerRecent ? QVariant::fromValue(static_cast<QObject *>(&recent)) : QVariant()},
-        {QStringLiteral("notesDoor"), offerNotes ? QVariant::fromValue(static_cast<QObject *>(&notes)) : QVariant()},
-        {QStringLiteral("quickNote"), quickNote ? QVariant::fromValue(static_cast<QObject *>(quickNote.get())) : QVariant()},
-        {QStringLiteral("genie"), genie ? QVariant::fromValue(static_cast<QObject *>(genie.get())) : QVariant()},
+        // What is not offered is passed as null; an empty QVariant would
+        // reach QML as undefined, which its "!== null" checks let through.
+        {QStringLiteral("recentUse"), QVariant::fromValue<QObject *>(offerRecent ? &recent : nullptr)},
+        {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
+        {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
+        {QStringLiteral("genie"), QVariant::fromValue<QObject *>(genie.get())},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {
