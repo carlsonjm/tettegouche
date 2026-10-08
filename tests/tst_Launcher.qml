@@ -52,6 +52,14 @@ TestCase {
         property int catalogActivated: -1
         function activateCatalogIfOpen(row) { catalogActivated = row; return 1 }
         function finishLaunch() { closes++ }
+        property bool dockPresent: false
+        property var pinnedRows: []
+        function catalogPinned(row) { return pinnedRows.indexOf(row) >= 0 }
+        property var pinAsks: []
+        function pinCatalog(row, pin) {
+            pinAsks = pinAsks.concat([[row, pin]])
+            pinnedRows = pin ? pinnedRows.concat([row]) : pinnedRows.filter(r => r !== row)
+        }
         property int webSearches: 0
         property bool bluetoothResult: false
         property int relatedRevision: 0
@@ -77,6 +85,8 @@ TestCase {
         property var carried: []
         property rect carriedSheet
         function carryOut(paths, sheet) { carried = paths; carriedSheet = sheet }
+        property int carriedApplication: -1
+        function carryApplication(row, sheet) { carriedApplication = row; carriedSheet = sheet }
         function beginGuestWebLaunch() { return false }
         property int notesLaunches: 0
         property bool notesLaunchAccepted: true
@@ -343,6 +353,7 @@ TestCase {
         const lines = []
         for (const line of sheet.contentItem.children) if (line.isSheetMenuItem && line.visible) lines.push(line.text)
         compare(lines, ["New Window", "New Private Window", "Hide", "Uninstall…"])
+        verify(!findChild(launcher, "application-sheet-pin").visible)
         let privateWindow = null
         for (const line of sheet.contentItem.children) if (line.text === "New Private Window") privateWindow = line
         const closes = controller.closes
@@ -364,12 +375,53 @@ TestCase {
         compare(catalog.uninstalled, 1)
         tryCompare(sheet, "opened", false)
 
+        // With Shuffle's dock there, the sheet pins to it and then unpins.
+        controller.dockPresent = true
+        const pin = findChild(launcher, "application-sheet-pin")
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        verify(pin.visible)
+        compare(pin.text, "Pin to dock")
+        mouseClick(pin, pin.width / 2, pin.height / 2)
+        compare(controller.pinAsks, [[1, true]])
+        tryCompare(sheet, "opened", false)
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        compare(pin.text, "Unpin from dock")
+        mouseClick(pin, pin.width / 2, pin.height / 2)
+        compare(controller.pinAsks, [[1, true], [1, false]])
+        tryCompare(sheet, "opened", false)
+        controller.dockPresent = false
+        controller.pinAsks = []
+        controller.pinnedRows = []
+
         catalog.clear()
         catalog.hiddenSet = ({})
         catalog.softwareReady = false
         catalog.softwareAsked = false
         catalog.ran = []
         catalog.uninstalled = -1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // An application dragged from Apps leaves as a carry, which the dock
+    // takes as a pin; a tap still opens it.
+    function test_applicationCarry() {
+        controller.opened()
+        for (let i = 0; i < 4; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(600)
+        const grid = findChild(launcher, "application-grid")
+        const tile = findChild(grid, "application-tile-2")
+        controller.carriedApplication = -1
+        mouseDrag(tile, tile.width / 2, tile.height / 2, 0, 120)
+        tryCompare(controller, "carriedApplication", 2)
+        const sheet = findChild(launcher, "launcher-sheet")
+        compare(controller.carriedSheet.width, sheet.width)
+        controller.carriedApplication = -1
+        catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
@@ -545,9 +597,10 @@ TestCase {
         tryCompare(launcher,"drawerProgress",0)
         controller.availableArea=original
     }
-    // Before anything is typed: Apps and Files as pills under the field, then
-    // what was used lately, evenly spaced to the field's own width, as many as
-    // fit and at most six; the field and the row are centred together.
+    // Before anything is typed: Apps and Files as pills centred under the
+    // field, then what was used lately on its own row below them, as many as
+    // fit and at most six, centred as one group; the field and the rows are
+    // centred together.
     function test_firstRow() {
         launcher.fileBrowser = filesMock
         fillRecent(8)
@@ -562,8 +615,10 @@ TestCase {
         compare(row.x, field.x)
         compare(row.y - field.y - field.height, 18)
         verify(Math.abs(field.y - (field.parent.height - row.y - row.height)) <= 1)
-        compare(apps.mapToItem(row, 0, 0).x, 0)
-        const fit = Math.min(6, Math.floor((row.width - row.pillsWidth - row.divide) / row.tileWidth))
+        const left = apps.mapToItem(row, 0, 0).x
+        const right = row.width - files.mapToItem(row, files.width, 0).x
+        verify(Math.abs(left - right) <= 1)
+        const fit = Math.min(6, Math.floor(row.width / row.tileWidth))
         verify(fit >= 4)
         compare(row.shownCount, fit)
         for (let i = 0; i < 8; ++i)
@@ -571,8 +626,10 @@ TestCase {
         const first = findChild(launcher, "recent-0")
         const last = findChild(launcher, "recent-" + (fit - 1))
         compare(findChild(launcher, "recent-1").x - first.x, row.cellWidth)
-        verify(first.x > files.mapToItem(row, files.width, 0).x)
-        compare(Math.round(last.x + last.width), Math.round(row.width))
+        compare(findChild(launcher, "recent-1").y, first.y)
+        verify(first.y >= apps.mapToItem(row, 0, apps.height).y)
+        verify(Math.abs(first.x - (row.width - last.x - last.width)) <= 1)
+        compare(Math.round(first.y + first.height), Math.round(row.height))
         // Typing hands the room to the results, and clearing brings it back.
         const query = findChild(launcher, "search-query")
         query.text = "x"
@@ -604,7 +661,7 @@ TestCase {
         tryCompare(row, "arrival", 1)
         compare(row.rest, 1)
     }
-    // A narrower sheet keeps the doors and fewer of the rest.
+    // A narrower sheet keeps the doors and as many of the rest as fit.
     function test_firstRowNarrow() {
         launcher.fileBrowser = filesMock
         fillRecent(8)
@@ -612,7 +669,8 @@ TestCase {
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
-        verify(row.shownCount >= 1 && row.shownCount < 4)
+        verify(row.shownCount >= 1)
+        compare(row.shownCount, Math.min(6, Math.floor(row.width / row.tileWidth)))
         verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
     }
@@ -737,7 +795,7 @@ TestCase {
         compare(notes.label, "Notes")
         compare(notes.height, files.height)
         compare(notes.mapToItem(row, 0, 0).x - files.mapToItem(row, files.width, 0).x, row.pillGap)
-        verify(findChild(launcher, "recent-0").x > notes.mapToItem(row, notes.width, 0).x)
+        verify(findChild(launcher, "recent-0").y >= notes.mapToItem(row, 0, notes.height).y)
         compare(row.pillsWidth, findChild(launcher, "apps-pill").width + files.width + notes.width + 2 * row.pillGap)
     }
     // Notes brings the quick-note sheet by a click, a tap or Enter, and Search

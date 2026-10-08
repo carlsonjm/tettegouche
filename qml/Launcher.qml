@@ -418,12 +418,22 @@ Item {
         return true
     }
 
+    // An application carried from its tile leaves Search as a drag, which
+    // Shuffle's dock takes as a pin, or any other launcher as its own.
+    function carryApplication(index) {
+        applicationSheet.close()
+        const at = sheet.mapToItem(null, 0, 0)
+        root.launcherController.carryApplication(index, Qt.rect(at.x, at.y, sheet.width, sheet.height))
+    }
+
     // An application's sheet, opened from its tile at a point on it.
     function showApplicationSheet(index, tile, point) {
         root.applicationCatalog.prepareSoftware()
         applicationSheet.row = index
         applicationSheet.actions = root.applicationCatalog.actions(index)
         applicationSheet.hidden = root.applicationCatalog.isHidden(index)
+        applicationSheet.pinned = root.launcherController.dockPresent
+            && root.launcherController.catalogPinned(index)
         const at = tile.mapToItem(sheet, point.x, point.y)
         applicationSheet.openNear(at.x, at.y)
     }
@@ -1060,32 +1070,36 @@ Item {
             }
 
             // Before anything is typed: Apps, Files and, where Gooseberry is
-            // installed, Notes; then what was used lately and is neither
-            // pinned, open nor hidden, spaced evenly across the field's width.
-            // A narrow sheet keeps the doors and as many of the rest as fit;
-            // with none of the rest, the doors are centred.
+            // installed, Notes, centred under the field; then, on a row of
+            // their own below them, what was used lately and is neither
+            // pinned, open nor hidden, centred as one group. A narrow sheet
+            // keeps the doors and as many of the rest as fit, and a short one
+            // keeps the doors alone.
             Item {
                 id: firstRow
                 objectName: "first-row"
                 readonly property real gap: 18
                 readonly property real pillGap: 10
+                readonly property real pillsHeight: 64
                 readonly property real tileWidth: 72
+                readonly property real tileHeight: 64
                 readonly property int most: 6
-                // The line between the doors and the rest, with its room.
-                readonly property real divide: 25
+                // The room between the doors and what was used lately.
+                readonly property real divide: 12
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
                 readonly property real pillsWidth: appsPill.width
                     + (filesPill.visible ? pillGap + filesPill.width : 0)
                     + (notesPill.visible ? pillGap + notesPill.width : 0)
                     + (geniePill.visible ? pillGap + geniePill.width : 0)
-                readonly property real naturalWidth: pillsWidth
-                    + (offered > 0 ? divide + Math.min(offered, most) * tileWidth : 0)
-                readonly property int shownCount: offered > 0 ? Math.max(0, Math.min(offered, most,
-                    Math.floor((width - pillsWidth - divide) / tileWidth))) : 0
-                readonly property real cellWidth: shownCount > 0
-                    ? (width - pillsWidth - divide) / shownCount : 0
+                readonly property real naturalWidth: Math.max(pillsWidth,
+                    Math.min(offered, most) * tileWidth)
+                readonly property bool roomBelow: parent.height >= 58 + gap + pillsHeight + divide + tileHeight
+                readonly property int shownCount: offered > 0 && roomBelow
+                    ? Math.max(0, Math.min(offered, most, Math.floor(width / tileWidth))) : 0
+                readonly property real cellWidth: tileWidth
+                readonly property real tilesX: (width - shownCount * tileWidth) / 2
                 readonly property real reach: gap + height
-                readonly property bool fits: parent.height >= 58 + reach
+                readonly property bool fits: parent.height >= 58 + gap + pillsHeight
                 // The row arrives a piece at a time: each door in turn, left
                 // to right, then what was used lately as one group. Typing
                 // sends the row away whole, sinking a little, and clearing
@@ -1155,7 +1169,7 @@ Item {
                 x: (parent.width - width) / 2
                 y: searchField.y + searchField.height + gap
                 width: searchField.compactWidth
-                height: 64
+                height: pillsHeight + (shownCount > 0 ? divide + tileHeight : 0)
                 opacity: fits && !root.applicationLaunchPending
                     ? rest * Math.max(0, 1 - root.drawerProgress * 3)
                         * Math.max(0, 1 - root.modeProgress * 3) : 0
@@ -1164,8 +1178,8 @@ Item {
                 transform: Translate { y: root.reducedMotion ? 0 : (1 - firstRow.rest) * 6 }
 
                 Row {
-                    x: firstRow.shownCount > 0 ? 0 : (firstRow.width - firstRow.pillsWidth) / 2
-                    anchors.verticalCenter: parent.verticalCenter
+                    x: (firstRow.width - firstRow.pillsWidth) / 2
+                    y: (firstRow.pillsHeight - height) / 2
                     spacing: firstRow.pillGap
                     FirstPill {
                         id: appsPill
@@ -1203,22 +1217,13 @@ Item {
                         onActivated: root.openGenie()
                     }
                 }
-                Rectangle {
-                    visible: firstRow.shownCount > 0
-                    opacity: firstRow.reveal(firstRow.doors)
-                    x: firstRow.pillsWidth + Math.floor(firstRow.divide / 2)
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 1
-                    height: 36
-                    color: "#2c2c2c"
-                }
                 Repeater {
                     model: root.recentUse
                     delegate: RecentTile {
                         id: recentTile
                         readonly property real reveal: firstRow.reveal(firstRow.doors)
-                        x: firstRow.pillsWidth + firstRow.divide + index * firstRow.cellWidth
-                        y: (firstRow.height - height) / 2
+                        x: firstRow.tilesX + index * firstRow.cellWidth
+                        y: firstRow.pillsHeight + firstRow.divide
                         width: firstRow.cellWidth
                         visible: index < firstRow.shownCount
                         opacity: reveal
@@ -1922,14 +1927,37 @@ Item {
 
                         HoverHandler { id: catalogHover }
                         TapHandler {
+                            id: catalogTap
                             enabled: !root.guestDragged
                                 && !root.applicationLaunchPending
                             longPressThreshold: 0.5
+                            // A hold that then moves carries the application.
+                            property bool held: false
+                            onPressedChanged: if (pressed) held = false
                             onTapped: root.runCatalogApplication(
                                 catalogDelegate.index,
                                 catalogDelegate.model.name)
-                            onLongPressed: root.showApplicationSheet(
-                                catalogDelegate.index, catalogTile, point.position)
+                            onLongPressed: {
+                                held = true
+                                root.showApplicationSheet(
+                                    catalogDelegate.index, catalogTile, point.position)
+                            }
+                        }
+                        // Carried by a mouse at once; by touch after a hold,
+                        // since a swipe scrolls Apps.
+                        DragHandler {
+                            objectName: "application-carry"
+                            target: null
+                            enabled: !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            onActiveChanged: if (active) root.carryApplication(catalogDelegate.index)
+                        }
+                        DragHandler {
+                            target: null
+                            enabled: !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.TouchScreen
+                            dragThreshold: catalogTap.held ? Qt.styleHints.startDragDistance : 32767
+                            onActiveChanged: if (active) root.carryApplication(catalogDelegate.index)
                         }
                         TapHandler {
                             enabled: !root.applicationLaunchPending
@@ -1942,7 +1970,8 @@ Item {
                 }
             }
 
-            // An application's sheet: its own actions, then Hide or Unhide,
+            // An application's sheet: its own actions, then Pin to dock or
+            // Unpin from dock where Shuffle's dock is there, Hide or Unhide,
             // and Uninstall where the software centre can show it.
             SheetMenu {
                 id: applicationSheet
@@ -1953,6 +1982,7 @@ Item {
                 property int row: -1
                 property var actions: []
                 property bool hidden: false
+                property bool pinned: false
                 Repeater {
                     model: applicationSheet.actions
                     // Made after the menu, so each line is given its menu here.
@@ -1963,6 +1993,12 @@ Item {
                         text: modelData.name
                         onTriggered: root.runCatalogAction(applicationSheet.row, modelData.index)
                     }
+                }
+                SheetMenuItem {
+                    objectName: "application-sheet-pin"
+                    text: applicationSheet.pinned ? words.i18n("Unpin from dock") : words.i18n("Pin to dock")
+                    visible: root.launcherController.dockPresent
+                    onTriggered: root.launcherController.pinCatalog(applicationSheet.row, !applicationSheet.pinned)
                 }
                 SheetMenuItem {
                     objectName: "application-sheet-hide"

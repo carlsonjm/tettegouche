@@ -29,7 +29,7 @@ than repeat it.
 | Tap or click Remember or Not now, in Genie | Genie writes down what it offered to remember about you, or leaves it. |
 | Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
 | Tap or click Expand, in Genie | Search grows and Genie's own window takes its place. |
-| Tap or click something used lately, beside them | Opens it, an application or a file in its usual application, and Search closes. |
+| Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tab, with nothing typed | Moves between Apps, Files, Notes, Ask and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
@@ -59,6 +59,7 @@ than repeat it.
 | Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show Genie when Split Rock is installed", off | Search never offers Genie. On, its default, Genie appears whenever Split Rock answers. |
+| Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings
@@ -78,7 +79,8 @@ than repeat it.
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
-| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
+| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
+| Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
 | Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |

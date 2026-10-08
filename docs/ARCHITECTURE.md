@@ -116,6 +116,8 @@ screen). What the dock pins comes from the Bottom Surface's
 `pinnedApplications`, what is open from Kadunce's workspace context, and
 whether the screen is shared from the portal's status item; each is optional,
 and with none of them nothing is left out on its account.
+The same answer tells an application's sheet in Apps whether to offer Pin to
+dock; it asks the Bottom Surface's `pinApplication` or `unpinApplication`.
 
 ## Files
 
