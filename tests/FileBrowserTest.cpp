@@ -1092,11 +1092,11 @@ private Q_SLOTS:
         if(!qEnvironmentVariableIsSet("TETTE_WORDS_SEALED"))QSKIP("Run by tests/verify-words.sh with marking test catalogs");
         const auto marked=[](const QString &s){ return s.startsWith(QStringLiteral("xx")) && s.endsWith(QStringLiteral("xx")); };
         QVERIFY2(marked(i18n("Home")),qPrintable(i18n("Home")));
-        const char *widget="plasma_applet_studio.warbler.tettegouche";
+        const char *widget="plasma_applet_co.goodinput.tettegouche";
         QVERIFY2(marked(i18nd(widget,"Open in Files")),qPrintable(i18nd(widget,"Open in Files")));
         QQmlEngine engine; QQmlComponent asks(&engine);
         asks.setData(QByteArrayLiteral("import QtQml\nimport org.kde.ki18n\nKI18nContext {\n"
-            "translationDomain: \"plasma_applet_studio.warbler.tettegouche\"\nproperty string said: i18n(\"Open in Files\")\n}"),QUrl());
+            "translationDomain: \"plasma_applet_co.goodinput.tettegouche\"\nproperty string said: i18n(\"Open in Files\")\n}"),QUrl());
         std::unique_ptr<QObject> context(asks.create());
         QVERIFY2(context,qPrintable(asks.errorString()));
         QVERIFY2(marked(context->property("said").toString()),qPrintable(context->property("said").toString()));

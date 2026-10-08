@@ -271,7 +271,7 @@ class OmniResults : public QSortFilterProxyModel
     Q_PROPERTY(QString quietFolders READ quietFolders WRITE setQuietFolders NOTIFY scopeChanged)
 public:
     explicit OmniResults(QObject *parent = nullptr) : QSortFilterProxyModel(parent) {
-        QSettings settings(QStringLiteral("studio.warbler"), QStringLiteral("tettegouche-search"));
+        QSettings settings(QStringLiteral("co.goodinput"), QStringLiteral("tettegouche-search"));
         const auto fallback = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation)
             + QStringLiteral("/Design Library");
         m_quietFolders = settings.value(QStringLiteral("quietFolders"),
@@ -326,7 +326,7 @@ public:
     void setAllFiles(bool value) { if (m_allFiles == value) return; releaseSelection(); m_allFiles = value; invalidate(); Q_EMIT scopeChanged(); }
     QString quietFolders() const { return m_quietFolders; }
     void setQuietFolders(const QString &value) {
-        QSettings settings(QStringLiteral("studio.warbler"), QStringLiteral("tettegouche-search"));
+        QSettings settings(QStringLiteral("co.goodinput"), QStringLiteral("tettegouche-search"));
         settings.setValue(QStringLiteral("quietFolders"), value);
         m_quietFolders = value;
         invalidate(); Q_EMIT scopeChanged();

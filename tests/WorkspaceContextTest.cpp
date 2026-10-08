@@ -16,14 +16,14 @@ private Q_SLOTS:
     {
         WorkspaceContext context;
         QVERIFY(context.update(QStringLiteral(R"({
-            "schema":"studio.warbler.kadunce.workspace-context","version":1,
+            "schema":"co.goodinput.kadunce.workspace-context","version":1,
             "applications":[
               {"windowId":"recent","appId":"org.example.App","lastActivated":12},
               {"windowId":"old","appId":"org.example.App","selected":true,"lastActivated":3}
             ]})")));
         QCOMPARE(context.windowIdForApplication(QStringLiteral("org.example.App"), {}), QStringLiteral("recent"));
         QVERIFY(context.update(QStringLiteral(R"({
-            "schema":"studio.warbler.kadunce.workspace-context","version":1,
+            "schema":"co.goodinput.kadunce.workspace-context","version":1,
             "applications":[{"windowId":"old","appId":"org.example.App","lastActivated":3}]})")));
         QCOMPARE(context.windowIdForApplication(QStringLiteral("org.example.App"), {}), QStringLiteral("old"));
     }
@@ -31,7 +31,7 @@ private Q_SLOTS:
     {
         WorkspaceContext context;
         const QString payload = QStringLiteral(R"json({
-            "schema":"studio.warbler.kadunce.workspace-context",
+            "schema":"co.goodinput.kadunce.workspace-context",
             "version":1,
             "focus":{"appId":"org.kde.konsole"},
             "applications":[
@@ -60,7 +60,7 @@ private Q_SLOTS:
     {
         WorkspaceContext context;
         const QString payload = QStringLiteral(R"json({
-            "schema":"studio.warbler.kadunce.workspace-context",
+            "schema":"co.goodinput.kadunce.workspace-context",
             "version":2,
             "applications":[]
         })json");
@@ -73,7 +73,7 @@ private Q_SLOTS:
     {
         WorkspaceContext context;
         QVERIFY(context.update(QStringLiteral(R"json({
-            "schema":"studio.warbler.kadunce.workspace-context",
+            "schema":"co.goodinput.kadunce.workspace-context",
             "version":1,
             "applications":[{"windowId":"app-window","appId":"org.example.App","title":"App"}]
         })json")));

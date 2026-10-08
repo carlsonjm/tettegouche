@@ -12,7 +12,7 @@
 
 namespace
 {
-constexpr auto ExpectedSchema = "studio.warbler.kadunce.workspace-context";
+constexpr auto ExpectedSchema = "co.goodinput.kadunce.workspace-context";
 constexpr int SupportedVersion = 1;
 }
 

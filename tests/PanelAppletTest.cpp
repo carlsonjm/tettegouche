@@ -86,12 +86,12 @@ private Q_SLOTS:
         QVERIFY(m_panel);
         m_panel->setFormFactor(Plasma::Types::Horizontal);
         m_panel->setLocation(Plasma::Types::BottomEdge);
-        m_applet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
+        m_applet = m_panel->createApplet(QStringLiteral("co.goodinput.tettegouche"));
         QVERIFY(m_applet);
         QVERIFY(!m_applet->failedToLaunch());
-        QCOMPARE(m_applet->pluginMetaData().iconName(), QStringLiteral("studio.warbler.tettegouche-logo"));
+        QCOMPARE(m_applet->pluginMetaData().iconName(), QStringLiteral("co.goodinput.tettegouche-logo"));
         const QString expectedPlugin = QString::fromLocal8Bit(qgetenv("TETTE_TEST_PLUGIN_ROOT"))
-            + QStringLiteral("/plasma/applets/studio.warbler.tettegouche.so");
+            + QStringLiteral("/plasma/applets/co.goodinput.tettegouche.so");
         QCOMPARE(QFileInfo(m_applet->pluginMetaData().fileName()).canonicalFilePath(),
                  QFileInfo(expectedPlugin).canonicalFilePath());
 
@@ -300,7 +300,7 @@ private Q_SLOTS:
     void nearestRightTaskBoundaryWidth()
     {
         auto *spacerApplet = m_panel->createApplet(QStringLiteral("org.kde.plasma.panelspacer"));
-        auto *taskApplet = m_panel->createApplet(QStringLiteral("studio.warbler.tettegouche"));
+        auto *taskApplet = m_panel->createApplet(QStringLiteral("co.goodinput.tettegouche"));
         QVERIFY(spacerApplet);
         QVERIFY(taskApplet);
         auto *spacer = PlasmaQuick::AppletQuickItem::itemForApplet(spacerApplet);
@@ -394,7 +394,7 @@ private Q_SLOTS:
     {
         QQmlEngine engine;
         QQmlComponent component(&engine,
-            QUrl(QStringLiteral("qrc:/qt/qml/plasma/applet/studio/warbler/tettegouche/SuiteIcon.qml")),
+            QUrl(QStringLiteral("qrc:/qt/qml/plasma/applet/co/goodinput/tettegouche/SuiteIcon.qml")),
             QQmlComponent::PreferSynchronous);
         QVERIFY2(component.isReady(), qPrintable(component.errorString()));
         const QStringList glyphs{
