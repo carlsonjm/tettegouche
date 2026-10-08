@@ -58,8 +58,16 @@ application and Tettegouche never depends on it.
   was.
 - An older Gooseberry without the interface keeps the earlier door: Notes runs
   the Capture action and Search closes.
+- Typed words also find notes. While Gooseberry is running and offers `Find`
+  (its `docs/DESKTOP.md`), each query of two letters or more asks it for up to
+  five notes with those words, and they are listed among the results: the
+  note's first words with a square of its colour, and under them the line
+  with the words and its folder, or the window it is stuck to. A tap opens
+  the note on Gooseberry's own card and Search closes. Gooseberry is never
+  started for this and never waited on; an answer to an older query is
+  dropped.
 - The widget's setting "Show Notes when Gooseberry is installed" is on by
-  default; off, Notes is never offered.
+  default; off, Notes is never offered and no note is asked for.
 
 ### Genie
 
@@ -96,21 +104,24 @@ code, and Tettegouche never depends on it.
    KDE indexing or scan content.
 2. Confidence precedes provider preference: exact name, named intent, prefix,
    query words, descriptive context, then unrelated. Unrelated rows are omitted.
-3. Apps, files, and system aids break ties only within comparable confidence. A
+3. A note Gooseberry found ranks by its first words like any name; found
+   only inside, it ranks as descriptive context. Notes sit with system aids.
+4. Apps, files, and system aids break ties only within comparable confidence. A
    precise setting may beat an incidental app; an explicit filename stays strong.
-4. Aliases describe destinations. Two-letter aliases remain ambiguous; longer
+5. Aliases describe destinations. Two-letter aliases remain ambiguous; longer
    alias prefixes express stronger intent without per-query exceptions.
-5. Matching ignores punctuation and case and uses word boundaries rather than
+6. Matching ignores punctuation and case and uses word boundaries rather than
    arbitrary scattered letters.
-6. No browsing or settings change occurs merely because the user types. Web
+7. No browsing or settings change occurs merely because the user types. Web
    fallback appears only after explicit submission of an empty eligible result.
-7. Ranking has no usage-learning requirement; history cannot overpower relevance.
+8. Ranking has no usage-learning requirement; history cannot overpower relevance.
 
 ## Providers and execution
 
 Allowed local sources are applications/services, Baloo and recent documents,
-KDE settings, calculator, and unit conversion. Shell, session/kill actions,
-browser history, and online runners are excluded.
+KDE settings, calculator, unit conversion, and notes from a running
+Gooseberry. Shell, session/kill actions, browser history, and online runners
+are excluded.
 
 Application results may activate an exact existing Kadunce window. Files and
 settings execute their provider or verified module action. Web dispatch sends an
