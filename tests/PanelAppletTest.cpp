@@ -32,6 +32,7 @@ public Q_SLOTS:
 #include <KConfigGroup>
 #include <KPackage/Package>
 #include <KPackage/PackageLoader>
+#include <KConfigLoader>
 #include <Plasma/Applet>
 #include <Plasma/Containment>
 #include <Plasma/Corona>
@@ -189,35 +190,38 @@ private Q_SLOTS:
 
     void configuredActivation()
     {
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("useKadunce"), false);
+        configure(QStringLiteral("useKadunce"), false);
         QSignalSpy started(m_process, &QProcess::started);
         // The same signal Plasma emits for a configured global shortcut.
         m_applet->activated();
         QTRY_COMPARE(started.count(), 1);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--standalone")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("useKadunce"), true);
+        configure(QStringLiteral("useKadunce"), true);
         // With recent use off, Search is told so as it starts.
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerRecent"), false);
+        configure(QStringLiteral("offerRecent"), false);
+        // Where Shuffle Settings writes it, through Plasma's scripting.
+        QCOMPARE(m_applet->config().group(QStringLiteral("Configuration")).group(QStringLiteral("General"))
+                     .readEntry(QStringLiteral("offerRecent"), true), false);
         m_applet->activated();
         QTRY_COMPARE(started.count(), 2);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-recent")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerRecent"), true);
+        configure(QStringLiteral("offerRecent"), true);
         // With Notes off, Search is told so as it starts.
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerNotes"), false);
+        configure(QStringLiteral("offerNotes"), false);
         m_applet->activated();
         QTRY_COMPARE(started.count(), 3);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerNotes"), true);
+        configure(QStringLiteral("offerNotes"), true);
         // With Genie off, Search is told so as it starts.
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerGenie"), false);
+        configure(QStringLiteral("offerGenie"), false);
         m_applet->activated();
         QTRY_COMPARE(started.count(), 4);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-genie")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        m_applet->config().group(QStringLiteral("General")).writeEntry(QStringLiteral("offerGenie"), true);
+        configure(QStringLiteral("offerGenie"), true);
     }
 
     void repeatedActivationToggles()
@@ -491,6 +495,16 @@ private Q_SLOTS:
     }
 
 private:
+    // As Plasma's settings page and scripting both do: through the
+    // configuration main.xml declares.
+    void configure(const QString &key, bool value)
+    {
+        auto *item = m_applet->configScheme()->findItemByName(key);
+        QVERIFY(item);
+        item->setProperty(value);
+        m_applet->configScheme()->save();
+    }
+
     QTemporaryDir m_fixture;
     QString m_executable;
     TestCorona *m_corona = nullptr;
