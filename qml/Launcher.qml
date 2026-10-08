@@ -1204,7 +1204,7 @@ Item {
                         objectName: "notes-pill"
                         label: words.i18n("Notes")
                         glyph: "notes"
-                        visible: root.notesDoor !== null && root.notesDoor.available
+                        visible: !!root.notesDoor && root.notesDoor.available
                         onActivated: root.openNotes()
                     }
                     FirstPill {
@@ -1213,7 +1213,7 @@ Item {
                         objectName: "genie-pill"
                         label: words.i18n("Ask")
                         glyph: "genie"
-                        visible: root.genie !== null && root.genie.available
+                        visible: !!root.genie && root.genie.available
                         onActivated: root.openGenie()
                     }
                 }

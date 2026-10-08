@@ -7,6 +7,7 @@
 #include "SuiteSettings.h"
 
 #include <KConfigGroup>
+#include <KConfigLoader>
 #include <KPluginFactory>
 #include <QProcess>
 #include <QStandardPaths>
@@ -45,7 +46,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
             [this] { Q_EMIT launcherActiveChanged(); });
 
     connect(this, &Plasma::Applet::activated, this, [this] {
-        launch(settings().readEntry(QStringLiteral("useKadunce"), true));
+        launch(setting(QStringLiteral("useKadunce"), true));
     });
     m_keys = LauncherKeys::acquire();
     m_keys->attach(this, [this](const QString &drawer) { openDrawer(drawer); });
@@ -90,10 +91,10 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
             setAmbientActivities(m_activities->activities());
         });
         connect(m_activities.get(), &ActivityModel::driveOpenRequested, this, [this](const QString &udi) {
-            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), {}, {}, udi);
+            startLauncher(setting(QStringLiteral("useKadunce"), true), {}, {}, udi);
         });
         connect(m_activities.get(), &ActivityModel::revealRequested, this, [this](const QString &path) {
-            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), path);
+            startLauncher(setting(QStringLiteral("useKadunce"), true), path);
         });
         setAmbientActivities(m_activities->activities());
     }
@@ -217,7 +218,7 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
         const auto url = m_activities->destinationForReveal(id, generation);
         if (url.isLocalFile()) {
             m_activities->revealed(id, generation);
-            startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), url.toLocalFile());
+            startLauncher(setting(QStringLiteral("useKadunce"), true), url.toLocalFile());
         }
     } else m_activities->invoke(id, generation, action, value);
 }
@@ -277,12 +278,17 @@ void TettegoucheApplet::launch(bool useKadunce)
 void TettegoucheApplet::openDrawer(const QString &drawer)
 {
     if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")) return;
-    startLauncher(settings().readEntry(QStringLiteral("useKadunce"), true), {}, drawer);
+    startLauncher(setting(QStringLiteral("useKadunce"), true), {}, drawer);
 }
 
-KConfigGroup TettegoucheApplet::settings() const
+bool TettegoucheApplet::setting(const QString &key, bool fallback)
 {
-    return config().group(QStringLiteral("General"));
+    // The values Plasmoid.configuration and Plasma's scripting both change,
+    // kept under the applet's Configuration group rather than beside it.
+    if (KConfigLoader *scheme = configScheme()) {
+        if (KConfigSkeletonItem *item = static_cast<KCoreConfigSkeleton *>(scheme)->findItem(key)) return item->property().toBool();
+    }
+    return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
 
 void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
@@ -313,11 +319,11 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     m_process->setProgram(executable);
     QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
     // Search's first screen offers what was used lately unless that is off.
-    if (!settings().readEntry(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
+    if (!setting(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
     // It offers Notes, where the notes application is installed, unless that is off.
-    if (!settings().readEntry(QStringLiteral("offerNotes"), true)) arguments << QStringLiteral("--no-notes");
+    if (!setting(QStringLiteral("offerNotes"), true)) arguments << QStringLiteral("--no-notes");
     // And Genie, where Split Rock is installed, unless that is off.
-    if (!settings().readEntry(QStringLiteral("offerGenie"), true)) arguments << QStringLiteral("--no-genie");
+    if (!setting(QStringLiteral("offerGenie"), true)) arguments << QStringLiteral("--no-genie");
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
     else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
     else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;

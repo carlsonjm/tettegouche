@@ -2324,6 +2324,17 @@ TestCase {
         genieStub.available = false
         verify(!genie.visible)
     }
+    // Turned off in the settings, Notes and Ask are absent however the
+    // launcher was told so, as null or as nothing at all.
+    function test_doorsOffWhenNotOffered() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = undefined
+        launcher.genie = undefined
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        verify(!findChild(launcher, "notes-pill").visible)
+        verify(!findChild(launcher, "genie-pill").visible)
+    }
     // Genie opens in Search's own window with the drawer's motion: the field
     // travels into the header for the question, the answer comes below, and
     // the window keeps its size.

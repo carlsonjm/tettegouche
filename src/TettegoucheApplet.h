@@ -53,9 +53,9 @@ Q_SIGNALS:
 
 private:
     void watchGeometryItem(QQuickItem *item);
-    // The widget's settings where its settings page keeps them: the General
-    // group of its configuration, as main.xml names it.
-    KConfigGroup settings() const;
+    // One of the widget's settings as main.xml declares it, read where its
+    // settings page and Shuffle Settings both write it.
+    bool setting(const QString &key, bool fallback);
     void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
                        const QString &drive = {});
 
