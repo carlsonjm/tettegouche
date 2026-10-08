@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import org.kde.ki18n
+import org.kde.kirigami as Kirigami
 
 pragma ComponentBehavior: Bound
 
@@ -20,10 +21,14 @@ Item {
     required property real progress
     // Where the search field rests, which the pad grows out of.
     required property rect fieldRest
-    property color surfaceColor: "#141414"
-    property color surfaceOutline: "#5a5a5a"
-    property color controlColor: "#242424"
-    property color primaryText: "#f2ffffff"
+    SearchColors {
+        id: tone
+        theme: pane.Kirigami.Theme
+    }
+    property color surfaceColor: tone.surface
+    property color surfaceOutline: tone.outline
+    property color controlColor: tone.control
+    property color primaryText: tone.primaryText
     property bool growing: false
 
     signal back()
@@ -68,6 +73,7 @@ Item {
     readonly property real bottomHeight: 14 + placeHeight + 14 + 44
     readonly property rect padEnd: Qt.rect(0, padTop, width,
         Math.max(60, height - padTop - bottomHeight))
+    // The note is paper of its own colour on any ground, with dark ink.
     readonly property string noteHex: quickNote && quickNote.colourHex !== "" ? quickNote.colourHex : "#F2D98A"
 
     visible: progress > 0.001
@@ -116,6 +122,7 @@ Item {
             rightPadding: 16
             topPadding: 12
             background: null
+            // Dark ink on the note's pale paper, whatever the ground around it.
             color: "#1A1A1A"
             selectionColor: "#40000000"
             selectedTextColor: "#1A1A1A"
@@ -190,6 +197,8 @@ Item {
                     Rectangle {
                         anchors.centerIn: parent
                         width: 28; height: 28; radius: 14
+                        // A swatch is the paper's own colour; a mid grey stands in
+                        // for one the notes application does not name.
                         color: pane.quickNote ? (pane.quickNote.colourHexes[swatch.index] || "#888888") : "#888888"
                     }
                     TapHandler {
@@ -292,7 +301,7 @@ Item {
                         font.pixelSize: 13
                         font.weight: Font.DemiBold
                         placeholderText: words.i18n("New folder")
-                        placeholderTextColor: "#8A8A90"
+                        placeholderTextColor: tone.hintText
                         Accessible.name: words.i18n("New folder")
                         background: Rectangle {
                             radius: 20
@@ -357,7 +366,7 @@ Item {
             visible: !pane.chips
             Text {
                 text: words.i18n("Belongs to").toUpperCase()
-                color: "#8A8A90"
+                color: tone.hintText
                 font.pixelSize: 11
                 font.weight: Font.Black
                 font.letterSpacing: 0.9
@@ -421,7 +430,7 @@ Item {
                     : pane.quickNote.readOnly ? words.i18n("Kept by a newer Gooseberry; not changed here")
                     : pane.quickNote.problem !== "" ? words.i18n("Not kept yet: %1", pane.quickNote.problem)
                     : words.i18n("Saved as you go")
-                color: trouble ? "#E08A80" : "#7FD1BE"
+                color: trouble ? tone.troubleText : tone.goodText
                 font.pixelSize: 13
                 font.weight: Font.Bold
             }

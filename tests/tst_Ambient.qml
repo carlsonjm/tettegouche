@@ -58,6 +58,26 @@ TestCase {
         capabilities: {play: true, pause: true}
     })
 
+    // Stand-ins for a dark and a light Plasma style, so the colours do not
+    // depend on the style the test happens to run under.
+    QtObject {
+        id: darkStyle
+        property color backgroundColor: "#141414"
+        property color textColor: "#E0E0E0"
+    }
+    QtObject {
+        id: lightStyle
+        property color backgroundColor: "#F2F2F2"
+        property color textColor: "#102729"
+        property color neutralTextColor: "#B65C00"
+    }
+    Component {
+        id: colorsComponent
+        Applet.AmbientColors {}
+    }
+    // The colours a surface or an open island paints with.
+    function colors(item) { return findChild(item, "ambientColors"); }
+
     Component {
         id: surfaceComponent
         Applet.AmbientSurface { height: 64; monotonicClock: () => 2000000 }
@@ -265,6 +285,7 @@ TestCase {
 
     function test_clear_over_the_band_black_with_it() {
         const surface = createSurface(405, [media]);
+        colors(surface).theme = darkStyle;
         const shape = island(surface, "media");
         verify(shape.color.a < 0.2);
         surface.opaque = true;
@@ -272,6 +293,57 @@ TestCase {
         tryVerify(() => Qt.colorEqual(shape.color, "#141414"));
         compare(bubble(surface).color, shape.color);
         compare(island(surface, "transfer").color, shape.color);
+    }
+
+    // On a dark style Ambient keeps the suite's values; on a light one its
+    // ground and ink are the style's, and its washes are that ink.
+    function test_colours_follow_the_style() {
+        const dark = createTemporaryObject(colorsComponent, testCase, {theme: darkStyle});
+        verify(dark.dark);
+        verify(Qt.colorEqual(dark.text, "#F8F8FF"));
+        verify(Qt.colorEqual(dark.surface, "#141414"));
+        verify(Qt.colorEqual(dark.card, "#000000"));
+        verify(Qt.colorEqual(dark.textOnInk, "#000000"));
+        verify(Qt.colorEqual(dark.art, "#2A2A2F"));
+        verify(Qt.colorEqual(dark.waitingText, "#E3B866"));
+        verify(Qt.colorEqual(dark.wash(0.07), Qt.rgba(248 / 255, 248 / 255, 1, 0.07)));
+
+        const light = createTemporaryObject(colorsComponent, testCase, {theme: lightStyle});
+        verify(!light.dark);
+        verify(Qt.colorEqual(light.text, "#102729"));
+        verify(Qt.colorEqual(light.surface, "#F2F2F2"));
+        verify(Qt.colorEqual(light.card, "#F2F2F2"));
+        verify(Qt.colorEqual(light.textOnInk, "#F2F2F2"));
+        verify(Qt.colorEqual(light.waitingText, "#B65C00"));
+        const wash = light.wash(0.12);
+        verify(Qt.colorEqual(Qt.rgba(wash.r, wash.g, wash.b, 1), "#102729"));
+        fuzzyCompare(wash.a, 0.12, 0.01);
+        // The square behind a player's icon is a light grey the icon reads on.
+        verify(light.art.hslLightness > 0.7 && light.art.hslLightness < light.surface.hslLightness);
+    }
+
+    // On a light style an island on an opaque band takes the style's ground,
+    // and words in the band and the open island take its ink.
+    function test_islands_on_a_light_style() {
+        const surface = createSurface(405, [media]);
+        colors(surface).theme = lightStyle;
+        settle();
+        const shape = island(surface, "media");
+        verify(Qt.colorEqual(Qt.rgba(shape.color.r, shape.color.g, shape.color.b, 1), "#102729"));
+        verify(shape.color.a < 0.2);
+        surface.opaque = true;
+        tryVerify(() => Qt.colorEqual(shape.color, "#F2F2F2"));
+        verify(Qt.colorEqual(findChild(surface, "ambient-media-title").color, "#102729"));
+
+        const open = createTemporaryObject(islandComponent, testCase, {surface: surface, kind: "media"});
+        verify(open !== null);
+        colors(open.contentItem).theme = lightStyle;
+        const card = findChild(open.contentItem, "ambient-island-open");
+        verify(Qt.colorEqual(card.color, "#F2F2F2"));
+        verify(Qt.colorEqual(open.ink, "#102729"));
+        colors(open.contentItem).theme = darkStyle;
+        verify(Qt.colorEqual(card.color, "#000000"));
+        verify(Qt.colorEqual(open.ink, "#F8F8FF"));
     }
 
     function test_controls_act_and_the_rest_opens() {

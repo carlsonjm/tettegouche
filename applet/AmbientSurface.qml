@@ -23,6 +23,11 @@ Item {
         translationDomain: "plasma_applet_co.goodinput.tettegouche"
     }
 
+    AmbientColors {
+        id: tone
+        theme: surface.Kirigami.Theme
+    }
+
     property var activities: []
     property var monotonicClock: () => 0
     property double clockNowUs: 0
@@ -652,9 +657,9 @@ Item {
             onWidthChanged: if (!island.peeling) island.restWidth = width
             height: surface.pillHeight
             radius: height / 2
-            color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
+            color: surface.opaque ? tone.surface : tone.wash(0.07)
             border.width: 1
-            border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
+            border.color: tone.wash(0.10)
             opacity: Math.min(1, Math.max(0, island.pop) * 2) * island.fade
                 * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
             visible: opacity > 0 && !surface.opened
@@ -711,7 +716,7 @@ Item {
                 radius: height / 2
                 color: "transparent"
                 border.width: 1
-                border.color: "#F8F8FF"
+                border.color: tone.text
                 opacity: 0.5
                 visible: pill.activeFocus
             }
@@ -776,7 +781,7 @@ Item {
             radius: width / 2
             color: "transparent"
             border.width: 1
-            border.color: "#F8F8FF"
+            border.color: tone.text
             opacity: 0.6
             visible: button.activeFocus
         }
@@ -788,7 +793,7 @@ Item {
     }
 
     component Label: Text {
-        color: "#F8F8FF"
+        color: tone.text
         font.pixelSize: surface.labelSize
         elide: Text.ElideRight
         maximumLineCount: 1
@@ -806,7 +811,7 @@ Item {
         Rectangle {
             anchors.fill: parent
             radius: art.corner
-            color: "#2A2A2F"
+            color: tone.art
             Kirigami.Icon {
                 anchors.centerIn: parent
                 width: Math.round(parent.width * 0.7)
@@ -835,7 +840,9 @@ Item {
             anchors.fill: parent
             visible: progressMark.known
             readonly property real value: progressMark.known ? Number(progressMark.activity.progress) : 0
+            readonly property color ink: tone.text
             onValueChanged: requestPaint()
+            onInkChanged: requestPaint()
             onPaint: {
                 const context = getContext("2d");
                 context.reset();
@@ -843,11 +850,11 @@ Item {
                 const radius = Math.min(width, height) / 2 - thickness / 2 - 0.5;
                 context.lineWidth = thickness;
                 context.lineCap = "round";
-                context.strokeStyle = "rgba(248,248,255,0.22)";
+                context.strokeStyle = tone.wash(0.22);
                 context.beginPath();
                 context.arc(width / 2, height / 2, radius, 0, 2 * Math.PI, false);
                 context.stroke();
-                context.strokeStyle = "#F8F8FF";
+                context.strokeStyle = ring.ink;
                 context.beginPath();
                 context.arc(width / 2, height / 2, radius, -Math.PI / 2,
                     -Math.PI / 2 + 2 * Math.PI * Math.max(0, Math.min(1, value)), false);
@@ -873,7 +880,7 @@ Item {
             radius: width / 2
             color: "transparent"
             border.width: mark.width < 26 ? 2.5 : 3
-            border.color: "#F8F8FF"
+            border.color: tone.text
         }
         SuiteIcon {
             anchors.centerIn: parent
@@ -1042,7 +1049,7 @@ Item {
                 visible: transferIsland.has("percent")
                 text: surface.transferShown && surface.known(surface.transferShown.progress)
                     ? Math.round(Math.max(0, Math.min(1, Number(surface.transferShown.progress))) * 100) : ""
-                color: "#F8F8FF"
+                color: tone.text
                 font.pixelSize: surface.tall ? 10 : 9
                 font.weight: Font.DemiBold
                 font.features: ({ "tnum": 1 })
@@ -1193,7 +1200,7 @@ Item {
                 width: openPiece.size - 8
                 height: Math.min(30, surface.pillHeight - 12)
                 radius: height / 2
-                color: Qt.rgba(248 / 255, 248 / 255, 1, openArea.pressed ? 0.24 : 0.14)
+                color: tone.wash(openArea.pressed ? 0.24 : 0.14)
                 scale: openArea.pressed ? 1.06 : 1
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
@@ -1203,7 +1210,7 @@ Item {
                 Keys.onEnterPressed: surface.open("drive")
                 Keys.onSpacePressed: surface.open("drive")
                 border.width: activeFocus ? 1 : 0
-                border.color: "#F8F8FF"
+                border.color: tone.text
                 Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
                 Label {
                     anchors.centerIn: parent
@@ -1236,6 +1243,7 @@ Item {
                 width: 10
                 height: 10
                 radius: 5
+                // A recording light, red on any ground.
                 color: "#FF5A4F"
             }
         }
@@ -1263,7 +1271,7 @@ Item {
                 width: stopPiece.size - 8
                 height: Math.min(30, surface.pillHeight - 12)
                 radius: height / 2
-                color: Qt.rgba(248 / 255, 248 / 255, 1, stopArea.pressed ? 0.24 : 0.14)
+                color: tone.wash(stopArea.pressed ? 0.24 : 0.14)
                 scale: stopArea.pressed ? 1.06 : 1
                 activeFocusOnTab: true
                 Accessible.role: Accessible.Button
@@ -1273,7 +1281,7 @@ Item {
                 Keys.onEnterPressed: surface.invoke(surface.screenShown, "stop")
                 Keys.onSpacePressed: surface.invoke(surface.screenShown, "stop")
                 border.width: activeFocus ? 1 : 0
-                border.color: "#F8F8FF"
+                border.color: tone.text
                 Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
                 Label {
                     anchors.centerIn: parent
@@ -1347,9 +1355,9 @@ Item {
         width: surface.pillHeight
         height: surface.pillHeight
         radius: width / 2
-        color: surface.opaque ? "#141414" : Qt.rgba(248 / 255, 248 / 255, 1, 0.07)
+        color: surface.opaque ? tone.surface : tone.wash(0.07)
         border.width: 1
-        border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.10)
+        border.color: tone.wash(0.10)
         opacity: Math.min(1, Math.max(0, bubbleComes.pop) * 2)
         visible: opacity > 0 && !surface.opened
         scale: (surface.reducedMotion ? 1 : 0.8 + 0.2 * Math.max(0, bubbleComes.pop)) * (bubbleArea.pressed ? 1.1 : 1)
@@ -1407,11 +1415,11 @@ Item {
             width: surface.tall ? 18 : 15
             height: width
             radius: width / 2
-            color: "#F8F8FF"
+            color: tone.text
             Text {
                 anchors.centerIn: parent
                 text: surface.bubbleCount
-                color: "#000000"
+                color: tone.textOnInk
                 font.pixelSize: parent.width > 16 ? 11 : 10
                 font.weight: Font.Bold
             }
@@ -1422,7 +1430,7 @@ Item {
             radius: height / 2
             color: "transparent"
             border.width: 1
-            border.color: "#F8F8FF"
+            border.color: tone.text
             opacity: 0.5
             visible: bubble.activeFocus
         }

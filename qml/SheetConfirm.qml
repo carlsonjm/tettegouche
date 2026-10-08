@@ -36,11 +36,17 @@ C.Dialog {
     // feeding back into that width.
     header: null
     contentItem: Column {
+        id: question
         spacing: 12
+        // The sheet's colours, from the theme of the window it opens in.
+        SearchColors {
+            id: tone
+            theme: question.Kirigami.Theme
+        }
         Text {
             width: parent.width
             text: confirm.title
-            color: "#F8F8FF"
+            color: tone.text
             font.pixelSize: 17
             font.weight: Font.DemiBold
             wrapMode: Text.Wrap
@@ -50,7 +56,7 @@ C.Dialog {
             width: parent.width
             visible: text.length > 0
             text: confirm.body
-            color: "#A8F8F8FF"
+            color: tone.bodyText
             font.pixelSize: 14
             wrapMode: Text.Wrap
         }
@@ -64,9 +70,9 @@ C.Dialog {
     }
     background: Rectangle {
         radius: 12
-        color: "#141414"
+        color: tone.surface
         border.width: 1
-        border.color: "#5a5a5a"
+        border.color: tone.outline
     }
     enter: Transition {
         NumberAnimation { property: "opacity"; from: 0; to: 1; duration: confirm.ms(120); easing.type: Easing.OutCubic }
@@ -81,7 +87,7 @@ C.Dialog {
         leftPadding: 18; rightPadding: 18
         contentItem: Text {
             text: pill.text
-            color: "#F8F8FF"
+            color: tone.text
             font.pixelSize: 14
             font.weight: pill.strong ? Font.DemiBold : Font.Normal
             horizontalAlignment: Text.AlignHCenter
@@ -89,9 +95,9 @@ C.Dialog {
         }
         background: Rectangle {
             radius: height / 2
-            color: pill.down ? "#4A4A4A" : pill.hovered ? "#333333" : "#242424"
+            color: pill.down ? tone.controlPressed : pill.hovered ? tone.controlHover : tone.control
             border.width: pill.visualFocus ? 1 : 0
-            border.color: "#F8F8FF"
+            border.color: tone.text
             Behavior on color { ColorAnimation { duration: confirm.ms(90) } }
         }
         Keys.onReturnPressed: clicked()

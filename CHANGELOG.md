@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Search, Files, Notes, Genie and Ambient follow a light colour scheme or
+  Plasma style: a light ground with dark words, glyphs and controls. A dark
+  one looks as before.
 - Apps sorts four ways: A to Z, Z to A, Most used and Newest installed, and
   keeps the choice. Most used follows KDE's record of what is opened, from
   anywhere; Newest installed goes by when each application arrived.

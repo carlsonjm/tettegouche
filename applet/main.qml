@@ -32,6 +32,10 @@ PlasmoidItem {
     readonly property bool bandOpaque: (Plasmoid.containmentDisplayHints
         & PlasmaCore.Types.ContainmentPrefersOpaqueBackground) !== 0
     property var island: null
+    AmbientColors {
+        id: tone
+        theme: root.Kirigami.Theme
+    }
 
     Connections {
         target: Plasmoid
@@ -178,7 +182,7 @@ PlasmoidItem {
             height: width
             radius: width / 2
             color: "transparent"
-            border.color: "#F8F8FF"
+            border.color: tone.text
             border.width: 1
             scale: Plasmoid.launcherActive ? 1 : launcherDimple.width / width
             opacity: Plasmoid.launcherActive ? 0.85 : 0
@@ -203,6 +207,7 @@ PlasmoidItem {
             radius: width / 2
             // Pearl: lit from above and a shade deeper toward its lower edge,
             // so it reads as a piece that rises rather than a flat disc.
+            // The Tette Dot is the same Ghost White pearl on every Plasma style.
             gradient: Gradient {
                 GradientStop { position: 0; color: "#FFFFFF" }
                 GradientStop { position: 0.55; color: "#F4F4FA" }

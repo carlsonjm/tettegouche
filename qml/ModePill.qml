@@ -17,9 +17,13 @@ Item {
     property bool tall: false
     property bool light: false
     property bool dimmed: false
-    property color primaryText: "#f2ffffff"
-    property color surfaceColor: "#141414"
-    property color controlColor: "#242424"
+    SearchColors {
+        id: tone
+        theme: pill.Kirigami.Theme
+    }
+    property color primaryText: tone.primaryText
+    property color surfaceColor: tone.surface
+    property color controlColor: tone.control
     signal activated()
     width: pillRow.implicitWidth + (tall ? 36 : 28)
     height: tall ? 44 : 42
@@ -38,8 +42,8 @@ Item {
         radius: height / 2
         scale: pillTap.pressed ? 1.04 : 1
         Behavior on scale { NumberAnimation { duration: pill.ms(120); easing.type: Easing.OutCubic } }
-        color: pill.light ? (pillTap.pressed ? "#d8d8de" : pill.primaryText)
-            : pillTap.pressed ? "#4A4A4A" : pillHover.hovered ? "#333333" : pill.controlColor
+        color: pill.light ? (pillTap.pressed ? tone.lightPressed : pill.primaryText)
+            : pillTap.pressed ? tone.controlPressed : pillHover.hovered ? tone.controlHover : pill.controlColor
         Behavior on color { ColorAnimation { duration: pill.ms(90) } }
         Row {
             id: pillRow
@@ -67,7 +71,7 @@ Item {
         radius: height / 2
         color: "transparent"
         border.width: 1.5
-        border.color: "#b0ffffff"
+        border.color: tone.focusRing
         visible: pill.activeFocus
     }
     HoverHandler {

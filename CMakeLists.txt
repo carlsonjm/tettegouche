@@ -89,7 +89,7 @@ qt_add_executable(tettegouche
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/GeniePane.qml qml/ModePill.qml qml/SuiteIcon.qml
-        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml
+        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
@@ -172,6 +172,7 @@ plasma_add_applet(co.goodinput.tettegouche
         applet/AmbientSurface.qml
         applet/IslandRoom.js
         applet/SuiteIcon.qml
+        applet/AmbientColors.qml
         applet/AmbientIsland.qml
         applet/ConfigGeneral.qml
         applet/config.qml

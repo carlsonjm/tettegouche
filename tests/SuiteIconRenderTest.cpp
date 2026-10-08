@@ -9,6 +9,8 @@
 #include <QSignalSpy>
 #include <QTest>
 
+#include <memory>
+
 class SuiteIconRenderTest : public QObject
 {
     Q_OBJECT
@@ -35,6 +37,18 @@ private Q_SLOTS:
             QStringLiteral("circle"), QStringLiteral("eye"), QStringLiteral("eye-off"),
             QStringLiteral("sticky-note"), QStringLiteral("genie"), QStringLiteral("notes")
         };
+        // Stand-ins for a dark and a light colour scheme. The software renderer
+        // the test runs on draws no layer effects, so the light glyph's
+        // recolour is checked by its settings and the drawing by the dark one.
+        const auto makeTheme = [&](const QString &ground, const QString &text) {
+            QQmlComponent themeComponent(&engine);
+            themeComponent.setData(QStringLiteral("import QtQuick\nQtObject { property color backgroundColor: \"%1\"; "
+                "property color textColor: \"%2\" }").arg(ground, text).toUtf8(), QUrl());
+            return std::unique_ptr<QObject>(themeComponent.create());
+        };
+        const auto darkTheme = makeTheme(QStringLiteral("#141414"), QStringLiteral("#E0E0E0"));
+        const auto lightTheme = makeTheme(QStringLiteral("#F2F2F2"), QStringLiteral("#102729"));
+        QVERIFY(darkTheme && lightTheme);
         for (const QString &glyph : glyphs) {
             QScopedPointer<QObject> icon(component.createWithInitialProperties(
                 {{QStringLiteral("glyph"), glyph}}));
@@ -44,8 +58,17 @@ private Q_SLOTS:
             item->setParentItem(window.contentItem());
             QVERIFY2(item->isVisible() && item->width() >= 20 && item->height() >= 20,
                 qPrintable(QStringLiteral("Zero-size or invisible SuiteIcon: ") + glyph));
-            auto *imageItem = item->findChild<QQuickItem *>();
-            QVERIFY2(imageItem, qPrintable(glyph));
+            auto *imageItem = item->findChild<QQuickItem *>(QStringLiteral("suiteIconImage"));
+            auto *tone = item->findChild<QObject *>(QStringLiteral("searchColors"), Qt::FindDirectChildrenOnly);
+            QVERIFY2(imageItem && tone, qPrintable(glyph));
+            tone->setProperty("theme", QVariant::fromValue(lightTheme.get()));
+            auto *layer = imageItem->property("layer").value<QObject *>();
+            QVERIFY2(layer && layer->property("enabled").toBool()
+                && item->property("ink").value<QColor>() == QColor(QStringLiteral("#102729")),
+                qPrintable(QStringLiteral("Not recoloured to a light scheme's text: ") + glyph));
+            tone->setProperty("theme", QVariant::fromValue(darkTheme.get()));
+            QVERIFY2(!layer->property("enabled").toBool(),
+                qPrintable(QStringLiteral("Recoloured on a dark scheme: ") + glyph));
             QTRY_COMPARE_WITH_TIMEOUT(imageItem->property("status").toInt(), 1, 3000);
             QVERIFY(imageItem->isVisible());
 

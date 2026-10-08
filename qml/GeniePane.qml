@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import org.kde.ki18n
+import org.kde.kirigami as Kirigami
 
 pragma ComponentBehavior: Bound
 
@@ -21,10 +22,14 @@ Item {
     // Where the search field rests, which the question field travels from.
     required property rect fieldRest
     property bool keysUp: false
-    property color surfaceColor: "#141414"
-    property color surfaceOutline: "#5a5a5a"
-    property color controlColor: "#242424"
-    property color primaryText: "#f2ffffff"
+    SearchColors {
+        id: tone
+        theme: pane.Kirigami.Theme
+    }
+    property color surfaceColor: tone.surface
+    property color surfaceOutline: tone.outline
+    property color controlColor: tone.control
+    property color primaryText: tone.primaryText
     property bool growing: false
 
     signal back()
@@ -101,7 +106,7 @@ Item {
             background: null
             color: pane.primaryText
             placeholderText: words.i18n("Ask, or say what you want done")
-            placeholderTextColor: "#8E929A"
+            placeholderTextColor: tone.answerPlaceholder
             font.pixelSize: 16
             font.weight: Font.DemiBold
             opacity: pane.clamp((pane.progress - 0.3) / 0.7)
@@ -148,7 +153,7 @@ Item {
         width: pane.width
         height: Math.max(0, pane.height - y)
         radius: 12
-        color: "#1C1C1C"
+        color: tone.answerSurface
         opacity: pane.progress
         transform: Translate { y: -20 * (1 - pane.progress) }
         clip: true
@@ -168,7 +173,7 @@ Item {
                     width: parent.width
                     visible: text !== ""
                     wrapMode: Text.Wrap
-                    color: pane.phase === "failed" ? "#E08A80" : pane.primaryText
+                    color: pane.phase === "failed" ? tone.troubleText : pane.primaryText
                     font.pixelSize: 16
                     font.weight: Font.Bold
                     text: !pane.genie ? ""
@@ -203,7 +208,7 @@ Item {
                             width: step.width - 36
                             text: step.modelData
                             wrapMode: Text.Wrap
-                            color: "#E4E4EA"
+                            color: tone.answerText
                             font.pixelSize: 15
                             lineHeight: 1.3
                         }
@@ -218,7 +223,7 @@ Item {
                         width: answerColumn.width
                         text: modelData
                         wrapMode: Text.Wrap
-                        color: "#E4E4EA"
+                        color: tone.answerText
                         font.pixelSize: 15
                         lineHeight: 1.3
                     }
@@ -329,7 +334,7 @@ Item {
                     width: parent.width
                     visible: text !== ""
                     wrapMode: Text.Wrap
-                    color: "#A8A8B0"
+                    color: tone.answerNote
                     font.pixelSize: 13
                     text: pane.genie && pane.phase === "ready" && pane.genie.answer !== "" && !pane.genie.canDoIt
                         ? pane.genie.doItReason : ""
@@ -341,7 +346,7 @@ Item {
                     width: parent.width
                     visible: text !== ""
                     wrapMode: Text.Wrap
-                    color: "#E08A80"
+                    color: tone.troubleText
                     font.pixelSize: 13
                     text: pane.genie && pane.phase !== "failed" ? pane.genie.problem : ""
                 }

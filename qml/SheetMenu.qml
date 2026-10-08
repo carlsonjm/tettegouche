@@ -109,10 +109,16 @@ C.Popup {
     }
 
     background: Rectangle {
+        id: face
+        // The sheet's colours, from the theme of the window it opens in.
+        SearchColors {
+            id: tone
+            theme: face.Kirigami.Theme
+        }
         radius: 12
-        color: "#141414"
+        color: tone.surface
         border.width: 1
-        border.color: "#5a5a5a"
+        border.color: tone.outline
         // A press between lines stops at the menu.
         MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
     }
