@@ -1885,7 +1885,7 @@ Item {
             // renamed; Enter or a tap elsewhere keeps the name.
             Item {
                 id: folderHeader
-                objectName: "folder-header"
+                objectName: "apps-folder-header"
                 x: 0
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width
@@ -1896,7 +1896,7 @@ Item {
 
                 TextInput {
                     id: folderName
-                    objectName: "folder-name"
+                    objectName: "apps-folder-name"
                     anchors.centerIn: parent
                     width: Math.min(parent.width - 48, Math.max(80, contentWidth + 4))
                     horizontalAlignment: TextInput.AlignHCenter
@@ -2042,7 +2042,7 @@ Item {
                         // A folder shows up to four of its applications.
                         Rectangle {
                             id: folderFace
-                            objectName: "folder-tile"
+                            objectName: "apps-folder-tile"
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.top: parent.top
                             anchors.topMargin: 10
@@ -2203,14 +2203,14 @@ Item {
             // Remove folder puts its applications back in Apps.
             SheetMenu {
                 id: folderSheet
-                objectName: "folder-sheet"
+                objectName: "apps-folder-sheet"
                 bounds: sheet
                 bottomMargin: root.keysReach
                 keysReach: root.keysReach
                 property int row: -1
                 property string folder: ""
                 SheetMenuItem {
-                    objectName: "folder-sheet-rename"
+                    objectName: "apps-folder-sheet-rename"
                     text: words.i18n("Rename")
                     onTriggered: {
                         root.openFolder(folderSheet.row)
@@ -2222,7 +2222,7 @@ Item {
                     }
                 }
                 SheetMenuItem {
-                    objectName: "folder-sheet-remove"
+                    objectName: "apps-folder-sheet-remove"
                     text: words.i18n("Remove folder")
                     onTriggered: root.applicationCatalog.removeFolder(folderSheet.folder)
                 }
