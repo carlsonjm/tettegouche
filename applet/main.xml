@@ -21,6 +21,10 @@
       <label>Show Genie in Search before anything is typed, when Split Rock is installed</label>
       <default>true</default>
     </entry>
+    <entry name="showAmbient" type="Bool">
+      <label>Show Ambient's islands beside the launcher in the panel</label>
+      <default>true</default>
+    </entry>
     <entry name="animateIndicator" type="Bool">
       <label>Animate the panel indicator when Tettegouche opens</label>
       <default>true</default>

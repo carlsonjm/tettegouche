@@ -59,6 +59,7 @@ than repeat it.
 | Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show Genie when Split Rock is installed", off | Search never offers Genie. On, its default, Genie appears whenever Split Rock answers. |
+| Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings

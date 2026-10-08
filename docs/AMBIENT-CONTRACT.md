@@ -5,6 +5,9 @@ state in its panel strip beside the launcher dot, while Temperance remains
 responsible for notifications and transient events. Its inputs are in
 [INPUT.md](INPUT.md).
 
+The widget's setting "Show islands beside the launcher", off, leaves the
+launcher's dot alone in the panel: Ambient shows nothing and takes no width.
+
 ## Admission and ownership
 
 An item may enter Ambient only while it has meaningful current state, continued

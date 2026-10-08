@@ -14,6 +14,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerNotesDefault
     property bool cfg_offerGenie
     property bool cfg_offerGenieDefault
+    property bool cfg_showAmbient
+    property bool cfg_showAmbientDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -45,6 +47,13 @@ KCMUtils.SimpleKCM {
             text: i18n("Show Genie when Split Rock is installed")
             checked: cfg_offerGenie
             onToggled: cfg_offerGenie = checked
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Ambient:")
+            text: i18n("Show islands beside the launcher")
+            checked: cfg_showAmbient
+            onToggled: cfg_showAmbient = checked
         }
 
         QQC2.CheckBox {

@@ -23,7 +23,9 @@ PlasmoidItem {
     // in it. A filled disc weighs more than an outlined status icon, so the dot
     // is a little smaller than one.
     readonly property int endpointWidth: 44
-    readonly property int ambientCoreWidth: ambient.minimumUsefulWidth
+    // With Ambient off the widget is the launcher's dot alone.
+    readonly property bool showAmbient: Plasmoid.configuration.showAmbient !== false
+    readonly property int ambientCoreWidth: showAmbient ? ambient.minimumUsefulWidth : 0
     property int responsiveMeasuredWidth: endpointWidth
     // Plasma's own word for a panel drawn black, which Shuffle's band gives
     // while a card is up; the island turns black with it.
@@ -66,7 +68,7 @@ PlasmoidItem {
         : i18n("Find an application")
 
     function refreshResponsiveWidth() {
-        if (vertical) {
+        if (vertical || !showAmbient) {
             responsiveMeasuredWidth = endpointWidth;
             return;
         }
@@ -80,6 +82,10 @@ PlasmoidItem {
     onVerticalChanged: Qt.callLater(refreshResponsiveWidth)
     onAmbientCoreWidthChanged: Qt.callLater(refreshResponsiveWidth)
     onVisibleChanged: Qt.callLater(refreshResponsiveWidth)
+    onShowAmbientChanged: {
+        if (!showAmbient && island) island.dismiss();
+        Qt.callLater(refreshResponsiveWidth);
+    }
     Component.onCompleted: Qt.callLater(refreshResponsiveWidth)
 
     Connections {
@@ -90,7 +96,7 @@ PlasmoidItem {
     AmbientSurface {
         id: ambient
         objectName: "tettegouche-ambient-surface"
-        visible: !root.vertical && width > 0
+        visible: root.showAmbient && !root.vertical && width > 0
         anchors.left: launcherButton.right
         anchors.right: parent.right
         anchors.top: parent.top
