@@ -36,7 +36,11 @@ Window {
     color: "transparent"
     flags: Qt.FramelessWindowHint
 
-    readonly property color ink: "#F8F8FF"
+    AmbientColors {
+        id: tone
+        theme: card.Kirigami.Theme
+    }
+    readonly property color ink: tone.text
     readonly property real openWidth: Math.min(384, width - 16)
     // The card grows up from the band, and no taller than the room above it;
     // what does not fit scrolls.
@@ -135,7 +139,7 @@ Window {
         height: 40
         width: Math.max(40, pillText.implicitWidth + 28)
         radius: height / 2
-        color: filled ? overlay.ink : Qt.rgba(248 / 255, 248 / 255, 1, pillArea.pressed ? 0.22 : 0.12)
+        color: filled ? overlay.ink : tone.wash(pillArea.pressed ? 0.22 : 0.12)
         scale: pillArea.pressed ? 1.04 : 1
         activeFocusOnTab: visible
         Accessible.role: Accessible.Button
@@ -151,7 +155,7 @@ Window {
             id: pillText
             anchors.centerIn: parent
             text: pill.label
-            color: pill.filled ? "#000000" : overlay.ink
+            color: pill.filled ? tone.textOnInk : overlay.ink
             font.pixelSize: 13
             font.weight: Font.Medium
         }
@@ -169,7 +173,7 @@ Window {
         Rectangle {
             anchors.fill: parent
             radius: art.corner
-            color: "#2A2A2F"
+            color: tone.art
             Kirigami.Icon {
                 anchors.centerIn: parent
                 width: Math.round(parent.width * 0.6)
@@ -194,10 +198,13 @@ Window {
         readonly property bool known: activity !== null && activity !== undefined
             && activity.progress !== undefined && activity.progress !== null
         Canvas {
+            id: ring
             anchors.fill: parent
             visible: progressMark.known
             readonly property real value: progressMark.known ? Number(progressMark.activity.progress) : 0
+            readonly property color ink: overlay.ink
             onValueChanged: requestPaint()
+            onInkChanged: requestPaint()
             onPaint: {
                 const context = getContext("2d");
                 context.reset();
@@ -205,11 +212,11 @@ Window {
                 const radius = Math.min(width, height) / 2 - thickness / 2 - 0.5;
                 context.lineWidth = thickness;
                 context.lineCap = "round";
-                context.strokeStyle = "rgba(248,248,255,0.22)";
+                context.strokeStyle = tone.wash(0.22);
                 context.beginPath();
                 context.arc(width / 2, height / 2, radius, 0, 2 * Math.PI, false);
                 context.stroke();
-                context.strokeStyle = "#F8F8FF";
+                context.strokeStyle = ring.ink;
                 context.beginPath();
                 context.arc(width / 2, height / 2, radius, -Math.PI / 2,
                     -Math.PI / 2 + 2 * Math.PI * Math.max(0, Math.min(1, value)), false);
@@ -245,9 +252,9 @@ Window {
         // A pill in the band, and a note once open: Shuffle's 12 px for what
         // floats above everything and closes.
         radius: Math.min(height / 2, 12)
-        color: "#000000"
+        color: tone.card
         border.width: 1
-        border.color: Qt.rgba(248 / 255, 248 / 255, 1, 0.12)
+        border.color: tone.wash(0.12)
         clip: true
         Behavior on x { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
         Behavior on y { NumberAnimation { duration: overlay.ms(320); easing.type: Easing.OutBack; easing.overshoot: 0.8 } }
@@ -404,7 +411,7 @@ Window {
                             width: parent.width
                             height: 4
                             radius: 2
-                            color: Qt.rgba(248 / 255, 248 / 255, 1, 0.22)
+                            color: tone.wash(0.22)
                             Rectangle {
                                 width: parent.width * Math.max(0, Math.min(1, seek.positionUs / Math.max(1, seek.lengthUs)))
                                 height: parent.height
@@ -470,7 +477,7 @@ Window {
                             width: 56
                             height: 56
                             radius: 28
-                            color: Qt.rgba(248 / 255, 248 / 255, 1, 0.14)
+                            color: tone.wash(0.14)
                             border.width: activeFocus ? 1 : 0
                             border.color: overlay.ink
                             scale: toggleArea.pressed ? 1.1 : 1
@@ -617,7 +624,7 @@ Window {
                                             : overlay.surface && overlay.surface.ended(row.modelData) ? row.modelData.description || ""
                                             : row.modelData.evidence === "filesystem" ? words.i18n("Incoming file · completion unknown")
                                             : overlay.surface ? overlay.surface.transferBytes(row.modelData) || overlay.surface.percentage(row.modelData) : ""
-                                        color: row.suspended ? "#E3B866" : overlay.ink
+                                        color: row.suspended ? tone.waitingText : overlay.ink
                                         opacity: row.suspended ? 1 : 0.66
                                         font.pixelSize: 12
                                     }

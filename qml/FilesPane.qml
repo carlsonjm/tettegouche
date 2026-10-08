@@ -14,6 +14,10 @@ Item {
         translationDomain: "tettegouche"
     }
     required property var browser
+    SearchColors {
+        id: tone
+        theme: pane.Kirigami.Theme
+    }
     // Shuffle's paper corner, for all Files lays in its sheet; anything pressed
     // is a pill.
     readonly property int paperRadius: 8
@@ -282,34 +286,34 @@ Item {
         y: Math.max(8, Math.round((pane.height - pane.keysReach - height) / 2))
         padding: 22
         onClosed: if (!answered && question.name) pane.browser.answer("stop", false)
-        background: Rectangle { radius: pane.paperRadius; color: "#1B1B1B"; border.color: "#333333" }
+        background: Rectangle { radius: pane.paperRadius; color: tone.sheet; border.color: tone.line }
         contentItem: ColumnLayout {
             spacing: 14
             Text {
                 objectName: "name-taken-title"
                 Layout.fillWidth: true
                 text: words.i18nc("a name, then the folder it is in", "“%1” is already in %2", nameTakenSheet.question.name || "", nameTakenSheet.question.folder || "")
-                color: "#F8F8FF"; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
+                color: tone.text; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
             }
             Text {
                 Layout.fillWidth: true
                 visible: !!nameTakenSheet.question.isFolder
                 text: words.i18n("Merge puts what arrives into the folder that is there. A file already in it asks again.")
-                color: "#A8FFFFFF"; font.pixelSize: 13; wrapMode: Text.Wrap
+                color: tone.secondaryText; font.pixelSize: 13; wrapMode: Text.Wrap
             }
             GridLayout {
                 visible: !nameTakenSheet.question.isFolder
                 columns: 2; columnSpacing: 16; rowSpacing: 6
-                Text { text: words.i18n("Already there"); color: "#A8FFFFFF"; font.pixelSize: 13 }
-                Text { objectName: "name-taken-existing"; Layout.fillWidth: true; text: nameTakenSheet.question.existing || ""; color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
-                Text { text: words.i18n("Arriving"); color: "#A8FFFFFF"; font.pixelSize: 13 }
-                Text { objectName: "name-taken-arriving"; Layout.fillWidth: true; text: nameTakenSheet.question.arriving || ""; color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
+                Text { text: words.i18n("Already there"); color: tone.secondaryText; font.pixelSize: 13 }
+                Text { objectName: "name-taken-existing"; Layout.fillWidth: true; text: nameTakenSheet.question.existing || ""; color: tone.text; font.pixelSize: 13; wrapMode: Text.Wrap }
+                Text { text: words.i18n("Arriving"); color: tone.secondaryText; font.pixelSize: 13 }
+                Text { objectName: "name-taken-arriving"; Layout.fillWidth: true; text: nameTakenSheet.question.arriving || ""; color: tone.text; font.pixelSize: 13; wrapMode: Text.Wrap }
             }
             RowLayout {
                 visible: !!nameTakenSheet.question.several
                 spacing: 10
                 C.Switch { id: sameForRest; objectName: "name-taken-rest" }
-                Text { text: words.i18n("Do the same for the rest"); color: "#F8F8FF"; font.pixelSize: 13 }
+                Text { text: words.i18n("Do the same for the rest"); color: tone.text; font.pixelSize: 13 }
             }
             RowLayout {
                 Layout.alignment: Qt.AlignRight
@@ -335,7 +339,7 @@ Item {
         x: Math.round((pane.width - width) / 2)
         y: Math.max(8, Math.round((pane.height - pane.keysReach - height) / 2))
         padding: 22
-        background: Rectangle { radius: pane.paperRadius; color: "#1B1B1B"; border.color: "#333333" }
+        background: Rectangle { radius: pane.paperRadius; color: tone.sheet; border.color: tone.line }
         contentItem: ColumnLayout {
             spacing: 14
             Text {
@@ -343,7 +347,7 @@ Item {
                 Layout.fillWidth: true
                 text: openWithSheet.choices.hasDefault === false ? words.i18n("Choose an application for “%1”", openWithSheet.choices.name || "")
                     : words.i18nc("a file name; the applications follow", "Open “%1” with", openWithSheet.choices.name || "")
-                color: "#F8F8FF"; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
+                color: tone.text; font.pixelSize: 17; font.weight: Font.DemiBold; wrapMode: Text.WrapAnywhere
             }
             C.TextField {
                 id: applicationFilter
@@ -368,12 +372,12 @@ Item {
                     Accessible.name: modelData.name
                     Accessible.description: modelData.isDefault ? words.i18n("Default") : ""
                     Accessible.onPressAction: { pane.browser.openWith(openWithSheet.choices.path, modelData.id, alwaysUse.checked); openWithSheet.close() }
-                    color: pick.pressed ? Qt.rgba(1, 1, 1, 0.16) : pickHover.hovered ? Qt.rgba(1, 1, 1, 0.08) : "transparent"
+                    color: pick.pressed ? tone.wash(0.16) : pickHover.hovered ? tone.wash(0.08) : "transparent"
                     Row {
                         x: 12; spacing: 12; anchors.verticalCenter: parent.verticalCenter
                         Kirigami.Icon { source: modelData.icon; width: 28; height: 28; anchors.verticalCenter: parent.verticalCenter }
-                        Text { text: modelData.name; color: "#F8F8FF"; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
-                        Text { visible: modelData.isDefault; text: words.i18n("Default"); color: "#A8FFFFFF"; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
+                        Text { text: modelData.name; color: tone.text; font.pixelSize: 14; anchors.verticalCenter: parent.verticalCenter }
+                        Text { visible: modelData.isDefault; text: words.i18n("Default"); color: tone.secondaryText; font.pixelSize: 12; anchors.verticalCenter: parent.verticalCenter }
                     }
                     HoverHandler { id: pickHover }
                     TapHandler {
@@ -394,7 +398,7 @@ Item {
             RowLayout {
                 spacing: 10
                 C.Switch { id: alwaysUse; objectName: "open-with-always" }
-                Text { Layout.fillWidth: true; text: openWithSheet.choices.kind ? words.i18nc("a kind of file, as “PNG image”", "Always use it for %1", openWithSheet.choices.kind) : words.i18n("Always use it for this kind of file"); color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.Wrap }
+                Text { Layout.fillWidth: true; text: openWithSheet.choices.kind ? words.i18nc("a kind of file, as “PNG image”", "Always use it for %1", openWithSheet.choices.kind) : words.i18n("Always use it for this kind of file"); color: tone.text; font.pixelSize: 13; wrapMode: Text.Wrap }
             }
             PillAction { objectName: "open-with-cancel"; Layout.alignment: Qt.AlignRight; text: words.i18n("Cancel"); onClicked: openWithSheet.close() }
         }
@@ -412,7 +416,7 @@ Item {
         y: Math.max(8, Math.round((pane.height - pane.keysReach - height) / 2))
         padding: 22
         onClosed: if (pane.browser) pane.browser.stopDescribing()
-        background: Rectangle { radius: pane.paperRadius; color: "#1B1B1B"; border.color: "#333333" }
+        background: Rectangle { radius: pane.paperRadius; color: tone.sheet; border.color: tone.line }
         contentItem: ColumnLayout {
             spacing: 18
             RowLayout {
@@ -435,7 +439,7 @@ Item {
                     objectName: "properties-name"
                     Layout.fillWidth: true
                     text: propertiesSheet.details.name || ""
-                    color: "#F8F8FF"; font.pixelSize: 17; font.weight: Font.DemiBold
+                    color: tone.text; font.pixelSize: 17; font.weight: Font.DemiBold
                     wrapMode: Text.WrapAnywhere; maximumLineCount: 3; elide: Text.ElideRight
                 }
             }
@@ -449,8 +453,8 @@ Item {
                         objectName: "properties-row-" + modelData.label
                         Layout.fillWidth: true
                         spacing: 16
-                        Text { Layout.preferredWidth: 96; Layout.alignment: Qt.AlignTop; text: modelData.label; color: "#A8FFFFFF"; font.pixelSize: 13 }
-                        Text { Layout.fillWidth: true; text: modelData.value; color: "#F8F8FF"; font.pixelSize: 13; wrapMode: Text.WrapAnywhere }
+                        Text { Layout.preferredWidth: 96; Layout.alignment: Qt.AlignTop; text: modelData.label; color: tone.secondaryText; font.pixelSize: 13 }
+                        Text { Layout.fillWidth: true; text: modelData.value; color: tone.text; font.pixelSize: 13; wrapMode: Text.WrapAnywhere }
                     }
                 }
             }
@@ -473,6 +477,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         z: 40
+        // A shade that darkens what is behind the question on any ground.
         color: "#99000000"
         radius: pane.paperRadius
         visible: opacity > 0
@@ -491,8 +496,8 @@ Item {
         background: Rectangle {
             // Pressed, so a pill, or a circle for a glyph alone.
             radius: height / 2
-            color: parent.down ? Qt.rgba(1, 1, 1, 0.16)
-                : parent.hovered || parent.visualFocus ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
+            color: parent.down ? tone.wash(0.16)
+                : parent.hovered || parent.visualFocus ? tone.wash(0.12) : "transparent"
             Behavior on color {
                 enabled: Kirigami.Units.shortDuration > 0
                 ColorAnimation { duration: Kirigami.Units.shortDuration }
@@ -514,7 +519,7 @@ Item {
                 visible: parent.parent.glyph.length === 0
                 anchors.fill: parent
                 text: parent.parent.text
-                color: parent.parent.enabled ? "#F8F8FF" : "#6BF8F8FF"
+                color: parent.parent.enabled ? tone.text : tone.disabledText
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
@@ -531,9 +536,9 @@ Item {
             x: parent.glyph.length ? (parent.width - height) / 2 : 0
             width: parent.glyph.length ? height : parent.width
             radius: height / 2
-            color: parent.down ? "#4A4A4A" : parent.hovered ? "#333333" : "#242424"
+            color: parent.down ? tone.controlPressed : parent.hovered ? tone.controlHover : tone.control
             border.width: parent.visualFocus ? 1 : 0
-            border.color: "#F8F8FF"
+            border.color: tone.text
             Behavior on color {
                 enabled: Kirigami.Units.shortDuration > 0
                 ColorAnimation { duration: Kirigami.Units.shortDuration }
@@ -562,7 +567,7 @@ Item {
                 readonly property bool ejectable: modelData.canEject === true && !busy
                 objectName: "files-place-" + modelData.label
                 width: ListView.view.width; height: 54 + (firstDrive ? 13 : 0)
-                Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: "#333333" }
+                Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: tone.line }
                 Item {
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 54
@@ -571,7 +576,7 @@ Item {
                     Behavior on scale { NumberAnimation { duration: pane.ms(placeFinger.active ? 160 : 120); easing.type: Easing.OutCubic } }
                     Rectangle {
                         anchors.fill: parent; anchors.margins: 3; radius: pane.paperRadius
-                        color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? "#2C2C2C" : "transparent"
+                        color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? tone.placeChosen : "transparent"
                     }
                     Row {
                         anchors.verticalCenter: parent.verticalCenter; x: 12; spacing: 12
@@ -579,12 +584,12 @@ Item {
                         Kirigami.Icon { source: place.modelData.icon; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter }
                         Column {
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: place.modelData.label; color: "#F8F8FF"; width: place.ejectable ? 76 : 116; elide: Text.ElideRight }
+                            Text { text: place.modelData.label; color: tone.text; width: place.ejectable ? 76 : 116; elide: Text.ElideRight }
                             Text {
                                 objectName: "files-place-note-" + place.modelData.label
                                 visible: text.length > 0
                                 text: place.modelData.note || ""
-                                color: "#A8FFFFFF"; font.pixelSize: 12; width: 116; elide: Text.ElideRight
+                                color: tone.secondaryText; font.pixelSize: 12; width: 116; elide: Text.ElideRight
                             }
                         }
                     }
@@ -614,7 +619,7 @@ Item {
                 }
             }
         }
-        Rectangle { Layout.fillHeight: true; width: 1; color: "#333333" }
+        Rectangle { Layout.fillHeight: true; width: 1; color: tone.line }
         ColumnLayout {
             Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
             RowLayout {
@@ -634,8 +639,8 @@ Item {
                         Accessible.name: modelData.label
                         Accessible.selected: pane.browser.currentTab===index
                         Accessible.onPressAction: pane.browser.selectTab(index)
-                        Rectangle { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: parent.width-24; height: 2; radius: 1; color: pane.browser.currentTab===index ? "#888888" : "transparent" }
-                        Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: "#F8F8FF"; elide: Text.ElideRight }
+                        Rectangle { anchors.bottom: parent.bottom; anchors.horizontalCenter: parent.horizontalCenter; width: parent.width-24; height: 2; radius: 1; color: pane.browser.currentTab===index ? tone.mark : "transparent" }
+                        Text { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 118; text: modelData.label; color: tone.text; elide: Text.ElideRight }
                         TapHandler { onTapped: pane.browser.selectTab(index) }
                         Action { anchors.right: parent.right; width: 42; text: words.i18n("Close tab"); glyph: "x"; enabled: pane.browser.tabs.length>1; onClicked: pane.browser.closeTab(index) }
                     }
@@ -651,7 +656,7 @@ Item {
                     Layout.fillWidth: true
                     Action { text: words.i18n("Back"); glyph: "arrow-left"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
                     Action { text: words.i18n("Forward"); glyph: "arrow-right"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
-                    Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: "#333333" }
+                    Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: tone.line }
                     ListView {
                         Layout.fillWidth: true; Layout.preferredHeight: 42
                         orientation: ListView.Horizontal; spacing: 4; clip: true
@@ -661,7 +666,7 @@ Item {
                             required property var modelData
                             required property int index
                             height: 42; spacing: 4
-                            Text { visible: index>0; text: "›"; color: "#777777"; height: 42; verticalAlignment: Text.AlignVCenter }
+                            Text { visible: index>0; text: "›"; color: tone.crumb; height: 42; verticalAlignment: Text.AlignVCenter }
                             Action { id: crumbAction; text: modelData.label; width: Math.min(170,Math.max(42,crumbMetrics.advanceWidth+20)); onClicked: pane.browser.navigate(modelData.path)
                                 TextMetrics { id: crumbMetrics; font: crumbAction.font; text: crumbAction.text }
                             }
@@ -676,7 +681,7 @@ Item {
                     Layout.fillWidth: true
                     visible: !pane.compact
                     implicitHeight: 1
-                    color: "#333333"
+                    color: tone.line
                 }
                 C.TextField {
                     id: pathEditor
@@ -721,7 +726,7 @@ Item {
                             }
                             Text {
                                 text: pane.operationStatusText
-                                color: "#A8FFFFFF"
+                                color: tone.secondaryText
                                 width: Math.min(implicitWidth, 240)
                                 elide: Text.ElideRight
                             }
@@ -759,16 +764,16 @@ Item {
                         Layout.preferredWidth: 220
                         text: !operationRow.operation ? "" : operationRow.operation.suspended ? words.i18n("Paused · %1", operationRow.operation.title || operationRow.operation.label)
                             : operationRow.operation.title ? words.i18nc("what is being done, as “Copying…”, then to what", "%1 %2", operationRow.operation.label, operationRow.operation.title) : operationRow.operation.label
-                        color: operationRow.operation && operationRow.operation.suspended ? "#E3B866" : "#F8F8FF"
+                        color: operationRow.operation && operationRow.operation.suspended ? tone.waitingText : tone.text
                         elide: Text.ElideMiddle
                     }
                     Rectangle {
                         Layout.fillWidth: true; Layout.preferredHeight: 4; radius: 2
-                        color: "#333333"
+                        color: tone.line
                         Accessible.role: Accessible.ProgressBar
                         Accessible.name: operationRow.operation ? (operationRow.operation.title || operationRow.operation.label) : ""
                         Rectangle {
-                            height: parent.height; radius: 2; color: "#F8F8FF"
+                            height: parent.height; radius: 2; color: tone.text
                             visible: operationRow.known
                             width: operationRow.known ? parent.width*Math.max(0,Math.min(1,operationRow.operation.progress)) : 0
                         }
@@ -777,7 +782,7 @@ Item {
                         Layout.preferredWidth: 44
                         horizontalAlignment: Text.AlignRight
                         text: operationRow.known ? Math.round(operationRow.operation.progress*100)+"%" : "—"
-                        color: "#A8FFFFFF"
+                        color: tone.secondaryText
                         font.features: ({ "tnum": 1 })
                     }
                     Action {
@@ -805,7 +810,7 @@ Item {
                 PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? words.i18n("Rename") : words.i18n("Create"); onClicked: pane.submitName() }
                 PillAction { objectName: "cancel-folder"; text: words.i18n("Cancel"); onClicked: pane.creatingFolder=false }
             }
-            Text { Layout.fillWidth: true; visible: text.length>0 && !(pane.browser && pane.browser.listingFailed); text: pane.browser ? pane.browser.error : ""; color: "#ffb5a8"; wrapMode: Text.Wrap }
+            Text { Layout.fillWidth: true; visible: text.length>0 && !(pane.browser && pane.browser.listingFailed); text: pane.browser ? pane.browser.error : ""; color: tone.errorText; wrapMode: Text.Wrap }
             GridView {
                 id: files
                 objectName: "files-grid"
@@ -830,7 +835,7 @@ Item {
                             width: filesScroll.pressed ? 10 : filesScroll.hovered ? 8 : 6
                             height: parent.height
                             radius: width / 2
-                            color: filesScroll.pressed ? "#8A8A8A" : filesScroll.hovered ? "#6A6A6A" : "#4A4A4A"
+                            color: filesScroll.pressed ? tone.handlePressed : filesScroll.hovered ? tone.handleHover : tone.handle
                             Behavior on width { NumberAnimation { duration: pane.ms(90) } }
                             Behavior on color { ColorAnimation { duration: pane.ms(90) } }
                         }
@@ -975,6 +980,7 @@ Item {
                         x: Math.min(box.origin.x,box.end.x)-files.contentX
                         y: Math.min(box.origin.y,box.end.y)-files.contentY
                         width: Math.abs(box.end.x-box.origin.x); height: Math.abs(box.end.y-box.origin.y)
+                        // A see-through grey band and a mid grey edge, which read on any ground.
                         radius: 6; color: "#28777777"; border.color: "#aaaaaa"
                     }
                 }
@@ -1018,9 +1024,10 @@ Item {
                     z: tileFinger.active ? 1 : 0
                     Behavior on scale { NumberAnimation { duration: pane.ms(tileFinger.active ? 160 : 120); easing.type: Easing.OutCubic } }
                     width: files.cellWidth; height: files.cellHeight
-                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: parent.selected ? "#333333" : "transparent" }
-                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: "#30444444"; border.color: "#F8F8FF"; border.width: 2; visible: (pane.draggingFiles || pane.incoming) && pane.dropFolder===modelData.path }
-                    Rectangle { anchors.fill: parent; anchors.margins: 2; radius: pane.paperRadius + 2; color: "transparent"; border.color: "#F8F8FF"; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: parent.selected ? tone.chosen : "transparent" }
+                    // The drop target's grey tint marks it on any ground; its edge is the ink.
+                    Rectangle { anchors.fill: parent; anchors.margins: 4; radius: pane.paperRadius; color: "#30444444"; border.color: tone.text; border.width: 2; visible: (pane.draggingFiles || pane.incoming) && pane.dropFolder===modelData.path }
+                    Rectangle { anchors.fill: parent; anchors.margins: 2; radius: pane.paperRadius + 2; color: "transparent"; border.color: tone.text; visible: files.activeFocus && pane.browser.focusedPath===modelData.path }
                     SuiteIcon {
                         anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 10
                         glyph: parent.selected ? "check" : "circle"
@@ -1048,8 +1055,8 @@ Item {
                                 visible: status === Image.Ready
                             }
                         }
-                        Text { text: modelData.name; color: "#F8F8FF"; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle }
-                        Text { text: modelData.detail; color: "#A8FFFFFF"; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle; font.pixelSize: 11 }
+                        Text { text: modelData.name; color: tone.text; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle }
+                        Text { text: modelData.detail; color: tone.secondaryText; width: parent.width; horizontalAlignment: Text.AlignHCenter; elide: Text.ElideMiddle; font.pixelSize: 11 }
                     }
                     TapHandler {
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
@@ -1146,7 +1153,7 @@ Item {
                         width: parent.width
                         horizontalAlignment: Text.AlignHCenter
                         wrapMode: Text.Wrap
-                        color: "#A8FFFFFF"
+                        color: tone.secondaryText
                         readonly property string typed: pane.browser ? pane.browser.filter.trim() : ""
                         text: !pane.browser ? "" : pane.browser.listingFailed ? pane.browser.error
                             : pane.browser.searching ? words.i18n("Searching…") : pane.browser.busy ? words.i18n("Loading…") : pane.browser.error ? ""
@@ -1165,11 +1172,11 @@ Item {
                         visible: !!pane.browser && pane.browser.listingFailed
                         width: wayBackLabel.implicitWidth + 32; height: 30
                         radius: height / 2
-                        color: wayBackTap.pressed ? "#4A4A4A" : wayBackHover.hovered ? "#333333" : "#242424"
+                        color: wayBackTap.pressed ? tone.controlPressed : wayBackHover.hovered ? tone.controlHover : tone.control
                         Accessible.role: Accessible.Button
                         Accessible.name: text
                         Accessible.onPressAction: activate()
-                        Text { id: wayBackLabel; anchors.centerIn: parent; text: wayBack.text; color: "#F8F8FF" }
+                        Text { id: wayBackLabel; anchors.centerIn: parent; text: wayBack.text; color: tone.text }
                         HoverHandler { id: wayBackHover; acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus }
                         TapHandler { id: wayBackTap; gesturePolicy: TapHandler.ReleaseWithinBounds; onTapped: wayBack.activate() }
                     }
@@ -1179,7 +1186,7 @@ Item {
                 objectName: "files-open-row"
                 Layout.fillWidth: true
                 visible: !pane.compact
-                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? words.i18np("1 selected", "%1 selected", pane.selectedPaths.length) : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : words.i18n("Select a file to open"); elide: Text.ElideMiddle; color: "#A8FFFFFF"; font.pixelSize: 12 }
+                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? words.i18np("1 selected", "%1 selected", pane.selectedPaths.length) : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : words.i18n("Select a file to open"); elide: Text.ElideMiddle; color: tone.secondaryText; font.pixelSize: 12 }
                 PillAction {
                     objectName: "open-file"
                     text: pane.browser && pane.browser.opening ? words.i18n("Opening…") : words.i18n("Open")
@@ -1224,10 +1231,10 @@ Item {
         x: Math.max(0,Math.min(pane.width-width,pane.dragPosition.x+18))
         y: Math.max(0,Math.min(pane.height-height,pane.dragPosition.y-58))
         width: dragLabel.implicitWidth+28; height: 42; radius: pane.paperRadius
-        color: "#242424"; border.color: "#5A5A5A"
+        color: tone.control; border.color: tone.outline
         readonly property int count: pane.incoming ? pane.incomingCount : pane.dragPaths.length
         readonly property string target: pane.incoming ? pane.incomingTarget : pane.dropFolder
-        Text { id: dragLabel; anchors.centerIn: parent; color: "#F8F8FF"; text: parent.target.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, parent.target.split("/").pop()) : words.i18np("Copy 1 · choose a folder", "Copy %1 · choose a folder", parent.count) }
+        Text { id: dragLabel; anchors.centerIn: parent; color: tone.text; text: parent.target.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, parent.target.split("/").pop()) : words.i18np("Copy 1 · choose a folder", "Copy %1 · choose a folder", parent.count) }
     }
     Shortcut { sequence: "Ctrl+T"; enabled: pane.visible; onActivated: pane.browser.addTab() }
     Shortcut { sequences: ["Alt+Return", "Alt+Enter"]; enabled: pane.visible && pane.selectedPaths.length===1; onActivated: pane.showProperties(pane.selectedPaths[0]) }
