@@ -418,6 +418,14 @@ Item {
         return true
     }
 
+    // An application carried from its tile leaves Search as a drag, which
+    // Shuffle's dock takes as a pin, or any other launcher as its own.
+    function carryApplication(index) {
+        applicationSheet.close()
+        const at = sheet.mapToItem(null, 0, 0)
+        root.launcherController.carryApplication(index, Qt.rect(at.x, at.y, sheet.width, sheet.height))
+    }
+
     // An application's sheet, opened from its tile at a point on it.
     function showApplicationSheet(index, tile, point) {
         root.applicationCatalog.prepareSoftware()
@@ -1919,14 +1927,37 @@ Item {
 
                         HoverHandler { id: catalogHover }
                         TapHandler {
+                            id: catalogTap
                             enabled: !root.guestDragged
                                 && !root.applicationLaunchPending
                             longPressThreshold: 0.5
+                            // A hold that then moves carries the application.
+                            property bool held: false
+                            onPressedChanged: if (pressed) held = false
                             onTapped: root.runCatalogApplication(
                                 catalogDelegate.index,
                                 catalogDelegate.model.name)
-                            onLongPressed: root.showApplicationSheet(
-                                catalogDelegate.index, catalogTile, point.position)
+                            onLongPressed: {
+                                held = true
+                                root.showApplicationSheet(
+                                    catalogDelegate.index, catalogTile, point.position)
+                            }
+                        }
+                        // Carried by a mouse at once; by touch after a hold,
+                        // since a swipe scrolls Apps.
+                        DragHandler {
+                            objectName: "application-carry"
+                            target: null
+                            enabled: !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            onActiveChanged: if (active) root.carryApplication(catalogDelegate.index)
+                        }
+                        DragHandler {
+                            target: null
+                            enabled: !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.TouchScreen
+                            dragThreshold: catalogTap.held ? Qt.styleHints.startDragDistance : 32767
+                            onActiveChanged: if (active) root.carryApplication(catalogDelegate.index)
                         }
                         TapHandler {
                             enabled: !root.applicationLaunchPending

@@ -9,6 +9,7 @@
 
 #include <QAbstractListModel>
 #include <QSet>
+#include <QUrl>
 #include <QVector>
 
 #include <memory>
@@ -48,6 +49,9 @@ public:
     Q_INVOKABLE bool launch(int row);
     Q_INVOKABLE [[nodiscard]] QString applicationId(int row) const;
     Q_INVOKABLE [[nodiscard]] QString applicationName(int row) const;
+    // The application's desktop file, as a drop elsewhere takes it.
+    [[nodiscard]] QUrl applicationUrl(int row) const;
+    [[nodiscard]] QString applicationIcon(int row) const;
     // The application's own actions from its desktop file, each {index, name,
     // icon}, in its order; runAction starts one by that index.
     Q_INVOKABLE [[nodiscard]] QVariantList actions(int row) const;

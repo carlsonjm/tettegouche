@@ -85,6 +85,8 @@ TestCase {
         property var carried: []
         property rect carriedSheet
         function carryOut(paths, sheet) { carried = paths; carriedSheet = sheet }
+        property int carriedApplication: -1
+        function carryApplication(row, sheet) { carriedApplication = row; carriedSheet = sheet }
         function beginGuestWebLaunch() { return false }
         property int notesLaunches: 0
         property bool notesLaunchAccepted: true
@@ -399,6 +401,27 @@ TestCase {
         catalog.softwareAsked = false
         catalog.ran = []
         catalog.uninstalled = -1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // An application dragged from Apps leaves as a carry, which the dock
+    // takes as a pin; a tap still opens it.
+    function test_applicationCarry() {
+        controller.opened()
+        for (let i = 0; i < 4; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(600)
+        const grid = findChild(launcher, "application-grid")
+        const tile = findChild(grid, "application-tile-2")
+        controller.carriedApplication = -1
+        mouseDrag(tile, tile.width / 2, tile.height / 2, 0, 120)
+        tryCompare(controller, "carriedApplication", 2)
+        const sheet = findChild(launcher, "launcher-sheet")
+        compare(controller.carriedSheet.width, sheet.width)
+        controller.carriedApplication = -1
+        catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }

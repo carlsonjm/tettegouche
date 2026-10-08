@@ -79,6 +79,7 @@ than repeat it.
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Hide, which takes it out of Apps and what was used lately while Search still finds it; and Uninstall…, where the software centre lists it, which opens it there. |
+| Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
 | Tap or click the sort button | Offers A to Z or Z to A. |
 | Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Back, at the header's left | Returns to search, with what is typed. |

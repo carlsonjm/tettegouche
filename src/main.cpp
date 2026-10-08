@@ -522,8 +522,7 @@ public Q_SLOTS:
     }
 
     // Files carried past the sheet's edge leave as a drag any application can
-    // take, offered only as a copy. The drag starts while the press that
-    // carried them is still held, which the compositor requires.
+    // take, offered only as a copy.
     Q_INVOKABLE void carryOut(const QStringList &paths, const QRectF &sheet)
     {
         if (m_carrying || !m_fileBrowser) return;
@@ -531,6 +530,29 @@ public Q_SLOTS:
         if (!mime) return;
         // KDE's document portal lets a sandboxed application read them too.
         KUrlMimeData::exportUrlsToPortal(mime);
+        const QIcon icon = QIcon::fromTheme(QMimeDatabase().mimeTypeForFile(paths.first()).iconName(),
+            QIcon::fromTheme(QStringLiteral("text-x-generic")));
+        carry(mime, icon, sheet);
+    }
+
+    // An application carried past its tile leaves as its desktop file, which
+    // Shuffle's dock pins where it is let go, as it pins one from any other
+    // launcher.
+    Q_INVOKABLE void carryApplication(int row, const QRectF &sheet)
+    {
+        if (m_carrying || !m_catalog) return;
+        const QUrl url = m_catalog->applicationUrl(row);
+        if (!url.isValid()) return;
+        auto *mime = new QMimeData;
+        mime->setUrls({url});
+        carry(mime, QIcon::fromTheme(m_catalog->applicationIcon(row),
+            QIcon::fromTheme(QStringLiteral("application-x-executable"))), sheet);
+    }
+
+    // Starts a carry while the press that began it is still held, which the
+    // compositor requires.
+    void carry(QMimeData *mime, const QIcon &icon, const QRectF &sheet)
+    {
         m_carrying = true;
         // Standalone, the launcher's surface covers the display so a press
         // outside the sheet can close it. Carrying, that cover would take
@@ -539,8 +561,6 @@ public Q_SLOTS:
         // change asks for one; without it the cover stayed away after a drop.
         const bool uncovered = !m_guestMode;
         if (uncovered) { m_view->setMask(QRegion(sheet.toAlignedRect())); m_view->update(); }
-        const QIcon icon = QIcon::fromTheme(QMimeDatabase().mimeTypeForFile(paths.first()).iconName(),
-            QIcon::fromTheme(QStringLiteral("text-x-generic")));
         QMetaObject::invokeMethod(this, [this, mime, icon, uncovered]() {
             auto *drag = new QDrag(this);
             drag->setMimeData(mime);

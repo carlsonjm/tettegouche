@@ -14,6 +14,8 @@
 #include <KApplicationTrader>
 
 #include <QSettings>
+#include <QDir>
+#include <QStandardPaths>
 #include <QUrl>
 
 #include <algorithm>
@@ -109,6 +111,22 @@ QString ApplicationCatalog::applicationId(int row) const
 {
     return row >= 0 && row < m_visibleRows.size()
         ? m_entries.at(m_visibleRows.at(row)).applicationId : QString();
+}
+
+QUrl ApplicationCatalog::applicationUrl(int row) const
+{
+    const Entry *entry = entryAt(row);
+    if (!entry) return {};
+    QString path = entry->service->entryPath();
+    if (QDir::isRelativePath(path))
+        path = QStandardPaths::locate(QStandardPaths::ApplicationsLocation, path);
+    return path.isEmpty() ? QUrl() : QUrl::fromLocalFile(path);
+}
+
+QString ApplicationCatalog::applicationIcon(int row) const
+{
+    const Entry *entry = entryAt(row);
+    return entry ? entry->icon : QString();
 }
 
 QString ApplicationCatalog::applicationName(int row) const
