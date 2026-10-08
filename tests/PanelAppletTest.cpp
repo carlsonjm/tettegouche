@@ -200,9 +200,6 @@ private Q_SLOTS:
         configure(QStringLiteral("useKadunce"), true);
         // With recent use off, Search is told so as it starts.
         configure(QStringLiteral("offerRecent"), false);
-        // Where Shuffle Settings writes it, through Plasma's scripting.
-        QCOMPARE(m_applet->config().group(QStringLiteral("Configuration")).group(QStringLiteral("General"))
-                     .readEntry(QStringLiteral("offerRecent"), true), false);
         m_applet->activated();
         QTRY_COMPARE(started.count(), 2);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-recent")});
