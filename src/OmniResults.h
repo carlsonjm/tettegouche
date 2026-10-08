@@ -20,6 +20,12 @@
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusReply>
+#include <QDBusArgument>
+#include <QDBusPendingCallWatcher>
+#include <QDBusVariant>
+#include <QPainter>
+#include <QPixmap>
+#include <KLocalizedString>
 
 inline bool withinQuietFolder(const QString &path, const QStringList &folders) {
     const auto clean = QDir::cleanPath(path);
@@ -78,6 +84,45 @@ public:
         QStringLiteral("systemsettings"))) {}
     void match(KRunner::RunnerContext &) override {}
 };
+
+// Notes found by the notes application, Gooseberry, which keeps them; Search
+// only lists what it answers. Never registered with KRunner.
+class NotesRunner : public KRunner::AbstractRunner {
+public:
+    static constexpr const char *Id = "gooseberry-notes";
+    NotesRunner() : AbstractRunner(nullptr, KPluginMetaData(QJsonObject{
+        {QStringLiteral("KPlugin"), QJsonObject{{QStringLiteral("Id"), QString::fromLatin1(Id)}, {QStringLiteral("Name"), QStringLiteral("Notes")}}}},
+        QString::fromLatin1(Id))) {}
+    void match(KRunner::RunnerContext &) override {}
+};
+
+inline bool noteMatch(const KRunner::QueryMatch &match) {
+    return match.runner() && match.runner()->id() == QLatin1String(NotesRunner::Id);
+}
+
+// A note's dictionary as the bus delivered it, made plain.
+inline QVariantMap busMap(const QVariant &value) {
+    if (value.canConvert<QDBusVariant>()) return busMap(value.value<QDBusVariant>().variant());
+    if (value.canConvert<QDBusArgument>()) return qdbus_cast<QVariantMap>(value.value<QDBusArgument>());
+    return value.toMap();
+}
+
+inline QVariantList busList(const QVariant &value) {
+    if (value.canConvert<QDBusArgument>()) return qdbus_cast<QVariantList>(value.value<QDBusArgument>());
+    return value.toList();
+}
+
+// A note's own colour, as the square beside it in the results.
+inline QIcon noteIcon(const QString &hex) {
+    QPixmap square(64, 64);
+    square.fill(Qt::transparent);
+    QPainter painter(&square);
+    painter.setRenderHint(QPainter::Antialiasing);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(QColor::isValidColorName(hex) ? QColor::fromString(hex) : QColor(0xF5, 0xD7, 0x6E));
+    painter.drawRoundedRect(QRectF(6, 6, 52, 52), 10, 10);
+    return QIcon(square);
+}
 
 inline int nameMatchQuality(QString name, QString query)
 {
@@ -141,7 +186,8 @@ inline int searchTier(const QString &id)
     if (id == QStringLiteral("baloosearch") || id == QStringLiteral("recentdocuments")
         || id == QStringLiteral("krunner_recentdocuments")) return 1;
     if (id == QStringLiteral("krunner_systemsettings") || id == QStringLiteral("systemsettings")
-        || id == QStringLiteral("calculator") || id == QStringLiteral("unitconverter")) return 2;
+        || id == QStringLiteral("calculator") || id == QStringLiteral("unitconverter")
+        || id == QLatin1String(NotesRunner::Id)) return 2;
     return 3;
 }
 
@@ -152,6 +198,13 @@ inline int searchTier(const KRunner::QueryMatch &match)
 
 inline int resultPriority(const KRunner::QueryMatch &match, const QString &query) {
     const int tier = searchTier(match);
+    if (noteMatch(match)) {
+        // Gooseberry found the words in the note, its folder or its window;
+        // a title that matches ranks as any name does.
+        auto evidence = SearchPolicy::name(match.text(), query);
+        if (evidence.confidence == SearchPolicy::Unrelated) evidence = {SearchPolicy::Context, 0};
+        return SearchPolicy::priority(evidence, tier);
+    }
     const bool setting = match.runner() && match.runner()->id().contains(QStringLiteral("systemsettings"));
     auto aliases = setting ? settingAliases(match.id()) : QStringList();
     if (tier == 1) aliases.append(QFileInfo(matchFilePath(match)).completeBaseName());
@@ -226,6 +279,8 @@ public:
         m_aliases.setColumnCount(1);
         m_combined.addSourceModel(&m_results);
         m_combined.addSourceModel(&m_aliases);
+        m_notes.setColumnCount(1);
+        m_combined.addSourceModel(&m_notes);
         setSourceModel(&m_combined);
         m_modules = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings"));
         m_modules.append(KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings_qwidgets")));
@@ -276,9 +331,40 @@ public:
         m_quietFolders = value;
         invalidate(); Q_EMIT scopeChanged();
     }
+    // Notes are asked of Gooseberry only while Search offers Notes.
+    void setNotesOffered(bool offered) { m_notesOffered = offered; }
+    // Lists the notes Gooseberry found for the query, replacing those shown.
+    void showNotes(const QVariantList &found) {
+        m_notes.removeRows(0, m_notes.rowCount());
+        for (const auto &value : found) {
+            const auto note = busMap(value);
+            const auto id = note.value(QStringLiteral("id")).toString();
+            if (id.isEmpty()) continue;
+            auto title = note.value(QStringLiteral("title")).toString();
+            if (title.isEmpty()) title = i18n("Empty note");
+            const bool stuck = note.value(QStringLiteral("stuck")).toBool();
+            const auto where = stuck
+                ? i18n("Note stuck to %1", note.value(QStringLiteral("window")).toString())
+                : i18n("Note in %1", note.value(QStringLiteral("folderLabel")).toString());
+            const auto excerpt = note.value(QStringLiteral("excerpt")).toString();
+            KRunner::QueryMatch match(&m_notesRunner);
+            match.setId(id);
+            match.setText(title);
+            match.setSubtext(where);
+            match.setData(id);
+            auto *item = new QStandardItem(noteIcon(note.value(QStringLiteral("colourHex")).toString()), title);
+            item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+            item->setData(excerpt.isEmpty() ? where : i18nc("@info a line of a note, then where it is", "%1 · %2", excerpt, where),
+                KRunner::ResultsModel::SubtextRole);
+            item->setData(true, KRunner::ResultsModel::EnabledRole);
+            m_notes.appendRow(item);
+        }
+        invalidate();
+    }
     void setQueryString(const QString &query) {
         releaseSelection();
         m_aliases.removeRows(0, m_aliases.rowCount());
+        askNotes(query);
         for (const auto &module : m_modules) {
             if (!settingIntent(module.pluginId(), query)) continue;
             KRunner::QueryMatch match(&m_aliasRunner);
@@ -299,10 +385,23 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override {
         return m_combined.data(mapToSource(index), role);
     }
-    Q_INVOKABLE void clear() { releaseSelection(); m_aliases.removeRows(0, m_aliases.rowCount()); m_results.clear(); }
+    Q_INVOKABLE void clear() {
+        releaseSelection();
+        ++m_notesAsk;
+        m_aliases.removeRows(0, m_aliases.rowCount());
+        m_notes.removeRows(0, m_notes.rowCount());
+        m_results.clear();
+    }
     Q_INVOKABLE bool run(const QModelIndex &index) {
         const auto source = m_combined.mapToSource(mapToSource(index));
         if (!source.isValid()) return false;
+        if (source.model() == &m_notes) {
+            // Gooseberry opens the note on its own card; Search waits for nothing.
+            auto request = QDBusMessage::createMethodCall(QString::fromLatin1(NotesService),
+                QString::fromLatin1(NotesPath), QString::fromLatin1(NotesInterface), QStringLiteral("OpenNote"));
+            request.setArguments({getQueryMatch(index).data().toString()});
+            return QDBusConnection::sessionBus().send(request);
+        }
         if (source.model() == &m_aliases) {
             const auto module = getQueryMatch(index).data().toString();
             auto bus = QDBusConnection::sessionBus();
@@ -402,15 +501,49 @@ protected:
         return left.row() < right.row();
     }
 private:
+    static constexpr const char *NotesService = "io.github.carlsonjm.gooseberry";
+    static constexpr const char *NotesPath = "/QuickNote";
+    static constexpr const char *NotesInterface = "io.github.carlsonjm.Gooseberry.QuickNote";
+    static constexpr uint NotesShown = 5;
+
+    // Asked as each letter is typed: only of a Gooseberry already running,
+    // never started for it, and never waited on. An answer to an older query
+    // is dropped; a Gooseberry without Find answers with an error, and no
+    // note is listed.
+    void askNotes(const QString &query) {
+        const int ask = ++m_notesAsk;
+        if (!m_notesOffered || SearchPolicy::compact(query).size() < 2) {
+            m_notes.removeRows(0, m_notes.rowCount());
+            return;
+        }
+        auto request = QDBusMessage::createMethodCall(QString::fromLatin1(NotesService),
+            QString::fromLatin1(NotesPath), QString::fromLatin1(NotesInterface), QStringLiteral("Find"));
+        request.setArguments({query, NotesShown});
+        request.setAutoStartService(false);
+        auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 1000), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, ask]() {
+            watcher->deleteLater();
+            const QDBusMessage reply = watcher->reply();
+            if (ask != m_notesAsk) return;
+            // The notes shown stay until the answer replaces them, so they do
+            // not blink at each letter.
+            showNotes(reply.type() == QDBusMessage::ReplyMessage ? busList(reply.arguments().value(0)) : QVariantList());
+        });
+    }
+
     bool m_refreshQueued = false;
+    bool m_notesOffered = false;
+    int m_notesAsk = 0;
     QString m_selectedDestination;
     QHash<QString, int> m_frozenOrder;
     bool m_allFiles = false;
     QString m_quietFolders;
     mutable QHash<QString, bool> m_repoDirectories;
     SettingsAliasRunner m_aliasRunner;
+    NotesRunner m_notesRunner;
     SearchSource m_results;
     QStandardItemModel m_aliases;
+    QStandardItemModel m_notes;
     SearchSources m_combined;
     QList<KPluginMetaData> m_modules;
 };

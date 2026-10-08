@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Typing in Search finds notes: up to five notes with the words are listed
+  among the results, each with its colour and its folder or window, and a tap
+  opens the note in Gooseberry. Only while Gooseberry is running.
 - Notes offers Folder and Stuck to under the note, as Gooseberry's own card
   does: where the note is kept, with a field for a new folder, and the window
   it is stuck to. An older Gooseberry keeps its Belongs to row.

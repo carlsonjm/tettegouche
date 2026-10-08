@@ -1128,6 +1128,9 @@ int main(int argc, char **argv)
     const bool offerNotes = !application.arguments().contains(QStringLiteral("--no-notes"));
     NotesDoor notes;
     if (offerNotes) controller.setNotesDoor(&notes);
+    // Notes found by their words are listed among the results, as Gooseberry
+    // answers, only while Notes is offered.
+    results.setNotesOffered(offerNotes);
     // The quick note itself, written in Search's window and kept by the notes
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;

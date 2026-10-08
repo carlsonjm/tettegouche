@@ -219,5 +219,29 @@ int main(int argc, char **argv)
     }
     for (const auto &id : {"krunner_shell", "krunner_kill", "krunner_powerdevil", "krunner_webshortcuts"})
         if (searchTier(QString::fromLatin1(id)) != 3) return 2;
+    {
+        // Notes as Gooseberry answers Find: each listed with its folder or
+        // window, a note whose title starts with the words first.
+        Results notes;
+        notes.testQuery = QStringLiteral("oat");
+        notes.showNotes({
+            QVariantMap{{QStringLiteral("id"), QStringLiteral("a")}, {QStringLiteral("title"), QStringLiteral("Shopping")},
+                        {QStringLiteral("excerpt"), QStringLiteral("buy oat milk")}, {QStringLiteral("folderLabel"), QStringLiteral("Home")},
+                        {QStringLiteral("colourHex"), QStringLiteral("#F5D76E")}},
+            QVariantMap{{QStringLiteral("id"), QStringLiteral("b")}, {QStringLiteral("title"), QStringLiteral("Oat recipes")},
+                        {QStringLiteral("stuck"), true}, {QStringLiteral("window"), QStringLiteral("plan.md")},
+                        {QStringLiteral("folderLabel"), QStringLiteral("Inbox")}},
+            QVariantMap{{QStringLiteral("id"), QString()}},
+        });
+        if (notes.rowCount() != 2) return 60;
+        if (notes.getQueryMatch(notes.index(0, 0)).data().toString() != QStringLiteral("b")) return 61;
+        const auto inside = notes.index(1, 0).data(KRunner::ResultsModel::SubtextRole).toString();
+        if (!inside.contains(QStringLiteral("buy oat milk")) || !inside.contains(QStringLiteral("Home"))) return 62;
+        if (!notes.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString().contains(QStringLiteral("plan.md"))) return 63;
+        if (!noteMatch(notes.getQueryMatch(notes.index(0, 0)))) return 64;
+        notes.clear();
+        if (notes.rowCount() != 0) return 65;
+        if (searchTier(QStringLiteral("gooseberry-notes")) != 2) return 66;
+    }
     return 0;
 }
