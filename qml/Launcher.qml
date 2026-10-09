@@ -27,6 +27,7 @@ Item {
     // Gooseberry's quick note, offered while it is installed; null when the
     // setting is off.
     property var notesDoor: null
+    property bool notesPillShown: true
     // The quick note Search writes in its own window; null when the setting is
     // off. Notes is one of Search's modes while the notes application speaks
     // its interface, and opens that application's own card otherwise.
@@ -1260,7 +1261,7 @@ Item {
                         objectName: "notes-pill"
                         label: words.i18n("Notes")
                         glyph: "notes"
-                        visible: !!root.notesDoor && root.notesDoor.available
+                        visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
                         onActivated: root.openNotes()
                     }
                     FirstPill {

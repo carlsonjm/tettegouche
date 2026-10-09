@@ -12,6 +12,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerRecentDefault
     property bool cfg_offerNotes
     property bool cfg_offerNotesDefault
+    property bool cfg_showNotesPill
+    property bool cfg_showNotesPillDefault
     property bool cfg_offerGenie
     property bool cfg_offerGenieDefault
     property bool cfg_showAmbient
@@ -41,6 +43,13 @@ KCMUtils.SimpleKCM {
             text: i18n("Show Notes when Gooseberry is installed")
             checked: cfg_offerNotes
             onToggled: cfg_offerNotes = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show the Notes pill")
+            enabled: cfg_offerNotes
+            checked: cfg_showNotesPill
+            onToggled: cfg_showNotesPill = checked
         }
 
         QQC2.CheckBox {

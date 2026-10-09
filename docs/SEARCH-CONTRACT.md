@@ -69,6 +69,8 @@ application and Tettegouche never depends on it.
   dropped.
 - The widget's setting "Show Notes when Gooseberry is installed" is on by
   default; off, Notes is never offered and no note is asked for.
+- "Show the Notes pill", on by default, hides only the first screen's Notes
+  pill; notes still answer a search.
 
 ### Genie
 
