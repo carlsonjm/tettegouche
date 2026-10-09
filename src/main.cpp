@@ -172,13 +172,13 @@ public:
         connect(&m_lateQuit, &QTimer::timeout, qApp, &QGuiApplication::quit);
         auto bus = QDBusConnection::sessionBus();
         bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
-                    QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("workspaceContextChanged"),
+                    QStringLiteral("co.goodinput.Kadunce"), QStringLiteral("workspaceContextChanged"),
                     this, SLOT(workspaceUpdated()));
         bus.connect(QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
-                    QStringLiteral("studio.warbler.Kadunce"), QStringLiteral("bridgeUnavailable"),
+                    QStringLiteral("co.goodinput.Kadunce"), QStringLiteral("bridgeUnavailable"),
                     this, SLOT(bridgeLost()));
-        bus.connect(QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
-                    QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("pinnedApplicationsChanged"),
+        bus.connect(QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
+                    QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("pinnedApplicationsChanged"),
                     this, SLOT(askPinned()));
         auto *owner = new QDBusServiceWatcher(QStringLiteral("org.kde.KWin"), bus,
             QDBusServiceWatcher::WatchForOwnerChange, this);
@@ -214,8 +214,8 @@ public:
         const QString id = m_catalog ? m_catalog->applicationId(row) : QString();
         if (id.isEmpty() || !m_dockPresent) return;
         QDBusMessage request = QDBusMessage::createMethodCall(
-            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
-            QStringLiteral("studio.warbler.BottomSurface"),
+            QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
+            QStringLiteral("co.goodinput.BottomSurface"),
             pin ? QStringLiteral("pinApplication") : QStringLiteral("unpinApplication"));
         request << id;
         QDBusConnection::sessionBus().asyncCall(request, 500);
@@ -342,7 +342,7 @@ public:
         QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
-            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("co.goodinput.Kadunce"),
             QStringLiteral("activateApplicationWindow"));
         request.setArguments({windowId});
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
@@ -368,7 +368,7 @@ public:
         QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
-            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("co.goodinput.Kadunce"),
             QStringLiteral("activateApplicationWindow"));
         request.setArguments({windowId});
         const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(
@@ -386,8 +386,8 @@ public Q_SLOTS:
     void askPinned()
     {
         const QDBusMessage request = QDBusMessage::createMethodCall(
-            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("/BottomSurface"),
-            QStringLiteral("studio.warbler.BottomSurface"), QStringLiteral("pinnedApplications"));
+            QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
+            QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("pinnedApplications"));
         auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 500), this);
         connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
             watcher->deleteLater();
@@ -882,7 +882,7 @@ private:
         return QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
-            QStringLiteral("studio.warbler.Kadunce"), method);
+            QStringLiteral("co.goodinput.Kadunce"), method);
     }
 
     void tryBeginGuest()
@@ -994,7 +994,7 @@ private:
         const QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
-            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("co.goodinput.Kadunce"),
             QStringLiteral("workspaceContext"));
         const QDBusReply<QString> reply = QDBusConnection::sessionBus().call(
             request, QDBus::Block, 500);
@@ -1012,7 +1012,7 @@ private:
         const QDBusMessage request = QDBusMessage::createMethodCall(
             QStringLiteral("org.kde.KWin"),
             QStringLiteral("/Kadunce"),
-            QStringLiteral("studio.warbler.Kadunce"),
+            QStringLiteral("co.goodinput.Kadunce"),
             QStringLiteral("workspaceContext"));
         auto *watcher = new QDBusPendingCallWatcher(
             QDBusConnection::sessionBus().asyncCall(request), this);

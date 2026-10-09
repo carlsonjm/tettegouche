@@ -13,7 +13,7 @@ cmake --build "${build_dir}" -j"$(nproc)"
 ctest --test-dir "${build_dir}" --output-on-failure
 
 # Remove obsolete loose-QML installation paths before installing the native applet.
-rm -rf -- "${HOME}/.local/share/plasma/plasmoids/studio.warbler.tettegouche"
+rm -rf -- "${HOME}/.local/share/plasma/plasmoids/co.goodinput.tettegouche"
 rm -f "${HOME}/.local/bin/tettegouche"
 rm -f "${HOME}/.local/share/applications/io.github.carlsonjm.Tettegouche.desktop"
 # Shuffle's install key, where it is set up, installs with no password: the
@@ -34,7 +34,7 @@ else
     sudo cmake --install "${build_dir}"
     # The widget picker prioritizes the plugin-ID icon over metadata.Icon. An old
     # scalable dimple would mask the new photo at small sizes; preserve then retire it.
-    old_picker=/usr/share/icons/hicolor/scalable/apps/studio.warbler.tettegouche.svg
+    old_picker=/usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche.svg
     if [[ -f $old_picker && ! -L $old_picker ]]; then
         artwork_backup=$(sudo mktemp -d /var/tmp/tettegouche-artwork-backup.XXXXXX)
         sudo cp --preserve=all -- "$old_picker" "$artwork_backup/"
@@ -73,7 +73,7 @@ announce_activity() {
 
 # The shell keeps the widget it loaded, so it restarts to run the new one.
 # Windows and the session stay as they are.
-widget="$(grep -m1 '/plasma/applets/studio\.warbler\.tettegouche\.so$' \
+widget="$(grep -m1 '/plasma/applets/co\.goodinput\.tettegouche\.so$' \
     "${build_dir}/install_manifest.txt" || true)"
 if systemctl --user --quiet is-active plasma-plasmashell.service 2>/dev/null; then
     systemctl --user restart plasma-plasmashell.service

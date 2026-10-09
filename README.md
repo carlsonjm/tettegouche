@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/studio.warbler.tettegouche-logo.png" width="180" alt="Tettegouche">
+  <img src="assets/co.goodinput.tettegouche-logo.png" width="180" alt="Tettegouche">
 </p>
 
 # Tettegouche

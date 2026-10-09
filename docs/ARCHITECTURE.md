@@ -168,7 +168,7 @@ absent when no activity qualifies.
 ## Settings
 
 The widget's own settings page stays and works everywhere. Where Shuffle
-Settings is installed (desktop entry `studio.warbler.Shuffle.Settings`),
+Settings is installed (desktop entry `co.goodinput.Shuffle.Settings`),
 Configure opens it at this widget's page instead, passing the page's name, `search`,
 as its one argument. The entry is looked for at each press, so there is one
 build and no switch, and a Plasma that wires Configure some other way keeps the
@@ -182,7 +182,7 @@ Related-setting children are read-only context under a settings result, owned by
 ## Words
 
 Every word Tettegouche shows comes from one of two KI18n catalogs:
-`tettegouche` for the launcher, and `plasma_applet_studio.warbler.tettegouche`,
+`tettegouche` for the launcher, and `plasma_applet_co.goodinput.tettegouche`,
 the one Plasma gives the panel widget, for the widget and Ambient. QML asks
 through a `KI18nContext` naming its catalog, so tests load the same words.
 `tools/extract-messages.sh` writes the catalogs' templates; a translation is

@@ -17,7 +17,7 @@ if rg -n -i 'tette[[:space:]]+files' --glob '!build*/**' --glob '!tests/verify-s
 fi
 
 rg -q 'QStringLiteral\("workspaceContext"\)' "${project_root}/src/main.cpp"
-rg -q 'studio\.warbler\.kadunce\.workspace-context' \
+rg -q 'co\.goodinput\.kadunce\.workspace-context' \
     "${project_root}/src/WorkspaceContext.cpp"
 rg -q 'SupportedVersion = 1' "${project_root}/src/WorkspaceContext.cpp"
 rg -q 'Q_INVOKABLE void finishLaunch\(\)' "${project_root}/src/main.cpp"

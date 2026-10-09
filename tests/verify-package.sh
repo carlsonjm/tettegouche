@@ -14,8 +14,8 @@ required=(
     applet/ConfigGeneral.qml
     applet/config.qml
     applet/main.xml
-    assets/studio.warbler.tettegouche.svg
-    assets/studio.warbler.tettegouche-logo.png
+    assets/co.goodinput.tettegouche.svg
+    assets/co.goodinput.tettegouche-logo.png
     src/TettegoucheApplet.cpp
     src/TettegoucheApplet.h
     src/metadata.json
@@ -53,7 +53,7 @@ rg -q 'DESTINATION \$\{KDE_INSTALL_DATADIR\}/tettegouche\)' "${project_root}/CMa
 rg -q 'plasma_add_applet' "${project_root}/CMakeLists.txt"
 rg -q 'KDE_INSTALL_ICONDIR.*/hicolor/512x512/apps' \
     "${project_root}/CMakeLists.txt"
-rg -q 'RENAME studio.warbler.tettegouche.png' "${project_root}/CMakeLists.txt"
+rg -q 'RENAME co.goodinput.tettegouche.png' "${project_root}/CMakeLists.txt"
 ! rg -q 'DESTINATION.*hicolor/scalable/apps' "${project_root}/CMakeLists.txt"
 rg -q 'K_PLUGIN_CLASS_WITH_JSON' \
     "${project_root}/src/TettegoucheApplet.cpp"

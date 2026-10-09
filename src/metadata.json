@@ -9,7 +9,7 @@
         "Description": "Just type. Find apps, files, settings, and the web in one place",
         "EnabledByDefault": true,
         "FormFactors": ["desktop"],
-        "Icon": "studio.warbler.tettegouche-logo",
+        "Icon": "co.goodinput.tettegouche-logo",
         "License": "GPL-2.0+",
         "Name": "Tettegouche",
         "Version": "0.2.0"

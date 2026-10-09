@@ -12,7 +12,7 @@ PlasmoidItem {
     // A duration at Plasma's animation speed: 1 ms when it is instant.
     function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)); }
 
-    Plasmoid.icon: "studio.warbler.tettegouche-logo"
+    Plasmoid.icon: "co.goodinput.tettegouche-logo"
     Plasmoid.status: Plasmoid.launcherActive
         ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground

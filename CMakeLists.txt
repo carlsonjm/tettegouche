@@ -48,7 +48,7 @@ target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
-target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
+target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp
@@ -154,12 +154,12 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/org.freedesktop.FileManager1.service
         DESTINATION ${KDE_INSTALL_DATADIR}/tettegouche)
 # Widget Explorer prefers an icon named after the plugin ID over metadata.Icon.
 # The live panel dimple is drawn independently in applet/main.qml.
-install(FILES assets/studio.warbler.tettegouche-logo.png
+install(FILES assets/co.goodinput.tettegouche-logo.png
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps
-        RENAME studio.warbler.tettegouche.png)
-install(FILES assets/studio.warbler.tettegouche-logo.png
+        RENAME co.goodinput.tettegouche.png)
+install(FILES assets/co.goodinput.tettegouche-logo.png
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps)
-plasma_add_applet(studio.warbler.tettegouche
+plasma_add_applet(co.goodinput.tettegouche
     CPP_SOURCES
         src/TettegoucheApplet.cpp
         src/TettegoucheApplet.h
@@ -178,7 +178,7 @@ plasma_add_applet(studio.warbler.tettegouche
         applet/config.qml
     RESOURCES
         applet/main.xml
-        assets/studio.warbler.tettegouche.svg
+        assets/co.goodinput.tettegouche.svg
         assets/icons/lucide/skip-back.svg
         assets/icons/lucide/play.svg
         assets/icons/lucide/pause.svg
@@ -188,7 +188,7 @@ plasma_add_applet(studio.warbler.tettegouche
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
 )
-target_link_libraries(studio.warbler.tettegouche PRIVATE
+target_link_libraries(co.goodinput.tettegouche PRIVATE
     LayerShellQt::Interface
     tettegouche-activities
     Qt6::Core
@@ -202,7 +202,7 @@ target_link_libraries(studio.warbler.tettegouche PRIVATE
     Plasma::Plasma
     Plasma::PlasmaQuick
 )
-target_compile_definitions(studio.warbler.tettegouche PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
+target_compile_definitions(co.goodinput.tettegouche PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
 
 if(BUILD_TESTING)
     qt_add_executable(activity-provider-test tests/ActivityProviderTest.cpp
@@ -303,8 +303,8 @@ if(BUILD_TESTING)
     target_include_directories(panel-applet-test PRIVATE src)
     target_link_libraries(panel-applet-test PRIVATE
         Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::ConfigGui KF6::Package KF6::GlobalAccel KF6::I18n)
-    target_compile_definitions(panel-applet-test PRIVATE TRANSLATION_DOMAIN="plasma_applet_studio.warbler.tettegouche")
-    add_dependencies(panel-applet-test studio.warbler.tettegouche)
+    target_compile_definitions(panel-applet-test PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
+    add_dependencies(panel-applet-test co.goodinput.tettegouche)
     add_test(NAME panel-applet-test
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
             $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})

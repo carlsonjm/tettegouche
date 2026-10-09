@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Writes the translation templates for Tettegouche's two KI18n catalogs into
 # the folder given, po/ by default: tettegouche.pot for the launcher, and
-# plasma_applet_studio.warbler.tettegouche.pot for the panel widget and Ambient.
+# plasma_applet_co.goodinput.tettegouche.pot for the panel widget and Ambient.
 # A translation is po/<language>/<catalog>.po; the build installs it.
 set -euo pipefail
 
@@ -38,4 +38,4 @@ extract() {
 }
 mkdir -p "${out}"
 extract tettegouche launcher_cpp launcher_qml
-extract plasma_applet_studio.warbler.tettegouche widget_cpp widget_qml
+extract plasma_applet_co.goodinput.tettegouche widget_cpp widget_qml

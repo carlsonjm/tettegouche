@@ -18,7 +18,7 @@ Window {
     // the widget, so they translate in the panel and in tests alike.
     KI18nContext {
         id: words
-        translationDomain: "plasma_applet_studio.warbler.tettegouche"
+        translationDomain: "plasma_applet_co.goodinput.tettegouche"
     }
 
     // The closed island this one grew from, which holds the activities.
