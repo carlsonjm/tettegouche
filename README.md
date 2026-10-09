@@ -32,6 +32,7 @@ Search can find:
 
 - Installed applications
 - Indexed files and recent documents
+- Notes, while Gooseberry is running
 - KDE settings
 - Calculator results
 - Unit conversions
@@ -40,8 +41,9 @@ Local results appear first. If nothing local matches, submitting the query can o
 it in your web browser. Tettegouche does not learn from or rank results by your
 usage history.
 
-**Apps** opens an alphabetical list of installed applications when you would
-rather look than search.
+**Apps** shows installed applications when you would rather look than search.
+It sorts A to Z, Z to A, by most used or by newest installed, and keeps your
+choice. Drag one application onto another to make a folder.
 
 ## Files
 
@@ -53,8 +55,8 @@ between folders and to or from other applications; open drives and phones, and
 eject drives; and recover the last item Tettegouche sent to Trash. File work
 continues safely if you close Search while an operation is running.
 
-Tettegouche currently focuses on local files; what Files does not yet do is
-listed in [docs/FILES-CONTRACT.md](docs/FILES-CONTRACT.md).
+Tettegouche currently focuses on local files; what Files may do later is listed
+in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Live activity
 
@@ -76,7 +78,8 @@ Each kind of activity is its own island, side by side and centred in the room
 the panel gives them, clear so the panel shows through. When they share the
 room, each gives up names first and keeps its buttons at its end. A tap opens
 an island in place, larger, with the media's art, position and controls or each
-transfer's own actions; a sideways flick sets one aside.
+transfer's own actions; a sideways flick sets one aside. The widget's settings
+can turn Ambient off.
 
 ## Related settings
 
