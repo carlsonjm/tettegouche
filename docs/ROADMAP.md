@@ -15,6 +15,8 @@ What is planned for Tettegouche, and what is not.
   shares; saved searches.
 - **Ambient:** windows a monitor layout sent to the dock; a timer; printing; a
   shelf for holding files between applications.
+- **Translations:** the first languages. Every word Tettegouche shows already
+  comes from a catalog.
 
 ## Not planned
 
