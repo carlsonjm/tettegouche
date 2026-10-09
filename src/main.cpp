@@ -1248,6 +1248,9 @@ int main(int argc, char **argv)
         // reach QML as undefined, which its "!== null" checks let through.
         {QStringLiteral("recentUse"), QVariant::fromValue<QObject *>(offerRecent ? &recent : nullptr)},
         {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
+        // The Notes pill can be left off the first screen on its own.
+        {QStringLiteral("notesPillShown"),
+         !application.arguments().contains(QStringLiteral("--no-notes-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
         {QStringLiteral("genie"), QVariant::fromValue<QObject *>(genie.get())},
     });

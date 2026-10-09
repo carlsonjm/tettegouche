@@ -17,6 +17,10 @@
       <label>Show Notes in Search before anything is typed, when Gooseberry is installed</label>
       <default>true</default>
     </entry>
+    <entry name="showNotesPill" type="Bool">
+      <label>Show the Notes pill on Search's first screen, while Notes is offered; notes still show among the results</label>
+      <default>true</default>
+    </entry>
     <entry name="offerGenie" type="Bool">
       <label>Show Genie in Search before anything is typed, when Split Rock is installed</label>
       <default>true</default>

@@ -213,10 +213,17 @@ private Q_SLOTS:
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
         configure(QStringLiteral("offerNotes"), true);
+        // With only the Notes pill off, Search is told so as it starts.
+        configure(QStringLiteral("showNotesPill"), false);
+        m_applet->activated();
+        QTRY_COMPARE(started.count(), 4);
+        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes-pill")});
+        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        configure(QStringLiteral("showNotesPill"), true);
         // With Genie off, Search is told so as it starts.
         configure(QStringLiteral("offerGenie"), false);
         m_applet->activated();
-        QTRY_COMPARE(started.count(), 4);
+        QTRY_COMPARE(started.count(), 5);
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-genie")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
         configure(QStringLiteral("offerGenie"), true);

@@ -322,6 +322,8 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     if (!setting(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
     // It offers Notes, where the notes application is installed, unless that is off.
     if (!setting(QStringLiteral("offerNotes"), true)) arguments << QStringLiteral("--no-notes");
+    // Its pill alone can be left out; notes still answer a search.
+    else if (!setting(QStringLiteral("showNotesPill"), true)) arguments << QStringLiteral("--no-notes-pill");
     // And Genie, where Split Rock is installed, unless that is off.
     if (!setting(QStringLiteral("offerGenie"), true)) arguments << QStringLiteral("--no-genie");
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
