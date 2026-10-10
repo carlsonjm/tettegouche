@@ -1375,6 +1375,8 @@ Item {
                     anchors.fill: parent
                     anchors.topMargin: 38
                     clip: true
+                    // A wheel notch scrolls by Plasma's step, as KDE's own lists do.
+                    Kirigami.WheelHandler { target: resultList }
                     spacing: 6
                     currentIndex: count > 0 ? 0 : -1
                     model: root.searchResults
@@ -1957,6 +1959,8 @@ Item {
                     Math.min(6, Math.floor(width / 126)))
                 cellHeight: root.launcherController.drawerExpanded ? 112 : 94
                 boundsBehavior: Flickable.StopAtBounds
+                // A wheel notch scrolls by Plasma's step, as KDE's own lists do.
+                Kirigami.WheelHandler { target: applicationGrid }
                 z: 3
                 // The arrow keys have chosen an application, which Enter
                 // opens: it shows, and stays in view.

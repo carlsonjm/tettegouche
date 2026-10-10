@@ -159,10 +159,13 @@ Item {
         clip: true
 
         Flickable {
+            id: answerScroll
             anchors.fill: parent
             anchors.margins: 18
             contentHeight: answerColumn.height
             boundsBehavior: Flickable.StopAtBounds
+            // A wheel notch scrolls by Plasma's step, as KDE's own lists do.
+            Kirigami.WheelHandler { target: answerScroll }
             Column {
                 id: answerColumn
                 width: parent.width

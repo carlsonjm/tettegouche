@@ -278,6 +278,8 @@ Window {
             clip: true
             interactive: contentHeight > height + 0.5
             boundsBehavior: Flickable.StopAtBounds
+            // A wheel notch scrolls by Plasma's step, as KDE's own lists do.
+            Kirigami.WheelHandler { target: scroller }
 
             Column {
                 id: content
