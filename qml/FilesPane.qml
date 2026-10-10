@@ -357,10 +357,13 @@ Item {
                 placeholderText: words.i18n("Filter applications")
             }
             ListView {
+                id: openWithList
                 objectName: "open-with-list"
                 Layout.fillWidth: true
                 Layout.preferredHeight: Math.min(contentHeight, Math.max(144, pane.height - pane.keysReach - 320))
                 clip: true
+                // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
+                Kirigami.WheelHandler { target: openWithList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
                 model: openWithSheet.showingAll
                     ? openWithSheet.everything.filter(a => a.name.toLowerCase().indexOf(applicationFilter.text.toLowerCase()) >= 0)
                     : (openWithSheet.choices.suggested || [])
@@ -549,10 +552,13 @@ Item {
         anchors.fill: parent
         spacing: 20
         ListView {
+            id: placesList
             objectName: "files-places"
             Layout.preferredWidth: 170
             Layout.fillHeight: true
             clip: true
+            // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
+            Kirigami.WheelHandler { target: placesList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
             model: pane.browser ? pane.browser.places : []
             // The places, then the drives under a rule. A drive opens on a tap,
             // mounted first if it is not; one that is plugged in has an eject
@@ -817,6 +823,8 @@ Item {
                 Accessible.role: Accessible.List
                 Accessible.name: pane.browser ? pane.browser.path.split("/").pop() || "/" : ""
                 interactive: !pane.draggingFiles
+                // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
+                Kirigami.WheelHandler { target: files; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
                 // A handle on the right edge for a long folder: slim at rest,
                 // wide enough for a finger to take, broader while held.
                 C.ScrollBar.vertical: C.ScrollBar {

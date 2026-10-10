@@ -159,10 +159,13 @@ Item {
         clip: true
 
         Flickable {
+            id: answerScroll
             anchors.fill: parent
             anchors.margins: 18
             contentHeight: answerColumn.height
             boundsBehavior: Flickable.StopAtBounds
+            // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
+            Kirigami.WheelHandler { target: answerScroll; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
             Column {
                 id: answerColumn
                 width: parent.width

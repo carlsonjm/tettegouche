@@ -278,6 +278,8 @@ Window {
             clip: true
             interactive: contentHeight > height + 0.5
             boundsBehavior: Flickable.StopAtBounds
+            // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
+            Kirigami.WheelHandler { target: scroller; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
 
             Column {
                 id: content
