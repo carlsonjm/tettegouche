@@ -6,7 +6,7 @@ than repeat it.
 
 | Task | Touch | Keyboard |
 | --- | --- | --- |
-| Search | Tap the dot | `Meta`, once set in Plasma |
+| Search | Tap the dot | `Meta` |
 | Apps | Tap Apps in Search | `Meta+G` |
 | Files | Tap Files in Search | `Meta+E` |
 | Ambient | Tap the island | — |
@@ -52,7 +52,7 @@ than repeat it.
 | --- | --- |
 | Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
-| Meta, once set as the widget's shortcut in Plasma | Opens or closes Search. Tettegouche does not set it; Plasma's own default for Meta opens Kickoff, Plasma's application menu. |
+| Meta, or Alt+F1 | Opens or closes Search. Tettegouche is an application launcher to Plasma, so Plasma's launcher key reaches it as it reaches Kickoff, Plasma's application menu. Where a screen's panels hold both, the first launcher Plasma finds opens. A shortcut set as the widget's own in Plasma opens Search too. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
