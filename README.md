@@ -8,7 +8,8 @@ Tettegouche is a touch-oriented Search and file launcher for KDE Plasma. It help
 you find, launch, browse, and act without sorting through separate menus.
 
 Its panel island also shows current media and file activity. Tettegouche works with
-touch, a pointer, or a keyboard. No background service is required.
+touch, a pointer, or a keyboard, and follows your light or dark colour scheme.
+No background service is required.
 
 ## Controls
 
@@ -25,10 +26,11 @@ takes `Meta+E` when it is installed; give the key to Tettegouche there. Every ot
 
 ## Search
 
-Tap the dot in the panel. Before you type, Search offers Apps and Files, Notes
-where Gooseberry is installed, and below them what you used lately: files, and
-applications that are not already open or pinned in the dock. Start typing and
-Search can find:
+Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
+and Files, Notes where Gooseberry is installed and Ask where Split Rock is,
+and below them what you used lately: files, and applications that are not
+already open or pinned in the dock. To go straight to one of them, press the
+dot and slide right onto it. Start typing and Search can find:
 
 - Installed applications
 - Indexed files and recent documents
@@ -43,7 +45,10 @@ usage history.
 
 **Apps** shows installed applications when you would rather look than search.
 It sorts A to Z, Z to A, by most used or by newest installed, and keeps your
-choice. Drag one application onto another to make a folder.
+choice. Drag one application onto another to make a folder. Touch and hold an
+application for its sheet: its own actions, folders, Hide, and Edit
+Application… to change its name, icon or command in KDE's menu editor. Apps
+also has a launcher of its own, with its own icon, to pin to a dock.
 
 ## Files
 
