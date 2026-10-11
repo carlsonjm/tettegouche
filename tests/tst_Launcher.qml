@@ -1412,6 +1412,8 @@ TestCase {
         const entry=findChild(launcher,"files-pill")
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
+        controller.setDrawerExpanded(true,true)
+        wait(250)
         const folder=findChild(launcher,"file-entry-Projects")
         const file=findChild(launcher,"file-entry-Notes.txt")
         const menu=findChild(launcher,"file-context-menu")
@@ -1563,6 +1565,8 @@ TestCase {
         const entry=findChild(launcher,"files-pill")
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
+        controller.setDrawerExpanded(true,true)
+        wait(250)
         const grid=findChild(launcher,"files-grid")
         const pane=findChild(launcher,"files-pane")
         filesMock.tileSize=1
@@ -1647,6 +1651,7 @@ TestCase {
     function test_filesDrives() {
         launcher.fileBrowser=filesMock
         launcher.setDrawerOpen(true,"files")
+        controller.setDrawerExpanded(true,true) // names and eject buttons show at full size
         tryCompare(launcher,"drawerProgress",1)
         wait(250) // the sheet's own growth settles before the rows are tapped
         const home={label:"Home",path:"/home/test",icon:"user-home",section:"places"}
@@ -1744,6 +1749,7 @@ TestCase {
     function test_keysKeepDrawersAbove() {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
+        controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "height", 710)
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
