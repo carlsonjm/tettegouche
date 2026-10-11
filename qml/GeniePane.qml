@@ -37,6 +37,7 @@ Item {
     signal back()
     signal expand()
     signal grow()
+    signal dismiss()
 
     // Opening shows the conversation's question as Split Rock keeps it.
     function focusField() {
@@ -136,7 +137,7 @@ Item {
         opacity: pane.clamp((pane.progress - 0.65) / 0.35)
         onActivated: pane.back()
     }
-    // Expand, and Pop out, which opens Genie's own window.
+    // Expand; Pop out, which opens Genie's own window; and Close.
     WindowActions {
         id: corner
         prefix: "genie"
@@ -147,6 +148,7 @@ Item {
         popOutName: words.i18n("Open in Genie")
         onExpand: pane.expand()
         onPopOut: pane.grow()
+        onDismiss: pane.dismiss()
     }
 
     // What Genie says, settling 20 px as the mode opens, as Files does.

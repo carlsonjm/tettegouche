@@ -44,6 +44,7 @@ than repeat it.
 | Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
 | Esc | Closes an open menu, then an open drawer, then Search. |
 | Tap or click outside Search | Closes it. Inside Kadunce's Spread, the space round Search belongs to Spread. |
+| Tap or click Close, last in the header's right corner, in Apps, Files, Notes or Genie | Closes Search, as a tap outside it does. |
 | Drag Search sideways inside Kadunce's Spread | Search follows and tells Spread how far it has moved. Let go: if Spread moves on, Search slides away to that side and closes; if not, it springs back. |
 | With the on-screen keys up | Search rises only as far as it must to stay above them, then shortens, so the search field and its results, or an open drawer, stay in view. Inside Kadunce's Spread it keeps its place and shortens instead. It returns as the keys go down. |
 
@@ -92,8 +93,8 @@ than repeat it.
 | Drag a folder out of Apps, or touch and hold it, then move | Carries its applications out of Search. Let go on Shuffle's dock and they are pinned there as one folder of the same name; anywhere else takes them as applications. |
 | Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; Edit Application…, where KDE's menu editor is installed, which opens the application's entry there to change its name, icon or command for this person; and Uninstall…, where the software centre lists it, which opens it there. |
 | Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
-| Tap or click the sort button, on the search field's right | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
-| Tap or click the eye, on the search field's left | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
+| Tap or click the sort button, on the search field's left | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
+| Tap or click the eye, inside the search field beside its search icon | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps opens filling the tablet's screen, and at Search's size on a monitor. |
 | Tap or click Back, at the header's left | Leaves an open folder for Apps; otherwise returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
@@ -123,8 +124,8 @@ than repeat it.
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
-| Tap or click the sort button, on the search field's right | Offers name A–Z, name Z–A, newest first and largest first. |
-| Tap or click the eye, on the search field's left | Shows hidden files, dimmed; again, hides them. |
+| Tap or click the sort button, on the search field's left | Offers name A–Z, name Z–A, newest first and largest first. |
+| Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Tap or click Pop out, beside Expand | Files moves into a window of its own, with its tabs, folder and selection as they were, and Search closes. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With Files in its own window: Files in Search, `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window forward and shows what was asked there; Search does not open Files. Closing the window returns Files to Search. |

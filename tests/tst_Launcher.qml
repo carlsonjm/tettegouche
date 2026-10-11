@@ -2010,10 +2010,13 @@ TestCase {
         wait(250)
         const eye = findChild(launcher, "hidden-button")
         const sort = findChild(launcher, "sort-button")
-        const field = findChild(launcher, "search-query")
+        const field = findChild(launcher, "search-field")
+        const query = findChild(launcher, "search-query")
         verify(eye.visible && eye.enabled)
-        verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, 0, 0).x + 0.5)
-        verify(field.mapToItem(null, field.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
+        // The eye inside search, past what is typed; the order on its left.
+        verify(eye.mapToItem(null, 0, 0).x >= query.mapToItem(null, query.width, 0).x - 0.5)
+        verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, field.width, 0).x - 40)
+        verify(sort.mapToItem(null, sort.width, 0).x <= field.mapToItem(null, 0, 0).x + 0.5)
         verify(!eye.showing)
         mouseClick(eye, eye.width / 2, eye.height / 2)
         compare(filesMock.hidden, true)
@@ -2038,7 +2041,7 @@ TestCase {
     }
 
     // Each drawer's header ends in the corner every drawer and mode shares:
-    // Expand in both, Pop out in Files only. Expand brings Search back to its
+    // Expand and Close in both, Pop out in Files only, Close last. Expand brings Search back to its
     // size and again fills the screen; Back leaves it at Search's size.
     function test_drawerCorner_data() {
         return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
@@ -2052,13 +2055,16 @@ TestCase {
         const header = findChild(launcher, "drawer-header")
         const expand = findChild(launcher, "drawer-expand")
         const popOut = findChild(launcher, "drawer-pop-out")
-        const sort = findChild(launcher, "sort-button")
+        const close = findChild(launcher, "drawer-close")
+        const field = findChild(launcher, "search-field")
         const left = item => item.mapToItem(header, 0, 0).x
         const right = item => item.mapToItem(header, item.width, 0).x
-        verify(expand.visible)
+        verify(expand.visible && close.visible)
         compare(popOut.visible, data.mode === "files")
-        verify(right(sort) < left(expand))
-        verify(Math.abs(right(data.mode === "files" ? popOut : expand) - (header.width - 14)) < 1)
+        verify(field.mapToItem(header, field.width, 0).x < left(expand))
+        verify(right(expand) <= left(data.mode === "files" ? popOut : close) + 0.5)
+        verify(Math.abs(right(close) - (header.width - 14)) < 1)
+        compare(close.Accessible.name, "Close Search")
         compare(controller.drawerExpanded, true)
         compare(expand.Accessible.name, "Make smaller")
         mouseClick(expand, expand.width / 2, expand.height / 2)
@@ -2072,6 +2078,35 @@ TestCase {
         compare(controller.drawerExpanded, false)
     }
 
+    // Close puts Search away from any drawer or mode.
+    function test_close_data() {
+        return [{ tag: "apps" }, { tag: "files" }, { tag: "notes" }, { tag: "genie" }]
+    }
+    function test_close(data) {
+        let close
+        if (data.tag === "notes" || data.tag === "genie") {
+            if (data.tag === "notes") openNotesMode()
+            else openGenieMode()
+            close = findChild(launcher, data.tag + "-close")
+        } else {
+            launcher.fileBrowser = filesMock
+            filesMock.placeKind = "folder"
+            launcher.setDrawerOpen(true, data.tag)
+            tryCompare(launcher, "drawerProgress", 1)
+            wait(250)
+            close = findChild(launcher, "drawer-close")
+        }
+        verify(close.visible && close.opacity > 0.99)
+        const before = controller.closes
+        mouseClick(close, close.width / 2, close.height / 2)
+        compare(controller.closes, before + 1)
+        if (data.tag === "notes") launcher.closeNotes()
+        else if (data.tag === "genie") launcher.closeMode()
+        else launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        tryCompare(launcher, "modeProgress", 0)
+    }
+
     // Notes and Ask have the same corner. Expand fills the screen and the
     // mode stays in Search; Back brings Search back to its size.
     function test_modeExpand_data() {
@@ -2083,8 +2118,10 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         const expand = findChild(launcher, data.tag + "-expand")
         const popOut = findChild(launcher, data.tag + "-pop-out")
-        verify(expand.opacity > 0.99 && popOut.visible)
+        const close = findChild(launcher, data.tag + "-close")
+        verify(expand.opacity > 0.99 && popOut.visible && close.visible)
         verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
+        verify(popOut.mapToItem(sheet, 0, 0).x < close.mapToItem(sheet, 0, 0).x)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         verify(controller.expansionChosen)
@@ -2184,8 +2221,8 @@ TestCase {
         const header = findChild(window, "files-window-header")
         const left = item => item.mapToItem(window, 0, 0).x
         const right = item => item.mapToItem(window, item.width, 0).x
-        verify(right(eye) <= left(field) + 0.5)
-        verify(right(field) <= left(sort) + 0.5)
+        verify(left(eye) >= left(field) && right(eye) <= right(field) - 40)
+        verify(right(sort) <= left(field) + 0.5)
         verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
         verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
         compare(findChild(window, "drawer-back"), null)

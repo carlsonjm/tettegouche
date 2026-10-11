@@ -36,6 +36,7 @@ Item {
     signal back()
     signal expand()
     signal grow()
+    signal dismiss()
     signal finished()
 
     function focusPad() { pad.forceActiveFocus() }
@@ -212,8 +213,8 @@ Item {
             }
         }
 
-        // Expand, and Pop out, which opens the note in the notes
-        // application's own window.
+        // Expand; Pop out, which opens the note in the notes
+        // application's own window; and Close.
         WindowActions {
             id: corner
             prefix: "notes"
@@ -225,6 +226,7 @@ Item {
             popOutName: words.i18n("Open in Notes")
             onExpand: pane.expand()
             onPopOut: pane.grow()
+            onDismiss: pane.dismiss()
         }
     }
 

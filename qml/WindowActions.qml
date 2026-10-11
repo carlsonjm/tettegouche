@@ -8,12 +8,13 @@ import org.kde.ki18n
 import org.kde.kirigami as Kirigami
 
 // The corner Apps, Files, Notes and Ask share at the right of their header:
-// Expand, which grows Search to fill the screen and brings it back, and Pop
-// out, which gives what is open a window of its own. Both are round, 30 in a
-// 42 touch, as the eye is.
+// Expand, which grows Search to fill the screen and brings it back, Pop out,
+// which gives what is open a window of its own, and Close, which puts Search
+// away, last as a window's is. All are round, 30 in a 42 touch, as the eye is.
 Row {
     id: actions
-    // Names each button for tests and tools: "<prefix>-expand", "<prefix>-pop-out".
+    // Names each button for tests and tools: "<prefix>-expand",
+    // "<prefix>-pop-out", "<prefix>-close".
     property string prefix: ""
     property bool expanded: false
     property bool popOutShown: true
@@ -21,6 +22,7 @@ Row {
     property string popOutName: words.i18n("Open in its own window")
     signal expand()
     signal popOut()
+    signal dismiss()
     spacing: 4
 
     KI18nContext {
@@ -39,6 +41,12 @@ Row {
         glyph: "square-arrow-out-up-right"
         name: actions.popOutName
         onActivated: actions.popOut()
+    }
+    Corner {
+        objectName: actions.prefix + "-close"
+        glyph: "x"
+        name: words.i18n("Close Search")
+        onActivated: actions.dismiss()
     }
 
     component Corner: Item {

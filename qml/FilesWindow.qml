@@ -56,7 +56,8 @@ Rectangle {
         }
     }
 
-    // The eye on search's left, the order on its right, the three centred.
+    // The order on search's left and the eye inside it, by its search icon,
+    // search centred.
     Item {
         id: header
         objectName: "files-window-header"
@@ -64,7 +65,7 @@ Rectangle {
         y: 14
         width: window.width - 2 * window.contentInset
         height: 44
-        readonly property real flankWidth: Math.max(eye.width, sort.width) + 4
+        readonly property real flankWidth: sort.width + 4
         readonly property real fieldWidth: Math.max(160,
             Math.min(width - 2 * flankWidth, Math.max(360, width / 2)))
 
@@ -72,7 +73,8 @@ Rectangle {
             id: eye
             objectName: "files-window-hidden"
             readonly property bool showing: !!window.fileBrowser && window.fileBrowser.hidden
-            x: field.x - 4 - width
+            x: field.x + field.width - 9 - clear.width - width
+            z: 1
             anchors.verticalCenter: parent.verticalCenter
             width: 42
             height: 42
@@ -127,7 +129,7 @@ Rectangle {
                 anchors.left: parent.left
                 anchors.leftMargin: 18
                 anchors.right: clear.left
-                anchors.rightMargin: 10
+                anchors.rightMargin: 10 + 42
                 anchors.verticalCenter: parent.verticalCenter
                 color: tone.primaryText
                 selectionColor: tone.selection
@@ -176,7 +178,7 @@ Rectangle {
             id: sort
             objectName: "files-window-sort"
             readonly property bool fixed: !!window.fileBrowser && window.fileBrowser.placeKind === "recent"
-            x: field.x + field.width + 4
+            x: field.x - 4 - width
             anchors.verticalCenter: parent.verticalCenter
             width: Math.max(42, sortLabel.implicitWidth + 46)
             height: 42

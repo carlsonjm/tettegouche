@@ -1026,8 +1026,8 @@ Item {
                     Math.max(360, parent.width * 0.72, firstRow.naturalWidth)) : parent.width
                 readonly property real compactY: idle ? Math.max(0, Math.round(
                     (parent.height - 58 - (firstRow.fits ? firstRow.reach : 0)) / 2)) : 0
-                // An open drawer holds search in its header, between Back and
-                // the sort button; it travels there as the drawer opens.
+                // An open drawer holds search in its header, between the sort
+                // button and the corner; it travels there as the drawer opens.
                 width: compactWidth + (drawerHandle.fieldWidth - compactWidth) * root.drawerProgress
                 height: 58 + (drawerHandle.openHeight - 58) * root.drawerProgress
                 x: (parent.width - width) / 2
@@ -1111,7 +1111,8 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 18
                     anchors.right: trailingAction.left
-                    anchors.rightMargin: 10
+                    // An open drawer's eye sits between the text and the icon.
+                    anchors.rightMargin: 10 + 42 * root.drawerProgress
                     anchors.verticalCenter: parent.verticalCenter
                     color: root.primaryText
                     selectionColor: tone.selection
@@ -1679,9 +1680,9 @@ Item {
                 readonly property real sectionGap: 16
                 readonly property real openHeight: 44
                 // Search, in the open header, keeps to the middle: centred,
-                // with the eye on its left and the sort button on its right,
-                // and the three as clear of Back as of the corner.
-                readonly property real flankWidth: Math.max(hiddenButton.width, sortButton.width) + 4
+                // with the eye inside it beside the search icon and the sort
+                // button on its left, as clear of Back as of the corner.
+                readonly property real flankWidth: sortButton.width + 4
                 readonly property real fieldSide: Math.max(backButton.x + backButton.width,
                     width - drawerCorner.x) + 12 + flankWidth
                 readonly property real fieldWidth: Math.max(160,
@@ -1756,7 +1757,8 @@ Item {
                 }
 
                 // The eye shows what is hidden: hidden applications in Browse
-                // everything, hidden files in Files. Again, it hides them.
+                // everything, hidden files in Files. Again, it hides them. It
+                // sits inside search, just left of its search icon.
                 Item {
                     id: hiddenButton
                     objectName: "hidden-button"
@@ -1770,7 +1772,7 @@ Item {
                             root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
                         }
                     }
-                    x: drawerHandle.fieldLeft - 4 - width
+                    x: drawerHandle.fieldLeft + drawerHandle.fieldWidth - 9 - trailingAction.width - width
                     anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
@@ -1814,7 +1816,7 @@ Item {
                     objectName: "sort-button"
                     Accessible.role: Accessible.ButtonMenu
                     Accessible.name: root.filesMode ? words.i18n("Sort: %1", sortLabel.text) : words.i18n("Sort")
-                    x: drawerHandle.fieldLeft + drawerHandle.fieldWidth + 4
+                    x: drawerHandle.fieldLeft - 4 - width
                     anchors.verticalCenter: parent.verticalCenter
                     // In Files the order is a grey pill naming it, as the
                     // suite's header controls are.
@@ -1904,6 +1906,7 @@ Item {
                     popOutName: words.i18n("Open Files in its own window")
                     onExpand: root.toggleExpanded()
                     onPopOut: root.popOutFiles()
+                    onDismiss: root.launcherController.close()
                 }
 
                 // The open drawer's header pulled down closes it.
@@ -1961,6 +1964,7 @@ Item {
                 primaryText: root.primaryText
                 onBack: root.closeNotes()
                 onExpand: root.toggleExpanded()
+                onDismiss: root.launcherController.close()
                 onGrow: root.growNotes()
                 onFinished: root.launcherController.close()
             }
@@ -1982,6 +1986,7 @@ Item {
                 primaryText: root.primaryText
                 onBack: root.closeMode()
                 onExpand: root.toggleExpanded()
+                onDismiss: root.launcherController.close()
                 onGrow: root.growMode()
             }
 
@@ -2382,7 +2387,8 @@ Item {
             Rectangle {
                 id: sortMenu
                 objectName: "sort-menu"
-                anchors.right: parent.right
+                // Under the sort button, on search's left.
+                x: Math.max(0, Math.min(parent.width - width, drawerHandle.x + sortButton.x))
                 y: drawerHandle.y + drawerHandle.height + 4
                 width: 160
                 height: sortChoices.implicitHeight + 12
