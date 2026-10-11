@@ -9,6 +9,9 @@ provenance.
   stroke: the doors line up beside the dot, the one under the finger or
   pointer is chosen, and letting go opens Search on it. Holding the dot
   brings the doors too; letting go back on the dot opens nothing.
+- Apps has a launcher of its own, with its own icon: the Apps pill's four
+  squares on a tile. It opens Search with Apps already open, and pins to a
+  dock like any application, as Files, Notes and Genie do.
 - An application's sheet in Apps offers Edit Application…, as Plasma's own
   launchers do. It opens the application in KDE's menu editor, where its
   icon, name or command can be changed for this person; Apps shows the change
