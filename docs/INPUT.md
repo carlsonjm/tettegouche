@@ -21,14 +21,15 @@ than repeat it.
 | Tap or click Back, or `Esc`, in Notes | Returns to Search; Notes resumes the same note. |
 | Tap or click a colour, in Notes | Sets the note's colour. |
 | Tap or click Folder or Stuck to, in Notes | Opens its choices under it: the folders and a field for a new one, or the windows and Don't stick to a window. A choice, or Enter in the field, sets it and returns to the pad; `Esc` closes the choices. With an older Gooseberry, Belongs to is there instead, and a place under it sets what the note belongs to. |
-| Tap or click All notes, in Notes | Search grows and Gooseberry's board takes its place. |
+| Tap or click Expand, at the header's right, in Notes or Genie | Search fills the screen and the mode stays in it; again, Search returns to its size. Back returns to Search at its size. |
+| Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click Ask, after Notes | Genie opens: the field travels into the header for the question, in the same window. Ask is there only while Split Rock answers. |
 | Type, then Enter, or tap a suggestion, in Genie | Asks Genie; the answer arrives below. |
 | Tap or click Keep this or That fixed it, in Genie | Files the answer in Genie's notebook, or records that it fixed the problem. |
 | Tap or click Remember or Not now, in Genie | Genie writes down what it offered to remember about you, or leaves it. |
 | Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
-| Tap or click Expand, in Genie | Search grows and Genie's own window takes its place. |
+| Tap or click Pop out, beside Expand, in Genie | Search grows and Genie's own window takes its place. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tab, with nothing typed | Moves between Apps, Files, Notes, Ask and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
@@ -91,8 +92,9 @@ than repeat it.
 | Drag a folder out of Apps, or touch and hold it, then move | Carries its applications out of Search. Let go on Shuffle's dock and they are pinned there as one folder of the same name; anywhere else takes them as applications. |
 | Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; Edit Application…, where KDE's menu editor is installed, which opens the application's entry there to change its name, icon or command for this person; and Uninstall…, where the software centre lists it, which opens it there. |
 | Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
-| Tap or click the sort button | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
-| Tap or click the eye beside the sort button | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
+| Tap or click the sort button, on the search field's right | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
+| Tap or click the eye, on the search field's left | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
+| Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps opens filling the tablet's screen, and at Search's size on a monitor. |
 | Tap or click Back, at the header's left | Leaves an open folder for Apps; otherwise returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, then an open folder, otherwise the drawer. |
@@ -121,8 +123,12 @@ than repeat it.
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
-| Tap or click the sort button | Offers name A–Z, name Z–A, newest first and largest first. |
-| Tap or click the eye beside the sort button | Shows hidden files, dimmed; again, hides them. |
+| Tap or click the sort button, on the search field's right | Offers name A–Z, name Z–A, newest first and largest first. |
+| Tap or click the eye, on the search field's left | Shows hidden files, dimmed; again, hides them. |
+| Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
+| Tap or click Pop out, beside Expand | Files moves into a window of its own, with its tabs, folder and selection as they were, and Search closes. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
+| With Files in its own window: Files in Search, `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window forward and shows what was asked there; Search does not open Files. Closing the window returns Files to Search. |
+| In Files' own window | The header keeps the eye, search and the sort button; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |

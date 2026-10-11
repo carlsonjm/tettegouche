@@ -28,6 +28,8 @@
     "action-grow": "maximize-2",
     "action-show-hidden": "eye",
     "action-keep-hidden": "eye-off",
-    "drawer-back": "chevron-left"
+    "drawer-back": "chevron-left",
+    "action-shrink": "minimize-2",
+    "action-pop-out": "square-arrow-out-up-right"
   }
 }

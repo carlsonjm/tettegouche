@@ -5,6 +5,15 @@ provenance.
 
 ## Unreleased
 
+- Apps, Files, Notes and Ask share one header. Back stays on the left; the
+  eye and the sort button sit either side of the search field; and the right
+  corner holds Expand, which fills the screen and brings Search back to its
+  size, and Pop out, which gives what is open a window of its own. Notes and
+  Ask pop out into their applications' windows, as All notes and Expand did.
+- Files pops out into a window of its own, with its tabs and folder as they
+  were. Inside Spread it takes Search's card; after that it is an ordinary
+  window. While it is open, Files in Search, Meta+E and folders from other
+  applications bring it forward.
 - Press the dot and slide right to reach Apps, Files, Notes or Ask in one
   stroke: the doors line up beside the dot, the one under the finger or
   pointer is chosen, and letting go opens Search on it. Holding the dot

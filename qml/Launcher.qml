@@ -43,6 +43,13 @@ Item {
     property bool modeGrowing: false
     property bool modeHandoff: false
     property string modeToken: ""
+    // Whether Search filled the screen before a mode grew into its
+    // application's window, to come back to if that window never shows.
+    property bool modeExpandedBefore: false
+    // Files' own window, which Pop out opens: offered where the launcher
+    // can open it, and awaited in Spread as a launch is.
+    readonly property bool filesWindowOffered: !!root.fileBrowser && !!root.launcherController.filesWindowOffered
+    property bool filesHandoff: false
     readonly property bool notesOpen: modeOpen && modeShown === "notes"
     readonly property real notesProgress: modeShown === "notes" ? modeProgress : 0
     readonly property bool notesGrowing: modeGrowing && modeShown === "notes"
@@ -354,6 +361,12 @@ Item {
     }
 
     function setDrawerOpen(open, mode) {
+        // With Files in its own window, Files is that window.
+        if (open && mode === "files" && root.launcherController.filesWindowOpen) {
+            root.launcherController.showFilesWindow()
+            root.launcherController.close()
+            return
+        }
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
         root.drawerOpen = open
@@ -519,6 +532,27 @@ Item {
         return false
     }
 
+    // Expand, in the corner of each drawer and mode: Search fills the screen,
+    // and again comes back to its size.
+    function toggleExpanded() {
+        root.launcherController.setDrawerExpanded(!root.launcherController.drawerExpanded, true)
+    }
+    // Pop out, in Files: Files moves into a window of its own with its tabs
+    // and folder as they are, and Search closes. In Spread the window takes
+    // Search's card, as an application started from Search does.
+    function popOutFiles() {
+        if (!root.drawerOpen || !root.filesMode || root.filesHandoff || !root.filesWindowOffered) return
+        root.filesHandoff = root.launcherController.guestMode
+            && root.launcherController.beginGuestFilesLaunch()
+        if (!root.launcherController.showFilesWindow()) {
+            if (root.filesHandoff) root.launcherController.cancelGuestApplicationLaunch()
+            root.filesHandoff = false
+            return
+        }
+        if (root.filesHandoff) filesHandoffTimeout.restart()
+        else root.launcherController.close()
+    }
+
     // A mode opens in Search's window with the drawer's motion and the
     // window keeps its size: Notes turns the field into the note pad, Genie
     // carries it into the header with the question.
@@ -594,18 +628,20 @@ Item {
         if (!root.modeOpen || root.modeGrowing) return
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
+        // Search goes back to the size it had before Expand.
+        if (root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
         root.forceActiveFocus()
     }
     function closeNotes() { root.closeMode() }
-    // All notes and Expand grow the window as Apps does, and the
-    // application's own window takes its place: in Spread through Kadunce's
-    // launch, over an Active card once it has drawn, since Kadunce puts it in
-    // the card's place.
+    // Pop out grows the window as Apps does, and the application's own window
+    // takes its place: in Spread through Kadunce's launch, over an Active card
+    // once it has drawn, since Kadunce puts it in the card's place.
     function growMode() {
         if (!root.modeOpen || root.modeGrowing) return
         const notes = root.modeShown === "notes"
+        root.modeExpandedBefore = root.launcherController.drawerExpanded
         root.modeGrowing = true
         root.modeToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
         root.launcherController.setDrawerExpanded(true)
@@ -627,7 +663,7 @@ Item {
         root.modeHandoff = false
         root.modeGrowing = false
         root.modeToken = ""
-        root.launcherController.setDrawerExpanded(false)
+        root.launcherController.setDrawerExpanded(root.modeExpandedBefore, true)
     }
     function modeWindowShown(requestToken) {
         if (!root.modeGrowing || root.modeHandoff || requestToken !== root.modeToken) return
@@ -798,6 +834,8 @@ Item {
             root.modeGrowing = false
             root.modeHandoff = false
             root.modeToken = ""
+            filesHandoffTimeout.stop()
+            root.filesHandoff = false
             if (root.quickNote) root.quickNote.refresh()
             if (root.genie) root.genie.refresh()
             root.forceActiveFocus()
@@ -824,6 +862,13 @@ Item {
             else root.setDrawerOpen(true, files ? "files" : "apps")
         }
         function onGuestLaunchReady() {
+            if (root.filesHandoff) {
+                filesHandoffTimeout.stop()
+                root.filesHandoff = false
+                root.guestExiting = true
+                launchReadyExit.restart()
+                return
+            }
             if (root.modeHandoff) {
                 modeTimeout.stop()
                 root.modeHandoff = false
@@ -1634,11 +1679,14 @@ Item {
                 readonly property real sectionGap: 16
                 readonly property real openHeight: 44
                 // Search, in the open header, keeps to the middle: centred,
-                // and as clear of Back as of the sort button.
+                // with the eye on its left and the sort button on its right,
+                // and the three as clear of Back as of the corner.
+                readonly property real flankWidth: Math.max(hiddenButton.width, sortButton.width) + 4
                 readonly property real fieldSide: Math.max(backButton.x + backButton.width,
-                    width - hiddenButton.x) + 12
+                    width - drawerCorner.x) + 12 + flankWidth
                 readonly property real fieldWidth: Math.max(160,
                     Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
+                readonly property real fieldLeft: (width - fieldWidth) / 2
                 readonly property real restingY: parent.height + root.contentInset - 48
                 readonly property real revealDistance: Math.max(1,
                     restingY)
@@ -1722,9 +1770,8 @@ Item {
                             root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
                         }
                     }
-                    anchors.right: sortButton.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: sortButton.verticalCenter
+                    x: drawerHandle.fieldLeft - 4 - width
+                    anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
                     opacity: sortButton.opacity
@@ -1767,8 +1814,7 @@ Item {
                     objectName: "sort-button"
                     Accessible.role: Accessible.ButtonMenu
                     Accessible.name: root.filesMode ? words.i18n("Sort: %1", sortLabel.text) : words.i18n("Sort")
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
+                    x: drawerHandle.fieldLeft + drawerHandle.fieldWidth + 4
                     anchors.verticalCenter: parent.verticalCenter
                     // In Files the order is a grey pill naming it, as the
                     // suite's header controls are.
@@ -1843,6 +1889,23 @@ Item {
                     }
                 }
 
+                // Expand and, in Files, Pop out, in the corner every drawer
+                // and mode shares.
+                WindowActions {
+                    id: drawerCorner
+                    prefix: "drawer"
+                    anchors.right: parent.right
+                    anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    opacity: sortButton.opacity
+                    enabled: sortButton.enabled
+                    expanded: root.launcherController.drawerExpanded
+                    popOutShown: root.filesMode && root.filesWindowOffered
+                    popOutName: words.i18n("Open Files in its own window")
+                    onExpand: root.toggleExpanded()
+                    onPopOut: root.popOutFiles()
+                }
+
                 // The open drawer's header pulled down closes it.
                 DragHandler {
                     id: drawerDrag
@@ -1891,11 +1954,13 @@ Item {
                 progress: root.notesProgress
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
                 growing: root.modeGrowing
+                expanded: root.launcherController.drawerExpanded
                 surfaceColor: root.surfaceColor
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
                 primaryText: root.primaryText
                 onBack: root.closeNotes()
+                onExpand: root.toggleExpanded()
                 onGrow: root.growNotes()
                 onFinished: root.launcherController.close()
             }
@@ -1909,12 +1974,14 @@ Item {
                 progress: root.genieProgress
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
                 growing: root.modeGrowing
+                expanded: root.launcherController.drawerExpanded
                 keysUp: root.keysUp
                 surfaceColor: root.surfaceColor
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
                 primaryText: root.primaryText
                 onBack: root.closeMode()
+                onExpand: root.toggleExpanded()
                 onGrow: root.growMode()
             }
 
@@ -2467,6 +2534,18 @@ Item {
         interval: 10000
         repeat: false
         onTriggered: root.stopGrowingMode()
+    }
+
+    // Files' window is already open; Search leaves if Kadunce does not take
+    // it as Search's card.
+    Timer {
+        id: filesHandoffTimeout
+        interval: 3000
+        onTriggered: {
+            root.filesHandoff = false
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.launcherController.close()
+        }
     }
 
     // Over an Active card the application's window has taken the card's

@@ -24,7 +24,10 @@ with a centered sheet; while files are carried out of Files, input narrows to
 the sheet so the drop can land on a window beside it. Kadunce guest mode keeps
 the layer-shell surface but masks input to Kadunce's negotiated guest geometry.
 Neither mode reserves workspace. Dismissal normally ends the process; an outstanding asynchronous file
-operation may keep its event loop alive after the surface hides.
+operation may keep its event loop alive after the surface hides, and Files' own
+window keeps it until the window closes. That window is an ordinary one beside
+the layer-shell surface, sharing its QML engine and `FileBrowser`
+([FILES-CONTRACT.md](FILES-CONTRACT.md) § Files' own window).
 
 The on-screen keys lie over the launcher and reserve no space. The launcher
 reads where they lie from the compositor's report to the focused window, which
@@ -87,8 +90,10 @@ and may hold the guest until Kadunce sees a matching window; a bounded timeout
 returns to search. Horizontal guest drag sends only motion deltas, leaving
 commit/cancel and real-card selection to Kadunce. Expanded Apps and Files
 drawers request the negotiated presentation capability and otherwise use
-standalone expansion. The expanded drawer has one accepted treatment, fitted to
-the tablet's Active card; there is no separate expanded layout for a monitor.
+standalone expansion. The expanded drawer has one treatment, fitted to the
+tablet's Active card or the screen. A drawer opens expanded on the tablet's own
+screen and at Search's size on a monitor; Expand, in the corner every drawer and
+mode shares, changes either, and Notes and Genie expand the same way.
 
 ## Search and catalogue
 

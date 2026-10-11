@@ -142,12 +142,28 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
   holds the item, because Trash changed elsewhere, the record is dropped so the
   one behind it can be restored.
 
+## Files' own window
+
+- Pop out moves Files out of Search into an ordinary window in the same
+  process, on the same `FileBrowser`, so tabs, folder, selection, clipboard and
+  running jobs carry over untouched. It opens at the size Search has as a card
+  inside Kadunce's Spread, or at Search's own size elsewhere, and is resized
+  and moved as any window is.
+- The window's application identity is `io.github.carlsonjm.Tettegouche.Files`,
+  Files' own entry, so the dock and Plasma's window list name it Files, and
+  Kadunce takes it as a card rather than as the launcher's surface. Inside
+  Spread it is awaited as a launch from Search is and takes Search's card.
+- While the window is open, every way to Files reaches it instead of Search:
+  Files in Search, `Meta+E`, a folder or file another application asks to
+  show, a drive, and a question a copy asks. Search itself opens as usual.
+  Closing the window returns Files to Search.
+
 ## Lifecycle and activity
 
 - Closing or handing off hides the launcher and releases its Kadunce guest
-  immediately. An outstanding job defers process exit until it finishes. A
-  job that meets a name already taken while the launcher is closed reopens it
-  on Files to ask.
+  immediately. An outstanding job defers process exit until it finishes, as
+  Files' open window does until it closes. A job that meets a name already
+  taken while the launcher is closed reopens it on Files to ask.
 - Reopening cancels deferred quit and restores current operation status. Late
   errors remain available to the reopened process.
 - The launcher exports a revisioned snapshot of its copies and moves, and

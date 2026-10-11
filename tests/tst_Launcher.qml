@@ -27,7 +27,12 @@ TestCase {
         controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
+        controller.expansionChosen = false
         controller.guestMode = false
+        controller.filesWindowOpen = false
+        controller.filesWindowShows = true
+        controller.filesWindows = 0
+        controller.filesLaunches = 0
         controller.opened()
         wait(300)
     }
@@ -35,7 +40,15 @@ TestCase {
         id: controller
         property bool guestMode: false
         property bool drawerExpanded: false
-        function setDrawerExpanded(expanded) { drawerExpanded = expanded }
+        property bool expansionChosen: false
+        function setDrawerExpanded(expanded, chosen) { drawerExpanded = expanded; expansionChosen = !!chosen }
+        readonly property bool filesWindowOffered: true
+        property bool filesWindowOpen: false
+        property bool filesWindowShows: true
+        property int filesWindows: 0
+        function showFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
+        property int filesLaunches: 0
+        function beginGuestFilesLaunch() { filesLaunches++; return guestMode }
         property rect availableArea: Qt.rect(0, 0, 1000, 740)
         property bool contextAvailable: false
         property real guestX: 140
@@ -1985,9 +1998,9 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // The eye beside the sort button shows what is hidden, in either drawer:
-    // hidden files in Files, hidden applications in Apps; again,
-    // it hides them. It keeps clear of the search field.
+    // The eye on search's left shows what is hidden, in either drawer:
+    // hidden files in Files, hidden applications in Apps; again, it hides
+    // them. The sort button sits on search's right.
     function test_hiddenEye() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -1999,8 +2012,8 @@ TestCase {
         const sort = findChild(launcher, "sort-button")
         const field = findChild(launcher, "search-query")
         verify(eye.visible && eye.enabled)
-        verify(eye.mapToItem(null, eye.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
-        verify(field.mapToItem(null, field.width, 0).x <= eye.mapToItem(null, 0, 0).x + 0.5)
+        verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, 0, 0).x + 0.5)
+        verify(field.mapToItem(null, field.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
         verify(!eye.showing)
         mouseClick(eye, eye.width / 2, eye.height / 2)
         compare(filesMock.hidden, true)
@@ -2022,6 +2035,171 @@ TestCase {
         verify(!catalog.showHidden)
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Each drawer's header ends in the corner every drawer and mode shares:
+    // Expand in both, Pop out in Files only. Expand brings Search back to its
+    // size and again fills the screen; Back leaves it at Search's size.
+    function test_drawerCorner_data() {
+        return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
+    }
+    function test_drawerCorner(data) {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        launcher.setDrawerOpen(true, data.mode)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const header = findChild(launcher, "drawer-header")
+        const expand = findChild(launcher, "drawer-expand")
+        const popOut = findChild(launcher, "drawer-pop-out")
+        const sort = findChild(launcher, "sort-button")
+        const left = item => item.mapToItem(header, 0, 0).x
+        const right = item => item.mapToItem(header, item.width, 0).x
+        verify(expand.visible)
+        compare(popOut.visible, data.mode === "files")
+        verify(right(sort) < left(expand))
+        verify(Math.abs(right(data.mode === "files" ? popOut : expand) - (header.width - 14)) < 1)
+        compare(controller.drawerExpanded, true)
+        compare(expand.Accessible.name, "Make smaller")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, false)
+        compare(expand.Accessible.name, "Expand")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        compare(controller.drawerExpanded, false)
+    }
+
+    // Notes and Ask have the same corner. Expand fills the screen and the
+    // mode stays in Search; Back brings Search back to its size.
+    function test_modeExpand_data() {
+        return [{ tag: "notes" }, { tag: "genie" }]
+    }
+    function test_modeExpand(data) {
+        if (data.tag === "notes") openNotesMode()
+        else openGenieMode()
+        const sheet = findChild(launcher, "launcher-sheet")
+        const expand = findChild(launcher, data.tag + "-expand")
+        const popOut = findChild(launcher, data.tag + "-pop-out")
+        verify(expand.opacity > 0.99 && popOut.visible)
+        verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
+        tryCompare(sheet, "width", 980)
+        verify(data.tag === "notes" ? launcher.notesOpen : launcher.genieOpen)
+        compare(quickStub.boards.length, 0)
+        compare(genieStub.windows.length, 0)
+        compare(controller.closes, 0)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, false)
+        tryCompare(sheet, "width", 640)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        tryCompare(sheet, "width", 980)
+        const back = findChild(launcher, data.tag + "-back")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "modeProgress", 0)
+        compare(controller.drawerExpanded, false)
+        tryCompare(sheet, "width", 640)
+    }
+
+    // Pop out moves Files into a window of its own and Search closes; in
+    // Spread the window is awaited as Search's card, as a launch is. With
+    // the window open, Files in Search brings the window forward instead.
+    function openFilesDrawer() {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        return findChild(launcher, "drawer-pop-out")
+    }
+    function test_filesPopOut() {
+        controller.closes = 0
+        let popOut = openFilesDrawer()
+        verify(popOut.visible)
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        compare(controller.filesWindows, 1)
+        compare(controller.filesLaunches, 0)
+        compare(controller.closes, 1)
+        verify(controller.filesWindowOpen)
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const files = findChild(launcher, "files-pill")
+        mouseClick(files, files.width / 2, files.height / 2)
+        compare(controller.filesWindows, 2)
+        compare(controller.closes, 2)
+        verify(!launcher.drawerOpen)
+        controller.filesWindowOpen = false
+
+        controller.guestMode = true
+        controller.handoffs = 0
+        popOut = openFilesDrawer()
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        compare(controller.filesLaunches, 1)
+        compare(controller.filesWindows, 3)
+        verify(launcher.filesHandoff)
+        compare(controller.closes, 2)
+        controller.guestLaunchReady()
+        tryCompare(controller, "handoffs", 1)
+        verify(!launcher.filesHandoff)
+        controller.guestMode = false
+        controller.filesWindowOpen = false
+
+        // A window that cannot open leaves Files where it is.
+        controller.filesWindowShows = false
+        popOut = openFilesDrawer()
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        verify(launcher.drawerOpen)
+        compare(controller.closes, 2)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Files' own window has Files' header, less Back and the corner: the eye
+    // on search's left, the order on its right, and Files under them. What
+    // is typed narrows the folder.
+    Component {
+        id: filesWindowComponent
+        App.FilesWindow {
+            width: 900
+            height: 640
+            launcherController: controller
+        }
+    }
+    function test_filesWindow() {
+        filesMock.filter = ""
+        filesMock.hidden = false
+        filesMock.placeKind = "folder"
+        const window = createTemporaryObject(filesWindowComponent, test, {fileBrowser: filesMock})
+        verify(window)
+        const eye = findChild(window, "files-window-hidden")
+        const field = findChild(window, "files-window-search")
+        const sort = findChild(window, "files-window-sort")
+        const pane = findChild(window, "files-window-pane")
+        const header = findChild(window, "files-window-header")
+        const left = item => item.mapToItem(window, 0, 0).x
+        const right = item => item.mapToItem(window, item.width, 0).x
+        verify(right(eye) <= left(field) + 0.5)
+        verify(right(field) <= left(sort) + 0.5)
+        verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
+        verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
+        compare(findChild(window, "drawer-back"), null)
+        compare(findChild(window, "drawer-pop-out"), null)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, true)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, false)
+        window.forceActiveFocus()
+        keyClick("r")
+        keyClick("e")
+        compare(filesMock.filter, "re")
+        keyClick(Qt.Key_Escape)
+        compare(filesMock.filter, "")
     }
 
     function test_filesMenusAndEmptyTrash() {
@@ -2400,7 +2578,7 @@ TestCase {
         verify(field.opacity < 0.01)
         verify(findChild(launcher, "first-row").opacity < 0.01)
         const back = findChild(launcher, "notes-back")
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         verify(back.opacity > 0.99 && grow.opacity > 0.99)
         verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
         verify(back.mapToItem(sheet, 0, 0).x < sheet.width / 2)
@@ -2525,11 +2703,11 @@ TestCase {
         compare(quickStub.belongs, "window")
         compare(quickStub.folderSets, [])
     }
-    // Over an Active card, All notes grows the window as Apps does, opens the
+    // Over an Active card, Pop out grows the window as Apps does, opens the
     // board, and fades once the board has drawn in the card's place.
     function test_notesGrowOverActive() {
         openNotesMode()
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(launcher.notesGrowing)
         compare(controller.drawerExpanded, true)
@@ -2542,13 +2720,13 @@ TestCase {
         quickStub.boardShown(quickStub.boards[0])
         tryCompare(controller, "closes", 1)
     }
-    // In Spread, All notes grows the guest, Kadunce awaits the board's window,
+    // In Spread, Pop out grows the guest, Kadunce awaits the board's window,
     // and Search leaves as it does for any launch.
     function test_notesGrowInSpread() {
         controller.guestMode = true
         controller.handoffs = 0
         openNotesMode()
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.notesLaunches, 1)
@@ -2564,7 +2742,7 @@ TestCase {
     function test_notesGrowRefused() {
         openNotesMode()
         quickStub.boardOpens = false
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(!launcher.notesGrowing)
         compare(controller.drawerExpanded, false)
@@ -2631,7 +2809,7 @@ TestCase {
         const question = findChild(launcher, "genie-question")
         verify(question.activeFocus)
         const back = findChild(launcher, "genie-back")
-        const expand = findChild(launcher, "genie-expand")
+        const expand = findChild(launcher, "genie-pop-out")
         const body = findChild(launcher, "genie-answer")
         const fieldTop = question.mapToItem(sheet, 0, 0).y
         verify(Math.abs(fieldTop - back.mapToItem(sheet, 0, back.height / 2).y) < question.height)
@@ -2671,11 +2849,11 @@ TestCase {
         compare(genieStub.acts, ["keep"])
         tryCompare(keep, "label", "Kept")
     }
-    // Expand grows the window and Genie's own window takes its place, over
+    // Pop out grows the window and Genie's own window takes its place, over
     // an Active card once it has drawn, and in Spread through Kadunce.
-    function test_genieExpands() {
+    function test_geniePopsOut() {
         openGenieMode()
-        const expand = findChild(launcher, "genie-expand")
+        const expand = findChild(launcher, "genie-pop-out")
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.genieLaunches, 0)
