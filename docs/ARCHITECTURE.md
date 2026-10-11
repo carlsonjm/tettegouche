@@ -91,9 +91,9 @@ returns to search. Horizontal guest drag sends only motion deltas, leaving
 commit/cancel and real-card selection to Kadunce. Expanded Apps and Files
 drawers request the negotiated presentation capability and otherwise use
 standalone expansion. The expanded drawer has one treatment, fitted to the
-tablet's Active card or the screen. A drawer opens expanded on the tablet's own
-screen and at Search's size on a monitor; Expand, in the corner every drawer and
-mode shares, changes either, and Notes and Genie expand the same way.
+tablet's Active card or the screen. Every drawer and mode opens at Search's size,
+a card in Spread; Expand, in the corner they all share, fills the screen and
+brings it back, and moving between Apps and Files keeps the size chosen.
 
 ## Search and catalogue
 

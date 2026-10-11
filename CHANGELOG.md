@@ -7,13 +7,14 @@ provenance.
 
 - Apps, Files, Notes and Ask share one header. Back stays on the left; the
   eye sits inside the search field by its search icon, and the sort button
-  moves below: beside New folder in Files, at the right of a row over the
-  applications in Apps; and the right corner holds Expand, which fills the screen and
+  moves below, after New folder, in Files and in Apps alike; and the right corner holds Expand, which fills the screen and
   brings Search back to its size, Pop out, which gives what is open a window
   of its own, and Close, which puts Search away. Notes and Ask pop out into
   their applications' windows, as All notes and Expand did.
 - Apps has New folder beside its order, as Files does: tap the applications
   for it, then Make folder, and the folder opens with its name ready.
+- Apps, Files, Notes and Ask all open at Search's size, a card in Spread;
+  Expand fills the screen.
 - At Search's size, as in Spread, Files folds its places to a rail of icons
   and shows its tiles one size smaller; a narrow Files window does the same.
 - Files pops out into a window of its own, with its tabs and folder as they

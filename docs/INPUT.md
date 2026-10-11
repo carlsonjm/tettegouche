@@ -96,7 +96,7 @@ than repeat it.
 | Tap or click the sort button, a pill naming the order at the right of the row above the applications | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
 | Tap or click New folder, beside the sort button | Asks for applications: a tap or Enter chooses one, or lets it go. Make folder, once two are chosen, gathers them into a new folder, which opens with its name ready to change. Cancel, Back or Esc leaves Apps as it was. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
-| Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps opens filling the tablet's screen, and at Search's size on a monitor. |
+| Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps, like every drawer and mode, opens at Search's size, a card in Spread; moving between Apps and Files keeps the size chosen. |
 | Tap or click Back, at the header's left | Leaves an open folder for Apps; otherwise returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, then an open folder, otherwise the drawer. |
@@ -125,13 +125,13 @@ than repeat it.
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
-| Tap or click the sort button, a pill naming the order beside New folder | Offers name A–Z, name Z–A, newest first and largest first. |
+| Tap or click the sort button, a pill naming the order after New folder, with Paste at the row's end when something waits to be pasted | Offers name A–Z, name Z–A, newest first and largest first. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
 | Tap or click Pop out, beside Expand | Files moves into a window of its own, with its tabs, folder and selection as they were, and Search closes. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With Files in its own window: Files in Search, `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window forward and shows what was asked there; Search does not open Files. Closing the window returns Files to Search. |
-| In Files' own window | The header keeps search with its eye, and the sort button stays beside New folder; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |
+| In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |

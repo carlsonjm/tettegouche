@@ -369,8 +369,11 @@ Item {
         }
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
+        // Every drawer opens at Search's own size, a card in Spread; Expand
+        // fills the screen. Moving between drawers keeps the size chosen.
+        const wasOpen = root.drawerOpen
         root.drawerOpen = open
-        root.launcherController.setDrawerExpanded(open)
+        if (!open || !wasOpen) root.launcherController.setDrawerExpanded(false)
         if (!open) {
             root.sortMenuOpen = false
             root.applicationCatalog.openFolder = ""

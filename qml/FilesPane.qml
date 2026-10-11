@@ -761,7 +761,8 @@ Item {
                             }
                         }
                     }
-                    // The order, a grey pill naming it, beside New folder; Recent
+                    PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
+                    // The order, a grey pill naming it, after New folder; Recent
                     // keeps the order of use.
                     Item {
                         id: sortPill
@@ -810,8 +811,6 @@ Item {
                             onClicked: sortMenu.openUnder(sortPill)
                         }
                     }
-                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
-                    PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
                     // With files chosen, their own menu; otherwise the folder's.
                     PillAction {
                         id: moreActions
@@ -825,6 +824,8 @@ Item {
                             pane.showActionsUnder(first, entry ? entry.directory : false, moreActions)
                         }
                     }
+                    // Paste only while something waits on the clipboard, last in the row.
+                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
                 }
             }
             Repeater {

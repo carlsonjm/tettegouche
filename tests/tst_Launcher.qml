@@ -848,6 +848,9 @@ TestCase {
     function test_expandedDrawerReturnsCompact() {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
+        // A drawer opens at Search's size; Expand fills the screen.
+        compare(controller.drawerExpanded, false)
+        controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "width", 980)
         tryCompare(sheet, "height", 710)
         compare(controller.drawerExpanded, true)
@@ -876,6 +879,7 @@ TestCase {
         const original=controller.availableArea
         controller.availableArea=Qt.rect(0,0,launcher.width,launcher.height)
         launcher.setDrawerOpen(true,"files")
+        controller.setDrawerExpanded(true,true)
         const sheet=findChild(launcher,"launcher-sheet")
         tryCompare(sheet,"height",launcher.height-20)
         compare(sheet.y,10)
@@ -1289,7 +1293,7 @@ TestCase {
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
         verify(launcher.filesMode)
-        compare(controller.drawerExpanded,true)
+        compare(controller.drawerExpanded,false)
         const pane=findChild(launcher,"files-pane")
         verify(pane.visible)
         verify(!findChild(launcher,"application-grid").visible)
@@ -1620,18 +1624,19 @@ TestCase {
         filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home",section:"places"}]
         const pane=findChild(launcher,"files-pane")
         const places=findChild(launcher,"files-places")
-        compare(controller.drawerExpanded,true)
-        verify(!pane.card)
-        tryCompare(places,"width",170)
-        compare(pane.tile.cell,184)
-        controller.drawerExpanded=false
+        // Files opens as a card, the places a rail.
+        compare(controller.drawerExpanded,false)
         verify(pane.card)
         tryCompare(places,"width",54)
         compare(pane.tile.cell,140)
-        compare(filesMock.tileSize,2)
         controller.drawerExpanded=true
+        verify(!pane.card)
         tryCompare(places,"width",170)
         compare(pane.tile.cell,184)
+        compare(filesMock.tileSize,2)
+        controller.drawerExpanded=false
+        tryCompare(places,"width",54)
+        compare(pane.tile.cell,140)
         filesMock.tileSize=1
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
@@ -2074,7 +2079,7 @@ TestCase {
         const newFolder = findChild(launcher, "new-folder")
         verify(Math.abs(sort.mapToItem(null, 0, sort.height / 2).y
             - newFolder.mapToItem(null, 0, newFolder.height / 2).y) < 1)
-        verify(sort.mapToItem(null, sort.width, 0).x <= newFolder.mapToItem(null, 0, 0).x + 0.5)
+        verify(newFolder.mapToItem(null, newFolder.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
         mouseClick(sort, sort.width / 2, sort.height / 2)
         tryCompare(menu, "opened", true)
         const sheet = menu.parent
@@ -2126,8 +2131,8 @@ TestCase {
     }
 
     // Each drawer's header ends in the corner every drawer and mode shares:
-    // Expand and Close in both, Pop out in Files only, Close last. Expand brings Search back to its
-    // size and again fills the screen; Back leaves it at Search's size.
+    // Expand and Close in both, Pop out in Files only, Close last. A drawer
+    // opens at Search's size; Expand fills the screen and brings it back.
     function test_drawerCorner_data() {
         return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
     }
@@ -2150,14 +2155,21 @@ TestCase {
         verify(right(expand) <= left(data.mode === "files" ? popOut : close) + 0.5)
         verify(Math.abs(right(close) - (header.width - 14)) < 1)
         compare(close.Accessible.name, "Close Search")
-        compare(controller.drawerExpanded, true)
-        compare(expand.Accessible.name, "Make smaller")
-        mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, false)
         compare(expand.Accessible.name, "Expand")
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         verify(controller.expansionChosen)
+        compare(expand.Accessible.name, "Make smaller")
+        // Moving to the other drawer keeps the size chosen.
+        launcher.setDrawerOpen(true, data.mode === "files" ? "apps" : "files")
+        compare(controller.drawerExpanded, true)
+        launcher.setDrawerOpen(true, data.mode)
+        compare(launcher.filesMode, data.mode === "files")
+        wait(50)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, false)
+        compare(expand.Accessible.name, "Expand")
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
         compare(controller.drawerExpanded, false)

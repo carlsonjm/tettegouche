@@ -263,8 +263,8 @@ public:
     bool tabletSurface() const {
         return m_view->screen() && m_view->screen()->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
     }
-    // An open drawer fills the tablet's screen by itself; Expand, chosen,
-    // fills any screen.
+    // Drawers open at Search's size; Expand, chosen, fills any screen. Pop out's
+    // growth, not chosen, fills only the tablet's screen.
     Q_INVOKABLE void setDrawerExpanded(bool expanded, bool chosen = false)
     {
         const quint64 generation = ++m_presentationGeneration;
