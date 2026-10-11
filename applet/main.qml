@@ -105,6 +105,12 @@ PlasmoidItem {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
+        // The doors take the band while a slide from the dot is on it.
+        opacity: root.scrubbing ? 0 : 1
+        Behavior on opacity {
+            enabled: root.animateIndicator
+            NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
+        }
         activities: Plasmoid.ambientActivities
         opaque: root.bandOpaque
         rises: Plasmoid.location !== PlasmaCore.Types.TopEdge
@@ -113,6 +119,137 @@ PlasmoidItem {
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
         onKindsChanged: if (root.island && kinds.length === 0) root.island.dismiss()
+    }
+
+    // A slide from the dot: press it and move right, and Search's doors,
+    // Apps, Files, Notes and Ask, line up in the band; the one under the
+    // finger or pointer is chosen and opens when it lets go. Held still,
+    // the doors come up as well, to look before choosing. Let go back on the
+    // dot opens nothing. A panel down a side of the screen keeps the tap.
+    readonly property bool canScrub: !vertical
+    property bool scrubbing: false
+    property string scrubChoice: ""
+    readonly property int holdMs: 300
+
+    function beginScrub() {
+        if (scrubbing || !canScrub) return;
+        if (island) island.dismiss();
+        scrubChoice = "";
+        scrubbing = true;
+    }
+    function endScrub() {
+        scrubbing = false;
+        scrubChoice = "";
+    }
+    // The door at a point on the dot's own item: none over the dot itself,
+    // otherwise the one nearest, so the gaps between doors and the space past
+    // the last keep a choice.
+    function doorAt(x) {
+        const local = pearlDoors.mapFromItem(launcherButton, x, 0).x;
+        if (x < launcherButton.width) return "";
+        let chosen = "";
+        let distance = Infinity;
+        for (let i = 0; i < pearlDoorsRepeater.count; ++i) {
+            const door = pearlDoorsRepeater.itemAt(i);
+            if (!door) continue;
+            const away = local < door.x ? door.x - local
+                : local > door.x + door.width ? local - door.x - door.width : 0;
+            if (away < distance) {
+                distance = away;
+                chosen = door.door;
+            }
+        }
+        return chosen;
+    }
+
+    Row {
+        id: pearlDoors
+        objectName: "tettegouche-pearl-doors"
+        anchors.left: launcherButton.right
+        anchors.leftMargin: 2
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: 6
+        visible: opacity > 0
+        opacity: root.scrubbing ? 1 : 0
+        Behavior on opacity {
+            enabled: root.animateIndicator
+            NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
+        }
+        Repeater {
+            id: pearlDoorsRepeater
+            model: Plasmoid.pearlDoors
+            delegate: Item {
+                id: doorItem
+                required property string modelData
+                required property int index
+                readonly property string door: modelData
+                readonly property bool chosen: root.scrubChoice === door
+                objectName: "tettegouche-pearl-door-" + door
+                width: doorFace.implicitWidth + 24
+                height: 30
+                Accessible.role: Accessible.Button
+                Accessible.name: doorLabel.text
+                Rectangle {
+                    anchors.fill: parent
+                    radius: height / 2
+                    color: doorItem.chosen ? tone.text : tone.over(root.bandOpaque ? 0.2 : 0.16)
+                    scale: doorItem.chosen ? 1.06 : 1
+                    // Each door arrives a moment after the one before it.
+                    opacity: root.scrubbing ? 1 : 0
+                    Behavior on scale {
+                        enabled: root.animateIndicator
+                        NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        enabled: root.animateIndicator
+                        SequentialAnimation {
+                            PauseAnimation { duration: root.scrubbing ? root.ms(30) * doorItem.index : 0 }
+                            NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic }
+                        }
+                    }
+                    Row {
+                        id: doorFace
+                        anchors.centerIn: parent
+                        spacing: 6
+                        // Apps: four squares, as on Search's own pill.
+                        Grid {
+                            visible: doorItem.door === "apps"
+                            anchors.verticalCenter: parent.verticalCenter
+                            columns: 2
+                            spacing: 2
+                            Repeater {
+                                model: 4
+                                Rectangle {
+                                    width: 5
+                                    height: 5
+                                    radius: 1
+                                    color: doorItem.chosen ? tone.textOnInk : tone.text
+                                }
+                            }
+                        }
+                        SuiteIcon {
+                            visible: doorItem.door !== "apps"
+                            anchors.verticalCenter: parent.verticalCenter
+                            glyph: doorItem.door === "notes" || doorItem.door === "genie"
+                                ? doorItem.door : "folder-open"
+                            ink: doorItem.chosen ? tone.textOnInk : tone.text
+                            width: 15
+                            height: 15
+                        }
+                        Text {
+                            id: doorLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: doorItem.door === "apps" ? i18n("Apps")
+                                : doorItem.door === "files" ? i18n("Files")
+                                : doorItem.door === "notes" ? i18n("Notes") : i18n("Ask")
+                            color: doorItem.chosen ? tone.textOnInk : tone.text
+                            font.pixelSize: 13
+                            font.weight: Font.Medium
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // The island opens on a surface of its own over the whole display, grown
@@ -222,6 +359,49 @@ PlasmoidItem {
         }
 
         HoverHandler { id: launcherHover }
-        TapHandler { onTapped: Plasmoid.launch(Plasmoid.configuration.useKadunce) }
+        // A tap opens Search; a slide or a hold brings the doors (above).
+        // The press stays the dot's until it lets go, wherever it travels.
+        MouseArea {
+            id: pearlPress
+            objectName: "tettegouche-launcher-press"
+            anchors.fill: parent
+            preventStealing: true
+            property real pressX: 0
+            onPressed: mouse => {
+                pressX = mouse.x;
+                root.endScrub();
+                if (!root.canScrub) return;
+                Plasmoid.refreshPearlDoors();
+                pearlHold.restart();
+            }
+            onPositionChanged: mouse => {
+                if (!root.canScrub) return;
+                if (!root.scrubbing && mouse.x - pressX > Qt.styleHints.startDragDistance) {
+                    pearlHold.stop();
+                    root.beginScrub();
+                }
+                if (root.scrubbing) root.scrubChoice = root.doorAt(mouse.x);
+            }
+            onReleased: mouse => {
+                pearlHold.stop();
+                if (root.scrubbing) {
+                    const chosen = root.scrubChoice;
+                    root.endScrub();
+                    if (chosen) Plasmoid.openDrawer(chosen);
+                    return;
+                }
+                if (mouse.x >= 0 && mouse.x <= width && mouse.y >= 0 && mouse.y <= height)
+                    Plasmoid.launch(Plasmoid.configuration.useKadunce);
+            }
+            onCanceled: {
+                pearlHold.stop();
+                root.endScrub();
+            }
+            Timer {
+                id: pearlHold
+                interval: root.holdMs
+                onTriggered: root.beginScrub()
+            }
+        }
     }
 }

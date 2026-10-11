@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- Press the dot and slide right to reach Apps, Files, Notes or Ask in one
+  stroke: the doors line up beside the dot, the one under the finger or
+  pointer is chosen, and letting go opens Search on it. Holding the dot
+  brings the doors too; letting go back on the dot opens nothing.
 - Ambient shows the album art of a track whose cover is embedded in the file,
   which a player such as Elisa sends inline, where it showed the player's icon
   before. A cover given as a plain path is shown too.

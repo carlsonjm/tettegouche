@@ -2,18 +2,23 @@
 
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
+#include "GenieChat.h"
 #include "LauncherKeys.h"
+#include "NotesDoor.h"
 #include "ProductName.h"
 #include "SuiteSettings.h"
 
 #include <KConfigGroup>
 #include <KConfigLoader>
 #include <KPluginFactory>
+#include <KService>
 #include <QProcess>
 #include <QStandardPaths>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCall>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #include <QQuickItem>
 #include <QTimer>
 #include <Plasma/Containment>
@@ -50,6 +55,8 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     });
     m_keys = LauncherKeys::acquire();
     m_keys->attach(this, [this](const QString &drawer) { openDrawer(drawer); });
+    // Once the widget's settings are read.
+    QTimer::singleShot(0, this, &TettegoucheApplet::refreshPearlDoors);
 
     const QString fixture = qEnvironmentVariable("TETTE_AMBIENT_FIXTURE");
     if (fixture == QStringLiteral("transfer-media") || fixture == QStringLiteral("paused")) {
@@ -277,8 +284,68 @@ void TettegoucheApplet::launch(bool useKadunce)
 
 void TettegoucheApplet::openDrawer(const QString &drawer)
 {
-    if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")) return;
+    if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")
+        && drawer != QLatin1String("notes") && drawer != QLatin1String("genie")) return;
     startLauncher(setting(QStringLiteral("useKadunce"), true), {}, drawer);
+}
+
+void TettegoucheApplet::refreshPearlDoors()
+{
+    setPearlDoors();
+    // Genie is offered where it answers or the bus can start it; asking
+    // the bus starts nothing.
+    if (!setting(QStringLiteral("offerGenie"), true)) {
+        m_genieThere = false;
+        setPearlDoors();
+        return;
+    }
+    const QString service = QString::fromLatin1(GenieChat::Service);
+    auto bus = QDBusConnection::sessionBus();
+    const auto busMethod = [](const QString &name) {
+        return QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.DBus"),
+            QStringLiteral("/org/freedesktop/DBus"), QStringLiteral("org.freedesktop.DBus"), name);
+    };
+    QDBusMessage owner = busMethod(QStringLiteral("NameHasOwner"));
+    owner.setArguments({service});
+    auto *ownerWatch = new QDBusPendingCallWatcher(bus.asyncCall(owner, 2000), this);
+    connect(ownerWatch, &QDBusPendingCallWatcher::finished, this, [this, ownerWatch, bus, busMethod, service] {
+        const QDBusPendingReply<bool> answers = *ownerWatch;
+        ownerWatch->deleteLater();
+        if (!answers.isError() && answers.value()) {
+            m_genieThere = true;
+            setPearlDoors();
+            return;
+        }
+        auto *startable = new QDBusPendingCallWatcher(
+            bus.asyncCall(busMethod(QStringLiteral("ListActivatableNames")), 2000), this);
+        connect(startable, &QDBusPendingCallWatcher::finished, this, [this, startable, service] {
+            const QDBusPendingReply<QStringList> names = *startable;
+            startable->deleteLater();
+            m_genieThere = !names.isError() && names.value().contains(service);
+            setPearlDoors();
+        });
+    });
+}
+
+void TettegoucheApplet::setPearlDoors()
+{
+    QStringList doors{QStringLiteral("apps"), QStringLiteral("files")};
+    // Notes as Search's first screen shows its pill: offered, the pill
+    // shown, and the notes application installed with its Capture action.
+    if (setting(QStringLiteral("offerNotes"), true) && setting(QStringLiteral("showNotesPill"), true)) {
+        if (const auto notes = KService::serviceByStorageId(QString::fromLatin1(NotesDoor::ApplicationId))) {
+            const auto actions = notes->actions();
+            if (std::any_of(actions.cbegin(), actions.cend(), [](const KServiceAction &action) {
+                    return action.name() == QLatin1String(NotesDoor::ActionName);
+                })) {
+                doors << QStringLiteral("notes");
+            }
+        }
+    }
+    if (m_genieThere && setting(QStringLiteral("offerGenie"), true)) doors << QStringLiteral("genie");
+    if (doors == m_pearlDoors) return;
+    m_pearlDoors = doors;
+    Q_EMIT pearlDoorsChanged();
 }
 
 bool TettegoucheApplet::setting(const QString &key, bool fallback)

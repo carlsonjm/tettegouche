@@ -544,6 +544,52 @@ Item {
         return true
     }
     function openGenie() { return root.openMode("genie") }
+    // Notes or Ask asked for from outside Search, as the dot's slide asks:
+    // that mode opens, or Search closes when it is the mode already open.
+    // Search may have only just opened, before Notes or Genie has answered
+    // whether it is there; the mode then waits for the answer, and Notes
+    // falls back to its own sheet if Gooseberry's interface never answers.
+    function openModeDirectly(name) {
+        modeWait.stop()
+        root.modeAwaited = ""
+        if (root.modeOpen && root.modeShown === name) {
+            root.launcherController.close()
+            return
+        }
+        if (root.drawerOpen) root.setDrawerOpen(false)
+        if (root.modeOpen) return
+        const client = name === "notes" ? root.quickNote : root.genie
+        if (name === "notes" && !root.notesDoor) return
+        if (name === "genie" && !client) return
+        if (client && client.available) {
+            if (name === "notes") root.openNotes()
+            else root.openGenie()
+            return
+        }
+        root.modeAwaited = name
+        modeWait.restart()
+    }
+    function settleAwaitedMode(late) {
+        const name = root.modeAwaited
+        if (!name) return
+        const client = name === "notes" ? root.quickNote : root.genie
+        if (!late && !(client && client.available)) return
+        modeWait.stop()
+        root.modeAwaited = ""
+        if (name === "notes") root.openNotes()
+        else root.openGenie()
+    }
+    property string modeAwaited: ""
+    Timer {
+        id: modeWait
+        interval: 1500
+        onTriggered: root.settleAwaitedMode(true)
+    }
+    Connections {
+        target: root.modeAwaited === "notes" ? root.quickNote : root.modeAwaited === "genie" ? root.genie : null
+        ignoreUnknownSignals: true
+        function onAvailableChanged() { root.settleAwaitedMode(false) }
+    }
     function closeMode() {
         if (!root.modeOpen || root.modeGrowing) return
         if (root.modeShown === "notes") root.quickNote.flush()
@@ -744,6 +790,8 @@ Item {
             modeSettle.stop()
             modeTimeout.stop()
             modeExit.stop()
+            modeWait.stop()
+            root.modeAwaited = ""
             root.modeOpen = false
             root.modeShown = ""
             root.modeProgress = 0
@@ -766,6 +814,10 @@ Item {
         // Meta+G or Meta+E: that drawer opens, or closes the launcher when it
         // is the drawer already open.
         function onDrawerRequested(mode) {
+            if (mode === "notes" || mode === "genie") {
+                root.openModeDirectly(mode)
+                return
+            }
             const files = mode === "files"
             if (files && !root.fileBrowser) return
             if (root.drawerOpen && root.filesMode === files) root.launcherController.close()

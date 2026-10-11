@@ -192,6 +192,8 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/x.svg
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
+        assets/icons/suite/notes.svg
+        assets/icons/suite/genie.svg
 )
 target_link_libraries(co.goodinput.tettegouche PRIVATE
     LayerShellQt::Interface

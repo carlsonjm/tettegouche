@@ -482,12 +482,14 @@ public Q_SLOTS:
     // The same, with the first one's Properties open.
     Q_SCRIPTABLE void showItemProperties(const QStringList &locations) { reveal(locations, true); }
 
-    // Meta+G opens Apps and Meta+E Files; the drawer already
-    // open closes the launcher instead.
+    // Meta+G opens Apps and Meta+E Files, and the dot's slide any of Apps,
+    // Files, Notes or Ask ("notes", "genie"); the one already open closes
+    // the launcher instead.
     Q_SCRIPTABLE void openDrawer(const QString &drawer)
     {
         if (!m_view->isVisible()) open();
-        if (drawer == QLatin1String("apps") || drawer == QLatin1String("files"))
+        if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
+            || drawer == QLatin1String("notes") || drawer == QLatin1String("genie"))
             Q_EMIT drawerRequested(drawer);
     }
 
