@@ -7,7 +7,8 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 ## First screen
 
 Before anything is typed, Search offers its doors, Apps and Files, then Notes
-where Gooseberry is installed, centred under the field, and on a row below them
+where Gooseberry is installed and Ask where Split Rock answers, centred under
+the field, and on a row below them
 what was used lately, newest first: at most six, as many as the field's width
 holds, centred as one group. A sheet too short for the second row keeps the
 doors alone. Its source is KDE's record of use for the current activity, read when
@@ -33,7 +34,7 @@ application and Tettegouche never depends on it.
 - Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
   is installed with its Capture action, looked for each time Search opens and
   whenever KDE's application list changes. Without it, the first screen has
-  Apps and Files only.
+  no Notes.
 - Notes opens in the same window with the drawer's motion: the field becomes
   the note pad, the pills fade, and Back, the note's five colours and the
   corner, Expand, Pop out and Close, come into the header where Apps has Back and
@@ -72,7 +73,7 @@ application and Tettegouche never depends on it.
 - The widget's setting "Show Notes when Gooseberry is installed" is on by
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
-  pill; notes still answer a search.
+  pill, and the dot's Notes door with it; notes still answer a search.
 
 ### Genie
 

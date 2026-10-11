@@ -36,7 +36,12 @@ Qt gives as the keyboard rectangle, and keeps its sheet above them itself.
 `Meta+G` and `Meta+E` are registered once per Plasma process in KDE's shortcut
 settings, under Tettegouche, by whichever Tettegouche widget came first. A
 press starts the launcher with `--drawer apps` or `--drawer files`, or asks a
-running one through `openDrawer` on its D-Bus interface.
+running one through `openDrawer` on its D-Bus interface; a slide from the dot
+does the same for any of `apps`, `files`, `notes` or `genie`. The Apps desktop
+entry, `io.github.carlsonjm.Tettegouche.Apps.desktop`, runs `--drawer apps`.
+The widget declares itself Plasma's application launcher
+(`org.kde.plasma.launchermenu`), so Plasma's launcher key reaches it as it
+reaches Kickoff.
 
 Where Shuffle is installed, Tettegouche names itself Search: in its tooltip,
 its widget title, its launcher window and its Shortcuts entry. Each process
@@ -199,7 +204,7 @@ counts follow the language.
 
 ## Look
 
-- The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) pearl, 20 px,
+- The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) dot, 20 px,
   lit from above and a shade deeper toward its lower edge, centred in a 44 px
   touch square at the panel's start, with a thin ring round it while the
   launcher is open. No icon family replaces or redraws it.

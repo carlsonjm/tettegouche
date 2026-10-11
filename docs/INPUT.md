@@ -39,6 +39,7 @@ than repeat it.
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows on the way. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. |
 | Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. |
+| Turn the mouse wheel over the results, or over an answer in Genie | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …" | Searches the web in the browser. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
 | Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
@@ -61,9 +62,9 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Show recent files and apps", off | Search opens with Apps, Files and Notes alone under the field, and nothing used lately is read. |
+| Setting "Show recent files and apps", off | Search opens with its doors, Apps, Files, Notes and Ask, alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
-| Setting "Show the Notes pill", off | The first screen leaves out the Notes pill; notes still answer a search. |
+| Setting "Show the Notes pill", off | The first screen leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show Genie when Split Rock is installed", off | Search never offers Genie. On, its default, Genie appears whenever Split Rock answers. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
@@ -86,6 +87,7 @@ than repeat it.
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
+| Turn the mouse wheel over the applications | Scrolls them 80 pixels a notch, as in Search. |
 | Tap or click a folder, or Enter on it | Opens it in place of Apps, with its name above its applications. Folders come first in Apps, A to Z; the applications in a folder follow the sort. Typing finds applications in folders too. |
 | Tap or click an open folder's name | Renames it; Enter or a tap elsewhere keeps the name, Esc keeps the old one. |
 | Touch and hold a folder, or right-click it | Opens its sheet: Rename, and Remove folder, which puts its applications back in Apps. |
@@ -122,6 +124,7 @@ than repeat it.
 | Open in new tab, from a folder's menu | Opens that folder in a tab of its own. |
 | Show in folder, from a file's menu in Recent or a search | Opens the folder that holds it, with the file chosen. |
 | Drag the handle at the right edge of a long folder | Scrolls through it at once. |
+| Turn the mouse wheel over the files, the places or Open with's list | Scrolls 80 pixels a notch, as in Search. With Ctrl, it sizes the tiles instead. |
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
@@ -204,6 +207,7 @@ than repeat it.
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island, tap or click Show and the player's name | Brings the player forward and closes the island. It shows only when the player can be raised. |
 | In the open island, tap or click a mark along its top | Moves between the media and the transfers. |
+| In the open island, turn the mouse wheel | Scrolls a card too long to show whole, 80 pixels a notch, as in Search. |
 | In the open island, tap or click Pause transfer, Resume or × on a transfer | Acts on that transfer alone. Each shows only when its source supports it. |
 | In the open island, tap or click Show in Files | Opens Files at the new download, selected, and closes the island. |
 | Esc, or a tap or click outside the open island | Closes it back into the band, not to search. |
