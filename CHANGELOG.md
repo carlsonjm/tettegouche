@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Ambient shows the album art of a track whose cover is embedded in the file,
+  which a player such as Elisa sends inline, where it showed the player's icon
+  before. A cover given as a plain path is shown too.
 - Apps has a launcher of its own, with its own icon: the Apps pill's four
   squares on a tile. It opens Search with Apps already open, and pins to a
   dock like any application, as Files, Notes and Genie do.

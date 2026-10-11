@@ -18,10 +18,16 @@ const QString rootInterface = QStringLiteral("org.mpris.MediaPlayer2");
 const QString propertiesInterface = QStringLiteral("org.freedesktop.DBus.Properties");
 constexpr qlonglong skipUs = 10000000;
 
-// Artwork is shown only from a local file or the web; any other scheme a player
-// names is dropped rather than handed to the image loader.
+// Artwork is shown from a local file, the web, or an image the player carries
+// inline as a data address, which is how a player hands over a cover that is
+// embedded in the track rather than kept beside it. A bare absolute path is
+// read as a local file. Any other scheme a player names is dropped rather than
+// handed to the image loader.
 QString artUrl(const QVariant &value) {
-    const QUrl url(value.toString());
+    const QString text = value.toString().trimmed();
+    if (text.startsWith(QLatin1Char('/'))) return QUrl::fromLocalFile(text).toString();
+    if (text.startsWith(QLatin1String("data:image/"), Qt::CaseInsensitive)) return text;
+    const QUrl url(text);
     return url.isValid() && (url.isLocalFile() || url.scheme() == QLatin1String("https")
         || url.scheme() == QLatin1String("http")) ? url.toString() : QString();
 }
