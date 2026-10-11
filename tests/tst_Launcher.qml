@@ -1554,6 +1554,32 @@ TestCase {
         tryCompare(filesMock,"revealPath","")
         filesMock.selectedPath=""
     }
+    // At a card's size the places fold to a rail of icons and the tiles come
+    // one size smaller; filling the screen brings both back.
+    function test_filesCard() {
+        launcher.fileBrowser=filesMock
+        filesMock.tileSize=2
+        launcher.setDrawerOpen(true,"files")
+        tryCompare(launcher,"drawerProgress",1)
+        filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home",section:"places"}]
+        const pane=findChild(launcher,"files-pane")
+        const places=findChild(launcher,"files-places")
+        compare(controller.drawerExpanded,true)
+        verify(!pane.card)
+        tryCompare(places,"width",170)
+        compare(pane.tile.cell,184)
+        controller.drawerExpanded=false
+        verify(pane.card)
+        tryCompare(places,"width",54)
+        compare(pane.tile.cell,140)
+        compare(filesMock.tileSize,2)
+        controller.drawerExpanded=true
+        tryCompare(places,"width",170)
+        compare(pane.tile.cell,184)
+        filesMock.tileSize=1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+    }
     // Drives follow the places under a rule: a tap opens one, and one plugged
     // in ejects from its own button, by mouse and by touch. Busy, a drive says
     // what it is doing and takes no tap.

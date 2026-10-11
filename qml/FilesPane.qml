@@ -41,6 +41,9 @@ Item {
     // the room above them: the actions join the path's row, and the tabs and
     // the Open row step aside.
     property bool compact: false
+    // At a card's size, as in Spread, the places fold to a rail of their
+    // icons and the tiles come one size smaller, so the folder has the room.
+    property bool card: false
     // How far up from the window's bottom the keys reach, so menus open above.
     property real keysReach: 0
     readonly property string rawOperationStatus: browser ? browser.operationStatus : ""
@@ -60,7 +63,8 @@ Item {
         {cell: 184, height: 176, icon: 84},
         {cell: 240, height: 228, icon: 128}
     ]
-    readonly property var tile: tileLevels[browser ? Math.max(0, Math.min(3, browser.tileSize)) : 1]
+    readonly property var tile: tileLevels[Math.max(0,
+        (browser ? Math.max(0, Math.min(3, browser.tileSize)) : 1) - (card ? 1 : 0))]
     function showOpenWith(path) {
         if (!browser || !path) return
         const choices = browser.openWithChoices(path)
@@ -554,7 +558,7 @@ Item {
         ListView {
             id: placesList
             objectName: "files-places"
-            Layout.preferredWidth: 170
+            Layout.preferredWidth: pane.card ? 54 : 170
             Layout.fillHeight: true
             clip: true
             // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
@@ -570,7 +574,7 @@ Item {
                 readonly property bool firstDrive: modelData.section === "drives"
                     && (index === 0 || ListView.view.model[index - 1].section !== "drives")
                 readonly property bool busy: modelData.busy === true
-                readonly property bool ejectable: modelData.canEject === true && !busy
+                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.card
                 objectName: "files-place-" + modelData.label
                 width: ListView.view.width; height: 54 + (firstDrive ? 13 : 0)
                 Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: tone.line }
@@ -585,10 +589,11 @@ Item {
                         color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? tone.placeChosen : "transparent"
                     }
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter; x: 12; spacing: 12
+                        anchors.verticalCenter: parent.verticalCenter; x: pane.card ? 16 : 12; spacing: 12
                         opacity: place.busy ? 0.6 : 1
                         Kirigami.Icon { source: place.modelData.icon; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter }
                         Column {
+                            visible: !pane.card
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: place.modelData.label; color: tone.text; width: place.ejectable ? 76 : 116; elide: Text.ElideRight }
                             Text {
@@ -606,6 +611,11 @@ Item {
                         Accessible.description: place.modelData.note || ""
                         Accessible.selected: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path
                         Accessible.onPressAction: if (!place.busy) open()
+                        // On the rail a pointer resting on a place names it.
+                        HoverHandler { id: placeHover }
+                        C.ToolTip.visible: pane.card && placeHover.hovered
+                        C.ToolTip.text: place.modelData.label
+                        C.ToolTip.delay: 600
                         function open() { place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path) }
                         TapHandler {
                             enabled: !place.busy

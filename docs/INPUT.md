@@ -127,6 +127,7 @@ than repeat it.
 | Tap or click the sort button, on the search field's left | Offers name A–Z, name Z–A, newest first and largest first. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
+| Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
 | Tap or click Pop out, beside Expand | Files moves into a window of its own, with its tabs, folder and selection as they were, and Search closes. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With Files in its own window: Files in Search, `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window forward and shows what was asked there; Search does not open Files. Closing the window returns Files to Search. |
 | In Files' own window | The header keeps the eye, search and the sort button; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |

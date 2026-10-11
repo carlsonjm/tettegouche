@@ -1998,6 +1998,7 @@ Item {
                     objectName: "files-pane"
                     browser: root.fileBrowser
                     compact: root.keysUp
+                    card: !root.launcherController.drawerExpanded
                     keysReach: root.keysReach
                     carryArea: sheet
                     onCarryOut: paths => {

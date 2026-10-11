@@ -235,6 +235,8 @@ Rectangle {
         id: pane
         objectName: "files-window-pane"
         browser: window.fileBrowser
+        // A narrow window folds the places as a card does.
+        card: window.width < 900
         carryArea: window
         x: window.contentInset
         y: header.y + header.height + 16
