@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Apps has a launcher of its own, with its own icon: the Apps pill's four
+  squares on a tile. It opens Search with Apps already open, and pins to a
+  dock like any application, as Files, Notes and Genie do.
 - An application's sheet in Apps offers Edit Application…, as Plasma's own
   launchers do. It opens the application in KDE's menu editor, where its
   icon, name or command can be changed for this person; Apps shows the change
