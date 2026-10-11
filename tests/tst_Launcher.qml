@@ -2397,14 +2397,14 @@ TestCase {
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
-        // One row: Back, then search in the middle, then the sort button.
+        // One row: Back, then the sort button, then search in the middle.
         verify(back.visible && back.enabled)
         verify(sort.visible && sort.enabled)
         compare(middle(field).y, middle(header).y)
         compare(middle(back).y, middle(header).y)
         compare(middle(sort).y, middle(header).y)
-        verify(right(back) < left(field))
-        verify(right(field) < left(sort))
+        verify(right(back) < left(sort))
+        verify(right(sort) <= left(field) + 0.5)
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
         // The drawer reaches up to the row search held above it.
         tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)
