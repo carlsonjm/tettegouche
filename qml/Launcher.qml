@@ -2147,7 +2147,8 @@ Item {
 
             // An application's sheet: its own actions, then Pin to dock or
             // Unpin from dock where Shuffle's dock is there, Hide or Unhide,
-            // and Uninstall where the software centre can show it.
+            // Edit Application… where KDE's menu editor is installed, and
+            // Uninstall where the software centre can show it.
             SheetMenu {
                 id: applicationSheet
                 objectName: "application-sheet"
@@ -2198,6 +2199,15 @@ Item {
                     objectName: "application-sheet-hide"
                     text: applicationSheet.hidden ? words.i18n("Unhide") : words.i18n("Hide")
                     onTriggered: root.applicationCatalog.setHidden(applicationSheet.row, !applicationSheet.hidden)
+                }
+                SheetMenuItem {
+                    objectName: "application-sheet-edit"
+                    text: words.i18n("Edit Application…")
+                    visible: root.applicationCatalog.canEdit(applicationSheet.row)
+                    onTriggered: {
+                        if (root.applicationCatalog.edit(applicationSheet.row))
+                            root.launcherController.finishLaunch()
+                    }
                 }
                 SheetMenuItem {
                     objectName: "application-sheet-uninstall"

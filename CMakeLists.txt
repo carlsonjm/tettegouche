@@ -146,6 +146,7 @@ install(TARGETS tettegouche RUNTIME DESTINATION ${KDE_INSTALL_BINDIR})
 # po/<language>/<catalog>.po; tools/extract-messages.sh makes their templates.
 ki18n_install(po)
 install(PROGRAMS io.github.carlsonjm.Tettegouche.desktop io.github.carlsonjm.Tettegouche.Files.desktop
+        io.github.carlsonjm.Tettegouche.Apps.desktop
         DESTINATION ${KDE_INSTALL_APPDIR})
 # Offered, not switched on: answering "Show in folder" is the product's choice,
 # made by placing this where D-Bus looks for services.
@@ -159,6 +160,10 @@ install(FILES assets/co.goodinput.tettegouche-logo.png
         RENAME co.goodinput.tettegouche.png)
 install(FILES assets/co.goodinput.tettegouche-logo.png
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps)
+# Apps' launcher tile, drawn at any size; named apart from the widget's
+# plugin ID so the widget picker keeps the photo above.
+install(FILES assets/co.goodinput.tettegouche-apps.svg
+        DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 plasma_add_applet(co.goodinput.tettegouche
     CPP_SOURCES
         src/TettegoucheApplet.cpp

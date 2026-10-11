@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Apps
+GenericName=Application Launcher
+Comment=Open Apps in Tettegouche's Search
+Exec=tettegouche --drawer apps
+Icon=co.goodinput.tettegouche-apps
+Terminal=false
+Categories=Utility;System;
+StartupNotify=false
