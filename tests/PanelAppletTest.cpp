@@ -184,8 +184,18 @@ private Q_SLOTS:
                  (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
         QSignalSpy started(m_process, &QProcess::started);
         const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
-        auto *apps = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-door-apps"));
-        auto *files = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-door-files"));
+        // The doors are the row's items rather than its QObject children.
+        auto *row = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-doors"));
+        QVERIFY(row);
+        const auto door = [row](const QString &name) -> QQuickItem * {
+            const auto items = row->childItems();
+            for (QQuickItem *item : items) {
+                if (item->objectName() == QStringLiteral("tettegouche-pearl-door-") + name) return item;
+            }
+            return nullptr;
+        };
+        auto *apps = door(QStringLiteral("apps"));
+        auto *files = door(QStringLiteral("files"));
         QVERIFY(apps && files);
         const auto middle = [](QQuickItem *item) {
             return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint();
