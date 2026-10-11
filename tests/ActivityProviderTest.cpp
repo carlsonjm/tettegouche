@@ -285,13 +285,37 @@ private Q_SLOTS:
         QTest::qWait(40);
         QCOMPARE(player.actions, before);
 
-        // Artwork from any other kind of address is left out.
-        player.metadata[QStringLiteral("mpris:artUrl")] = QStringLiteral("smb://server/cover.png");
-        auto signal = QDBusMessage::createSignal(path, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"));
-        signal.setArguments({QStringLiteral("org.mpris.MediaPlayer2.Player"),
-            QVariantMap{{QStringLiteral("Metadata"), player.metadata}}, QStringList{}});
-        QVERIFY(peer.send(signal));
+        const auto sendArt = [&](const QString &art) {
+            player.metadata[QStringLiteral("mpris:artUrl")] = art;
+            auto signal = QDBusMessage::createSignal(path, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"));
+            signal.setArguments({QStringLiteral("org.mpris.MediaPlayer2.Player"),
+                QVariantMap{{QStringLiteral("Metadata"), player.metadata}}, QStringList{}});
+            return peer.send(signal);
+        };
+        const auto shownArt = [&] {
+            return provider.activities().first().toMap().value(QStringLiteral("artUrl")).toString();
+        };
+        // A cover embedded in the track arrives inline as a data address.
+        const QString inlineCover = QStringLiteral("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==");
+        QVERIFY(sendArt(inlineCover));
+        QTRY_COMPARE(shownArt(), inlineCover);
+        // Covers from the web are shown.
+        QVERIFY(sendArt(QStringLiteral("https://example.org/cover.jpg")));
+        QTRY_COMPARE(shownArt(), QStringLiteral("https://example.org/cover.jpg"));
+        // A bare path is a local file.
+        QVERIFY(sendArt(QStringLiteral("/tmp/My Album/cover.jpg")));
+        QTRY_COMPARE(shownArt(), QStringLiteral("file:///tmp/My Album/cover.jpg"));
+
+        // Artwork from any other kind of address is left out, and the player's
+        // icon stands in.
+        QVERIFY(sendArt(QStringLiteral("smb://server/cover.png")));
         QTRY_VERIFY(!provider.activities().first().toMap().contains(QStringLiteral("artUrl")));
+        QVERIFY(sendArt(QStringLiteral("image://cover/1")));
+        QTest::qWait(40);
+        QVERIFY(!provider.activities().first().toMap().contains(QStringLiteral("artUrl")));
+        QVERIFY(sendArt(QStringLiteral("data:text/html;base64,PGI+PC9iPg==")));
+        QTest::qWait(40);
+        QVERIFY(!provider.activities().first().toMap().contains(QStringLiteral("artUrl")));
 
         // A player that cannot be raised offers no way to bring it forward.
         root->canRaise = false;
