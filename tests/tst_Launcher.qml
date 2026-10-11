@@ -631,14 +631,15 @@ TestCase {
         const header = findChild(launcher, "apps-folder-header")
         const folder = findChild(grid, "application-tile-0")
         verify(findChild(folder, "apps-folder-tile").visible)
-        compare(header.height, 0)
+        // The name shares the row the order sits in, so Apps does not move.
+        verify(!header.visible)
         const gridTop = grid.y
         mouseClick(folder, folder.width / 2, folder.height / 2)
         compare(catalog.openFolder, "f1")
         verify(launcher.folderOpen)
         compare(controller.catalogActivated, -1)
-        compare(header.height, 40)
-        compare(grid.y, gridTop + 40)
+        verify(header.visible)
+        compare(grid.y, gridTop)
         compare(findChild(launcher, "apps-folder-name").text, "Games")
         const back = findChild(launcher, "drawer-back")
         mouseClick(back, back.width / 2, back.height / 2)
@@ -858,10 +859,11 @@ TestCase {
         const search = findChild(launcher, "search-field")
         const grid = findChild(launcher, "application-grid")
         compare(header.y,0)
-        // The drawer reaches up under the header, to search's old row.
+        // The drawer reaches up under the header, to search's old row, with
+        // the order's row over the applications.
         compare(search.y,0)
-        compare(grid.y-search.y-search.height,16)
-        verify(grid.y < 64)
+        compare(grid.y-search.y-search.height,16+50)
+        verify(grid.y < 114)
         const closesBefore = controller.closes
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
