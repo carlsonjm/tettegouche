@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Ambient shows the album art of a track whose cover is embedded in the file,
+  which a player such as Elisa sends inline, where it showed the player's icon
+  before. A cover given as a plain path is shown too.
 - Meta opens Search. Tettegouche tells Plasma it is an application launcher,
   so Plasma's launcher key, Meta or Alt+F1, reaches it as it reaches Kickoff,
   with no shortcut to set first.

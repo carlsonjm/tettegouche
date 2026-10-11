@@ -55,7 +55,10 @@ not own the source operation or retain a completion history.
 
 Discovery takes an initial snapshot and then follows owner, property, and seek
 events. Missing title, artist, album, artwork, duration, or capabilities remain
-absent. Artwork is shown only from a local file or the web. The presentation
+absent. Artwork is shown from a local file, the web, or an image the player
+carries inline (`data:image/…`), which is how a player such as Elisa hands over
+a cover embedded in the track; anything else leaves the player's icon in its
+place. The presentation
 clock advances from source position/rate samples and freezes on pause. Controls
 require current capabilities and owner validation. A jump to a point names the
 track where the player gives one, so a late request cannot move the next track,
