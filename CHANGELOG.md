@@ -5,6 +5,12 @@ provenance.
 
 ## Unreleased
 
+- A notch of the mouse wheel scrolls 80 pixels in Search's results, Apps,
+  Files, Genie's answer and the open island, at Plasma's usual three lines a
+  notch, where it moved a short, mouse-dependent step before.
+- The widget's settings offer "Show the Notes pill"; off, Search's first
+  screen and the dot's slide leave Notes out, while typed words still find
+  notes.
 - Press the dot and slide right to reach Apps, Files, Notes or Ask in one
   stroke: the doors line up beside the dot, the one under the finger or
   pointer is chosen, and letting go opens Search on it. Holding the dot
