@@ -7,8 +7,9 @@ Item {
     id: suiteIcon
     required property string glyph
     // The glyphs are drawn in Ghost White and shown as drawn on a dark ground;
-    // on a light one they are recoloured to the Plasma style's text.
-    readonly property color ink: tone.text
+    // on a light one they are recoloured to the Plasma style's text. A
+    // different ink recolours them on either ground.
+    property color ink: tone.text
     objectName: "suiteIcon-" + glyph
     implicitWidth: 20
     implicitHeight: 20
@@ -25,7 +26,7 @@ Item {
             + suiteIcon.glyph + ".svg"
         fillMode: Image.PreserveAspectFit
         smooth: true
-        layer.enabled: !tone.dark
+        layer.enabled: !tone.dark || !Qt.colorEqual(suiteIcon.ink, tone.text)
         layer.effect: MultiEffect {
             colorization: 1.0
             colorizationColor: suiteIcon.ink

@@ -2117,6 +2117,48 @@ TestCase {
         verify(!launcher.drawerOpen)
         compare(controller.closes, 2)
     }
+    // The dot's slide asks for Notes or Ask as Meta+G asks for Apps: that
+    // mode opens, and asked again, Search closes. Asked before Genie has
+    // answered, Ask waits for it.
+    function test_modeRequests() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        controller.closes = 0
+        controller.drawerRequested("apps")
+        tryCompare(launcher, "drawerOpen", true)
+        controller.drawerRequested("notes")
+        verify(!launcher.drawerOpen)
+        verify(launcher.notesOpen)
+        compare(quickStub.starts, 1)
+        tryCompare(launcher, "notesProgress", 1)
+        controller.drawerRequested("notes")
+        compare(controller.closes, 1)
+
+        launcher.genie = genieStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        genieStub.available = false
+        controller.drawerRequested("genie")
+        wait(50)
+        verify(!launcher.genieOpen)
+        genieStub.available = true
+        tryCompare(launcher, "genieOpen", true)
+        compare(genieStub.starts, 1)
+        compare(controller.closes, 1)
+
+        // Without Genie, Ask leaves Search as it is.
+        launcher.genie = null
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        controller.drawerRequested("genie")
+        wait(50)
+        verify(!launcher.modeOpen)
+        compare(launcher.modeAwaited, "")
+        compare(controller.closes, 1)
+    }
     // Both drawers share one header: Back on the left returns to search,
     // search sits in the middle and is typed into as before, and the sort
     // button stays on the right. No Close drawer pill remains.

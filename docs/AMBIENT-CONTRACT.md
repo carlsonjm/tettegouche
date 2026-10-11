@@ -8,6 +8,10 @@ responsible for notifications and transient events. Its inputs are in
 The widget's setting "Show islands beside the launcher", off, leaves the
 launcher's dot alone in the panel: Ambient shows nothing and takes no width.
 
+While a slide from the launcher dot shows Search's doors in the band, the
+islands fade and an open island closes; they return when it lets go
+([INPUT.md](INPUT.md) § The dot).
+
 ## Admission and ownership
 
 An item may enter Ambient only while it has meaningful current state, continued

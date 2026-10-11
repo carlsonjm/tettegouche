@@ -173,6 +173,81 @@ private Q_SLOTS:
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
     }
 
+    void pearlSlide()
+    {
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        m_window->resize(520, 100);
+        m_face->setSize(QSizeF(400, 42));
+        QTest::qWait(50);
+        // Without Notes or Genie on this computer, the doors are Apps and Files.
+        QCOMPARE(m_applet->property("pearlDoors").toStringList(),
+                 (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
+        QSignalSpy started(m_process, &QProcess::started);
+        const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
+        auto *apps = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-door-apps"));
+        auto *files = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-door-files"));
+        QVERIFY(apps && files);
+        const auto middle = [](QQuickItem *item) {
+            return item->mapToScene(QPointF(item->width() / 2, item->height() / 2)).toPoint();
+        };
+
+        // Press and slide right: the doors come at once, the one under the
+        // pointer is chosen, and letting go opens it.
+        QTest::mousePress(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTest::mouseMove(m_window, center + QPoint(2, 0));
+        QVERIFY(!m_face->property("scrubbing").toBool());
+        QTest::mouseMove(m_window, center + QPoint(30, 0));
+        QVERIFY(m_face->property("scrubbing").toBool());
+        QTest::mouseMove(m_window, middle(files));
+        QCOMPARE(m_face->property("scrubChoice").toString(), QStringLiteral("files"));
+        QTest::mouseMove(m_window, middle(apps));
+        QCOMPARE(m_face->property("scrubChoice").toString(), QStringLiteral("apps"));
+        QTest::mouseMove(m_window, middle(files));
+        QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, middle(files));
+        QTRY_COMPARE(started.count(), 1);
+        QCOMPARE(m_process->arguments(), (QStringList{QStringLiteral("--drawer"), QStringLiteral("files")}));
+        QVERIFY(!m_face->property("scrubbing").toBool());
+        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+
+        // Held still, the doors come too; let go back on the dot, nothing opens.
+        QTest::mousePress(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTRY_VERIFY_WITH_TIMEOUT(m_face->property("scrubbing").toBool(), 1000);
+        QTest::mouseMove(m_window, middle(apps));
+        QTest::mouseMove(m_window, center);
+        QCOMPARE(m_face->property("scrubChoice").toString(), QString());
+        QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTest::qWait(50);
+        QCOMPARE(started.count(), 1);
+        QVERIFY(!m_face->property("scrubbing").toBool());
+
+        // A finger does the same.
+        auto *touchDevice = QTest::createTouchDevice();
+        QTest::touchEvent(m_window, touchDevice).press(0, center, m_window);
+        QTest::touchEvent(m_window, touchDevice).move(0, center + QPoint(30, 0), m_window);
+        QTest::touchEvent(m_window, touchDevice).move(0, middle(apps), m_window);
+        QTest::touchEvent(m_window, touchDevice).release(0, middle(apps), m_window);
+        QTRY_COMPARE(started.count(), 2);
+        QCOMPARE(m_process->arguments(), (QStringList{QStringLiteral("--drawer"), QStringLiteral("apps")}));
+        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+
+        // Down a side of the screen the dot keeps its tap alone.
+        m_panel->setFormFactor(Plasma::Types::Vertical);
+        m_face->setSize(QSizeF(44, 42));
+        QTest::qWait(20);
+        QTest::mousePress(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTest::mouseMove(m_window, center + QPoint(30, 0));
+        QTest::qWait(400);
+        QVERIFY(!m_face->property("scrubbing").toBool());
+        QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, center + QPoint(30, 0));
+        QTest::qWait(50);
+        QCOMPARE(started.count(), 2);
+
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        m_window->resize(120, 100);
+        m_face->setSize(QSizeF(44, 42));
+        QTest::qWait(20);
+    }
+
     void launcherPrecedesAmbientStrip()
     {
         m_panel->setFormFactor(Plasma::Types::Horizontal);
@@ -407,7 +482,8 @@ private Q_SLOTS:
         QVERIFY2(component.isReady(), qPrintable(component.errorString()));
         const QStringList glyphs{
             QStringLiteral("skip-back"), QStringLiteral("play"), QStringLiteral("pause"),
-            QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x")
+            QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x"),
+            QStringLiteral("folder-open"), QStringLiteral("notes"), QStringLiteral("genie")
         };
         // Stand-ins for a dark and a light Plasma style. The software renderer
         // the test runs on draws no layer effects, so the light glyph's
