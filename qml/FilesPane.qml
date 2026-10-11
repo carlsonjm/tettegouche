@@ -258,6 +258,19 @@ Item {
         }
         SheetMenuItem { objectName: "context-properties"; text: words.i18n("Properties"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
+    // The folder's order, kept inside the pane under its pill.
+    SheetMenu {
+        id: sortMenu
+        objectName: "files-sort-menu"
+        bounds: pane
+        bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
+        readonly property int mode: pane.browser ? pane.browser.sortMode : 0
+        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: sortMenu.mode === 0; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 0 }
+        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: sortMenu.mode === 1; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 1 }
+        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: sortMenu.mode === 2; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 2 }
+        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: sortMenu.mode === 3; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 3 }
+    }
     // The one permanent delete Files offers, said plainly before it happens.
     SheetConfirm {
         id: emptyTrashConfirm
@@ -746,6 +759,55 @@ Item {
                                 width: Math.min(implicitWidth, 240)
                                 elide: Text.ElideRight
                             }
+                        }
+                    }
+                    // The order, a grey pill naming it, beside New folder; Recent
+                    // keeps the order of use.
+                    Item {
+                        id: sortPill
+                        objectName: "files-sort"
+                        readonly property bool fixed: !!pane.browser && pane.browser.placeKind === "recent"
+                        visible: !(pane.selectedPaths && pane.selectedPaths.length > 0)
+                        Layout.preferredWidth: sortPillLabel.implicitWidth + 46
+                        Layout.preferredHeight: 42
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.ButtonMenu
+                        Accessible.name: words.i18n("Sort: %1", sortPillLabel.text)
+                        Accessible.onPressAction: sortMenu.openUnder(sortPill)
+                        Keys.onReturnPressed: sortMenu.openUnder(sortPill)
+                        Keys.onEnterPressed: sortMenu.openUnder(sortPill)
+                        Keys.onSpacePressed: sortMenu.openUnder(sortPill)
+                        Rectangle {
+                            y: 6; width: parent.width; height: parent.height - 12
+                            radius: height / 2
+                            color: sortPillPress.pressed || sortMenu.visible ? tone.controlPressed
+                                : sortPillHover.hovered ? tone.controlHover : tone.control
+                            border.width: sortPill.activeFocus ? 1 : 0
+                            border.color: tone.text
+                            Text {
+                                id: sortPillLabel
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 16
+                                text: sortPill.fixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][pane.browser ? pane.browser.sortMode : 0]
+                                color: tone.text
+                            }
+                            SuiteIcon {
+                                glyph: "chevron-down"
+                                width: 14; height: 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        HoverHandler {
+                            id: sortPillHover
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                        }
+                        MouseArea {
+                            id: sortPillPress
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: sortMenu.openUnder(sortPill)
                         }
                     }
                     PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }

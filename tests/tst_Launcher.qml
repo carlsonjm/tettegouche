@@ -1786,7 +1786,7 @@ TestCase {
         verify(!pill.visible)
         verify(!findChild(launcher, "new-folder").visible)
         verify(!findChild(launcher, "paste-here").visible)
-        compare(findChild(launcher, "sort-button").fileOrderFixed, true)
+        compare(findChild(launcher, "files-sort").fixed, true)
         filesMock.searching = true
         filesMock.entries = []
         compare(findChild(launcher, "files-empty").text, "Searching…")
@@ -1798,7 +1798,7 @@ TestCase {
         filesMock.placeKind = "folder"
         filesMock.entries = [{name:"Projects",path:"/home/test/Projects",directory:true,icon:"folder",detail:"Folder"}, {name:"Notes.txt",path:"/home/test/Notes.txt",directory:false,icon:"text-plain",detail:"842 B"}]
         verify(findChild(launcher, "paste-here").visible)
-        compare(findChild(launcher, "sort-button").fileOrderFixed, false)
+        compare(findChild(launcher, "files-sort").fixed, false)
         filesMock.canPaste = false
         query.text = ""
         launcher.setDrawerOpen(false)
@@ -2002,8 +2002,8 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Files' order opens under its button and stays inside the sheet, and a
-    // line sets the order. Hidden files are the eye's, not the menu's.
+    // Files' order, beside New folder, opens under its pill and stays inside
+    // the sheet, and a line sets the order. Hidden files are the eye's.
     function test_filesSortMenu() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -2011,8 +2011,13 @@ TestCase {
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const sort = findChild(launcher, "sort-button")
+        const sort = findChild(launcher, "files-sort")
         const menu = findChild(launcher, "files-sort-menu")
+        verify(sort.visible)
+        const newFolder = findChild(launcher, "new-folder")
+        verify(Math.abs(sort.mapToItem(null, 0, sort.height / 2).y
+            - newFolder.mapToItem(null, 0, newFolder.height / 2).y) < 1)
+        verify(sort.mapToItem(null, sort.width, 0).x <= newFolder.mapToItem(null, 0, 0).x + 0.5)
         mouseClick(sort, sort.width / 2, sort.height / 2)
         tryCompare(menu, "opened", true)
         const sheet = menu.parent
@@ -2024,9 +2029,8 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // The eye on search's left shows what is hidden, in either drawer:
-    // hidden files in Files, hidden applications in Apps; again, it hides
-    // them. The sort button sits on search's right.
+    // The eye inside search shows what is hidden, in either drawer: hidden
+    // files in Files, hidden applications in Apps; again, it hides them.
     function test_hiddenEye() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -2035,14 +2039,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const eye = findChild(launcher, "hidden-button")
-        const sort = findChild(launcher, "sort-button")
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
         verify(eye.visible && eye.enabled)
-        // The eye inside search, past what is typed; the order on its left.
+        // The eye inside search, past what is typed.
         verify(eye.mapToItem(null, 0, 0).x >= query.mapToItem(null, query.width, 0).x - 0.5)
         verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, field.width, 0).x - 40)
-        verify(sort.mapToItem(null, sort.width, 0).x <= field.mapToItem(null, 0, 0).x + 0.5)
         verify(!eye.showing)
         mouseClick(eye, eye.width / 2, eye.height / 2)
         compare(filesMock.hidden, true)
@@ -2242,13 +2244,12 @@ TestCase {
         verify(window)
         const eye = findChild(window, "files-window-hidden")
         const field = findChild(window, "files-window-search")
-        const sort = findChild(window, "files-window-sort")
         const pane = findChild(window, "files-window-pane")
         const header = findChild(window, "files-window-header")
         const left = item => item.mapToItem(window, 0, 0).x
         const right = item => item.mapToItem(window, item.width, 0).x
         verify(left(eye) >= left(field) && right(eye) <= right(field) - 40)
-        verify(right(sort) <= left(field) + 0.5)
+        verify(findChild(window, "files-sort"))
         verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
         verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
         compare(findChild(window, "drawer-back"), null)
@@ -2417,26 +2418,30 @@ TestCase {
         compare(findChild(launcher, "close-drawer-button"), null)
         const header = findChild(launcher, "drawer-header")
         const back = findChild(launcher, "drawer-back")
-        const sort = findChild(launcher, "sort-button")
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
-        // One row: Back, then the sort button, then search in the middle.
+        // One row: Back, then search in the middle, then the corner; the
+        // order sits below, over the drawer.
         verify(back.visible && back.enabled)
-        verify(sort.visible && sort.enabled)
         compare(middle(field).y, middle(header).y)
         compare(middle(back).y, middle(header).y)
-        compare(middle(sort).y, middle(header).y)
-        verify(right(back) < left(sort))
-        verify(right(sort) <= left(field) + 0.5)
+        verify(right(back) < left(field))
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
+        const appsSort = findChild(launcher, "sort-button")
+        compare(appsSort.visible, data.mode === "apps")
+        if (data.mode === "apps") {
+            verify(appsSort.enabled)
+            verify(appsSort.mapToItem(header, 0, 0).y >= header.height)
+            verify(Math.abs(right(appsSort) - right(header)) < 1)
+        }
         // The drawer reaches up to the row search held above it.
         tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)
         const drawer = findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid")
         verify(drawer.visible)
-        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16)
+        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16 + (data.mode === "apps" ? 50 : 0))
         // A tap or click on search takes the keys, and a tap by its edge
         // asks for the on-screen ones; what is typed narrows the drawer,
         // from the field or from anywhere in the launcher.
@@ -2503,7 +2508,7 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const query = findChild(launcher, "search-query")
-        const sort = findChild(launcher, "sort-button")
+        const sort = findChild(launcher, data.mode === "files" ? "files-sort" : "sort-button")
         query.forceActiveFocus()
         mouseClick(sort, sort.width / 2, sort.height / 2)
         const filesMenu = findChild(launcher, "files-sort-menu")

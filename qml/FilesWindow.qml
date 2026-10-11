@@ -56,8 +56,8 @@ Rectangle {
         }
     }
 
-    // The order on search's left and the eye inside it, by its search icon,
-    // search centred.
+    // Search centred, with the eye inside it by its search icon; the order
+    // sits beside New folder, below.
     Item {
         id: header
         objectName: "files-window-header"
@@ -65,9 +65,7 @@ Rectangle {
         y: 14
         width: window.width - 2 * window.contentInset
         height: 44
-        readonly property real flankWidth: sort.width + 4
-        readonly property real fieldWidth: Math.max(160,
-            Math.min(width - 2 * flankWidth, Math.max(360, width / 2)))
+        readonly property real fieldWidth: Math.max(160, Math.min(width, Math.max(360, width / 2)))
 
         Item {
             id: eye
@@ -169,64 +167,6 @@ Rectangle {
                         filter.forceActiveFocus()
                     }
                 }
-            }
-        }
-
-        // The order, a grey pill naming it, as in Search; Recent keeps the
-        // order of use.
-        Item {
-            id: sort
-            objectName: "files-window-sort"
-            readonly property bool fixed: !!window.fileBrowser && window.fileBrowser.placeKind === "recent"
-            x: field.x - 4 - width
-            anchors.verticalCenter: parent.verticalCenter
-            width: Math.max(42, sortLabel.implicitWidth + 46)
-            height: 42
-            Accessible.role: Accessible.ButtonMenu
-            Accessible.name: words.i18n("Sort: %1", sortLabel.text)
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width
-                height: 30
-                radius: height / 2
-                color: sortPress.pressed || sortMenu.visible ? tone.controlPressed
-                    : sortHover.hovered ? tone.controlHover : tone.control
-                Behavior on color { ColorAnimation { duration: window.ms(90) } }
-                Text {
-                    id: sortLabel
-                    anchors.verticalCenter: parent.verticalCenter
-                    x: 14
-                    text: sort.fixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][window.fileBrowser ? window.fileBrowser.sortMode : 0]
-                    color: tone.primaryText
-                    font.pixelSize: 13
-                }
-                SuiteIcon {
-                    glyph: "chevron-down"
-                    width: 14; height: 14
-                    anchors.right: parent.right
-                    anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-            HoverHandler {
-                id: sortHover
-                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-            }
-            MouseArea {
-                id: sortPress
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: sortMenu.openUnder(sort)
-            }
-            SheetMenu {
-                id: sortMenu
-                objectName: "files-window-sort-menu"
-                bounds: window
-                readonly property int mode: window.fileBrowser ? window.fileBrowser.sortMode : 0
-                SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: sortMenu.mode === 0; enabled: !sort.fixed; onTriggered: window.fileBrowser.sortMode = 0 }
-                SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: sortMenu.mode === 1; enabled: !sort.fixed; onTriggered: window.fileBrowser.sortMode = 1 }
-                SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: sortMenu.mode === 2; enabled: !sort.fixed; onTriggered: window.fileBrowser.sortMode = 2 }
-                SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: sortMenu.mode === 3; enabled: !sort.fixed; onTriggered: window.fileBrowser.sortMode = 3 }
             }
         }
     }

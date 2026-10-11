@@ -6,8 +6,9 @@ provenance.
 ## Unreleased
 
 - Apps, Files, Notes and Ask share one header. Back stays on the left; the
-  sort button sits left of the search field and the eye inside it, by its
-  search icon; and the right corner holds Expand, which fills the screen and
+  eye sits inside the search field by its search icon, and the sort button
+  moves below: beside New folder in Files, at the right of a row over the
+  applications in Apps; and the right corner holds Expand, which fills the screen and
   brings Search back to its size, Pop out, which gives what is open a window
   of its own, and Close, which puts Search away. Notes and Ask pop out into
   their applications' windows, as All notes and Expand did.

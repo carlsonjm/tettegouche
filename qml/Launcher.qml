@@ -1680,11 +1680,11 @@ Item {
                 readonly property real sectionGap: 16
                 readonly property real openHeight: 44
                 // Search, in the open header, keeps to the middle: centred,
-                // with the eye inside it beside the search icon and the sort
-                // button on its left, as clear of Back as of the corner.
-                readonly property real flankWidth: sortButton.width + 4
+                // with the eye inside it beside the search icon, as clear of
+                // Back as of the corner.
+                readonly property real controlsOpacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
                 readonly property real fieldSide: Math.max(backButton.x + backButton.width,
-                    width - drawerCorner.x) + 12 + flankWidth
+                    width - drawerCorner.x) + 12
                 readonly property real fieldWidth: Math.max(160,
                     Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
                 readonly property real fieldLeft: (width - fieldWidth) / 2
@@ -1776,8 +1776,8 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
-                    opacity: sortButton.opacity
-                    enabled: sortButton.enabled
+                    opacity: drawerHandle.controlsOpacity
+                    enabled: root.drawerOpen && opacity > 0.9
                     Accessible.role: Accessible.CheckBox
                     Accessible.name: root.filesMode ? words.i18n("Show hidden files")
                         : words.i18n("Show hidden applications")
@@ -1811,86 +1811,6 @@ Item {
                     }
                 }
 
-                Item {
-                id: sortButton
-                    objectName: "sort-button"
-                    Accessible.role: Accessible.ButtonMenu
-                    Accessible.name: root.filesMode ? words.i18n("Sort: %1", sortLabel.text) : words.i18n("Sort")
-                    x: drawerHandle.fieldLeft - 4 - width
-                    anchors.verticalCenter: parent.verticalCenter
-                    // In Files the order is a grey pill naming it, as the
-                    // suite's header controls are.
-                    width: root.filesMode ? Math.max(42, sortLabel.implicitWidth + 46) : 42
-                    height: 42
-                    opacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
-                    enabled: root.drawerOpen && opacity > 0.9
-
-                    Kirigami.Icon {
-                        anchors.centerIn: parent
-                        visible: !root.filesMode
-                        width: 20
-                        height: 20
-                        source: root.applicationCatalog.sortOrder === 1
-                            ? "view-sort-descending-symbolic"
-                            : "view-sort-ascending-symbolic"
-                        color: root.primaryText
-                    }
-
-                    Rectangle {
-                        visible: root.filesMode
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        height: 30
-                        radius: height / 2
-                        color: sortPress.pressed || fileSort.visible ? tone.controlPressed
-                            : sortHover.hovered ? tone.controlHover : root.controlColor
-                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
-                        Text {
-                            id: sortLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: 14
-                            text: sortButton.fileOrderFixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][root.fileBrowser ? root.fileBrowser.sortMode : 0]
-                            color: root.primaryText
-                            font.pixelSize: 13
-                        }
-                        SuiteIcon {
-                            glyph: "chevron-down"
-                            width: 14; height: 14
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                    HoverHandler {
-                        id: sortHover
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                    }
-                    MouseArea {
-                        id: sortPress
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (root.filesMode) fileSort.openUnder(sortButton)
-                            else root.sortMenuOpen = !root.sortMenuOpen
-                        }
-                    }
-                    // Recent keeps the order of use.
-                    readonly property bool fileOrderFixed: !!root.fileBrowser && root.fileBrowser.placeKind === "recent"
-                    // Files' order, kept inside the sheet under the button.
-                    SheetMenu {
-                        id: fileSort
-                        objectName: "files-sort-menu"
-                        bounds: sheet
-                        bottomMargin: root.keysReach
-                        keysReach: root.keysReach
-                        readonly property int mode: root.fileBrowser ? root.fileBrowser.sortMode : 0
-                        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: fileSort.mode === 0; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
-                        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
-                        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
-                        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
-                    }
-                }
-
                 // Expand and, in Files, Pop out, in the corner every drawer
                 // and mode shares.
                 WindowActions {
@@ -1899,8 +1819,8 @@ Item {
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    opacity: sortButton.opacity
-                    enabled: sortButton.enabled
+                    opacity: drawerHandle.controlsOpacity
+                    enabled: root.drawerOpen && opacity > 0.9
                     expanded: root.launcherController.drawerExpanded
                     popOutShown: root.filesMode && root.filesWindowOffered
                     popOutName: words.i18n("Open Files in its own window")
@@ -2016,16 +1936,70 @@ Item {
                 opacity: root.drawerProgress
                 transform: Translate { y: -20*(1-root.drawerProgress) }
             }
-            // An open folder's name, over its applications. Tapped, it can be
-            // renamed; Enter or a tap elsewhere keeps the name.
+            // Apps' row over its applications: the order, a grey pill naming
+            // it at the right, as Files has its own over the folder.
+            Item {
+                id: sortButton
+                objectName: "sort-button"
+                readonly property var orderNames: [words.i18n("A to Z"), words.i18n("Z to A"),
+                    words.i18n("Most used"), words.i18n("Newest installed")]
+                Accessible.role: Accessible.ButtonMenu
+                Accessible.name: words.i18n("Sort: %1", sortLabel.text)
+                Accessible.onPressAction: root.sortMenuOpen = !root.sortMenuOpen
+                x: parent.width - width
+                y: searchField.y + searchField.height + drawerHandle.sectionGap
+                width: sortLabel.implicitWidth + 46
+                height: 42
+                visible: !root.filesMode && opacity > 0
+                opacity: drawerHandle.controlsOpacity
+                enabled: root.drawerOpen && !root.filesMode && opacity > 0.9
+                z: 5
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 30
+                    radius: height / 2
+                    color: sortPress.pressed || root.sortMenuOpen ? tone.controlPressed
+                        : sortHover.hovered ? tone.controlHover : root.controlColor
+                    Behavior on color { ColorAnimation { duration: root.ms(90) } }
+                    Text {
+                        id: sortLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 14
+                        text: sortButton.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
+                        color: root.primaryText
+                        font.pixelSize: 13
+                    }
+                    SuiteIcon {
+                        glyph: "chevron-down"
+                        width: 14; height: 14
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+                HoverHandler {
+                    id: sortHover
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                }
+                MouseArea {
+                    id: sortPress
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.sortMenuOpen = !root.sortMenuOpen
+                }
+            }
+
+            // An open folder's name, over its applications, in the same row.
+            // Tapped, it can be renamed; Enter or a tap elsewhere keeps the name.
             Item {
                 id: folderHeader
                 objectName: "apps-folder-header"
                 x: 0
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width
-                height: root.folderOpen && query.text.length === 0 ? 40 : 0
-                visible: height > 0
+                height: 42
+                visible: root.folderOpen && query.text.length === 0
                 opacity: root.drawerProgress
                 z: 4
 
@@ -2033,7 +2007,7 @@ Item {
                     id: folderName
                     objectName: "apps-folder-name"
                     anchors.centerIn: parent
-                    width: Math.min(parent.width - 48, Math.max(80, contentWidth + 4))
+                    width: Math.min(parent.width - 2 * sortButton.width - 24, Math.max(80, contentWidth + 4))
                     horizontalAlignment: TextInput.AlignHCenter
                     text: root.applicationCatalog.openFolderName
                     color: root.primaryText
@@ -2072,7 +2046,7 @@ Item {
                 objectName: "application-grid"
                 x: 0
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
-                    + folderHeader.height
+                    + folderHeader.height + 8
                 width: parent.width
                 height: Math.max(0, parent.height - y)
                 clip: true
@@ -2388,9 +2362,9 @@ Item {
             Rectangle {
                 id: sortMenu
                 objectName: "sort-menu"
-                // Under the sort button, on search's left.
-                x: Math.max(0, Math.min(parent.width - width, drawerHandle.x + sortButton.x))
-                y: drawerHandle.y + drawerHandle.height + 4
+                // Under the sort button.
+                anchors.right: parent.right
+                y: sortButton.y + sortButton.height + 4
                 width: 160
                 height: sortChoices.implicitHeight + 12
                 radius: root.noteRadius

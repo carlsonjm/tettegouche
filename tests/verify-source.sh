@@ -76,7 +76,7 @@ fi
 rg -q 'Q_PROPERTY\(int sortOrder' \
     "${project_root}/src/ApplicationCatalog.h"
 rg -q 'setFilterText' "${project_root}/src/ApplicationCatalog.cpp"
-rg -q 'view-sort-descending-symbolic' \
+rg -Fq 'objectName: "sort-button"' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'property: "drawerProgress"' "${project_root}/qml/Launcher.qml"
 rg -q 'KApplicationTrader::query' \
