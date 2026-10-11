@@ -30,9 +30,13 @@ Item {
     property color controlColor: tone.control
     property color primaryText: tone.primaryText
     property bool growing: false
+    // Whether Search fills the screen, which Expand changes.
+    property bool expanded: false
 
     signal back()
+    signal expand()
     signal grow()
+    signal dismiss()
     signal finished()
 
     function focusPad() { pad.forceActiveFocus() }
@@ -209,16 +213,20 @@ Item {
             }
         }
 
-        Pill {
-            id: growPill
-            objectName: "notes-all"
+        // Expand; Pop out, which opens the note in the notes
+        // application's own window; and Close.
+        WindowActions {
+            id: corner
+            prefix: "notes"
             anchors.right: parent.right
             anchors.rightMargin: 14
             anchors.verticalCenter: parent.verticalCenter
-            label: words.i18n("All notes")
-            glyph: "maximize-2"
             opacity: pane.clamp((pane.progress - 0.72) / 0.28)
-            onActivated: pane.grow()
+            expanded: pane.expanded
+            popOutName: words.i18n("Open in Notes")
+            onExpand: pane.expand()
+            onPopOut: pane.grow()
+            onDismiss: pane.dismiss()
         }
     }
 

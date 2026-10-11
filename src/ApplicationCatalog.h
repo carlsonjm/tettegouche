@@ -114,6 +114,10 @@ public:
     // Puts the application with this id into the folder a row is, or makes a
     // new folder of it and the application a row is. Returns the folder's id.
     Q_INVOKABLE QString gather(int row, const QString &applicationId);
+    // Makes a new folder of these applications, two or more, each leaving any
+    // folder it was in. Returns the folder's id, or empty when fewer than two
+    // are known.
+    Q_INVOKABLE QString makeFolder(const QStringList &applicationIds);
     // Puts an application's row into a folder.
     Q_INVOKABLE void putInFolder(int row, const QString &folderId);
     // Takes an application's row out of its folder; a folder left with one

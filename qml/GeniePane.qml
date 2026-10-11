@@ -31,9 +31,13 @@ Item {
     property color controlColor: tone.control
     property color primaryText: tone.primaryText
     property bool growing: false
+    // Whether Search fills the screen, which Expand changes.
+    property bool expanded: false
 
     signal back()
+    signal expand()
     signal grow()
+    signal dismiss()
 
     // Opening shows the conversation's question as Split Rock keeps it.
     function focusField() {
@@ -55,9 +59,9 @@ Item {
 
     readonly property real headerHeight: 44
     // The question keeps to the middle of the header, as clear of Back as of
-    // Expand, as search does in Apps and Files.
+    // the corner, as search does in Apps and Files.
     readonly property real fieldSide: Math.max(backPill.x + backPill.width,
-        width - growPill.x) + 12
+        width - corner.x) + 12
     readonly property real fieldWidth: Math.max(160,
         Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
     readonly property string phase: genie ? genie.phase : ""
@@ -122,7 +126,7 @@ Item {
     }
 
     // Header, as Apps and Files place theirs: Back from 65% of the way,
-    // Expand from 72%.
+    // the corner from 72%.
     Pill {
         id: backPill
         objectName: "genie-back"
@@ -133,15 +137,18 @@ Item {
         opacity: pane.clamp((pane.progress - 0.65) / 0.35)
         onActivated: pane.back()
     }
-    Pill {
-        id: growPill
-        objectName: "genie-expand"
+    // Expand; Pop out, which opens Genie's own window; and Close.
+    WindowActions {
+        id: corner
+        prefix: "genie"
         x: pane.width - width - 14
         y: (pane.headerHeight - height) / 2
-        label: words.i18n("Expand")
-        glyph: "maximize-2"
         opacity: pane.clamp((pane.progress - 0.72) / 0.28)
-        onActivated: pane.grow()
+        expanded: pane.expanded
+        popOutName: words.i18n("Open in Genie")
+        onExpand: pane.expand()
+        onPopOut: pane.grow()
+        onDismiss: pane.dismiss()
     }
 
     // What Genie says, settling 20 px as the mode opens, as Files does.

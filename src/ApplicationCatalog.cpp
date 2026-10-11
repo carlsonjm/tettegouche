@@ -380,6 +380,26 @@ QString ApplicationCatalog::gather(int row, const QString &applicationId)
     return target;
 }
 
+QString ApplicationCatalog::makeFolder(const QStringList &applicationIds)
+{
+    QStringList chosen;
+    for (const QString &id : applicationIds) {
+        if (!id.isEmpty() && !chosen.contains(id) && entryIndex(id) >= 0) chosen.append(id);
+    }
+    if (chosen.size() < 2) {
+        return {};
+    }
+    const QString target = QStringLiteral("f%1%2")
+        .arg(QDateTime::currentMSecsSinceEpoch(), 0, 36)
+        .arg(QRandomGenerator::global()->bounded(1296), 0, 36);
+    for (Folder &folder : m_folders) {
+        for (const QString &id : chosen) folder.applications.removeAll(id);
+    }
+    m_folders.append({target, nameFor(chosen), chosen});
+    storeFolders();
+    return target;
+}
+
 void ApplicationCatalog::putInFolder(int row, const QString &folderId)
 {
     const Entry *entry = entryAt(row);

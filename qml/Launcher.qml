@@ -43,6 +43,13 @@ Item {
     property bool modeGrowing: false
     property bool modeHandoff: false
     property string modeToken: ""
+    // Whether Search filled the screen before a mode grew into its
+    // application's window, to come back to if that window never shows.
+    property bool modeExpandedBefore: false
+    // Files' own window, which Pop out opens: offered where the launcher
+    // can open it, and awaited in Spread as a launch is.
+    readonly property bool filesWindowOffered: !!root.fileBrowser && !!root.launcherController.filesWindowOffered
+    property bool filesHandoff: false
     readonly property bool notesOpen: modeOpen && modeShown === "notes"
     readonly property real notesProgress: modeShown === "notes" ? modeProgress : 0
     readonly property bool notesGrowing: modeGrowing && modeShown === "notes"
@@ -354,10 +361,19 @@ Item {
     }
 
     function setDrawerOpen(open, mode) {
+        // With Files in its own window, Files is that window.
+        if (open && mode === "files" && root.launcherController.filesWindowOpen) {
+            root.launcherController.showFilesWindow()
+            root.launcherController.close()
+            return
+        }
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
+        // Every drawer opens at Search's own size, a card in Spread; Expand
+        // fills the screen. Moving between drawers keeps the size chosen.
+        const wasOpen = root.drawerOpen
         root.drawerOpen = open
-        root.launcherController.setDrawerExpanded(open)
+        if (!open || !wasOpen) root.launcherController.setDrawerExpanded(false)
         if (!open) {
             root.sortMenuOpen = false
             root.applicationCatalog.openFolder = ""
@@ -459,8 +475,49 @@ Item {
         applicationGrid.keyChosen = false
     }
     function goBack() {
+        if (root.choosingFolder) root.cancelFolder()
+        else if (root.folderOpen) root.closeFolder()
+        else {
+            root.setDrawerOpen(false)
+            if (root.modeOpen) root.closeMode()
+        }
+    }
+
+    // New folder in Apps: the applications tapped are chosen, and Make
+    // folder gathers them, two or more, into a folder of their own, which
+    // opens with its name ready to change.
+    property bool choosingFolder: false
+    property var folderPicks: []
+    onDrawerOpenChanged: if (!root.drawerOpen) root.cancelFolder()
+    onFilesModeChanged: if (root.filesMode) root.cancelFolder()
+    function startFolder() {
         if (root.folderOpen) root.closeFolder()
-        else root.setDrawerOpen(false)
+        root.sortMenuOpen = false
+        root.folderPicks = []
+        root.choosingFolder = true
+    }
+    function cancelFolder() {
+        root.choosingFolder = false
+        root.folderPicks = []
+    }
+    function pickForFolder(applicationId) {
+        if (!applicationId) return
+        const picks = root.folderPicks.slice()
+        const at = picks.indexOf(applicationId)
+        if (at >= 0) picks.splice(at, 1)
+        else picks.push(applicationId)
+        root.folderPicks = picks
+    }
+    function makeFolder() {
+        const folder = root.applicationCatalog.makeFolder(root.folderPicks)
+        root.cancelFolder()
+        if (!folder) return
+        query.text = ""
+        root.applicationCatalog.openFolder = folder
+        applicationGrid.currentIndex = applicationGrid.count > 0 ? 0 : -1
+        applicationGrid.keyChosen = false
+        folderName.forceActiveFocus()
+        folderName.selectAll()
     }
 
     // A folder's sheet: Rename and Remove folder.
@@ -487,6 +544,12 @@ Item {
     }
 
     function runCatalogApplication(index, applicationName) {
+        // Choosing for a new folder, a tap or Enter chooses instead.
+        if (root.choosingFolder) {
+            if (!root.applicationCatalog.isFolder(index))
+                root.pickForFolder(root.applicationCatalog.applicationId(index))
+            return true
+        }
         if (root.applicationCatalog.isFolder(index)) {
             root.openFolder(index)
             return true
@@ -517,6 +580,27 @@ Item {
             root.launchingApplication = ""
         }
         return false
+    }
+
+    // Expand, in the corner of each drawer and mode: Search fills the screen,
+    // and again comes back to its size.
+    function toggleExpanded() {
+        root.launcherController.setDrawerExpanded(!root.launcherController.drawerExpanded, true)
+    }
+    // Pop out, in Files: Files moves into a window of its own with its tabs
+    // and folder as they are, and Search closes. In Spread the window takes
+    // Search's card, as an application started from Search does.
+    function popOutFiles() {
+        if (!root.drawerOpen || !root.filesMode || root.filesHandoff || !root.filesWindowOffered) return
+        root.filesHandoff = root.launcherController.guestMode
+            && root.launcherController.beginGuestFilesLaunch()
+        if (!root.launcherController.showFilesWindow()) {
+            if (root.filesHandoff) root.launcherController.cancelGuestApplicationLaunch()
+            root.filesHandoff = false
+            return
+        }
+        if (root.filesHandoff) filesHandoffTimeout.restart()
+        else root.launcherController.close()
     }
 
     // A mode opens in Search's window with the drawer's motion and the
@@ -594,18 +678,20 @@ Item {
         if (!root.modeOpen || root.modeGrowing) return
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
+        // Search goes back to the size it had before Expand.
+        if (root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
         root.forceActiveFocus()
     }
     function closeNotes() { root.closeMode() }
-    // All notes and Expand grow the window as Apps does, and the
-    // application's own window takes its place: in Spread through Kadunce's
-    // launch, over an Active card once it has drawn, since Kadunce puts it in
-    // the card's place.
+    // Pop out grows the window as Apps does, and the application's own window
+    // takes its place: in Spread through Kadunce's launch, over an Active card
+    // once it has drawn, since Kadunce puts it in the card's place.
     function growMode() {
         if (!root.modeOpen || root.modeGrowing) return
         const notes = root.modeShown === "notes"
+        root.modeExpandedBefore = root.launcherController.drawerExpanded
         root.modeGrowing = true
         root.modeToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
         root.launcherController.setDrawerExpanded(true)
@@ -627,7 +713,7 @@ Item {
         root.modeHandoff = false
         root.modeGrowing = false
         root.modeToken = ""
-        root.launcherController.setDrawerExpanded(false)
+        root.launcherController.setDrawerExpanded(root.modeExpandedBefore, true)
     }
     function modeWindowShown(requestToken) {
         if (!root.modeGrowing || root.modeHandoff || requestToken !== root.modeToken) return
@@ -711,6 +797,11 @@ Item {
         if (event.key === Qt.Key_Escape) {
             if (root.sortMenuOpen) {
                 root.sortMenuOpen = false
+                event.accepted = true
+                return
+            }
+            if (root.choosingFolder) {
+                root.cancelFolder()
                 event.accepted = true
                 return
             }
@@ -798,6 +889,8 @@ Item {
             root.modeGrowing = false
             root.modeHandoff = false
             root.modeToken = ""
+            filesHandoffTimeout.stop()
+            root.filesHandoff = false
             if (root.quickNote) root.quickNote.refresh()
             if (root.genie) root.genie.refresh()
             root.forceActiveFocus()
@@ -811,19 +904,36 @@ Item {
             firstRow.arrive(root.own(140), true)
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
-        // Meta+G or Meta+E: that drawer opens, or closes the launcher when it
-        // is the drawer already open.
+        // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
+        // screen, a single step to the whole view, or the launcher closes when
+        // it is the one already open. Pills inside Search open at its size.
+        // Another drawer or mode already open gives way, so the slide moves
+        // straight from one to the next and Back leads to search.
         function onDrawerRequested(mode) {
+            if (root.modeOpen && root.modeShown !== mode) root.closeMode()
             if (mode === "notes" || mode === "genie") {
+                const shown = root.modeOpen && root.modeShown === mode
                 root.openModeDirectly(mode)
+                const coming = (root.modeOpen && root.modeShown === mode) || root.modeAwaited === mode
+                if (!shown && coming) root.launcherController.setDrawerExpanded(true, true)
                 return
             }
             const files = mode === "files"
             if (files && !root.fileBrowser) return
             if (root.drawerOpen && root.filesMode === files) root.launcherController.close()
-            else root.setDrawerOpen(true, files ? "files" : "apps")
+            else {
+                root.setDrawerOpen(true, files ? "files" : "apps")
+                root.launcherController.setDrawerExpanded(true, true)
+            }
         }
         function onGuestLaunchReady() {
+            if (root.filesHandoff) {
+                filesHandoffTimeout.stop()
+                root.filesHandoff = false
+                root.guestExiting = true
+                launchReadyExit.restart()
+                return
+            }
             if (root.modeHandoff) {
                 modeTimeout.stop()
                 root.modeHandoff = false
@@ -981,8 +1091,8 @@ Item {
                     Math.max(360, parent.width * 0.72, firstRow.naturalWidth)) : parent.width
                 readonly property real compactY: idle ? Math.max(0, Math.round(
                     (parent.height - 58 - (firstRow.fits ? firstRow.reach : 0)) / 2)) : 0
-                // An open drawer holds search in its header, between Back and
-                // the sort button; it travels there as the drawer opens.
+                // An open drawer holds search in its header, between the sort
+                // button and the corner; it travels there as the drawer opens.
                 width: compactWidth + (drawerHandle.fieldWidth - compactWidth) * root.drawerProgress
                 height: 58 + (drawerHandle.openHeight - 58) * root.drawerProgress
                 x: (parent.width - width) / 2
@@ -1066,7 +1176,8 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 18
                     anchors.right: trailingAction.left
-                    anchors.rightMargin: 10
+                    // An open drawer's eye sits between the text and the icon.
+                    anchors.rightMargin: 10 + 42 * root.drawerProgress
                     anchors.verticalCenter: parent.verticalCenter
                     color: root.primaryText
                     selectionColor: tone.selection
@@ -1634,11 +1745,14 @@ Item {
                 readonly property real sectionGap: 16
                 readonly property real openHeight: 44
                 // Search, in the open header, keeps to the middle: centred,
-                // and as clear of Back as of the sort button.
+                // with the eye inside it beside the search icon, as clear of
+                // Back as of the corner.
+                readonly property real controlsOpacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
                 readonly property real fieldSide: Math.max(backButton.x + backButton.width,
-                    width - hiddenButton.x) + 12
+                    width - drawerCorner.x) + 12
                 readonly property real fieldWidth: Math.max(160,
                     Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
+                readonly property real fieldLeft: (width - fieldWidth) / 2
                 readonly property real restingY: parent.height + root.contentInset - 48
                 readonly property real revealDistance: Math.max(1,
                     restingY)
@@ -1708,7 +1822,8 @@ Item {
                 }
 
                 // The eye shows what is hidden: hidden applications in Browse
-                // everything, hidden files in Files. Again, it hides them.
+                // everything, hidden files in Files. Again, it hides them. It
+                // sits inside search, just left of its search icon.
                 Item {
                     id: hiddenButton
                     objectName: "hidden-button"
@@ -1722,13 +1837,12 @@ Item {
                             root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
                         }
                     }
-                    anchors.right: sortButton.left
-                    anchors.rightMargin: 4
-                    anchors.verticalCenter: sortButton.verticalCenter
+                    x: drawerHandle.fieldLeft + drawerHandle.fieldWidth - 9 - trailingAction.width - width
+                    anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
-                    opacity: sortButton.opacity
-                    enabled: sortButton.enabled
+                    opacity: drawerHandle.controlsOpacity
+                    enabled: root.drawerOpen && opacity > 0.9
                     Accessible.role: Accessible.CheckBox
                     Accessible.name: root.filesMode ? words.i18n("Show hidden files")
                         : words.i18n("Show hidden applications")
@@ -1762,85 +1876,22 @@ Item {
                     }
                 }
 
-                Item {
-                id: sortButton
-                    objectName: "sort-button"
-                    Accessible.role: Accessible.ButtonMenu
-                    Accessible.name: root.filesMode ? words.i18n("Sort: %1", sortLabel.text) : words.i18n("Sort")
+                // Expand and, in Files, Pop out, in the corner every drawer
+                // and mode shares.
+                WindowActions {
+                    id: drawerCorner
+                    prefix: "drawer"
                     anchors.right: parent.right
                     anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    // In Files the order is a grey pill naming it, as the
-                    // suite's header controls are.
-                    width: root.filesMode ? Math.max(42, sortLabel.implicitWidth + 46) : 42
-                    height: 42
-                    opacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
+                    opacity: drawerHandle.controlsOpacity
                     enabled: root.drawerOpen && opacity > 0.9
-
-                    Kirigami.Icon {
-                        anchors.centerIn: parent
-                        visible: !root.filesMode
-                        width: 20
-                        height: 20
-                        source: root.applicationCatalog.sortOrder === 1
-                            ? "view-sort-descending-symbolic"
-                            : "view-sort-ascending-symbolic"
-                        color: root.primaryText
-                    }
-
-                    Rectangle {
-                        visible: root.filesMode
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        height: 30
-                        radius: height / 2
-                        color: sortPress.pressed || fileSort.visible ? tone.controlPressed
-                            : sortHover.hovered ? tone.controlHover : root.controlColor
-                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
-                        Text {
-                            id: sortLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            x: 14
-                            text: sortButton.fileOrderFixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][root.fileBrowser ? root.fileBrowser.sortMode : 0]
-                            color: root.primaryText
-                            font.pixelSize: 13
-                        }
-                        SuiteIcon {
-                            glyph: "chevron-down"
-                            width: 14; height: 14
-                            anchors.right: parent.right
-                            anchors.rightMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                    }
-                    HoverHandler {
-                        id: sortHover
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                    }
-                    MouseArea {
-                        id: sortPress
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (root.filesMode) fileSort.openUnder(sortButton)
-                            else root.sortMenuOpen = !root.sortMenuOpen
-                        }
-                    }
-                    // Recent keeps the order of use.
-                    readonly property bool fileOrderFixed: !!root.fileBrowser && root.fileBrowser.placeKind === "recent"
-                    // Files' order, kept inside the sheet under the button.
-                    SheetMenu {
-                        id: fileSort
-                        objectName: "files-sort-menu"
-                        bounds: sheet
-                        bottomMargin: root.keysReach
-                        keysReach: root.keysReach
-                        readonly property int mode: root.fileBrowser ? root.fileBrowser.sortMode : 0
-                        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: fileSort.mode === 0; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=0 }
-                        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: fileSort.mode === 1; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=1 }
-                        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: fileSort.mode === 2; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=2 }
-                        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: fileSort.mode === 3; enabled: !sortButton.fileOrderFixed; onTriggered: root.fileBrowser.sortMode=3 }
-                    }
+                    expanded: root.launcherController.drawerExpanded
+                    popOutShown: root.filesMode && root.filesWindowOffered
+                    popOutName: words.i18n("Open Files in its own window")
+                    onExpand: root.toggleExpanded()
+                    onPopOut: root.popOutFiles()
+                    onDismiss: root.launcherController.close()
                 }
 
                 // The open drawer's header pulled down closes it.
@@ -1891,11 +1942,14 @@ Item {
                 progress: root.notesProgress
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
                 growing: root.modeGrowing
+                expanded: root.launcherController.drawerExpanded
                 surfaceColor: root.surfaceColor
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
                 primaryText: root.primaryText
                 onBack: root.closeNotes()
+                onExpand: root.toggleExpanded()
+                onDismiss: root.launcherController.close()
                 onGrow: root.growNotes()
                 onFinished: root.launcherController.close()
             }
@@ -1909,12 +1963,15 @@ Item {
                 progress: root.genieProgress
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
                 growing: root.modeGrowing
+                expanded: root.launcherController.drawerExpanded
                 keysUp: root.keysUp
                 surfaceColor: root.surfaceColor
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
                 primaryText: root.primaryText
                 onBack: root.closeMode()
+                onExpand: root.toggleExpanded()
+                onDismiss: root.launcherController.close()
                 onGrow: root.growMode()
             }
 
@@ -1926,6 +1983,7 @@ Item {
                     objectName: "files-pane"
                     browser: root.fileBrowser
                     compact: root.keysUp
+                    card: !root.launcherController.drawerExpanded
                     keysReach: root.keysReach
                     carryArea: sheet
                     onCarryOut: paths => {
@@ -1943,16 +2001,136 @@ Item {
                 opacity: root.drawerProgress
                 transform: Translate { y: -20*(1-root.drawerProgress) }
             }
-            // An open folder's name, over its applications. Tapped, it can be
-            // renamed; Enter or a tap elsewhere keeps the name.
+            // Apps' row over its applications: the order, a grey pill naming
+            // it at the right, as Files has its own over the folder.
+            Item {
+                id: sortButton
+                objectName: "sort-button"
+                readonly property var orderNames: [words.i18n("A to Z"), words.i18n("Z to A"),
+                    words.i18n("Most used"), words.i18n("Newest installed")]
+                Accessible.role: Accessible.ButtonMenu
+                Accessible.name: words.i18n("Sort: %1", sortLabel.text)
+                Accessible.onPressAction: root.sortMenuOpen = !root.sortMenuOpen
+                x: parent.width - width
+                y: searchField.y + searchField.height + drawerHandle.sectionGap
+                width: sortLabel.implicitWidth + 46
+                height: 42
+                visible: !root.filesMode && !root.choosingFolder && opacity > 0
+                opacity: drawerHandle.controlsOpacity
+                enabled: root.drawerOpen && !root.filesMode && opacity > 0.9
+                z: 5
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 30
+                    radius: height / 2
+                    color: sortPress.pressed || root.sortMenuOpen ? tone.controlPressed
+                        : sortHover.hovered ? tone.controlHover : root.controlColor
+                    Behavior on color { ColorAnimation { duration: root.ms(90) } }
+                    Text {
+                        id: sortLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        x: 14
+                        text: sortButton.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
+                        color: root.primaryText
+                        font.pixelSize: 13
+                    }
+                    SuiteIcon {
+                        glyph: "chevron-down"
+                        width: 14; height: 14
+                        anchors.right: parent.right
+                        anchors.rightMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+                HoverHandler {
+                    id: sortHover
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                }
+                MouseArea {
+                    id: sortPress
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.sortMenuOpen = !root.sortMenuOpen
+                }
+            }
+
+            // New folder, beside the order, as Files has it.
+            ModePill {
+                id: newAppsFolder
+                objectName: "apps-new-folder"
+                label: words.i18n("New folder")
+                primaryText: root.primaryText
+                controlColor: root.controlColor
+                x: sortButton.x - 8 - width
+                y: sortButton.y
+                visible: sortButton.visible && !root.folderOpen && !root.choosingFolder
+                opacity: sortButton.opacity
+                enabled: sortButton.enabled
+                z: 5
+                onActivated: root.startFolder()
+            }
+            // Choosing for a new folder: what to do, Cancel, and Make folder
+            // once two are chosen.
+            Item {
+                id: folderChoosing
+                objectName: "apps-folder-choosing"
+                x: 0
+                y: sortButton.y
+                width: parent.width
+                height: 42
+                visible: root.choosingFolder && !root.filesMode
+                z: 6
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.right: cancelFolderPill.left
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.folderPicks.length === 0
+                        ? words.i18n("Choose applications for the new folder")
+                        : words.i18np("%1 chosen", "%1 chosen", root.folderPicks.length)
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                }
+                ModePill {
+                    id: cancelFolderPill
+                    objectName: "apps-folder-cancel"
+                    label: words.i18n("Cancel")
+                    primaryText: root.primaryText
+                    controlColor: root.controlColor
+                    anchors.right: makeFolderPill.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    onActivated: root.cancelFolder()
+                }
+                ModePill {
+                    id: makeFolderPill
+                    objectName: "apps-folder-make"
+                    label: words.i18n("Make folder")
+                    light: true
+                    dimmed: root.folderPicks.length < 2
+                    enabled: root.folderPicks.length >= 2
+                    primaryText: root.primaryText
+                    controlColor: root.controlColor
+                    surfaceColor: root.surfaceColor
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    onActivated: root.makeFolder()
+                }
+            }
+
+            // An open folder's name, over its applications, in the same row.
+            // Tapped, it can be renamed; Enter or a tap elsewhere keeps the name.
             Item {
                 id: folderHeader
                 objectName: "apps-folder-header"
                 x: 0
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width
-                height: root.folderOpen && query.text.length === 0 ? 40 : 0
-                visible: height > 0
+                height: 42
+                visible: root.folderOpen && query.text.length === 0
                 opacity: root.drawerProgress
                 z: 4
 
@@ -1960,7 +2138,7 @@ Item {
                     id: folderName
                     objectName: "apps-folder-name"
                     anchors.centerIn: parent
-                    width: Math.min(parent.width - 48, Math.max(80, contentWidth + 4))
+                    width: Math.min(parent.width - 2 * sortButton.width - 24, Math.max(80, contentWidth + 4))
                     horizontalAlignment: TextInput.AlignHCenter
                     text: root.applicationCatalog.openFolderName
                     color: root.primaryText
@@ -1999,7 +2177,7 @@ Item {
                 objectName: "application-grid"
                 x: 0
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
-                    + folderHeader.height
+                    + folderHeader.height + 8
                 width: parent.width
                 height: Math.max(0, parent.height - y)
                 clip: true
@@ -2051,6 +2229,10 @@ Item {
                         else root.carryApplication(index)
                     }
                     Accessible.onPressAction: root.runCatalogApplication(index, model.name)
+                    Accessible.checkable: root.choosingFolder && !isFolder
+                    Accessible.checked: picked
+                    readonly property bool picked: root.choosingFolder && !isFolder
+                        && root.folderPicks.indexOf(root.applicationCatalog.applicationId(index)) >= 0
                     required property int index
                     required property var model
                     readonly property bool chosen: applicationGrid.keyChosen
@@ -2085,10 +2267,35 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 5
                         radius: root.paperRadius
-                        color: catalogHover.hovered || catalogDelegate.chosen || gatherDrop.containsDrag
+                        color: catalogDelegate.picked ? tone.controlPressed
+                            : catalogHover.hovered || catalogDelegate.chosen || gatherDrop.containsDrag
                             ? tone.tileHover : "transparent"
-                        // A hidden application, shown by the eye, is dimmed.
-                        opacity: catalogDelegate.model.hidden ? 0.45 : 1
+                        // A hidden application, shown by the eye, is dimmed;
+                        // so is a folder while applications are chosen.
+                        opacity: catalogDelegate.model.hidden
+                            || (root.choosingFolder && catalogDelegate.isFolder) ? 0.45 : 1
+
+                        // Chosen for the new folder.
+                        Rectangle {
+                            objectName: "application-picked"
+                            visible: catalogDelegate.picked
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: 6
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: root.controlColor
+                            border.width: 1.5
+                            border.color: root.primaryText
+                            z: 2
+                            SuiteIcon {
+                                anchors.centerIn: parent
+                                glyph: "check"
+                                width: 14
+                                height: 14
+                            }
+                        }
                         // The chosen application rises, as a touched one does.
                         scale: catalogDelegate.chosen ? 1.04 : 1
                         Behavior on scale { NumberAnimation { duration: root.ms(120) } }
@@ -2315,8 +2522,9 @@ Item {
             Rectangle {
                 id: sortMenu
                 objectName: "sort-menu"
+                // Under the sort button.
                 anchors.right: parent.right
-                y: drawerHandle.y + drawerHandle.height + 4
+                y: sortButton.y + sortButton.height + 4
                 width: 160
                 height: sortChoices.implicitHeight + 12
                 radius: root.noteRadius
@@ -2467,6 +2675,18 @@ Item {
         interval: 10000
         repeat: false
         onTriggered: root.stopGrowingMode()
+    }
+
+    // Files' window is already open; Search leaves if Kadunce does not take
+    // it as Search's card.
+    Timer {
+        id: filesHandoffTimeout
+        interval: 3000
+        onTriggered: {
+            root.filesHandoff = false
+            root.launcherController.cancelGuestApplicationLaunch()
+            root.launcherController.close()
+        }
     }
 
     // Over an Active card the application's window has taken the card's

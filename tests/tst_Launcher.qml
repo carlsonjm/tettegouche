@@ -27,7 +27,12 @@ TestCase {
         controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
+        controller.expansionChosen = false
         controller.guestMode = false
+        controller.filesWindowOpen = false
+        controller.filesWindowShows = true
+        controller.filesWindows = 0
+        controller.filesLaunches = 0
         controller.opened()
         wait(300)
     }
@@ -35,7 +40,15 @@ TestCase {
         id: controller
         property bool guestMode: false
         property bool drawerExpanded: false
-        function setDrawerExpanded(expanded) { drawerExpanded = expanded }
+        property bool expansionChosen: false
+        function setDrawerExpanded(expanded, chosen) { drawerExpanded = expanded; expansionChosen = !!chosen }
+        readonly property bool filesWindowOffered: true
+        property bool filesWindowOpen: false
+        property bool filesWindowShows: true
+        property int filesWindows: 0
+        function showFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
+        property int filesLaunches: 0
+        function beginGuestFilesLaunch() { filesLaunches++; return guestMode }
         property rect availableArea: Qt.rect(0, 0, 1000, 740)
         property bool contextAvailable: false
         property real guestX: 140
@@ -162,6 +175,9 @@ TestCase {
             openFolderName = ""
             for (let i = 0; i < count; ++i) if (get(i).folderId === openFolder) openFolderName = get(i).name
         }
+        function applicationId(row) { return row >= 0 && row < count && !isFolder(row) ? "app" + row : "" }
+        property var made: []
+        function makeFolder(ids) { made = ids; return ids.length >= 2 ? "made" : "" }
         function gather(row, id) { return "" }
         function putInFolder(row, id) { putIn = [row, id] }
         function takeOut(row) { takenOut = row }
@@ -527,6 +543,57 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
+    // New folder sits beside the order over Apps. It asks for applications;
+    // a tap chooses one, and Make folder, from two, gathers them into a
+    // folder that opens with its name ready. Esc or Cancel lets it go.
+    function test_appsNewFolder() {
+        controller.opened()
+        for (let i = 0; i < 4; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        catalog.made = []
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const newFolder = findChild(launcher, "apps-new-folder")
+        const sort = findChild(launcher, "sort-button")
+        verify(newFolder.visible && sort.visible)
+        compare(newFolder.y, sort.y)
+        verify(newFolder.x + newFolder.width <= sort.x)
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        verify(launcher.choosingFolder)
+        verify(!newFolder.visible && !sort.visible)
+        const make = findChild(launcher, "apps-folder-make")
+        verify(make.visible && !make.enabled)
+        const launchesBefore = controller.catalogActivated
+        const tile = i => findChild(launcher, "application-tile-" + i)
+        mouseClick(tile(0), tile(0).width / 2, tile(0).height / 2)
+        verify(!make.enabled)
+        mouseClick(tile(2), tile(2).width / 2, tile(2).height / 2)
+        compare(launcher.folderPicks, ["app0", "app2"])
+        verify(tile(0).picked && !tile(1).picked && tile(2).picked)
+        compare(controller.catalogActivated, launchesBefore)
+        verify(make.enabled)
+        mouseClick(make, make.width / 2, make.height / 2)
+        compare(catalog.made, ["app0", "app2"])
+        verify(!launcher.choosingFolder)
+        compare(catalog.openFolder, "made")
+        catalog.openFolder = ""
+
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        verify(launcher.choosingFolder)
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.choosingFolder)
+        verify(launcher.drawerOpen)
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        const cancel = findChild(launcher, "apps-folder-cancel")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        verify(!launcher.choosingFolder)
+
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
     // An application dragged from Apps leaves as a carry, which the dock
     // takes as a pin; a tap still opens it.
     function test_applicationCarry() {
@@ -564,14 +631,15 @@ TestCase {
         const header = findChild(launcher, "apps-folder-header")
         const folder = findChild(grid, "application-tile-0")
         verify(findChild(folder, "apps-folder-tile").visible)
-        compare(header.height, 0)
+        // The name shares the row the order sits in, so Apps does not move.
+        verify(!header.visible)
         const gridTop = grid.y
         mouseClick(folder, folder.width / 2, folder.height / 2)
         compare(catalog.openFolder, "f1")
         verify(launcher.folderOpen)
         compare(controller.catalogActivated, -1)
-        compare(header.height, 40)
-        compare(grid.y, gridTop + 40)
+        verify(header.visible)
+        compare(grid.y, gridTop)
         compare(findChild(launcher, "apps-folder-name").text, "Games")
         const back = findChild(launcher, "drawer-back")
         mouseClick(back, back.width / 2, back.height / 2)
@@ -780,6 +848,9 @@ TestCase {
     function test_expandedDrawerReturnsCompact() {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
+        // A drawer opens at Search's size; Expand fills the screen.
+        compare(controller.drawerExpanded, false)
+        controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "width", 980)
         tryCompare(sheet, "height", 710)
         compare(controller.drawerExpanded, true)
@@ -791,10 +862,11 @@ TestCase {
         const search = findChild(launcher, "search-field")
         const grid = findChild(launcher, "application-grid")
         compare(header.y,0)
-        // The drawer reaches up under the header, to search's old row.
+        // The drawer reaches up under the header, to search's old row, with
+        // the order's row over the applications.
         compare(search.y,0)
-        compare(grid.y-search.y-search.height,16)
-        verify(grid.y < 64)
+        compare(grid.y-search.y-search.height,16+50)
+        verify(grid.y < 114)
         const closesBefore = controller.closes
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
@@ -807,6 +879,7 @@ TestCase {
         const original=controller.availableArea
         controller.availableArea=Qt.rect(0,0,launcher.width,launcher.height)
         launcher.setDrawerOpen(true,"files")
+        controller.setDrawerExpanded(true,true)
         const sheet=findChild(launcher,"launcher-sheet")
         tryCompare(sheet,"height",launcher.height-20)
         compare(sheet.y,10)
@@ -1220,7 +1293,7 @@ TestCase {
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
         verify(launcher.filesMode)
-        compare(controller.drawerExpanded,true)
+        compare(controller.drawerExpanded,false)
         const pane=findChild(launcher,"files-pane")
         verify(pane.visible)
         verify(!findChild(launcher,"application-grid").visible)
@@ -1308,9 +1381,14 @@ TestCase {
         compare(filesMock.createdName,"Created folder")
         compare(filesMock.filter,"")
         mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        tryVerify(function(){ return findChild(launcher,"folder-name").visible })
+        // The form's row is laid out with the next frame; Cancel is tapped
+        // where it is drawn, not where it sat before.
+        waitForRendering(launcher)
         const cancel=findChild(launcher,"cancel-folder")
+        tryVerify(function(){ return cancel.width>0 && cancel.mapToItem(launcher,0,0).x>0 })
         mouseClick(cancel,cancel.width/2,cancel.height/2)
-        verify(!findChild(launcher,"folder-name").visible)
+        tryVerify(function(){ return !findChild(launcher,"folder-name").visible })
         filesMock.operationStatus="Done"
         wait(20)
         verify(pane.showOperationSuccess)
@@ -1339,6 +1417,8 @@ TestCase {
         const entry=findChild(launcher,"files-pill")
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
+        controller.setDrawerExpanded(true,true)
+        wait(250)
         const folder=findChild(launcher,"file-entry-Projects")
         const file=findChild(launcher,"file-entry-Notes.txt")
         const menu=findChild(launcher,"file-context-menu")
@@ -1490,6 +1570,8 @@ TestCase {
         const entry=findChild(launcher,"files-pill")
         mouseClick(entry,entry.width/2,entry.height/2)
         tryCompare(launcher,"drawerProgress",1)
+        controller.setDrawerExpanded(true,true)
+        wait(250)
         const grid=findChild(launcher,"files-grid")
         const pane=findChild(launcher,"files-pane")
         filesMock.tileSize=1
@@ -1541,13 +1623,42 @@ TestCase {
         tryCompare(filesMock,"revealPath","")
         filesMock.selectedPath=""
     }
+    // At a card's size the places fold to a rail of icons and the tiles come
+    // one size smaller; filling the screen brings both back.
+    function test_filesCard() {
+        launcher.fileBrowser=filesMock
+        filesMock.tileSize=2
+        launcher.setDrawerOpen(true,"files")
+        tryCompare(launcher,"drawerProgress",1)
+        filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home",section:"places"}]
+        const pane=findChild(launcher,"files-pane")
+        const places=findChild(launcher,"files-places")
+        // Files opens as a card, the places a rail.
+        compare(controller.drawerExpanded,false)
+        verify(pane.card)
+        tryCompare(places,"width",54)
+        compare(pane.tile.cell,140)
+        controller.drawerExpanded=true
+        verify(!pane.card)
+        tryCompare(places,"width",170)
+        compare(pane.tile.cell,184)
+        compare(filesMock.tileSize,2)
+        controller.drawerExpanded=false
+        tryCompare(places,"width",54)
+        compare(pane.tile.cell,140)
+        filesMock.tileSize=1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+    }
     // Drives follow the places under a rule: a tap opens one, and one plugged
     // in ejects from its own button, by mouse and by touch. Busy, a drive says
     // what it is doing and takes no tap.
     function test_filesDrives() {
         launcher.fileBrowser=filesMock
         launcher.setDrawerOpen(true,"files")
+        controller.setDrawerExpanded(true,true) // names and eject buttons show at full size
         tryCompare(launcher,"drawerProgress",1)
+        wait(250) // the sheet's own growth settles before the rows are tapped
         const home={label:"Home",path:"/home/test",icon:"user-home",section:"places"}
         const root={label:"ROOTFS",path:"/",icon:"drive-harddisk",section:"drives",drive:"root",mounted:true,canEject:false,busy:false,note:""}
         const stick={label:"STICK",path:"/run/media/test/STICK",icon:"drive-removable-media",section:"drives",drive:"stick",mounted:true,canEject:true,busy:false,note:""}
@@ -1643,6 +1754,7 @@ TestCase {
     function test_keysKeepDrawersAbove() {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
+        controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "height", 710)
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
@@ -1747,7 +1859,7 @@ TestCase {
         verify(!pill.visible)
         verify(!findChild(launcher, "new-folder").visible)
         verify(!findChild(launcher, "paste-here").visible)
-        compare(findChild(launcher, "sort-button").fileOrderFixed, true)
+        compare(findChild(launcher, "files-sort").fixed, true)
         filesMock.searching = true
         filesMock.entries = []
         compare(findChild(launcher, "files-empty").text, "Searching…")
@@ -1759,7 +1871,7 @@ TestCase {
         filesMock.placeKind = "folder"
         filesMock.entries = [{name:"Projects",path:"/home/test/Projects",directory:true,icon:"folder",detail:"Folder"}, {name:"Notes.txt",path:"/home/test/Notes.txt",directory:false,icon:"text-plain",detail:"842 B"}]
         verify(findChild(launcher, "paste-here").visible)
-        compare(findChild(launcher, "sort-button").fileOrderFixed, false)
+        compare(findChild(launcher, "files-sort").fixed, false)
         filesMock.canPaste = false
         query.text = ""
         launcher.setDrawerOpen(false)
@@ -1963,8 +2075,8 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Files' order opens under its button and stays inside the sheet, and a
-    // line sets the order. Hidden files are the eye's, not the menu's.
+    // Files' order, beside New folder, opens under its pill and stays inside
+    // the sheet, and a line sets the order. Hidden files are the eye's.
     function test_filesSortMenu() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -1972,8 +2084,13 @@ TestCase {
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const sort = findChild(launcher, "sort-button")
+        const sort = findChild(launcher, "files-sort")
         const menu = findChild(launcher, "files-sort-menu")
+        verify(sort.visible)
+        const newFolder = findChild(launcher, "new-folder")
+        verify(Math.abs(sort.mapToItem(null, 0, sort.height / 2).y
+            - newFolder.mapToItem(null, 0, newFolder.height / 2).y) < 1)
+        verify(newFolder.mapToItem(null, newFolder.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
         mouseClick(sort, sort.width / 2, sort.height / 2)
         tryCompare(menu, "opened", true)
         const sheet = menu.parent
@@ -1985,9 +2102,8 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // The eye beside the sort button shows what is hidden, in either drawer:
-    // hidden files in Files, hidden applications in Apps; again,
-    // it hides them. It keeps clear of the search field.
+    // The eye inside search shows what is hidden, in either drawer: hidden
+    // files in Files, hidden applications in Apps; again, it hides them.
     function test_hiddenEye() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -1996,11 +2112,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const eye = findChild(launcher, "hidden-button")
-        const sort = findChild(launcher, "sort-button")
-        const field = findChild(launcher, "search-query")
+        const field = findChild(launcher, "search-field")
+        const query = findChild(launcher, "search-query")
         verify(eye.visible && eye.enabled)
-        verify(eye.mapToItem(null, eye.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
-        verify(field.mapToItem(null, field.width, 0).x <= eye.mapToItem(null, 0, 0).x + 0.5)
+        // The eye inside search, past what is typed.
+        verify(eye.mapToItem(null, 0, 0).x >= query.mapToItem(null, query.width, 0).x - 0.5)
+        verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, field.width, 0).x - 40)
         verify(!eye.showing)
         mouseClick(eye, eye.width / 2, eye.height / 2)
         compare(filesMock.hidden, true)
@@ -2024,6 +2141,211 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
+    // Each drawer's header ends in the corner every drawer and mode shares:
+    // Expand and Close in both, Pop out in Files only, Close last. A drawer
+    // opens at Search's size; Expand fills the screen and brings it back.
+    function test_drawerCorner_data() {
+        return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
+    }
+    function test_drawerCorner(data) {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        launcher.setDrawerOpen(true, data.mode)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const header = findChild(launcher, "drawer-header")
+        const expand = findChild(launcher, "drawer-expand")
+        const popOut = findChild(launcher, "drawer-pop-out")
+        const close = findChild(launcher, "drawer-close")
+        const field = findChild(launcher, "search-field")
+        const left = item => item.mapToItem(header, 0, 0).x
+        const right = item => item.mapToItem(header, item.width, 0).x
+        verify(expand.visible && close.visible)
+        compare(popOut.visible, data.mode === "files")
+        verify(field.mapToItem(header, field.width, 0).x < left(expand))
+        verify(right(expand) <= left(data.mode === "files" ? popOut : close) + 0.5)
+        verify(Math.abs(right(close) - (header.width - 14)) < 1)
+        compare(close.Accessible.name, "Close Search")
+        compare(controller.drawerExpanded, false)
+        compare(expand.Accessible.name, "Expand")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
+        compare(expand.Accessible.name, "Make smaller")
+        // Moving to the other drawer keeps the size chosen.
+        launcher.setDrawerOpen(true, data.mode === "files" ? "apps" : "files")
+        compare(controller.drawerExpanded, true)
+        launcher.setDrawerOpen(true, data.mode)
+        compare(launcher.filesMode, data.mode === "files")
+        wait(50)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, false)
+        compare(expand.Accessible.name, "Expand")
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        compare(controller.drawerExpanded, false)
+    }
+
+    // Close puts Search away from any drawer or mode.
+    function test_close_data() {
+        return [{ tag: "apps" }, { tag: "files" }, { tag: "notes" }, { tag: "genie" }]
+    }
+    function test_close(data) {
+        let close
+        if (data.tag === "notes" || data.tag === "genie") {
+            if (data.tag === "notes") openNotesMode()
+            else openGenieMode()
+            close = findChild(launcher, data.tag + "-close")
+        } else {
+            launcher.fileBrowser = filesMock
+            filesMock.placeKind = "folder"
+            launcher.setDrawerOpen(true, data.tag)
+            tryCompare(launcher, "drawerProgress", 1)
+            wait(250)
+            close = findChild(launcher, "drawer-close")
+        }
+        verify(close.visible && close.opacity > 0.99)
+        const before = controller.closes
+        mouseClick(close, close.width / 2, close.height / 2)
+        compare(controller.closes, before + 1)
+        if (data.tag === "notes") launcher.closeNotes()
+        else if (data.tag === "genie") launcher.closeMode()
+        else launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        tryCompare(launcher, "modeProgress", 0)
+    }
+
+    // Notes and Ask have the same corner. Expand fills the screen and the
+    // mode stays in Search; Back brings Search back to its size.
+    function test_modeExpand_data() {
+        return [{ tag: "notes" }, { tag: "genie" }]
+    }
+    function test_modeExpand(data) {
+        if (data.tag === "notes") openNotesMode()
+        else openGenieMode()
+        const sheet = findChild(launcher, "launcher-sheet")
+        const expand = findChild(launcher, data.tag + "-expand")
+        const popOut = findChild(launcher, data.tag + "-pop-out")
+        const close = findChild(launcher, data.tag + "-close")
+        verify(expand.opacity > 0.99 && popOut.visible && close.visible)
+        verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
+        verify(popOut.mapToItem(sheet, 0, 0).x < close.mapToItem(sheet, 0, 0).x)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
+        tryCompare(sheet, "width", 980)
+        verify(data.tag === "notes" ? launcher.notesOpen : launcher.genieOpen)
+        compare(quickStub.boards.length, 0)
+        compare(genieStub.windows.length, 0)
+        compare(controller.closes, 0)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        compare(controller.drawerExpanded, false)
+        tryCompare(sheet, "width", 640)
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        tryCompare(sheet, "width", 980)
+        const back = findChild(launcher, data.tag + "-back")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "modeProgress", 0)
+        compare(controller.drawerExpanded, false)
+        tryCompare(sheet, "width", 640)
+    }
+
+    // Pop out moves Files into a window of its own and Search closes; in
+    // Spread the window is awaited as Search's card, as a launch is. With
+    // the window open, Files in Search brings the window forward instead.
+    function openFilesDrawer() {
+        launcher.fileBrowser = filesMock
+        filesMock.placeKind = "folder"
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        return findChild(launcher, "drawer-pop-out")
+    }
+    function test_filesPopOut() {
+        controller.closes = 0
+        let popOut = openFilesDrawer()
+        verify(popOut.visible)
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        compare(controller.filesWindows, 1)
+        compare(controller.filesLaunches, 0)
+        compare(controller.closes, 1)
+        verify(controller.filesWindowOpen)
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const files = findChild(launcher, "files-pill")
+        mouseClick(files, files.width / 2, files.height / 2)
+        compare(controller.filesWindows, 2)
+        compare(controller.closes, 2)
+        verify(!launcher.drawerOpen)
+        controller.filesWindowOpen = false
+
+        controller.guestMode = true
+        controller.handoffs = 0
+        popOut = openFilesDrawer()
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        compare(controller.filesLaunches, 1)
+        compare(controller.filesWindows, 3)
+        verify(launcher.filesHandoff)
+        compare(controller.closes, 2)
+        controller.guestLaunchReady()
+        tryCompare(controller, "handoffs", 1)
+        verify(!launcher.filesHandoff)
+        controller.guestMode = false
+        controller.filesWindowOpen = false
+
+        // A window that cannot open leaves Files where it is.
+        controller.filesWindowShows = false
+        popOut = openFilesDrawer()
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
+        verify(launcher.drawerOpen)
+        compare(controller.closes, 2)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Files' own window has Files' header, less Back and the corner: the eye
+    // on search's left, the order on its right, and Files under them. What
+    // is typed narrows the folder.
+    Component {
+        id: filesWindowComponent
+        App.FilesWindow {
+            width: 900
+            height: 640
+            launcherController: controller
+        }
+    }
+    function test_filesWindow() {
+        filesMock.filter = ""
+        filesMock.hidden = false
+        filesMock.placeKind = "folder"
+        const window = createTemporaryObject(filesWindowComponent, test, {fileBrowser: filesMock})
+        verify(window)
+        const eye = findChild(window, "files-window-hidden")
+        const field = findChild(window, "files-window-search")
+        const pane = findChild(window, "files-window-pane")
+        const header = findChild(window, "files-window-header")
+        const left = item => item.mapToItem(window, 0, 0).x
+        const right = item => item.mapToItem(window, item.width, 0).x
+        verify(left(eye) >= left(field) && right(eye) <= right(field) - 40)
+        verify(findChild(window, "files-sort"))
+        verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
+        verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
+        compare(findChild(window, "drawer-back"), null)
+        compare(findChild(window, "drawer-pop-out"), null)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, true)
+        mouseClick(eye, eye.width / 2, eye.height / 2)
+        compare(filesMock.hidden, false)
+        window.forceActiveFocus()
+        keyClick("r")
+        keyClick("e")
+        compare(filesMock.filter, "re")
+        keyClick(Qt.Key_Escape)
+        compare(filesMock.filter, "")
+    }
+
     function test_filesMenusAndEmptyTrash() {
         launcher.fileBrowser = filesMock
         filesMock.selectedPath = ""
@@ -2032,6 +2354,7 @@ TestCase {
         filesMock.empties = 0
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
+        wait(250) // the sheet's own growth settles before the menu is measured
         const more = findChild(launcher, "more-actions")
         const menu = findChild(launcher, "file-context-menu")
         compare(more.text, "Folder actions")
@@ -2098,6 +2421,9 @@ TestCase {
         controller.drawerRequested("apps")
         tryCompare(launcher, "drawerOpen", true)
         verify(!launcher.filesMode)
+        // Asked for from outside Search, a drawer opens filling the screen.
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
         controller.drawerRequested("apps")
         compare(controller.closes, 1)
         // Meta+E moves to Files, and again closes.
@@ -2105,6 +2431,7 @@ TestCase {
         controller.drawerRequested("files")
         tryCompare(launcher, "filesMode", true)
         verify(launcher.drawerOpen)
+        compare(controller.drawerExpanded, true)
         compare(controller.closes, 1)
         controller.drawerRequested("files")
         compare(controller.closes, 2)
@@ -2132,6 +2459,7 @@ TestCase {
         controller.drawerRequested("notes")
         verify(!launcher.drawerOpen)
         verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
         compare(quickStub.starts, 1)
         tryCompare(launcher, "notesProgress", 1)
         controller.drawerRequested("notes")
@@ -2153,9 +2481,11 @@ TestCase {
         launcher.genie = null
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        controller.drawerExpanded = false
         controller.drawerRequested("genie")
         wait(50)
         verify(!launcher.modeOpen)
+        compare(controller.drawerExpanded, false)
         compare(launcher.modeAwaited, "")
         compare(controller.closes, 1)
     }
@@ -2176,26 +2506,30 @@ TestCase {
         compare(findChild(launcher, "close-drawer-button"), null)
         const header = findChild(launcher, "drawer-header")
         const back = findChild(launcher, "drawer-back")
-        const sort = findChild(launcher, "sort-button")
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
-        // One row: Back, then search in the middle, then the sort button.
+        // One row: Back, then search in the middle, then the corner; the
+        // order sits below, over the drawer.
         verify(back.visible && back.enabled)
-        verify(sort.visible && sort.enabled)
         compare(middle(field).y, middle(header).y)
         compare(middle(back).y, middle(header).y)
-        compare(middle(sort).y, middle(header).y)
         verify(right(back) < left(field))
-        verify(right(field) < left(sort))
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
+        const appsSort = findChild(launcher, "sort-button")
+        compare(appsSort.visible, data.mode === "apps")
+        if (data.mode === "apps") {
+            verify(appsSort.enabled)
+            verify(appsSort.mapToItem(header, 0, 0).y >= header.height)
+            verify(Math.abs(right(appsSort) - right(header)) < 1)
+        }
         // The drawer reaches up to the row search held above it.
         tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)
         const drawer = findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid")
         verify(drawer.visible)
-        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16)
+        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16 + (data.mode === "apps" ? 50 : 0))
         // A tap or click on search takes the keys, and a tap by its edge
         // asks for the on-screen ones; what is typed narrows the drawer,
         // from the field or from anywhere in the launcher.
@@ -2262,7 +2596,7 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const query = findChild(launcher, "search-query")
-        const sort = findChild(launcher, "sort-button")
+        const sort = findChild(launcher, data.mode === "files" ? "files-sort" : "sort-button")
         query.forceActiveFocus()
         mouseClick(sort, sort.width / 2, sort.height / 2)
         const filesMenu = findChild(launcher, "files-sort-menu")
@@ -2360,6 +2694,33 @@ TestCase {
         }
         compare(controller.closes, 0)
     }
+    // From a mode the dot's slide opened, the next slide goes straight to
+    // the drawer or mode chosen, and Back from it leads to search.
+    function test_slideMovesOnFromAMode() {
+        launcher.genie = genieStub
+        genieStub.available = true
+        openNotesMode()
+        controller.drawerRequested("apps")
+        verify(!launcher.notesOpen)
+        tryCompare(launcher, "drawerOpen", true)
+        compare(controller.drawerExpanded, true)
+        controller.drawerRequested("notes")
+        verify(launcher.notesOpen && !launcher.drawerOpen)
+        controller.drawerRequested("genie")
+        verify(launcher.genieOpen && !launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        tryCompare(launcher, "genieProgress", 1)
+        controller.drawerRequested("files")
+        verify(!launcher.modeOpen)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const back = findChild(launcher, "drawer-back")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "drawerProgress", 0)
+        verify(!launcher.modeOpen && !launcher.drawerOpen)
+        compare(controller.drawerExpanded, false)
+        launcher.genie = null
+    }
     function openNotesMode() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
@@ -2400,7 +2761,7 @@ TestCase {
         verify(field.opacity < 0.01)
         verify(findChild(launcher, "first-row").opacity < 0.01)
         const back = findChild(launcher, "notes-back")
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         verify(back.opacity > 0.99 && grow.opacity > 0.99)
         verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
         verify(back.mapToItem(sheet, 0, 0).x < sheet.width / 2)
@@ -2525,11 +2886,11 @@ TestCase {
         compare(quickStub.belongs, "window")
         compare(quickStub.folderSets, [])
     }
-    // Over an Active card, All notes grows the window as Apps does, opens the
+    // Over an Active card, Pop out grows the window as Apps does, opens the
     // board, and fades once the board has drawn in the card's place.
     function test_notesGrowOverActive() {
         openNotesMode()
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(launcher.notesGrowing)
         compare(controller.drawerExpanded, true)
@@ -2542,13 +2903,13 @@ TestCase {
         quickStub.boardShown(quickStub.boards[0])
         tryCompare(controller, "closes", 1)
     }
-    // In Spread, All notes grows the guest, Kadunce awaits the board's window,
+    // In Spread, Pop out grows the guest, Kadunce awaits the board's window,
     // and Search leaves as it does for any launch.
     function test_notesGrowInSpread() {
         controller.guestMode = true
         controller.handoffs = 0
         openNotesMode()
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.notesLaunches, 1)
@@ -2564,7 +2925,7 @@ TestCase {
     function test_notesGrowRefused() {
         openNotesMode()
         quickStub.boardOpens = false
-        const grow = findChild(launcher, "notes-all")
+        const grow = findChild(launcher, "notes-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(!launcher.notesGrowing)
         compare(controller.drawerExpanded, false)
@@ -2631,7 +2992,7 @@ TestCase {
         const question = findChild(launcher, "genie-question")
         verify(question.activeFocus)
         const back = findChild(launcher, "genie-back")
-        const expand = findChild(launcher, "genie-expand")
+        const expand = findChild(launcher, "genie-pop-out")
         const body = findChild(launcher, "genie-answer")
         const fieldTop = question.mapToItem(sheet, 0, 0).y
         verify(Math.abs(fieldTop - back.mapToItem(sheet, 0, back.height / 2).y) < question.height)
@@ -2671,11 +3032,11 @@ TestCase {
         compare(genieStub.acts, ["keep"])
         tryCompare(keep, "label", "Kept")
     }
-    // Expand grows the window and Genie's own window takes its place, over
+    // Pop out grows the window and Genie's own window takes its place, over
     // an Active card once it has drawn, and in Spread through Kadunce.
-    function test_genieExpands() {
+    function test_geniePopsOut() {
         openGenieMode()
-        const expand = findChild(launcher, "genie-expand")
+        const expand = findChild(launcher, "genie-pop-out")
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.genieLaunches, 0)

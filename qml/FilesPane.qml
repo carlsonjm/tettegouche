@@ -41,6 +41,9 @@ Item {
     // the room above them: the actions join the path's row, and the tabs and
     // the Open row step aside.
     property bool compact: false
+    // At a card's size, as in Spread, the places fold to a rail of their
+    // icons and the tiles come one size smaller, so the folder has the room.
+    property bool card: false
     // How far up from the window's bottom the keys reach, so menus open above.
     property real keysReach: 0
     readonly property string rawOperationStatus: browser ? browser.operationStatus : ""
@@ -60,7 +63,8 @@ Item {
         {cell: 184, height: 176, icon: 84},
         {cell: 240, height: 228, icon: 128}
     ]
-    readonly property var tile: tileLevels[browser ? Math.max(0, Math.min(3, browser.tileSize)) : 1]
+    readonly property var tile: tileLevels[Math.max(0,
+        (browser ? Math.max(0, Math.min(3, browser.tileSize)) : 1) - (card ? 1 : 0))]
     function showOpenWith(path) {
         if (!browser || !path) return
         const choices = browser.openWithChoices(path)
@@ -253,6 +257,19 @@ Item {
             onTriggered: { if (pane.browser.canUnhide) pane.browser.unhideSelected(); else pane.browser.hideSelected() }
         }
         SheetMenuItem { objectName: "context-properties"; text: words.i18n("Properties"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
+    }
+    // The folder's order, kept inside the pane under its pill.
+    SheetMenu {
+        id: sortMenu
+        objectName: "files-sort-menu"
+        bounds: pane
+        bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
+        readonly property int mode: pane.browser ? pane.browser.sortMode : 0
+        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: sortMenu.mode === 0; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 0 }
+        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: sortMenu.mode === 1; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 1 }
+        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: sortMenu.mode === 2; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 2 }
+        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: sortMenu.mode === 3; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 3 }
     }
     // The one permanent delete Files offers, said plainly before it happens.
     SheetConfirm {
@@ -554,7 +571,7 @@ Item {
         ListView {
             id: placesList
             objectName: "files-places"
-            Layout.preferredWidth: 170
+            Layout.preferredWidth: pane.card ? 54 : 170
             Layout.fillHeight: true
             clip: true
             // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
@@ -570,7 +587,7 @@ Item {
                 readonly property bool firstDrive: modelData.section === "drives"
                     && (index === 0 || ListView.view.model[index - 1].section !== "drives")
                 readonly property bool busy: modelData.busy === true
-                readonly property bool ejectable: modelData.canEject === true && !busy
+                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.card
                 objectName: "files-place-" + modelData.label
                 width: ListView.view.width; height: 54 + (firstDrive ? 13 : 0)
                 Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: tone.line }
@@ -585,10 +602,11 @@ Item {
                         color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? tone.placeChosen : "transparent"
                     }
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter; x: 12; spacing: 12
+                        anchors.verticalCenter: parent.verticalCenter; x: pane.card ? 16 : 12; spacing: 12
                         opacity: place.busy ? 0.6 : 1
                         Kirigami.Icon { source: place.modelData.icon; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter }
                         Column {
+                            visible: !pane.card
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: place.modelData.label; color: tone.text; width: place.ejectable ? 76 : 116; elide: Text.ElideRight }
                             Text {
@@ -606,6 +624,11 @@ Item {
                         Accessible.description: place.modelData.note || ""
                         Accessible.selected: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path
                         Accessible.onPressAction: if (!place.busy) open()
+                        // On the rail a pointer resting on a place names it.
+                        HoverHandler { id: placeHover }
+                        C.ToolTip.visible: pane.card && placeHover.hovered
+                        C.ToolTip.text: place.modelData.label
+                        C.ToolTip.delay: 600
                         function open() { place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path) }
                         TapHandler {
                             enabled: !place.busy
@@ -738,8 +761,56 @@ Item {
                             }
                         }
                     }
-                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
                     PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
+                    // The order, a grey pill naming it, after New folder; Recent
+                    // keeps the order of use.
+                    Item {
+                        id: sortPill
+                        objectName: "files-sort"
+                        readonly property bool fixed: !!pane.browser && pane.browser.placeKind === "recent"
+                        visible: !(pane.selectedPaths && pane.selectedPaths.length > 0)
+                        Layout.preferredWidth: sortPillLabel.implicitWidth + 46
+                        Layout.preferredHeight: 42
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.ButtonMenu
+                        Accessible.name: words.i18n("Sort: %1", sortPillLabel.text)
+                        Accessible.onPressAction: sortMenu.openUnder(sortPill)
+                        Keys.onReturnPressed: sortMenu.openUnder(sortPill)
+                        Keys.onEnterPressed: sortMenu.openUnder(sortPill)
+                        Keys.onSpacePressed: sortMenu.openUnder(sortPill)
+                        Rectangle {
+                            y: 6; width: parent.width; height: parent.height - 12
+                            radius: height / 2
+                            color: sortPillPress.pressed || sortMenu.visible ? tone.controlPressed
+                                : sortPillHover.hovered ? tone.controlHover : tone.control
+                            border.width: sortPill.activeFocus ? 1 : 0
+                            border.color: tone.text
+                            Text {
+                                id: sortPillLabel
+                                anchors.verticalCenter: parent.verticalCenter
+                                x: 16
+                                text: sortPill.fixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][pane.browser ? pane.browser.sortMode : 0]
+                                color: tone.text
+                            }
+                            SuiteIcon {
+                                glyph: "chevron-down"
+                                width: 14; height: 14
+                                anchors.right: parent.right
+                                anchors.rightMargin: 12
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                        HoverHandler {
+                            id: sortPillHover
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                        }
+                        MouseArea {
+                            id: sortPillPress
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: sortMenu.openUnder(sortPill)
+                        }
+                    }
                     // With files chosen, their own menu; otherwise the folder's.
                     PillAction {
                         id: moreActions
@@ -753,6 +824,8 @@ Item {
                             pane.showActionsUnder(first, entry ? entry.directory : false, moreActions)
                         }
                     }
+                    // Paste only while something waits on the clipboard, last in the row.
+                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
                 }
             }
             Repeater {

@@ -89,11 +89,14 @@ qt_add_executable(tettegouche
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/GeniePane.qml qml/ModePill.qml qml/SuiteIcon.qml
+        qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
         assets/icons/lucide/maximize-2.svg
+        assets/icons/lucide/minimize-2.svg
+        assets/icons/lucide/square-arrow-out-up-right.svg
         assets/icons/suite/genie.svg
         assets/icons/suite/notes.svg
         assets/icons/lucide/square.svg

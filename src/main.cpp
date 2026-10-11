@@ -65,6 +65,10 @@
 namespace
 {
 constexpr auto ServiceName = "io.github.carlsonjm.Tettegouche";
+// Files' own window answers to the Files entry, so the dock, Kadunce and
+// Plasma's window list name it Files, and Kadunce does not take it for the
+// launcher's surface.
+constexpr auto FilesApplicationId = "io.github.carlsonjm.Tettegouche.Files";
 
 QStringList applicationRunnerIds()
 {
@@ -151,6 +155,9 @@ class LauncherController final : public QObject
     Q_PROPERTY(int relatedRevision READ relatedRevision NOTIFY relatedChanged)
     // Whether Shuffle's dock answered when Search last asked what it pins.
     Q_PROPERTY(bool dockPresent READ dockPresent NOTIFY pinnedChanged)
+    // Files' own window: offered, and whether it is open now.
+    Q_PROPERTY(bool filesWindowOffered READ filesWindowOffered CONSTANT)
+    Q_PROPERTY(bool filesWindowOpen READ filesWindowOpen NOTIFY filesWindowChanged)
 
 public:
     LauncherController(QQuickView *view,
@@ -188,9 +195,11 @@ public:
             const auto boundsChanged = [this, screen] {
                 if (screen != m_view->screen()) return;
                 const bool expanded = m_requestedExpanded;
+                const bool chosen = m_expansionChosen;
                 endGuestLease();
                 m_requestedExpanded = expanded;
-                m_drawerExpanded = expanded && tabletSurface();
+                m_expansionChosen = chosen;
+                m_drawerExpanded = expanded && (chosen || tabletSurface());
                 m_view->resize(screen->geometry().size());
                 Q_EMIT guestChanged();
             };
@@ -254,19 +263,23 @@ public:
     bool tabletSurface() const {
         return m_view->screen() && m_view->screen()->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
     }
-    Q_INVOKABLE void setDrawerExpanded(bool expanded)
+    // Drawers open at Search's size; Expand, chosen, fills any screen. Pop out's
+    // growth, not chosen, fills only the tablet's screen.
+    Q_INVOKABLE void setDrawerExpanded(bool expanded, bool chosen = false)
     {
         const quint64 generation = ++m_presentationGeneration;
         m_requestedExpanded = expanded;
+        m_expansionChosen = chosen;
         if (!m_guestMode) {
-            m_drawerExpanded = expanded && tabletSurface();
+            m_drawerExpanded = expanded && (chosen || tabletSurface());
             Q_EMIT guestChanged();
             return;
         }
         if (!m_guestExpansionSupported || !m_activeGuestRect.isValid()) {
             endGuestLease();
             m_requestedExpanded = expanded;
-            m_drawerExpanded = expanded && tabletSurface();
+            m_expansionChosen = chosen;
+            m_drawerExpanded = expanded && (chosen || tabletSurface());
             Q_EMIT guestChanged();
             return;
         }
@@ -293,9 +306,11 @@ public:
             watcher->deleteLater();
             if (generation != m_presentationGeneration || !m_guestMode) return;
             if (reply.isError() || !reply.value()) {
+                const bool chosen = m_expansionChosen;
                 endGuestLease();
                 m_requestedExpanded = true;
-                m_drawerExpanded = tabletSurface();
+                m_expansionChosen = chosen;
+                m_drawerExpanded = chosen || tabletSurface();
             } else {
                 m_drawerExpanded = true;
                 // Expanded input ends at the same dock-safe boundary as paint.
@@ -411,7 +426,7 @@ public Q_SLOTS:
     void bridgeLost()
     {
         ++m_presentationGeneration;
-        m_drawerExpanded = m_requestedExpanded && tabletSurface();
+        m_drawerExpanded = m_requestedExpanded && (m_expansionChosen || tabletSurface());
         m_launchToken.clear();
         ++m_contextGeneration;
         m_context.clear();
@@ -441,6 +456,11 @@ public Q_SLOTS:
     {
         const QFileInfo info(file);
         if (!m_fileBrowser || !info.isAbsolute() || !info.isFile() || info.isSymLink()) { open(); return; }
+        if (filesWindowOpen()) {
+            showFilesWindow();
+            m_fileBrowser->reveal({info.absoluteFilePath()});
+            return;
+        }
         open();
         m_fileBrowser->reveal({info.absoluteFilePath()});
         Q_EMIT filesRequested();
@@ -484,9 +504,15 @@ public Q_SLOTS:
 
     // Meta+G opens Apps and Meta+E Files, and the dot's slide any of Apps,
     // Files, Notes or Ask ("notes", "genie"); the one already open closes
-    // the launcher instead.
+    // the launcher instead. With Files in its own window, Files brings that
+    // window forward.
     Q_SCRIPTABLE void openDrawer(const QString &drawer)
     {
+        if (drawer == QLatin1String("files") && filesWindowOpen()) {
+            if (m_view->isVisible()) close();
+            showFilesWindow();
+            return;
+        }
         if (!m_view->isVisible()) open();
         if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
             || drawer == QLatin1String("notes") || drawer == QLatin1String("genie"))
@@ -580,7 +606,7 @@ public Q_SLOTS:
         // the drop meant for the windows beside the sheet. A changed input
         // region reaches the compositor only with the next frame, so each
         // change asks for one; without it the cover stayed away after a drop.
-        const bool uncovered = !m_guestMode;
+        const bool uncovered = !m_guestMode && m_view->isVisible();
         if (uncovered) { m_view->setMask(QRegion(sheet.toAlignedRect())); m_view->update(); }
         QMetaObject::invokeMethod(this, [this, mime, icon, uncovered]() {
             auto *drag = new QDrag(this);
@@ -710,6 +736,66 @@ public Q_SLOTS:
             guestMethod(QStringLiteral("cancelLauncherGuestLaunch")));
     }
 
+    bool filesWindowOffered() const { return m_fileBrowser != nullptr; }
+    bool filesWindowOpen() const { return m_filesWindow && m_filesWindow->isVisible(); }
+
+    // Files in a window of its own, with the same tabs, folder and work as
+    // Files in Search; shown, or brought forward when it already is. It opens
+    // at the size Search has as a card in Spread, or Search's own size
+    // elsewhere, and is an ordinary window after that.
+    Q_INVOKABLE bool showFilesWindow()
+    {
+        if (!m_fileBrowser) return false;
+        m_lateQuit.stop();
+        if (!m_filesWindow) {
+            m_filesWindow = std::make_unique<QQuickView>(m_view->engine(), nullptr);
+            m_filesWindow->setTitle(i18n("Files"));
+            m_filesWindow->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
+            m_filesWindow->setResizeMode(QQuickView::SizeRootObjectToView);
+            m_filesWindow->setMinimumSize(QSize(420, 320));
+            m_filesWindow->setInitialProperties({
+                {QStringLiteral("fileBrowser"), QVariant::fromValue<QObject *>(m_fileBrowser)},
+                {QStringLiteral("launcherController"), QVariant::fromValue<QObject *>(this)},
+            });
+            m_filesWindow->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
+            if (m_filesWindow->status() == QQuickView::Error) {
+                m_filesWindow.reset();
+                return false;
+            }
+            connect(m_filesWindow.get(), &QWindow::visibleChanged, this, [this](bool visible) {
+                if (!visible) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
+                Q_EMIT filesWindowChanged();
+                // Closed with Search gone too, the launcher's work is done.
+                if (!visible && !m_view->isVisible()) finishOrDeferQuit();
+            });
+        }
+        if (!m_filesWindow->isVisible()) {
+            const QRect area = availableArea();
+            const QSize size = m_guestMode && m_compactGuestRect.isValid()
+                ? m_compactGuestRect.size()
+                : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
+            m_filesWindow->resize(size.expandedTo(m_filesWindow->minimumSize()));
+            m_filesWindow->setScreen(m_view->screen());
+            // A window takes the application's identity as it is shown, and
+            // Files keeps it while its window is open.
+            m_launcherApplicationId = QGuiApplication::desktopFileName();
+            QGuiApplication::setDesktopFileName(QString::fromLatin1(FilesApplicationId));
+            m_filesWindow->show();
+            m_filesWindow->requestActivate();
+            Q_EMIT filesWindowChanged();
+            return true;
+        }
+        raiseFilesWindow();
+        return true;
+    }
+
+    // Files' window is awaited in Spread as an application started from
+    // Search is, and takes Search's card.
+    Q_INVOKABLE bool beginGuestFilesLaunch()
+    {
+        return prepareGuestIdentity(QString::fromLatin1(FilesApplicationId));
+    }
+
     Q_INVOKABLE void showInputMethod()
     {
         if (QInputMethod *inputMethod = QGuiApplication::inputMethod()) {
@@ -798,6 +884,7 @@ Q_SIGNALS:
     void guestLaunchReady();
     void guestNavigationReady(int slot);
     void guestBridgeLost();
+    void filesWindowChanged();
 
 public:
     void setFileBrowser(FileBrowser *browser) {
@@ -834,8 +921,29 @@ public:
 private:
     void showFiles()
     {
+        if (filesWindowOpen()) {
+            showFilesWindow();
+            return;
+        }
         if (!m_view->isVisible()) open();
         Q_EMIT filesRequested();
+    }
+    // Kadunce brings the window forward as it would any card; without it,
+    // the window asks for itself.
+    void raiseFilesWindow()
+    {
+        refreshContextBlocking();
+        const QString windowId = m_context.windowIdForApplication(QString::fromLatin1(FilesApplicationId), QString());
+        if (!windowId.isEmpty()) {
+            QDBusMessage request = QDBusMessage::createMethodCall(
+                QStringLiteral("org.kde.KWin"), QStringLiteral("/Kadunce"),
+                QStringLiteral("co.goodinput.Kadunce"), QStringLiteral("activateApplicationWindow"));
+            request.setArguments({windowId});
+            const QDBusReply<bool> reply = QDBusConnection::sessionBus().call(request, QDBus::Block, 500);
+            if (reply.isValid() && reply.value()) return;
+        }
+        m_filesWindow->raise();
+        m_filesWindow->requestActivate();
     }
     void reveal(const QStringList &locations, bool properties)
     {
@@ -874,6 +982,8 @@ private:
     bool m_carrying=false;
     void finishOrDeferQuit() {
         m_quitAfterFiles=true;
+        // Files' own window keeps the launcher, and with it Files, running.
+        if (filesWindowOpen()) return;
         if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
         // A copy that just failed is told to Ambient before the launcher goes.
         if (m_fileBrowser && m_fileBrowser->failedJustNow()) m_lateQuit.start();
@@ -980,6 +1090,7 @@ private:
         ++m_presentationGeneration;
         m_drawerExpanded = false;
         m_requestedExpanded = false;
+        m_expansionChosen = false;
         if (!m_guestMode) {
             return;
         }
@@ -1049,12 +1160,15 @@ private:
     QRect m_compactGuestRect, m_activeGuestRect;
     bool m_drawerExpanded = false;
     bool m_requestedExpanded = false;
+    bool m_expansionChosen = false;
     bool m_guestExpansionSupported = false;
     quint64 m_presentationGeneration = 0;
     bool m_guestMode = false;
     bool m_guestAllowed = true;
     quint64 m_contextGeneration = 0;
     QString m_launchToken;
+    std::unique_ptr<QQuickView> m_filesWindow;
+    QString m_launcherApplicationId;
 };
 
 namespace
