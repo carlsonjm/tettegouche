@@ -1381,9 +1381,14 @@ TestCase {
         compare(filesMock.createdName,"Created folder")
         compare(filesMock.filter,"")
         mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        tryVerify(function(){ return findChild(launcher,"folder-name").visible })
+        // The form's row is laid out with the next frame; Cancel is tapped
+        // where it is drawn, not where it sat before.
+        waitForRendering(launcher)
         const cancel=findChild(launcher,"cancel-folder")
+        tryVerify(function(){ return cancel.width>0 && cancel.mapToItem(launcher,0,0).x>0 })
         mouseClick(cancel,cancel.width/2,cancel.height/2)
-        verify(!findChild(launcher,"folder-name").visible)
+        tryVerify(function(){ return !findChild(launcher,"folder-name").visible })
         filesMock.operationStatus="Done"
         wait(20)
         verify(pane.showOperationSuccess)
