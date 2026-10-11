@@ -477,7 +477,10 @@ Item {
     function goBack() {
         if (root.choosingFolder) root.cancelFolder()
         else if (root.folderOpen) root.closeFolder()
-        else root.setDrawerOpen(false)
+        else {
+            root.setDrawerOpen(false)
+            if (root.modeOpen) root.closeMode()
+        }
     }
 
     // New folder in Apps: the applications tapped are chosen, and Make
@@ -904,7 +907,10 @@ Item {
         // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
         // screen, a single step to the whole view, or the launcher closes when
         // it is the one already open. Pills inside Search open at its size.
+        // Another drawer or mode already open gives way, so the slide moves
+        // straight from one to the next and Back leads to search.
         function onDrawerRequested(mode) {
+            if (root.modeOpen && root.modeShown !== mode) root.closeMode()
             if (mode === "notes" || mode === "genie") {
                 const shown = root.modeOpen && root.modeShown === mode
                 root.openModeDirectly(mode)

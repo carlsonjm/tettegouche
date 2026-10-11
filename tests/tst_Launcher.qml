@@ -2689,6 +2689,33 @@ TestCase {
         }
         compare(controller.closes, 0)
     }
+    // From a mode the dot's slide opened, the next slide goes straight to
+    // the drawer or mode chosen, and Back from it leads to search.
+    function test_slideMovesOnFromAMode() {
+        launcher.genie = genieStub
+        genieStub.available = true
+        openNotesMode()
+        controller.drawerRequested("apps")
+        verify(!launcher.notesOpen)
+        tryCompare(launcher, "drawerOpen", true)
+        compare(controller.drawerExpanded, true)
+        controller.drawerRequested("notes")
+        verify(launcher.notesOpen && !launcher.drawerOpen)
+        controller.drawerRequested("genie")
+        verify(launcher.genieOpen && !launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        tryCompare(launcher, "genieProgress", 1)
+        controller.drawerRequested("files")
+        verify(!launcher.modeOpen)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const back = findChild(launcher, "drawer-back")
+        mouseClick(back, back.width / 2, back.height / 2)
+        tryCompare(launcher, "drawerProgress", 0)
+        verify(!launcher.modeOpen && !launcher.drawerOpen)
+        compare(controller.drawerExpanded, false)
+        launcher.genie = null
+    }
     function openNotesMode() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
