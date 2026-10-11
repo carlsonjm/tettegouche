@@ -1,0 +1,10 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Apps' launcher: the four squares of Search's Apps pill on a tile. The tile sits inside the margin icon themes leave around app artwork (42 of 48 in Colloid), so it is drawn the size of the apps beside it. -->
+<g transform="translate(16 16) scale(0.875)">
+<rect width="256" height="256" rx="40" fill="#A9DCC0"/>
+<rect x="66" y="66" width="46" height="46" rx="10" stroke="#1A1A1A" stroke-width="12" stroke-linejoin="round"/>
+<rect x="144" y="66" width="46" height="46" rx="10" stroke="#1A1A1A" stroke-width="12" stroke-linejoin="round"/>
+<rect x="66" y="144" width="46" height="46" rx="10" stroke="#1A1A1A" stroke-width="12" stroke-linejoin="round"/>
+<rect x="144" y="144" width="46" height="46" rx="10" stroke="#1A1A1A" stroke-width="12" stroke-linejoin="round"/>
+</g>
+</svg>

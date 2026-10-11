@@ -9,6 +9,8 @@ required=(
     README.md
     io.github.carlsonjm.Tettegouche.desktop
     io.github.carlsonjm.Tettegouche.Files.desktop
+    io.github.carlsonjm.Tettegouche.Apps.desktop
+    assets/co.goodinput.tettegouche-apps.svg
     org.freedesktop.FileManager1.service.in
     applet/main.qml
     applet/ConfigGeneral.qml
@@ -54,7 +56,12 @@ rg -q 'plasma_add_applet' "${project_root}/CMakeLists.txt"
 rg -q 'KDE_INSTALL_ICONDIR.*/hicolor/512x512/apps' \
     "${project_root}/CMakeLists.txt"
 rg -q 'RENAME co.goodinput.tettegouche.png' "${project_root}/CMakeLists.txt"
-! rg -q 'DESTINATION.*hicolor/scalable/apps' "${project_root}/CMakeLists.txt"
+# Only Apps' tile is scalable; a scalable copy of the widget's own icon would
+# mask its photo in the widget picker.
+! rg -q 'install\(FILES assets/co\.goodinput\.tettegouche\.svg' "${project_root}/CMakeLists.txt"
+rg -q '^Exec=tettegouche --drawer apps$' "${project_root}/io.github.carlsonjm.Tettegouche.Apps.desktop"
+rg -q '^Icon=co.goodinput.tettegouche-apps$' "${project_root}/io.github.carlsonjm.Tettegouche.Apps.desktop"
+! rg -q '^NoDisplay=true$' "${project_root}/io.github.carlsonjm.Tettegouche.Apps.desktop"
 rg -q 'K_PLUGIN_CLASS_WITH_JSON' \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q 'No background service' "${project_root}/README.md"

@@ -76,6 +76,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click Apps in Search | Opens Apps. |
+| Open the Apps launcher, from the dock or Plasma's menus | Opens Search with Apps already open. The launcher carries its own icon, the Apps pill's four squares on a tile, so it can be pinned like any application. |
 | Type | Narrows the applications to those whose names match. What is typed shows in the search field, in the middle of the drawer's header. |
 | Arrow keys, typed into or not | The first press shows, lifted, the application Enter would open; then Left and Right move one, Up and Down a row, keeping it in view. |
 | Enter | Opens the chosen application: the first one, unless the arrow keys moved it. |
