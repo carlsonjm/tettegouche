@@ -901,17 +901,24 @@ Item {
             firstRow.arrive(root.own(140), true)
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
-        // Meta+G or Meta+E: that drawer opens, or closes the launcher when it
-        // is the drawer already open.
+        // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
+        // screen, a single step to the whole view, or the launcher closes when
+        // it is the one already open. Pills inside Search open at its size.
         function onDrawerRequested(mode) {
             if (mode === "notes" || mode === "genie") {
+                const shown = root.modeOpen && root.modeShown === mode
                 root.openModeDirectly(mode)
+                const coming = (root.modeOpen && root.modeShown === mode) || root.modeAwaited === mode
+                if (!shown && coming) root.launcherController.setDrawerExpanded(true, true)
                 return
             }
             const files = mode === "files"
             if (files && !root.fileBrowser) return
             if (root.drawerOpen && root.filesMode === files) root.launcherController.close()
-            else root.setDrawerOpen(true, files ? "files" : "apps")
+            else {
+                root.setDrawerOpen(true, files ? "files" : "apps")
+                root.launcherController.setDrawerExpanded(true, true)
+            }
         }
         function onGuestLaunchReady() {
             if (root.filesHandoff) {

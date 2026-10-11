@@ -2416,6 +2416,9 @@ TestCase {
         controller.drawerRequested("apps")
         tryCompare(launcher, "drawerOpen", true)
         verify(!launcher.filesMode)
+        // Asked for from outside Search, a drawer opens filling the screen.
+        compare(controller.drawerExpanded, true)
+        verify(controller.expansionChosen)
         controller.drawerRequested("apps")
         compare(controller.closes, 1)
         // Meta+E moves to Files, and again closes.
@@ -2423,6 +2426,7 @@ TestCase {
         controller.drawerRequested("files")
         tryCompare(launcher, "filesMode", true)
         verify(launcher.drawerOpen)
+        compare(controller.drawerExpanded, true)
         compare(controller.closes, 1)
         controller.drawerRequested("files")
         compare(controller.closes, 2)
@@ -2450,6 +2454,7 @@ TestCase {
         controller.drawerRequested("notes")
         verify(!launcher.drawerOpen)
         verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
         compare(quickStub.starts, 1)
         tryCompare(launcher, "notesProgress", 1)
         controller.drawerRequested("notes")
@@ -2471,9 +2476,11 @@ TestCase {
         launcher.genie = null
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        controller.drawerExpanded = false
         controller.drawerRequested("genie")
         wait(50)
         verify(!launcher.modeOpen)
+        compare(controller.drawerExpanded, false)
         compare(launcher.modeAwaited, "")
         compare(controller.closes, 1)
     }

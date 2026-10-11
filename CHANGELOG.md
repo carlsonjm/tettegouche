@@ -13,8 +13,9 @@ provenance.
   their applications' windows, as All notes and Expand did.
 - Apps has New folder beside its order, as Files does: tap the applications
   for it, then Make folder, and the folder opens with its name ready.
-- Apps, Files, Notes and Ask all open at Search's size, a card in Spread;
-  Expand fills the screen.
+- Apps, Files, Notes and Ask open at Search's size, a card in Spread, from
+  the pills in Search; Expand fills the screen. The dot's slide, Meta+G and
+  Meta+E open them filling the screen in one step.
 - At Search's size, as in Spread, Files folds its places to a rail of icons
   and shows its tiles one size smaller; a narrow Files window does the same.
 - Files pops out into a window of its own, with its tabs and folder as they

@@ -53,7 +53,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
-| Press the dot and slide right, by finger or mouse | Search's doors, Apps, Files, Notes and Ask, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it. Notes and Ask are there as Search's first screen offers them. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Press the dot and slide right, by finger or mouse | Search's doors, Apps, Files, Notes and Ask, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen; Expand brings it to Search's size. Notes and Ask are there as Search's first screen offers them. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -96,11 +96,11 @@ than repeat it.
 | Tap or click the sort button, a pill naming the order at the right of the row above the applications | Offers A to Z, Z to A, Most used or Newest installed; the choice is kept. |
 | Tap or click New folder, beside the sort button | Asks for applications: a tap or Enter chooses one, or lets it go. Make folder, once two are chosen, gathers them into a new folder, which opens with its name ready to change. Cancel, Back or Esc leaves Apps as it was. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
-| Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps, like every drawer and mode, opens at Search's size, a card in Spread; moving between Apps and Files keeps the size chosen. |
+| Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps, like every drawer and mode, opens at Search's size, a card in Spread, from the pills in Search; the dot's slide, Meta+G and Meta+E open it filling the screen; moving between Apps and Files keeps the size chosen. |
 | Tap or click Back, at the header's left | Leaves an open folder for Apps; otherwise returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, then an open folder, otherwise the drawer. |
-| Meta+G | Opens Search on Apps; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
+| Meta+G | Opens Search on Apps, filling the screen; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
 
@@ -179,7 +179,7 @@ than repeat it.
 | Tap or click Pause, Resume or × on a running copy or move | Pauses, resumes or cancels that one alone. Other file actions stay available while it runs. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Cancels a drag; otherwise clears the selection; otherwise closes Files. |
-| Meta+E | Opens Search on Files; pressed there again, closes it. It is listed and changed as Meta+G is. Dolphin holds Meta+E from its own install, so it opens Dolphin until Meta+E is taken from Dolphin in System Settings. |
+| Meta+E | Opens Search on Files, filling the screen; pressed there again, closes it. It is listed and changed as Meta+G is. Dolphin holds Meta+E from its own install, so it opens Dolphin until Meta+E is taken from Dolphin in System Settings. |
 | With the on-screen keys up | The current folder, its path and its actions stay above them: the actions join the path's row, and the tabs and the Open row step aside until the keys go down. Menus open above the keys. |
 
 ## Ambient
