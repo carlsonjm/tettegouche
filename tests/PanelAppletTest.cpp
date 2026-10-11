@@ -179,9 +179,17 @@ private Q_SLOTS:
         m_window->resize(520, 100);
         m_face->setSize(QSizeF(400, 42));
         QTest::qWait(50);
-        // Without Notes or Genie on this computer, the doors are Apps and Files.
-        QCOMPARE(m_applet->property("pearlDoors").toStringList(),
-                 (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
+        // Apps and Files come first; Notes and Genie follow where this
+        // computer has them, so only their order is checked.
+        const QStringList doors = m_applet->property("pearlDoors").toStringList();
+        QCOMPARE(doors.mid(0, 2), (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
+        const QStringList known{QStringLiteral("apps"), QStringLiteral("files"),
+                                QStringLiteral("notes"), QStringLiteral("genie")};
+        int last = -1;
+        for (const QString &door : doors) {
+            QVERIFY2(known.indexOf(door) > last, qPrintable(doors.join(QLatin1Char(','))));
+            last = known.indexOf(door);
+        }
         QSignalSpy started(m_process, &QProcess::started);
         const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
         // The doors are the row's items rather than its QObject children.
