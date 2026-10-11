@@ -175,6 +175,9 @@ TestCase {
             openFolderName = ""
             for (let i = 0; i < count; ++i) if (get(i).folderId === openFolder) openFolderName = get(i).name
         }
+        function applicationId(row) { return row >= 0 && row < count && !isFolder(row) ? "app" + row : "" }
+        property var made: []
+        function makeFolder(ids) { made = ids; return ids.length >= 2 ? "made" : "" }
         function gather(row, id) { return "" }
         function putInFolder(row, id) { putIn = [row, id] }
         function takeOut(row) { takenOut = row }
@@ -536,6 +539,57 @@ TestCase {
         catalog.softwareAsked = false
         catalog.ran = []
         catalog.uninstalled = -1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // New folder sits beside the order over Apps. It asks for applications;
+    // a tap chooses one, and Make folder, from two, gathers them into a
+    // folder that opens with its name ready. Esc or Cancel lets it go.
+    function test_appsNewFolder() {
+        controller.opened()
+        for (let i = 0; i < 4; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
+        catalog.made = []
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const newFolder = findChild(launcher, "apps-new-folder")
+        const sort = findChild(launcher, "sort-button")
+        verify(newFolder.visible && sort.visible)
+        compare(newFolder.y, sort.y)
+        verify(newFolder.x + newFolder.width <= sort.x)
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        verify(launcher.choosingFolder)
+        verify(!newFolder.visible && !sort.visible)
+        const make = findChild(launcher, "apps-folder-make")
+        verify(make.visible && !make.enabled)
+        const launchesBefore = controller.catalogActivated
+        const tile = i => findChild(launcher, "application-tile-" + i)
+        mouseClick(tile(0), tile(0).width / 2, tile(0).height / 2)
+        verify(!make.enabled)
+        mouseClick(tile(2), tile(2).width / 2, tile(2).height / 2)
+        compare(launcher.folderPicks, ["app0", "app2"])
+        verify(tile(0).picked && !tile(1).picked && tile(2).picked)
+        compare(controller.catalogActivated, launchesBefore)
+        verify(make.enabled)
+        mouseClick(make, make.width / 2, make.height / 2)
+        compare(catalog.made, ["app0", "app2"])
+        verify(!launcher.choosingFolder)
+        compare(catalog.openFolder, "made")
+        catalog.openFolder = ""
+
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        verify(launcher.choosingFolder)
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.choosingFolder)
+        verify(launcher.drawerOpen)
+        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        const cancel = findChild(launcher, "apps-folder-cancel")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2)
+        verify(!launcher.choosingFolder)
+
+        catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }

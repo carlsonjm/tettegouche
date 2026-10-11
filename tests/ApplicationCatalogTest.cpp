@@ -213,6 +213,34 @@ private Q_SLOTS:
         QCOMPARE(last.folderCount(), 0);
     }
 
+    // New folder makes a folder of the applications chosen, two or more,
+    // taking each out of any folder it was in.
+    void makesAFolderOfChosenApplications()
+    {
+        const QString alpha = QStringLiteral("alpha.desktop");
+        const QString beta = QStringLiteral("beta.desktop");
+        const QString zulu = QStringLiteral("zulu.desktop");
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.folderCount(), 0);
+        QVERIFY(catalog.makeFolder({alpha}).isEmpty());
+        QVERIFY(catalog.makeFolder({alpha, alpha}).isEmpty());
+        QVERIFY(catalog.makeFolder({alpha, QStringLiteral("missing.desktop")}).isEmpty());
+        QCOMPARE(catalog.folderCount(), 0);
+        const QString first = catalog.makeFolder({alpha, beta});
+        QVERIFY(!first.isEmpty());
+        QCOMPARE(catalog.folderCount(), 1);
+        QCOMPARE(catalog.rowCount(), 2);
+        // Beta leaves the first folder, which is left with one and ends.
+        const QString second = catalog.makeFolder({beta, zulu});
+        QVERIFY(!second.isEmpty() && second != first);
+        QCOMPARE(catalog.folderCount(), 1);
+        catalog.setOpenFolder(second);
+        QCOMPARE(order(catalog), (QStringList{beta, zulu}));
+        catalog.setOpenFolder({});
+        catalog.removeFolder(second);
+        QCOMPARE(catalog.folderCount(), 0);
+    }
+
     // Each order, over the same applications; an unused application follows
     // the used ones A to Z, and the order chosen is the next catalog's.
     void ordersFourWaysAndKeepsTheChoice()

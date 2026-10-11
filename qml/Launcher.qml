@@ -472,8 +472,46 @@ Item {
         applicationGrid.keyChosen = false
     }
     function goBack() {
-        if (root.folderOpen) root.closeFolder()
+        if (root.choosingFolder) root.cancelFolder()
+        else if (root.folderOpen) root.closeFolder()
         else root.setDrawerOpen(false)
+    }
+
+    // New folder in Apps: the applications tapped are chosen, and Make
+    // folder gathers them, two or more, into a folder of their own, which
+    // opens with its name ready to change.
+    property bool choosingFolder: false
+    property var folderPicks: []
+    onDrawerOpenChanged: if (!root.drawerOpen) root.cancelFolder()
+    onFilesModeChanged: if (root.filesMode) root.cancelFolder()
+    function startFolder() {
+        if (root.folderOpen) root.closeFolder()
+        root.sortMenuOpen = false
+        root.folderPicks = []
+        root.choosingFolder = true
+    }
+    function cancelFolder() {
+        root.choosingFolder = false
+        root.folderPicks = []
+    }
+    function pickForFolder(applicationId) {
+        if (!applicationId) return
+        const picks = root.folderPicks.slice()
+        const at = picks.indexOf(applicationId)
+        if (at >= 0) picks.splice(at, 1)
+        else picks.push(applicationId)
+        root.folderPicks = picks
+    }
+    function makeFolder() {
+        const folder = root.applicationCatalog.makeFolder(root.folderPicks)
+        root.cancelFolder()
+        if (!folder) return
+        query.text = ""
+        root.applicationCatalog.openFolder = folder
+        applicationGrid.currentIndex = applicationGrid.count > 0 ? 0 : -1
+        applicationGrid.keyChosen = false
+        folderName.forceActiveFocus()
+        folderName.selectAll()
     }
 
     // A folder's sheet: Rename and Remove folder.
@@ -500,6 +538,12 @@ Item {
     }
 
     function runCatalogApplication(index, applicationName) {
+        // Choosing for a new folder, a tap or Enter chooses instead.
+        if (root.choosingFolder) {
+            if (!root.applicationCatalog.isFolder(index))
+                root.pickForFolder(root.applicationCatalog.applicationId(index))
+            return true
+        }
         if (root.applicationCatalog.isFolder(index)) {
             root.openFolder(index)
             return true
@@ -747,6 +791,11 @@ Item {
         if (event.key === Qt.Key_Escape) {
             if (root.sortMenuOpen) {
                 root.sortMenuOpen = false
+                event.accepted = true
+                return
+            }
+            if (root.choosingFolder) {
+                root.cancelFolder()
                 event.accepted = true
                 return
             }
@@ -1950,7 +1999,7 @@ Item {
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: sortLabel.implicitWidth + 46
                 height: 42
-                visible: !root.filesMode && opacity > 0
+                visible: !root.filesMode && !root.choosingFolder && opacity > 0
                 opacity: drawerHandle.controlsOpacity
                 enabled: root.drawerOpen && !root.filesMode && opacity > 0.9
                 z: 5
@@ -1987,6 +2036,72 @@ Item {
                     anchors.fill: parent
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.sortMenuOpen = !root.sortMenuOpen
+                }
+            }
+
+            // New folder, beside the order, as Files has it.
+            ModePill {
+                id: newAppsFolder
+                objectName: "apps-new-folder"
+                label: words.i18n("New folder")
+                primaryText: root.primaryText
+                controlColor: root.controlColor
+                x: sortButton.x - 8 - width
+                y: sortButton.y
+                visible: sortButton.visible && !root.folderOpen && !root.choosingFolder
+                opacity: sortButton.opacity
+                enabled: sortButton.enabled
+                z: 5
+                onActivated: root.startFolder()
+            }
+            // Choosing for a new folder: what to do, Cancel, and Make folder
+            // once two are chosen.
+            Item {
+                id: folderChoosing
+                objectName: "apps-folder-choosing"
+                x: 0
+                y: sortButton.y
+                width: parent.width
+                height: 42
+                visible: root.choosingFolder && !root.filesMode
+                z: 6
+                Text {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.right: cancelFolderPill.left
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: root.folderPicks.length === 0
+                        ? words.i18n("Choose applications for the new folder")
+                        : words.i18np("%1 chosen", "%1 chosen", root.folderPicks.length)
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                    elide: Text.ElideRight
+                }
+                ModePill {
+                    id: cancelFolderPill
+                    objectName: "apps-folder-cancel"
+                    label: words.i18n("Cancel")
+                    primaryText: root.primaryText
+                    controlColor: root.controlColor
+                    anchors.right: makeFolderPill.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    onActivated: root.cancelFolder()
+                }
+                ModePill {
+                    id: makeFolderPill
+                    objectName: "apps-folder-make"
+                    label: words.i18n("Make folder")
+                    light: true
+                    dimmed: root.folderPicks.length < 2
+                    enabled: root.folderPicks.length >= 2
+                    primaryText: root.primaryText
+                    controlColor: root.controlColor
+                    surfaceColor: root.surfaceColor
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    onActivated: root.makeFolder()
                 }
             }
 
@@ -2098,6 +2213,10 @@ Item {
                         else root.carryApplication(index)
                     }
                     Accessible.onPressAction: root.runCatalogApplication(index, model.name)
+                    Accessible.checkable: root.choosingFolder && !isFolder
+                    Accessible.checked: picked
+                    readonly property bool picked: root.choosingFolder && !isFolder
+                        && root.folderPicks.indexOf(root.applicationCatalog.applicationId(index)) >= 0
                     required property int index
                     required property var model
                     readonly property bool chosen: applicationGrid.keyChosen
@@ -2132,10 +2251,35 @@ Item {
                         anchors.fill: parent
                         anchors.margins: 5
                         radius: root.paperRadius
-                        color: catalogHover.hovered || catalogDelegate.chosen || gatherDrop.containsDrag
+                        color: catalogDelegate.picked ? tone.controlPressed
+                            : catalogHover.hovered || catalogDelegate.chosen || gatherDrop.containsDrag
                             ? tone.tileHover : "transparent"
-                        // A hidden application, shown by the eye, is dimmed.
-                        opacity: catalogDelegate.model.hidden ? 0.45 : 1
+                        // A hidden application, shown by the eye, is dimmed;
+                        // so is a folder while applications are chosen.
+                        opacity: catalogDelegate.model.hidden
+                            || (root.choosingFolder && catalogDelegate.isFolder) ? 0.45 : 1
+
+                        // Chosen for the new folder.
+                        Rectangle {
+                            objectName: "application-picked"
+                            visible: catalogDelegate.picked
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.margins: 6
+                            width: 20
+                            height: 20
+                            radius: 10
+                            color: root.controlColor
+                            border.width: 1.5
+                            border.color: root.primaryText
+                            z: 2
+                            SuiteIcon {
+                                anchors.centerIn: parent
+                                glyph: "check"
+                                width: 14
+                                height: 14
+                            }
+                        }
                         // The chosen application rises, as a touched one does.
                         scale: catalogDelegate.chosen ? 1.04 : 1
                         Behavior on scale { NumberAnimation { duration: root.ms(120) } }

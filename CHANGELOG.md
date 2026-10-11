@@ -12,6 +12,8 @@ provenance.
   brings Search back to its size, Pop out, which gives what is open a window
   of its own, and Close, which puts Search away. Notes and Ask pop out into
   their applications' windows, as All notes and Expand did.
+- Apps has New folder beside its order, as Files does: tap the applications
+  for it, then Make folder, and the folder opens with its name ready.
 - At Search's size, as in Spread, Files folds its places to a rail of icons
   and shows its tiles one size smaller; a narrow Files window does the same.
 - Files pops out into a window of its own, with its tabs and folder as they
