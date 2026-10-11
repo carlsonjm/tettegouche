@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Meta opens Search. Tettegouche tells Plasma it is an application launcher,
+  so Plasma's launcher key, Meta or Alt+F1, reaches it as it reaches Kickoff,
+  with no shortcut to set first.
 - Search, Files, Notes, Genie and Ambient follow a light colour scheme or
   Plasma style: a light ground with dark words, glyphs and controls. A dark
   one looks as before.

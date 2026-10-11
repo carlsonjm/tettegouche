@@ -14,7 +14,7 @@ touch, a pointer, or a keyboard. No background service is required.
 
 | Task | Touch | Keyboard |
 | --- | --- | --- |
-| Search | Tap the dot | `Meta`, once set in Plasma |
+| Search | Tap the dot | `Meta` |
 | Apps | Tap Apps in Search | `Meta+G` |
 | Files | Tap Files in Search | `Meta+E` |
 | Ambient | Tap the island | — |
