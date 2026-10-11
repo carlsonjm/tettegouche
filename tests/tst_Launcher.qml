@@ -138,6 +138,9 @@ TestCase {
         function prepareSoftware() { softwareAsked = true }
         function canUninstall(row) { return softwareReady && row === 1 }
         function uninstall(row) { uninstalled = row; return true }
+        property int edited: -1
+        function canEdit(row) { return row === 1 }
+        function edit(row) { edited = row; return true }
         // Folders: a row whose isFolder is true is one, by its folderId.
         property string openFolder: ""
         property string openFolderName: ""
@@ -432,8 +435,8 @@ TestCase {
     }
 
     // Holding an application, or right-clicking it, opens its sheet: its own
-    // actions, which start afresh, Hide, and Uninstall once the software
-    // catalog can show it.
+    // actions, which start afresh, Hide, Edit Application… where KDE's menu
+    // editor can open it, and Uninstall once the software catalog can show it.
     function test_applicationSheet() {
         controller.opened()
         for (let i = 0; i < 6; ++i) catalog.append({name: "App " + i, icon: "application-x-executable"})
@@ -460,7 +463,7 @@ TestCase {
         // Its own actions come first, each by its own index.
         const lines = []
         for (const line of sheet.contentItem.children) if (line.isSheetMenuItem && line.visible) lines.push(line.text)
-        compare(lines, ["New Window", "New Private Window", "Hide", "Uninstall…"])
+        compare(lines, ["New Window", "New Private Window", "Hide", "Edit Application…", "Uninstall…"])
         verify(!findChild(launcher, "application-sheet-pin").visible)
         let privateWindow = null
         for (const line of sheet.contentItem.children) if (line.text === "New Private Window") privateWindow = line
@@ -481,6 +484,17 @@ TestCase {
         compare(hide.text, "Unhide")
         mouseClick(uninstall, uninstall.width / 2, uninstall.height / 2)
         compare(catalog.uninstalled, 1)
+        tryCompare(sheet, "opened", false)
+
+        // Edit Application… opens the menu editor on it, and Search steps aside.
+        const edit = findChild(launcher, "application-sheet-edit")
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        verify(edit.visible)
+        const closesBeforeEdit = controller.closes
+        mouseClick(edit, edit.width / 2, edit.height / 2)
+        compare(catalog.edited, 1)
+        compare(controller.closes, closesBeforeEdit + 1)
         tryCompare(sheet, "opened", false)
 
         // With Shuffle's dock there, the sheet pins to it and then unpins.

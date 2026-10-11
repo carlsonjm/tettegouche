@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- An application's sheet in Apps offers Edit Application…, as Plasma's own
+  launchers do. It opens the application in KDE's menu editor, where its
+  icon, name or command can be changed for this person; Apps shows the change
+  the next time it opens.
 - Meta opens Search. Tettegouche tells Plasma it is an application launcher,
   so Plasma's launcher key, Meta or Alt+F1, reaches it as it reaches Kickoff,
   with no shortcut to set first.

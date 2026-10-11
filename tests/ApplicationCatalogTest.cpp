@@ -64,6 +64,9 @@ private Q_SLOTS:
               "[Desktop Action private-window]\nName=New Private Window\nIcon=view-private\nExec=true\n");
         write(applications + QStringLiteral("beta.desktop"),
               "[Desktop Entry]\nType=Application\nName=Beta\nExec=true\n");
+        // KDE's menu editor, kept out of Apps as the real one is not.
+        write(applications + QStringLiteral("org.kde.kmenuedit.desktop"),
+              "[Desktop Entry]\nType=Application\nName=Menu Editor\nExec=true\nNoDisplay=true\n");
         // Past the coarsest file system clock, so Zulu is plainly newer.
         QTest::qSleep(1100);
         write(applications + QStringLiteral("zulu.desktop"),
@@ -133,6 +136,16 @@ private Q_SLOTS:
         QVERIFY(!catalog.softwareReady());
         QVERIFY(!catalog.canUninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
         QVERIFY(!catalog.uninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
+    }
+
+    // With KDE's menu editor installed, an application can be edited there.
+    void offersTheMenuEditor()
+    {
+        ApplicationCatalog catalog;
+        QCOMPARE(rowOf(catalog, QStringLiteral("org.kde.kmenuedit.desktop")), -1);
+        QVERIFY(catalog.canEdit(rowOf(catalog, QStringLiteral("alpha.desktop"))));
+        QVERIFY(!catalog.canEdit(-1));
+        QVERIFY(!catalog.edit(-1));
     }
 
     // Folders come first and keep their applications out of Apps; one opens

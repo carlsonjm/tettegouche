@@ -108,7 +108,9 @@ a folder; a folder carried carries its applications' desktop files and
 `application/x-tettegouche-folder` with `{"name": …}`, which Shuffle's dock reads
 to pin them as one folder, while any other launcher pins them one by one. Apps
 launches with `KIO::ApplicationLauncherJob`, telling KDE's activity
-service each start. Existing-window matching runs before launch.
+service each start. Edit Application… hands the application's desktop file id to
+KDE's menu editor, which keeps the person's copy of the entry; Apps reads it
+from KDE's application list like any other. Existing-window matching runs before launch.
 
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list
 each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on

@@ -10,6 +10,7 @@
 #include <AppStreamQt/launchable.h>
 #include <AppStreamQt/pool.h>
 #include <KIO/ApplicationLauncherJob>
+#include <KIO/CommandLauncherJob>
 #include <KIO/OpenUrlJob>
 #include <KApplicationTrader>
 #include <KLocalizedString>
@@ -589,6 +590,27 @@ bool ApplicationCatalog::uninstall(int row)
         return false;
     }
     auto *job = new KIO::OpenUrlJob(QUrl(QStringLiteral("appstream://") + id), this);
+    job->start();
+    return true;
+}
+
+bool ApplicationCatalog::canEdit(int row) const
+{
+    const Entry *entry = entryAt(row);
+    return entry && entry->service->isApplication()
+        && KService::serviceByDesktopName(QStringLiteral("org.kde.kmenuedit"));
+}
+
+bool ApplicationCatalog::edit(int row)
+{
+    const KService::Ptr editor = KService::serviceByDesktopName(QStringLiteral("org.kde.kmenuedit"));
+    if (!editor || !canEdit(row)) {
+        return false;
+    }
+    // The editor finds the entry by its desktop file id, which is its menu id,
+    // in whichever menu holds it, and a running editor turns to it.
+    auto *job = new KIO::CommandLauncherJob(editor->exec(), {entryAt(row)->applicationId}, this);
+    job->setDesktopName(editor->desktopEntryName());
     job->start();
     return true;
 }
