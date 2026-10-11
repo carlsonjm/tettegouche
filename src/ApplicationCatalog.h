@@ -91,6 +91,13 @@ public:
     // one handles software links and its catalog lists the application.
     Q_INVOKABLE [[nodiscard]] bool canUninstall(int row) const;
     Q_INVOKABLE bool uninstall(int row);
+    // Whether KDE's menu editor is installed to open the application's menu
+    // entry in.
+    Q_INVOKABLE [[nodiscard]] bool canEdit(int row) const;
+    // Opens the application's menu entry in KDE's menu editor, where its name,
+    // icon and command change for this person; Apps reads the change the next
+    // time it opens.
+    Q_INVOKABLE bool edit(int row);
 
     // Folders. Apps draws its folders first, A to Z by name, and the
     // applications in none after them in the chosen order; inside a folder its
