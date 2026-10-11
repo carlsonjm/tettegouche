@@ -1643,6 +1643,7 @@ TestCase {
         launcher.fileBrowser=filesMock
         launcher.setDrawerOpen(true,"files")
         tryCompare(launcher,"drawerProgress",1)
+        wait(250) // the sheet's own growth settles before the rows are tapped
         const home={label:"Home",path:"/home/test",icon:"user-home",section:"places"}
         const root={label:"ROOTFS",path:"/",icon:"drive-harddisk",section:"drives",drive:"root",mounted:true,canEject:false,busy:false,note:""}
         const stick={label:"STICK",path:"/run/media/test/STICK",icon:"drive-removable-media",section:"drives",drive:"stick",mounted:true,canEject:true,busy:false,note:""}
@@ -2330,6 +2331,7 @@ TestCase {
         filesMock.empties = 0
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
+        wait(250) // the sheet's own growth settles before the menu is measured
         const more = findChild(launcher, "more-actions")
         const menu = findChild(launcher, "file-context-menu")
         compare(more.text, "Folder actions")
