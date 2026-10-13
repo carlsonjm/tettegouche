@@ -122,12 +122,12 @@ private Q_SLOTS:
     void hidesAnApplicationUntilShown()
     {
         ApplicationCatalog catalog;
-        const int count = catalog.rowCount();
+        const int count = order(catalog).size();
         QSignalSpy hiddenCount(&catalog, &ApplicationCatalog::hiddenCountChanged);
         catalog.setHidden(rowOf(catalog, QStringLiteral("alpha.desktop")), true);
         QCOMPARE(hiddenCount.size(), 1);
         QCOMPARE(catalog.hiddenCount(), 1);
-        QCOMPARE(catalog.rowCount(), count - 1);
+        QCOMPARE(order(catalog).size(), count - 1);
         QCOMPARE(rowOf(catalog, QStringLiteral("alpha.desktop")), -1);
         catalog.setFilterText(QStringLiteral("alp"));
         QCOMPARE(catalog.rowCount(), 0);
@@ -149,7 +149,7 @@ private Q_SLOTS:
         next.setShowHidden(false);
         QVERIFY(rowOf(next, QStringLiteral("alpha.desktop")) >= 0);
         ApplicationCatalog last;
-        QCOMPARE(last.rowCount(), count);
+        QCOMPARE(order(last).size(), count);
     }
 
     // Nothing can be uninstalled before the software catalog has loaded.
