@@ -2134,11 +2134,8 @@ Item {
                     && !root.applicationLaunchPending
                 z: 3
 
-                readonly property bool stripShown: root.applicationCatalog.sortOrder === 0
-                    && root.applicationCatalog.filterText === "" && letters.length >= 2
-                readonly property real tilesWidth: width - (stripShown ? jumpStrip.width : 0)
-                readonly property int columns: Math.max(3, Math.min(6, Math.floor(tilesWidth / 126)))
-                readonly property real cellWidth: tilesWidth / columns
+                readonly property int columns: Math.max(3, Math.min(6, Math.floor(width / 126)))
+                readonly property real cellWidth: width / columns
                 readonly property real cellHeight: root.launcherController.drawerExpanded ? 112 : 94
                 property int count: 0
                 property int currentIndex: -1
@@ -2146,8 +2143,6 @@ Item {
                 // Enter opens: it shows, and stays in view.
                 property bool keyChosen: false
                 property var lines: []
-                // Under A to Z, each letter there is and the line it starts on.
-                property var letters: []
                 // Each choosable row, in order, and the line each row lies on.
                 property var choices: []
                 property var lineOf: ({})
@@ -2158,21 +2153,11 @@ Item {
                     const catalog = root.applicationCatalog
                     const total = catalog.rowCount()
                     const built = []
-                    const letterLines = []
-                    const byLetter = catalog.sortOrder === 0 && catalog.filterText === ""
                     const chosen = []
                     const where = {}
                     let tiles = null
                     for (let row = 0; row < total; ++row) {
                         const kind = catalog.kind(row) || "application"
-                        if (byLetter && kind !== "member" && kind !== "section") {
-                            const letter = catalog.letter(row)
-                            if (letterLines.length === 0 || letterLines[letterLines.length - 1].label !== letter) {
-                                const line = kind === "application" && tiles && !tiles.member
-                                    && tiles.rows.length < columns ? built.length - 1 : built.length
-                                letterLines.push({ label: letter, line: line })
-                            }
-                        }
                         if (kind === "application" || kind === "member") {
                             const member = kind === "member"
                             if (!tiles || tiles.member !== member || tiles.rows.length >= columns) {
@@ -2204,7 +2189,6 @@ Item {
                     count = total
                     choices = chosen
                     lineOf = where
-                    letters = letterLines
                     lines = built
                     if (keep) {
                         applicationLines.forceLayout()
@@ -2267,16 +2251,11 @@ Item {
                     }
                     choose(to)
                 }
-                // Scrolls to the line a letter starts on, from the strip.
-                function jumpTo(at) {
-                    if (at < 0 || at >= letters.length) return
-                    applicationLines.positionViewAtIndex(letters[at].line, ListView.Beginning)
-                }
 
                 ListView {
                     id: applicationLines
                     objectName: "application-lines"
-                    width: applicationGrid.tilesWidth
+                    width: parent.width
                     height: parent.height
                     model: applicationGrid.lines
                     boundsBehavior: Flickable.StopAtBounds
@@ -2347,48 +2326,6 @@ Item {
                                 delegate: catalogTileComponent
                             }
                         }
-                    }
-                }
-
-                // A to Z, the letters there are, down the right edge: a tap or
-                // a slide along it moves Apps to that letter.
-                Item {
-                    id: jumpStrip
-                    objectName: "apps-jump-strip"
-                    anchors.right: parent.right
-                    width: 24
-                    height: parent.height
-                    visible: applicationGrid.stripShown
-                    readonly property real letterHeight: Math.min(18, (height - 8) / Math.max(1, applicationGrid.letters.length))
-                    Accessible.role: Accessible.ScrollBar
-                    Accessible.name: words.i18n("Letters")
-                    Column {
-                        id: letterColumn
-                        anchors.centerIn: parent
-                        Repeater {
-                            model: applicationGrid.letters
-                            delegate: Text {
-                                required property var modelData
-                                width: jumpStrip.width
-                                height: jumpStrip.letterHeight
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: modelData.label
-                                color: root.secondaryText
-                                font.pixelSize: Math.min(11, jumpStrip.letterHeight - 2)
-                                font.weight: Font.DemiBold
-                            }
-                        }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        preventStealing: true
-                        function jump(y) {
-                            const at = Math.floor((y - letterColumn.y) / jumpStrip.letterHeight)
-                            applicationGrid.jumpTo(Math.max(0, Math.min(applicationGrid.letters.length - 1, at)))
-                        }
-                        onPressed: mouse => jump(mouse.y)
-                        onPositionChanged: mouse => { if (pressed) jump(mouse.y) }
                     }
                 }
             }

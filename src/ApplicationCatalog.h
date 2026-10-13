@@ -123,9 +123,6 @@ public:
     Q_INVOKABLE [[nodiscard]] QString kind(int row) const;
     // A row's roles by name, for a view that draws rows out of a model's own.
     Q_INVOKABLE [[nodiscard]] QVariantMap item(int row) const;
-    // The letter a row's name is filed under, # for one that starts with no
-    // letter; empty for a section's row.
-    Q_INVOKABLE [[nodiscard]] QString letter(int row) const;
     Q_INVOKABLE [[nodiscard]] bool isOpen(int row) const;
     // Opens or closes a folder's row, and keeps the choice.
     Q_INVOKABLE void setFolderOpen(const QString &folderId, bool open);

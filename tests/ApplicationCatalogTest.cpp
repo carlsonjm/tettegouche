@@ -195,8 +195,6 @@ private Q_SLOTS:
         QCOMPARE(row, 0);
         QVERIFY(catalog.isFolder(row));
         QVERIFY(!catalog.isFolder(rowOf(catalog, zulu)));
-        QCOMPARE(catalog.letter(row), QStringLiteral("F"));
-        QCOMPARE(catalog.letter(rowOf(catalog, zulu)), QStringLiteral("Z"));
         QCOMPARE(catalog.folderId(row), folder);
         QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::FolderIconsRole).toStringList().size(), 2);
         QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::SizeRole).toInt(), 2);

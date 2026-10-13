@@ -6,7 +6,7 @@ provenance.
 ## Unreleased
 
 - Apps A to Z is one run by name, each folder at its own name's place among
-  the applications, with the letters down the right edge to jump to one. Most
+  the applications, with no letter rows or letters down the edge. Most
   used is divided into sections by when each was last used, and Newest
   installed by when each arrived, a folder at the head of its section.
   Folders are rows that open and close in place, their applications below

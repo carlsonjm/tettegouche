@@ -89,7 +89,6 @@ than repeat it.
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Turn the mouse wheel over the applications | Scrolls them 80 pixels a notch, as in Search. |
 | Look over Apps, with nothing typed | A to Z is one run by name, each folder at its name's place among the applications. Most used is divided into sections, each under a row of its own, by when each was last used, within the day, the week, the month or earlier, the most used first in each; Newest installed by when each arrived, within the week, the month, the year or earlier. There a folder heads the section of its most used or newest application. Typing shows every match, in folders or not, with no sections. |
-| Tap or slide along the letters at the right edge, under A to Z | Moves Apps to the first application or folder of that letter, # for names that start with anything else. |
 | Tap or click a folder's row, or Enter on it | Opens it in place, its applications below its row in the sort, or closes it. Each folder keeps whether it was left open. |
 | Touch and hold a folder's row, or right-click it | Opens its sheet: Rename, which readies the name on its row to change, where Enter or a tap elsewhere keeps the new name and Esc the old one; and Remove folder, which puts its applications back in Apps. |
 | Drag an application onto another, or onto a folder's row or an application in an open folder | Makes a folder of the two, named for what they share where they share a kind, which starts open; or puts it in the folder. |

@@ -177,8 +177,6 @@ TestCase {
             return at.kind ? at.kind : at.isFolder === true ? "folder" : "application"
         }
         function item(row) { return row >= 0 && row < count ? get(row) : ({}) }
-        // A row's letter, where a test gives one.
-        function letter(row) { return row >= 0 && row < count && kind(row) !== "section" ? (get(row).letter || "") : "" }
         function isOpen(row) { return isFolder(row) && !!openSet[get(row).folderId] }
         function folderRow(id) {
             for (let i = 0; i < count; ++i) if (isFolder(i) && get(i).folderId === id) return i
@@ -728,38 +726,23 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // A to Z is one run with no rows of its own: the arrow keys start on its
-    // first application, and the letters run down the right edge, where a
-    // tap moves Apps to that letter.
-    function test_letters() {
+    // A to Z is one run with no rows of its own, applications of different
+    // letters sharing a line, and no letters down the edge: the arrow keys
+    // start on its first application.
+    function test_oneRun() {
         controller.opened()
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application", letter: "A"})
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application", letter: "B"})
+        for (let i = 0; i < 4; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
+        for (let i = 0; i < 4; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
         launcher.setDrawerOpen(true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const grid = findChild(launcher, "application-grid")
-        compare(grid.letters.length, 2)
-        compare(grid.letters[0].label, "A")
-        compare(grid.letters[1].label, "B")
         verify(!findChild(launcher, "apps-section-label"))
+        verify(!findChild(launcher, "apps-jump-strip"))
+        compare(grid.lines.length, Math.ceil(8 / grid.columns))
         launcher.forceActiveFocus()
         keyClick(Qt.Key_Down)
         compare(grid.currentIndex, 0)
-        const strip = findChild(launcher, "apps-jump-strip")
-        verify(strip.visible)
-        const lines = findChild(launcher, "application-lines")
-        compare(lines.contentY, lines.originY)
-        mouseClick(strip, strip.width / 2, strip.height / 2 + strip.letterHeight / 2)
-        verify(lines.contentY > lines.originY)
-        // Typing leaves the letters.
-        catalog.filterText = "x"
-        verify(!strip.visible)
-        catalog.filterText = ""
-        // So does an order with no letters.
-        catalog.sortOrder = 2
-        verify(!strip.visible)
-        catalog.sortOrder = 0
         catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
@@ -786,7 +769,6 @@ TestCase {
         compare(grid.currentIndex, 1)
         keyClick(Qt.Key_Down)
         compare(grid.currentIndex, 5)
-        verify(!findChild(launcher, "apps-jump-strip").visible)
         catalog.sortOrder = 0
         catalog.clear()
         launcher.setDrawerOpen(false)

@@ -44,9 +44,8 @@ it in your web browser. Tettegouche does not learn from or rank results by your
 usage history.
 
 **Apps** shows installed applications when you would rather look than search.
-It sorts A to Z, with the letters down the edge to jump along, or by most
-used or newest installed, divided into sections by when each was last used or
-arrived, and keeps your choice. Drag one application onto another to make a
+It sorts A to Z, or by most used or newest installed, divided into sections by
+when each was last used or arrived, and keeps your choice. Drag one application onto another to make a
 folder, which takes its name's place A to Z, or heads its section, and opens
 and closes in place. Touch and hold an
 application for its sheet: its own actions, folders, Hide, and Edit

@@ -39,15 +39,6 @@ const QString FoldersKey = QStringLiteral("Browse/folders");
 // The folders left open, by id.
 const QString OpenFoldersKey = QStringLiteral("Browse/openFolders");
 
-// The letter a name is filed under: its first, without accents, as a capital,
-// or # when it starts with anything but a letter.
-QString letterOf(const QString &name)
-{
-    const QString plain = name.trimmed().normalized(QString::NormalizationForm_D);
-    if (plain.isEmpty() || !plain.at(0).isLetter()) return QStringLiteral("#");
-    return plain.left(1).toUpper();
-}
-
 // How long ago, in whole days, against the current date: never, for no
 // date, and none for one still to come.
 qint64 daysSince(const QDateTime &when)
@@ -344,13 +335,6 @@ QVariantMap ApplicationCatalog::item(int row) const
 QString ApplicationCatalog::kind(int row) const
 {
     return row >= 0 && row < m_visibleRows.size() ? data(index(row), KindRole).toString() : QString();
-}
-
-QString ApplicationCatalog::letter(int row) const
-{
-    if (folderAt(row)) return letterOf(folderLabel(m_visibleRows.at(row).at));
-    const Entry *entry = entryAt(row);
-    return entry ? letterOf(entry->name) : QString();
 }
 
 bool ApplicationCatalog::isOpen(int row) const
