@@ -16,6 +16,7 @@
 #include <QStringList>
 #include <QDir>
 #include <QFile>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -30,13 +31,35 @@ void write(const QString &path, const QByteArray &text)
     file.write(text);
 }
 
+// The applications drawn, in order, leaving out sections and folders.
 QStringList order(const ApplicationCatalog &catalog)
 {
     QStringList ids;
     for (int row = 0; row < catalog.rowCount(); ++row) {
-        ids.append(catalog.applicationId(row));
+        if (!catalog.applicationId(row).isEmpty()) ids.append(catalog.applicationId(row));
     }
     return ids;
+}
+
+// Every row drawn: a section as §label, a folder as [name], + when open, an
+// application in an open folder as >id, any other by its id.
+QStringList layout(const ApplicationCatalog &catalog)
+{
+    QStringList rows;
+    for (int row = 0; row < catalog.rowCount(); ++row) {
+        const QString kind = catalog.kind(row);
+        if (kind == QStringLiteral("section")) {
+            rows.append(QStringLiteral("§") + catalog.data(catalog.index(row), ApplicationCatalog::NameRole).toString());
+        } else if (kind == QStringLiteral("folder")) {
+            rows.append(QStringLiteral("[") + catalog.folderName(row) + QStringLiteral("]")
+                        + (catalog.isOpen(row) ? QStringLiteral("+") : QString()));
+        } else if (kind == QStringLiteral("member")) {
+            rows.append(QStringLiteral(">") + catalog.applicationId(row));
+        } else {
+            rows.append(catalog.applicationId(row));
+        }
+    }
+    return rows;
 }
 
 int rowOf(const ApplicationCatalog &catalog, const QString &id)
@@ -148,65 +171,74 @@ private Q_SLOTS:
         QVERIFY(!catalog.edit(-1));
     }
 
-    // Folders come first and keep their applications out of Apps; one opens
-    // in place of Apps, typing finds what is in them, and a folder left with
-    // one application is no longer one. Folders are kept for the next catalog.
+    // Apps is divided by first letter, a folder heading its name's letter.
+    // A folder keeps its applications out of the letters and opens in place,
+    // the choice kept; typing finds what is in it, and a folder left with one
+    // application is no longer one. Folders are kept for the next catalog.
     void gathersApplicationsIntoFolders()
     {
         const QString alpha = QStringLiteral("alpha.desktop");
         const QString beta = QStringLiteral("beta.desktop");
         const QString zulu = QStringLiteral("zulu.desktop");
         ApplicationCatalog catalog;
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§A"), alpha, QStringLiteral("§B"), beta,
+                                               QStringLiteral("§Z"), zulu}));
         QCOMPARE(catalog.folderCount(), 0);
         QVERIFY(catalog.gather(rowOf(catalog, alpha), alpha).isEmpty());
         const QString folder = catalog.gather(rowOf(catalog, alpha), beta);
         QVERIFY(!folder.isEmpty());
         QCOMPARE(catalog.folderCount(), 1);
-        QCOMPARE(catalog.rowCount(), 2);
-        QVERIFY(catalog.isFolder(0));
-        QCOMPARE(catalog.folderId(0), folder);
-        QCOMPARE(catalog.folderName(0), QStringLiteral("Folder"));
-        QCOMPARE(catalog.data(catalog.index(0), ApplicationCatalog::FolderIconsRole).toStringList().size(), 2);
-        QVERIFY(catalog.applicationId(0).isEmpty());
+        // A new folder starts open.
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§F"), QStringLiteral("[Folder]+"),
+                                               QStringLiteral(">") + alpha, QStringLiteral(">") + beta,
+                                               QStringLiteral("§Z"), zulu}));
+        const int row = catalog.folderRow(folder);
+        QCOMPARE(row, 1);
+        QVERIFY(catalog.isFolder(row));
+        QVERIFY(!catalog.isFolder(0));
+        QCOMPARE(catalog.folderId(row), folder);
+        QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::FolderIconsRole).toStringList().size(), 2);
+        QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::SizeRole).toInt(), 2);
+        QVERIFY(catalog.applicationId(row).isEmpty());
+        QVERIFY(!catalog.launch(row));
         QVERIFY(!catalog.launch(0));
-        QCOMPARE(catalog.applicationId(1), zulu);
-        // Folders stay first, whatever the order.
-        catalog.setSortOrder(ApplicationCatalog::NameDescending);
-        QVERIFY(catalog.isFolder(0));
-        catalog.setSortOrder(ApplicationCatalog::NameAscending);
+        QCOMPARE(catalog.folderOf(rowOf(catalog, alpha)), folder);
 
-        QSignalSpy opened(&catalog, &ApplicationCatalog::openFolderChanged);
-        catalog.setOpenFolder(folder);
-        QCOMPARE(opened.size(), 1);
-        QCOMPARE(order(catalog), (QStringList{alpha, beta}));
-        QCOMPARE(catalog.folderOf(0), folder);
-        catalog.setOpenFolder({});
+        catalog.setFolderOpen(folder, false);
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§F"), QStringLiteral("[Folder]"),
+                                               QStringLiteral("§Z"), zulu}));
         catalog.setFilterText(QStringLiteral("eta"));
-        QCOMPARE(order(catalog), QStringList{beta});
+        QCOMPARE(layout(catalog), QStringList{beta});
         QCOMPARE(catalog.folderOf(0), folder);
         catalog.setFilterText({});
 
         catalog.putInFolder(rowOf(catalog, zulu), folder);
-        QCOMPARE(catalog.rowCount(), 1);
+        QCOMPARE(catalog.rowCount(), 2);
         catalog.renameFolder(folder, QStringLiteral(" Work "));
-        QCOMPARE(catalog.folderName(0), QStringLiteral("Work"));
-        QCOMPARE(catalog.folderUrls(0).size(), 3);
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]")}));
+        QCOMPARE(catalog.folderUrls(catalog.folderRow(folder)).size(), 3);
 
         ApplicationCatalog next;
-        QCOMPARE(next.rowCount(), 1);
-        QCOMPARE(next.folderName(0), QStringLiteral("Work"));
+        QCOMPARE(layout(next), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]")}));
+        next.setFolderOpen(folder, true);
+        ApplicationCatalog opened;
+        QVERIFY(opened.isOpen(opened.folderRow(folder)));
 
-        catalog.setOpenFolder(folder);
+        catalog.setFolderOpen(folder, true);
         catalog.takeOut(rowOf(catalog, zulu));
-        QCOMPARE(order(catalog), (QStringList{alpha, beta}));
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]+"),
+                                               QStringLiteral(">") + alpha, QStringLiteral(">") + beta,
+                                               QStringLiteral("§Z"), zulu}));
         catalog.takeOut(rowOf(catalog, beta));
-        // One left is no folder: Apps shows itself again.
-        QVERIFY(catalog.openFolder().isEmpty());
+        // One left is no folder.
         QCOMPARE(catalog.folderCount(), 0);
+        QCOMPARE(catalog.folderRow(folder), -1);
         QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
 
         const QString again = catalog.gather(rowOf(catalog, zulu), alpha);
-        QCOMPARE(catalog.rowCount(), 2);
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§B"), beta, QStringLiteral("§F"),
+                                               QStringLiteral("[Folder]+"), QStringLiteral(">") + alpha,
+                                               QStringLiteral(">") + zulu}));
         catalog.removeFolder(again);
         QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
         ApplicationCatalog last;
@@ -214,7 +246,7 @@ private Q_SLOTS:
     }
 
     // New folder makes a folder of the applications chosen, two or more,
-    // taking each out of any folder it was in.
+    // taking each out of any folder it was in; it starts open.
     void makesAFolderOfChosenApplications()
     {
         const QString alpha = QStringLiteral("alpha.desktop");
@@ -229,21 +261,24 @@ private Q_SLOTS:
         const QString first = catalog.makeFolder({alpha, beta});
         QVERIFY(!first.isEmpty());
         QCOMPARE(catalog.folderCount(), 1);
-        QCOMPARE(catalog.rowCount(), 2);
+        QVERIFY(catalog.isOpen(catalog.folderRow(first)));
         // Beta leaves the first folder, which is left with one and ends.
         const QString second = catalog.makeFolder({beta, zulu});
         QVERIFY(!second.isEmpty() && second != first);
         QCOMPARE(catalog.folderCount(), 1);
-        catalog.setOpenFolder(second);
-        QCOMPARE(order(catalog), (QStringList{beta, zulu}));
-        catalog.setOpenFolder({});
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§A"), alpha, QStringLiteral("§F"),
+                                               QStringLiteral("[Folder]+"), QStringLiteral(">") + beta,
+                                               QStringLiteral(">") + zulu}));
         catalog.removeFolder(second);
         QCOMPARE(catalog.folderCount(), 0);
     }
 
-    // Each order, over the same applications; an unused application follows
-    // the used ones A to Z, and the order chosen is the next catalog's.
-    void ordersFourWaysAndKeepsTheChoice()
+    // Each order, over the same applications, divided its own way: by when
+    // each was last used, the most used first inside each, or by when it
+    // arrived. A folder heads the section of its most used application. The
+    // order chosen is the next catalog's, and Z to A, once kept, reads as
+    // A to Z.
+    void ordersThreeWaysAndKeepsTheChoice()
     {
         const QString alpha = QStringLiteral("alpha.desktop");
         const QString beta = QStringLiteral("beta.desktop");
@@ -251,34 +286,46 @@ private Q_SLOTS:
         int reads = 0;
         ApplicationCatalog catalog;
         QCOMPARE(catalog.sortOrder(), int(ApplicationCatalog::NameAscending));
-        catalog.setUseReader([&reads, beta, zulu] {
+        const QDateTime now = QDateTime::currentDateTime();
+        catalog.setUseReader([&reads, beta, zulu, now] {
             ++reads;
-            return QHash<QString, double>{{zulu, 2.0}, {beta, 5.0}};
+            return QHash<QString, ApplicationUse>{{zulu, {2.0, now}}, {beta, {5.0, now.addDays(-10)}}};
         });
         // Nothing is read while names decide the order.
         QCOMPARE(reads, 0);
         QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
 
         QSignalSpy changed(&catalog, &ApplicationCatalog::sortOrderChanged);
-        catalog.setSortOrder(ApplicationCatalog::NameDescending);
-        QCOMPARE(order(catalog), (QStringList{zulu, beta, alpha}));
         catalog.setSortOrder(ApplicationCatalog::MostUsed);
         QCOMPARE(reads, 1);
-        QCOMPARE(order(catalog), (QStringList{beta, zulu, alpha}));
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§Used today"), zulu, QStringLiteral("§This month"),
+                                               beta, QStringLiteral("§Earlier"), alpha}));
         catalog.refreshUse();
         QCOMPARE(reads, 2);
         catalog.setFilterText(QStringLiteral("a"));
-        QCOMPARE(order(catalog), (QStringList{beta, alpha}));
+        QCOMPARE(layout(catalog), (QStringList{beta, alpha}));
         catalog.setFilterText({});
+
+        const QString folder = catalog.makeFolder({alpha, zulu});
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§Used today"), QStringLiteral("[Folder]+"),
+                                               QStringLiteral(">") + zulu, QStringLiteral(">") + alpha,
+                                               QStringLiteral("§This month"), beta}));
+        catalog.removeFolder(folder);
+
         catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
+        QCOMPARE(layout(catalog).constFirst(), QStringLiteral("§This week"));
         QCOMPARE(order(catalog).constFirst(), zulu);
+        catalog.setSortOrder(1);
         catalog.setSortOrder(7);
         QCOMPARE(catalog.sortOrder(), int(ApplicationCatalog::NewestInstalled));
-        QCOMPARE(changed.size(), 3);
+        QCOMPARE(changed.size(), 2);
 
         ApplicationCatalog next;
         QCOMPARE(next.sortOrder(), int(ApplicationCatalog::NewestInstalled));
-        next.setSortOrder(ApplicationCatalog::NameAscending);
+        QSettings().setValue(QStringLiteral("Browse/sortOrder"), 1);
+        ApplicationCatalog kept;
+        QCOMPARE(kept.sortOrder(), int(ApplicationCatalog::NameAscending));
+        kept.setSortOrder(ApplicationCatalog::NameAscending);
         ApplicationCatalog last;
         QCOMPARE(last.sortOrder(), int(ApplicationCatalog::NameAscending));
     }

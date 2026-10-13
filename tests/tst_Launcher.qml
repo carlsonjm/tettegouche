@@ -154,9 +154,9 @@ TestCase {
         property int edited: -1
         function canEdit(row) { return row === 1 }
         function edit(row) { edited = row; return true }
-        // Folders: a row whose isFolder is true is one, by its folderId.
-        property string openFolder: ""
-        property string openFolderName: ""
+        // Folders: a row whose isFolder is true is one, by its folderId; a
+        // row's kind says what it is, an application where none is given.
+        property var openSet: ({})
         property var renamed: []
         property string removed: ""
         property var putIn: []
@@ -171,11 +171,28 @@ TestCase {
             for (let i = 0; i < count; ++i) if (isFolder(i)) list.push({id: get(i).folderId, name: get(i).name})
             return list
         }
-        onOpenFolderChanged: {
-            openFolderName = ""
-            for (let i = 0; i < count; ++i) if (get(i).folderId === openFolder) openFolderName = get(i).name
+        function kind(row) {
+            if (row < 0 || row >= count) return ""
+            const at = get(row)
+            return at.kind ? at.kind : at.isFolder === true ? "folder" : "application"
         }
-        function applicationId(row) { return row >= 0 && row < count && !isFolder(row) ? "app" + row : "" }
+        function item(row) { return row >= 0 && row < count ? get(row) : ({}) }
+        function isOpen(row) { return isFolder(row) && !!openSet[get(row).folderId] }
+        function folderRow(id) {
+            for (let i = 0; i < count; ++i) if (isFolder(i) && get(i).folderId === id) return i
+            return -1
+        }
+        // Opening a folder draws the applications in it as its own.
+        function setFolderOpen(id, open) {
+            const next = Object.assign({}, openSet)
+            next[id] = open
+            openSet = next
+            for (let i = 0; i < count; ++i)
+                if (get(i).inFolder === id) setProperty(i, "kind", open ? "member" : "application")
+        }
+        function applicationId(row) {
+            return row >= 0 && row < count && (kind(row) === "application" || kind(row) === "member") ? "app" + row : ""
+        }
         property var made: []
         function makeFolder(ids) { made = ids; return ids.length >= 2 ? "made" : "" }
         function gather(row, id) { return "" }
@@ -575,8 +592,8 @@ TestCase {
         mouseClick(make, make.width / 2, make.height / 2)
         compare(catalog.made, ["app0", "app2"])
         verify(!launcher.choosingFolder)
-        compare(catalog.openFolder, "made")
-        catalog.openFolder = ""
+        compare(launcher.renamingFolder, "made")
+        launcher.renamingFolder = ""
 
         mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
         verify(launcher.choosingFolder)
@@ -615,58 +632,54 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // A folder opens in place of Apps from a tap, and Back or Esc returns;
-    // its sheet renames it in place or removes it. An application's sheet puts
-    // it in a folder, or takes it out of the one it is in. A folder carried
-    // leaves as one.
+    // A folder is a row in Apps that a tap or Enter opens and closes in
+    // place, its applications below it; its sheet renames it on its row or
+    // removes it. An application's sheet puts it in a folder, or takes it out
+    // of the one it is in. A folder carried leaves as one.
     function test_folders() {
         controller.opened()
         controller.catalogActivated = -1
-        catalog.append({name: "Games", icon: "", isFolder: true, folderId: "f1", inFolder: ""})
-        for (let i = 0; i < 3; ++i) catalog.append({name: "App " + i, icon: "application-x-executable", isFolder: false, folderId: "", inFolder: i === 2 ? "f1" : ""})
+        catalog.openSet = ({})
+        catalog.append({name: "Games", icon: "", kind: "folder", isFolder: true, folderId: "f1", inFolder: ""})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "App " + i, icon: "application-x-executable", kind: "application", isFolder: false, folderId: "", inFolder: i === 2 ? "f1" : ""})
         launcher.setDrawerOpen(true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(600)
         const grid = findChild(launcher, "application-grid")
-        const header = findChild(launcher, "apps-folder-header")
-        const folder = findChild(grid, "application-tile-0")
-        verify(findChild(folder, "apps-folder-tile").visible)
-        // The name shares the row the order sits in, so Apps does not move.
-        verify(!header.visible)
-        const gridTop = grid.y
-        mouseClick(folder, folder.width / 2, folder.height / 2)
-        compare(catalog.openFolder, "f1")
-        verify(launcher.folderOpen)
+        const header = () => findChild(grid, "apps-folder-0")
+        verify(header().visible)
+        verify(findChild(header(), "apps-folder-tile").visible)
+        mouseClick(header(), header().width / 2, header().height / 2)
+        verify(catalog.openSet.f1)
         compare(controller.catalogActivated, -1)
-        verify(header.visible)
-        compare(grid.y, gridTop)
-        compare(findChild(launcher, "apps-folder-name").text, "Games")
-        const back = findChild(launcher, "drawer-back")
-        mouseClick(back, back.width / 2, back.height / 2)
-        compare(catalog.openFolder, "")
         verify(launcher.drawerOpen)
-        mouseClick(folder, folder.width / 2, folder.height / 2)
-        compare(catalog.openFolder, "f1")
+        mouseClick(header(), header().width / 2, header().height / 2)
+        verify(!catalog.openSet.f1)
+        // Enter on a chosen folder opens it too.
         launcher.forceActiveFocus()
-        keyClick(Qt.Key_Escape)
-        compare(catalog.openFolder, "")
-        verify(launcher.drawerOpen)
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 0)
+        keyClick(Qt.Key_Return)
+        verify(catalog.openSet.f1)
+        compare(controller.catalogActivated, -1)
+        compare(grid.currentIndex, 0)
+        catalog.setFolderOpen("f1", false)
 
         // The folder's sheet.
         const folderSheet = findChild(launcher, "apps-folder-sheet")
-        mouseClick(folder, folder.width / 2, folder.height / 2, Qt.RightButton)
+        mouseClick(header(), header().width / 2, header().height / 2, Qt.RightButton)
         tryCompare(folderSheet, "opened", true)
         const rename = findChild(launcher, "apps-folder-sheet-rename")
         mouseClick(rename, rename.width / 2, rename.height / 2)
-        compare(catalog.openFolder, "f1")
-        const name = findChild(launcher, "apps-folder-name")
+        tryCompare(launcher, "renamingFolder", "f1")
+        const name = findChild(header(), "apps-folder-name")
         tryCompare(name, "activeFocus", true)
         for (const letter of "play") keyClick(letter)
         keyClick(Qt.Key_Return)
         compare(catalog.renamed, ["f1", "play"])
-        catalog.openFolder = ""
+        compare(launcher.renamingFolder, "")
         tryCompare(folderSheet, "opened", false)
-        mouseClick(folder, folder.width / 2, folder.height / 2, Qt.RightButton)
+        mouseClick(header(), header().width / 2, header().height / 2, Qt.RightButton)
         tryCompare(folderSheet, "opened", true)
         const remove = findChild(launcher, "apps-folder-sheet-remove")
         mouseClick(remove, remove.width / 2, remove.height / 2)
@@ -698,7 +711,7 @@ TestCase {
         // Carried, the folder leaves as one.
         controller.carriedFolder = -1
         controller.carriedApplication = -1
-        mouseDrag(folder, folder.width / 2, folder.height / 2, 0, 120)
+        mouseDrag(header(), header().width / 2, header().height / 2, 0, 120)
         tryCompare(controller, "carriedFolder", 0)
         compare(controller.carriedApplication, -1)
 
@@ -707,6 +720,45 @@ TestCase {
         catalog.removed = ""
         catalog.putIn = []
         catalog.takenOut = -1
+        catalog.openSet = ({})
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Apps' sections: each has a row of its own, which the arrow keys pass
+    // over, and under A to Z the letters run down the right edge, where a
+    // tap moves Apps to that letter.
+    function test_sections() {
+        controller.opened()
+        catalog.append({name: "A", icon: "", kind: "section"})
+        for (let i = 0; i < 30; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
+        catalog.append({name: "B", icon: "", kind: "section"})
+        for (let i = 0; i < 30; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const grid = findChild(launcher, "application-grid")
+        compare(grid.sections.length, 2)
+        compare(grid.sections[0].label, "A")
+        verify(!findChild(grid, "application-tile-0"))
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 1)
+        const strip = findChild(launcher, "apps-jump-strip")
+        verify(strip.visible)
+        const lines = findChild(launcher, "application-lines")
+        compare(lines.contentY, lines.originY)
+        mouseClick(strip, strip.width / 2, strip.height / 2 + strip.letterHeight / 2)
+        verify(lines.contentY > lines.originY)
+        // Typing leaves the letters.
+        catalog.filterText = "x"
+        verify(!strip.visible)
+        catalog.filterText = ""
+        // So does an order with no letters.
+        catalog.sortOrder = 2
+        verify(!strip.visible)
+        catalog.sortOrder = 0
         catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
@@ -2677,10 +2729,11 @@ TestCase {
         const menu = findChild(launcher, "sort-menu")
         tryCompare(menu, "opacity", 1)
         compare(menu.width, 160)
-        // Four rows of 38 with 4 between, inside 6 on each side.
-        compare(menu.height, 176)
+        // Three rows of 38 with 4 between, inside 6 on each side.
+        compare(menu.height, 134)
         verify(catalog.useReads >= 1)
-        const rows = [["Z to A", 1], ["Most used", 2], ["Newest installed", 3], ["A to Z", 0]]
+        // Each by its place in the menu and the catalog's number for it.
+        const rows = [["Most used", 2, 1], ["Newest installed", 3, 2], ["A to Z", 0, 0]]
         for (let i = 0; i < rows.length; ++i) {
             if (i > 0) {
                 mouseClick(sort, sort.width / 2, sort.height / 2)
@@ -2688,7 +2741,7 @@ TestCase {
                 tryCompare(menu, "opacity", 1)
             }
             const order = rows[i][1]
-            mouseClick(menu, menu.width / 2, 6 + order * 42 + 19)
+            mouseClick(menu, menu.width / 2, 6 + rows[i][2] * 42 + 19)
             tryCompare(catalog, "sortOrder", order)
             compare(launcher.sortMenuOpen, false)
         }

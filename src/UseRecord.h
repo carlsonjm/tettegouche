@@ -8,7 +8,15 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QDBusPendingCall>
+#include <QDateTime>
 #include <QString>
+
+// How much an application has been used, as KDE's activity service scores
+// it, favouring both often and lately, and when it was last used.
+struct ApplicationUse {
+    double score = 0;
+    QDateTime last;
+};
 
 // A use, told to KDE's activity service as Plasma's own launchers tell it, so
 // it shows in Recent and on Search's first screen. Plasma's privacy setting

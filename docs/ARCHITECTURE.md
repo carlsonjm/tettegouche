@@ -108,12 +108,16 @@ Tettegouche-owned confidence policy. Its behavior is owned by
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
 Apps reads visible applications from `KApplicationTrader` and orders them by
-display name either way, by use, or by when each desktop file arrived. Use is
-KDE's own score from the activity service, summed over every activity and read
-again each time Apps opens while it decides the order; the order chosen is kept
-in Tettegouche's settings. Its folders live there too, as {id, name, apps}
-by desktop file id; a folder is drawn while two or more of its applications are
-here and shown. An application carried from Apps carries its desktop file and
+display name, by use, or by when each desktop file arrived, and divides them
+into sections by the same: first letter, last use, or arrival. Use is KDE's
+own score and last use from the activity service, summed over every activity
+and read again each time Apps opens while it decides the order; the order
+chosen is kept in Tettegouche's settings. Its folders live there too, as {id,
+name, apps} by desktop file id, with the ids of those left open; a folder is
+drawn while two or more of its applications are here and shown. The catalog
+is one list of rows, each a section, a folder, an application or an
+application in an open folder, and `Launcher.qml` lays them out in lines,
+sections and folders on lines of their own. An application carried from Apps carries its desktop file and
 `application/x-tettegouche-application` with its id, which a tile reads to make
 a folder; a folder carried carries its applications' desktop files and
 `application/x-tettegouche-folder` with `{"name": …}`, which Shuffle's dock reads

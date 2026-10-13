@@ -21,11 +21,13 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QMap>
 #include <QRandomGenerator>
 #include <QStandardPaths>
 #include <QUrl>
 
 #include <algorithm>
+#include <limits>
 
 namespace
 {
@@ -34,6 +36,31 @@ const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
 const QString OrderKey = QStringLiteral("Browse/sortOrder");
 // Apps' folders, as JSON: a list of {id, name, apps}, apps by desktop file id.
 const QString FoldersKey = QStringLiteral("Browse/folders");
+// The folders left open, by id.
+const QString OpenFoldersKey = QStringLiteral("Browse/openFolders");
+
+// The letter a name is filed under: its first, without accents, as a capital,
+// or # when it starts with anything but a letter.
+QString letterOf(const QString &name)
+{
+    const QString plain = name.trimmed().normalized(QString::NormalizationForm_D);
+    if (plain.isEmpty() || !plain.at(0).isLetter()) return QStringLiteral("#");
+    return plain.left(1).toUpper();
+}
+
+// How long ago, in whole days, against the current date: never, for no
+// date, and none for one still to come.
+qint64 daysSince(const QDateTime &when)
+{
+    if (!when.isValid()) return std::numeric_limits<qint64>::max();
+    return std::max<qint64>(0, when.date().daysTo(QDate::currentDate()));
+}
+
+// Which of four spans a number of days falls in, the nearest first.
+int spanOf(qint64 days, qint64 first, qint64 second, qint64 third)
+{
+    return days < first ? 0 : days < second ? 1 : days < third ? 2 : 3;
+}
 
 QDateTime installedAt(const KService::Ptr &service)
 {
@@ -75,7 +102,9 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
-    m_sortOrder = order >= NameAscending && order <= NewestInstalled ? order : NameAscending;
+    m_sortOrder = order == MostUsed || order == NewestInstalled ? order : NameAscending;
+    const QStringList open = QSettings().value(OpenFoldersKey).toStringList();
+    m_openFolders = QSet<QString>(open.cbegin(), open.cend());
     const QJsonArray folders = QJsonDocument::fromJson(
         QSettings().value(FoldersKey).toString().toUtf8()).array();
     for (const QJsonValue &value : folders) {
@@ -108,8 +137,29 @@ QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
         || index.row() >= m_visibleRows.size()) {
         return {};
     }
+    const Row &row = m_visibleRows.at(index.row());
+    if (row.kind == SectionRow) {
+        switch (role) {
+        case NameRole:
+            return row.label;
+        case KindRole:
+            return QStringLiteral("section");
+        case IsFolderRole:
+        case HiddenRole:
+        case OpenRole:
+            return false;
+        default:
+            return {};
+        }
+    }
     if (const Folder *folder = folderAt(index.row())) {
         switch (role) {
+        case KindRole:
+            return QStringLiteral("folder");
+        case OpenRole:
+            return m_openFolders.contains(folder->id);
+        case SizeRole:
+            return drawnFolders().value(row.at).size();
         case NameRole:
             return folder->name.isEmpty()
                 ? i18nc("@label an Apps folder with no name", "Folder") : folder->name;
@@ -137,8 +187,12 @@ QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
             return {};
         }
     }
-    const Entry &entry = m_entries.at(m_visibleRows.at(index.row()));
+    const Entry &entry = m_entries.at(row.at);
     switch (role) {
+    case KindRole:
+        return row.kind == MemberRow ? QStringLiteral("member") : QStringLiteral("application");
+    case OpenRole:
+        return false;
     case NameRole:
         return entry.name;
     case IconRole:
@@ -168,6 +222,9 @@ QHash<int, QByteArray> ApplicationCatalog::roleNames() const
         {IsFolderRole, QByteArrayLiteral("isFolder")},
         {FolderIdRole, QByteArrayLiteral("folderId")},
         {FolderIconsRole, QByteArrayLiteral("folderIcons")},
+        {KindRole, QByteArrayLiteral("kind")},
+        {OpenRole, QByteArrayLiteral("open")},
+        {SizeRole, QByteArrayLiteral("size")},
     };
 }
 
@@ -213,16 +270,17 @@ QString ApplicationCatalog::applicationName(int row) const
 
 const ApplicationCatalog::Entry *ApplicationCatalog::entryAt(int row) const
 {
-    return row >= 0 && row < m_visibleRows.size() && m_visibleRows.at(row) >= 0
-        ? &m_entries.at(m_visibleRows.at(row)) : nullptr;
+    if (row < 0 || row >= m_visibleRows.size()) return nullptr;
+    const Row &drawn = m_visibleRows.at(row);
+    return drawn.kind == ApplicationRow || drawn.kind == MemberRow ? &m_entries.at(drawn.at) : nullptr;
 }
 
 const ApplicationCatalog::Folder *ApplicationCatalog::folderAt(int row) const
 {
-    if (row < 0 || row >= m_visibleRows.size() || m_visibleRows.at(row) >= 0) {
+    if (row < 0 || row >= m_visibleRows.size() || m_visibleRows.at(row).kind != FolderRow) {
         return nullptr;
     }
-    return &m_folders.at(-1 - m_visibleRows.at(row));
+    return &m_folders.at(m_visibleRows.at(row).at);
 }
 
 bool ApplicationCatalog::shown(const Entry &entry) const
@@ -270,6 +328,56 @@ QHash<int, QVector<int>> ApplicationCatalog::drawnFolders() const
 bool ApplicationCatalog::isFolder(int row) const
 {
     return folderAt(row) != nullptr;
+}
+
+QVariantMap ApplicationCatalog::item(int row) const
+{
+    QVariantMap item;
+    if (row < 0 || row >= m_visibleRows.size()) return item;
+    const QHash<int, QByteArray> roles = roleNames();
+    for (auto role = roles.cbegin(); role != roles.cend(); ++role) {
+        item.insert(QString::fromLatin1(role.value()), data(index(row), role.key()));
+    }
+    return item;
+}
+
+QString ApplicationCatalog::kind(int row) const
+{
+    return row >= 0 && row < m_visibleRows.size() ? data(index(row), KindRole).toString() : QString();
+}
+
+bool ApplicationCatalog::isOpen(int row) const
+{
+    const Folder *folder = folderAt(row);
+    return folder && m_openFolders.contains(folder->id);
+}
+
+void ApplicationCatalog::setFolderOpen(const QString &folderId, bool open)
+{
+    if (folderIndex(folderId) < 0 || m_openFolders.contains(folderId) == open) return;
+    if (open) m_openFolders.insert(folderId);
+    else m_openFolders.remove(folderId);
+    storeOpenFolders();
+    rebuildVisibleRows();
+}
+
+int ApplicationCatalog::folderRow(const QString &folderId) const
+{
+    for (int row = 0; row < m_visibleRows.size(); ++row) {
+        const Row &drawn = m_visibleRows.at(row);
+        if (drawn.kind == FolderRow && m_folders.at(drawn.at).id == folderId) return row;
+    }
+    return -1;
+}
+
+void ApplicationCatalog::storeOpenFolders()
+{
+    QStringList stored;
+    for (const Folder &folder : m_folders) {
+        if (m_openFolders.contains(folder.id)) stored.append(folder.id);
+    }
+    m_openFolders = QSet<QString>(stored.cbegin(), stored.cend());
+    QSettings().setValue(OpenFoldersKey, stored);
 }
 
 QString ApplicationCatalog::folderId(int row) const
@@ -367,6 +475,7 @@ QString ApplicationCatalog::gather(int row, const QString &applicationId)
                 folder.applications.removeAll(pair.at(0));
             }
             m_folders.append({target, nameFor(pair), {pair.at(0)}});
+            m_openFolders.insert(target);
         }
     }
     for (Folder &folder : m_folders) {
@@ -396,6 +505,7 @@ QString ApplicationCatalog::makeFolder(const QStringList &applicationIds)
         for (const QString &id : chosen) folder.applications.removeAll(id);
     }
     m_folders.append({target, nameFor(chosen), chosen});
+    m_openFolders.insert(target);
     storeFolders();
     return target;
 }
@@ -447,7 +557,7 @@ QList<QUrl> ApplicationCatalog::folderUrls(int row) const
     QList<QUrl> urls;
     const Folder *folder = folderAt(row);
     if (!folder) return urls;
-    QVector<int> members = drawnFolders().value(-1 - m_visibleRows.at(row));
+    QVector<int> members = drawnFolders().value(m_visibleRows.at(row).at);
     sortEntries(members);
     for (int at : members) {
         QString path = m_entries.at(at).service->entryPath();
@@ -471,29 +581,8 @@ void ApplicationCatalog::storeFolders()
                                   {QStringLiteral("apps"), QJsonArray::fromStringList(folder.applications)}});
     }
     QSettings().setValue(FoldersKey, QString::fromUtf8(QJsonDocument(stored).toJson(QJsonDocument::Compact)));
+    storeOpenFolders();
     rebuildVisibleRows();
-}
-
-QString ApplicationCatalog::openFolder() const
-{
-    return m_openFolder;
-}
-
-void ApplicationCatalog::setOpenFolder(const QString &folderId)
-{
-    const QString open = folderIndex(folderId) >= 0 ? folderId : QString();
-    if (m_openFolder == open) return;
-    m_openFolder = open;
-    rebuildVisibleRows();
-    Q_EMIT openFolderChanged();
-}
-
-QString ApplicationCatalog::openFolderName() const
-{
-    const int at = folderIndex(m_openFolder);
-    if (at < 0) return {};
-    return m_folders.at(at).name.isEmpty()
-        ? i18nc("@label an Apps folder with no name", "Folder") : m_folders.at(at).name;
 }
 
 int ApplicationCatalog::folderCount() const
@@ -687,7 +776,7 @@ int ApplicationCatalog::sortOrder() const
 
 void ApplicationCatalog::setSortOrder(int sortOrder)
 {
-    if (sortOrder < NameAscending || sortOrder > NewestInstalled
+    if ((sortOrder != NameAscending && sortOrder != MostUsed && sortOrder != NewestInstalled)
         || m_sortOrder == sortOrder) {
         return;
     }
@@ -721,13 +810,14 @@ void ApplicationCatalog::sortEntries(QVector<int> &rows) const
     // Entry indices are already A to Z, so a stable sort keeps it among equals.
     std::sort(rows.begin(), rows.end());
     switch (m_sortOrder) {
-    case NameDescending:
-        std::reverse(rows.begin(), rows.end());
-        break;
     case MostUsed:
+        // Section by section, the most used first inside each.
         std::stable_sort(rows.begin(), rows.end(), [this](int left, int right) {
-            return m_use.value(m_entries.at(left).applicationId)
-                > m_use.value(m_entries.at(right).applicationId);
+            const int leftSpan = useSpan(left);
+            const int rightSpan = useSpan(right);
+            if (leftSpan != rightSpan) return leftSpan < rightSpan;
+            return m_use.value(m_entries.at(left).applicationId).score
+                > m_use.value(m_entries.at(right).applicationId).score;
         });
         break;
     case NewestInstalled:
@@ -740,9 +830,61 @@ void ApplicationCatalog::sortEntries(QVector<int> &rows) const
     }
 }
 
+int ApplicationCatalog::useSpan(int entry) const
+{
+    // The same day, the week, the month, or earlier or never.
+    return spanOf(daysSince(m_use.value(m_entries.at(entry).applicationId).last), 1, 7, 31);
+}
+
+QPair<QString, QString> ApplicationCatalog::sectionOf(int entry) const
+{
+    const Entry &own = m_entries.at(entry);
+    switch (m_sortOrder) {
+    case MostUsed: {
+        const int span = useSpan(entry);
+        const QString key = QString::number(span);
+        if (span == 0) return {key, i18nc("@title a section of Apps", "Used today")};
+        if (span == 1) return {key, i18nc("@title a section of Apps", "This week")};
+        if (span == 2) return {key, i18nc("@title a section of Apps", "This month")};
+        return {key, i18nc("@title a section of Apps", "Earlier")};
+    }
+    case NewestInstalled: {
+        const int span = spanOf(daysSince(own.installed), 7, 31, 365);
+        const QString key = QString::number(span);
+        if (span == 0) return {key, i18nc("@title a section of Apps", "This week")};
+        if (span == 1) return {key, i18nc("@title a section of Apps", "This month")};
+        if (span == 2) return {key, i18nc("@title a section of Apps", "This year")};
+        return {key, i18nc("@title a section of Apps", "Older")};
+    }
+    default: {
+        const QString letter = letterOf(own.name);
+        return {letter, letter};
+    }
+    }
+}
+
+QPair<QString, QString> ApplicationCatalog::folderSection(int folder, const QVector<int> &members) const
+{
+    if (m_sortOrder == NameAscending) {
+        const QString letter = letterOf(m_folders.at(folder).name.isEmpty()
+            ? i18nc("@label an Apps folder with no name", "Folder") : m_folders.at(folder).name);
+        return {letter, letter};
+    }
+    // Its first application in the order: the most used, or the newest.
+    QVector<int> ordered = members;
+    std::sort(ordered.begin(), ordered.end());
+    const int first = *std::min_element(ordered.cbegin(), ordered.cend(), [this](int left, int right) {
+        if (m_sortOrder == MostUsed) {
+            return m_use.value(m_entries.at(left).applicationId).score
+                > m_use.value(m_entries.at(right).applicationId).score;
+        }
+        return m_entries.at(left).installed > m_entries.at(right).installed;
+    });
+    return sectionOf(first);
+}
+
 void ApplicationCatalog::rebuildVisibleRows()
 {
-    const QString wasOpen = m_openFolder;
     const int wasDrawn = m_drawnFolders;
     beginResetModel();
     m_visibleRows.clear();
@@ -750,43 +892,65 @@ void ApplicationCatalog::rebuildVisibleRows()
 
     const QHash<int, QVector<int>> drawn = drawnFolders();
     m_drawnFolders = drawn.size();
-    // A folder that is no longer drawn closes.
-    if (!m_openFolder.isEmpty() && !drawn.contains(folderIndex(m_openFolder))) {
-        m_openFolder.clear();
-    }
 
-    QVector<int> entries;
     if (!m_filterText.isEmpty()) {
+        QVector<int> entries;
         for (int at = 0; at < m_entries.size(); ++at) {
             const Entry &entry = m_entries.at(at);
             if (shown(entry) && entry.name.contains(m_filterText, Qt::CaseInsensitive)) {
                 entries.append(at);
             }
         }
-    } else if (!m_openFolder.isEmpty()) {
-        entries = drawn.value(folderIndex(m_openFolder));
+        sortEntries(entries);
+        for (int at : entries) m_visibleRows.append({ApplicationRow, at, {}});
     } else {
+        struct Section {
+            QString label;
+            QVector<int> folders;
+            QVector<int> entries;
+        };
+        QMap<QString, Section> sections;
         QSet<int> inFolders;
-        for (const QVector<int> &members : drawn) {
-            for (int at : members) inFolders.insert(at);
-        }
-        QVector<int> folders(drawn.keyBegin(), drawn.keyEnd());
-        std::sort(folders.begin(), folders.end(), [this](int left, int right) {
-            const int byName = QString::localeAwareCompare(m_folders.at(left).name, m_folders.at(right).name);
-            return byName != 0 ? byName < 0 : left < right;
-        });
-        for (int folder : folders) {
-            m_visibleRows.append(-1 - folder);
+        for (auto folder = drawn.cbegin(); folder != drawn.cend(); ++folder) {
+            for (int at : folder.value()) inFolders.insert(at);
+            const auto [key, label] = folderSection(folder.key(), folder.value());
+            sections[key].label = label;
+            sections[key].folders.append(folder.key());
         }
         for (int at = 0; at < m_entries.size(); ++at) {
-            if (shown(m_entries.at(at)) && !inFolders.contains(at)) {
-                entries.append(at);
+            if (!shown(m_entries.at(at)) || inFolders.contains(at)) continue;
+            const auto [key, label] = sectionOf(at);
+            sections[key].label = label;
+            sections[key].entries.append(at);
+        }
+        // Letters A to Z as the language orders them, # before them; the
+        // other orders' keys are already in theirs.
+        QStringList keys = sections.keys();
+        if (m_sortOrder == NameAscending) {
+            std::sort(keys.begin(), keys.end(), [](const QString &left, const QString &right) {
+                if ((left == QStringLiteral("#")) != (right == QStringLiteral("#")))
+                    return left == QStringLiteral("#");
+                return QString::localeAwareCompare(left, right) < 0;
+            });
+        }
+        for (const QString &key : keys) {
+            Section &section = sections[key];
+            m_visibleRows.append({SectionRow, -1, section.label});
+            std::sort(section.folders.begin(), section.folders.end(), [this](int left, int right) {
+                const int byName = QString::localeAwareCompare(m_folders.at(left).name, m_folders.at(right).name);
+                return byName != 0 ? byName < 0 : left < right;
+            });
+            for (int folder : section.folders) {
+                m_visibleRows.append({FolderRow, folder, {}});
+                if (!m_openFolders.contains(m_folders.at(folder).id)) continue;
+                QVector<int> members = drawn.value(folder);
+                sortEntries(members);
+                for (int at : members) m_visibleRows.append({MemberRow, at, {}});
             }
+            sortEntries(section.entries);
+            for (int at : section.entries) m_visibleRows.append({ApplicationRow, at, {}});
         }
     }
-    sortEntries(entries);
-    m_visibleRows.append(entries);
     endResetModel();
     if (wasDrawn != m_drawnFolders) Q_EMIT foldersChanged();
-    if (wasOpen != m_openFolder) Q_EMIT openFolderChanged();
 }

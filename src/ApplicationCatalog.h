@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include "UseRecord.h"
+
 #include <KService>
 
 #include <QAbstractListModel>
@@ -33,9 +35,6 @@ class ApplicationCatalog final : public QAbstractListModel
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY hiddenCountChanged)
     // Whether the software catalog has loaded, so canUninstall can answer.
     Q_PROPERTY(bool softwareReady READ softwareReady NOTIFY softwareReadyChanged)
-    // The folder Apps shows the inside of, by id; empty shows Apps itself.
-    Q_PROPERTY(QString openFolder READ openFolder WRITE setOpenFolder NOTIFY openFolderChanged)
-    Q_PROPERTY(QString openFolderName READ openFolderName NOTIFY openFolderChanged)
     // Whether any folder is drawn, so the sheet can offer one to put in.
     Q_PROPERTY(int folderCount READ folderCount NOTIFY foldersChanged)
 
@@ -49,20 +48,28 @@ public:
         FolderIdRole,
         // Up to four of a folder's applications' icons, in Apps' order.
         FolderIconsRole,
+        // What a row is: "application", "member" for an application inside
+        // an open folder, "folder" or "section".
+        KindRole,
+        // Whether a folder's row is open, its applications below it.
+        OpenRole,
+        // How many applications a folder's row holds.
+        SizeRole,
     };
     Q_ENUM(Role)
 
+    // Each order keeps the number it is stored by; 1 was Z to A, and a
+    // kept 1 reads as A to Z.
     enum Order {
-        NameAscending,
-        NameDescending,
-        MostUsed,
-        NewestInstalled,
+        NameAscending = 0,
+        MostUsed = 2,
+        NewestInstalled = 3,
     };
     Q_ENUM(Order)
 
-    // How much each application has been used, by desktop file id; the
-    // higher, the more. An application missing from it has not been used.
-    using UseReader = std::function<QHash<QString, double>()>;
+    // How much and how lately each application has been used, by desktop
+    // file id. An application missing from it has not been used.
+    using UseReader = std::function<QHash<QString, ApplicationUse>()>;
 
     explicit ApplicationCatalog(QObject *parent = nullptr);
     ~ApplicationCatalog() override;
@@ -99,11 +106,29 @@ public:
     // time it opens.
     Q_INVOKABLE bool edit(int row);
 
-    // Folders. Apps draws its folders first, A to Z by name, and the
-    // applications in none after them in the chosen order; inside a folder its
-    // applications keep that order too. A folder is drawn while two or more of
-    // its applications are here and shown; otherwise those here show as
-    // themselves. Typing searches every application, in folders or not.
+    // Sections. With nothing typed, Apps is divided by the order: by first
+    // letter A to Z, with # for any name that starts with no letter; under
+    // Most used by when each was last used (today, this week, this month,
+    // earlier), the most used first inside each; under Newest installed by
+    // when it arrived (this week, this month, this year, older). Each section
+    // opens with a row of its own, then its folders A to Z, then its
+    // applications in the order. A folder sits in the section of its name's
+    // letter, of its most used application's last use, or of its newest
+    // application's arrival.
+    //
+    // Folders. A folder is a row that opens or closes in place, its
+    // applications below it in the order; whether each is open is kept. A
+    // folder is drawn while two or more of its applications are here and
+    // shown; otherwise those here show as themselves. Typing searches every
+    // application, in folders or not, with no sections.
+    Q_INVOKABLE [[nodiscard]] QString kind(int row) const;
+    // A row's roles by name, for a view that draws rows out of a model's own.
+    Q_INVOKABLE [[nodiscard]] QVariantMap item(int row) const;
+    Q_INVOKABLE [[nodiscard]] bool isOpen(int row) const;
+    // Opens or closes a folder's row, and keeps the choice.
+    Q_INVOKABLE void setFolderOpen(const QString &folderId, bool open);
+    // The row a folder is drawn at, or -1.
+    Q_INVOKABLE [[nodiscard]] int folderRow(const QString &folderId) const;
     Q_INVOKABLE [[nodiscard]] bool isFolder(int row) const;
     Q_INVOKABLE [[nodiscard]] QString folderId(int row) const;
     Q_INVOKABLE [[nodiscard]] QString folderName(int row) const;
@@ -115,8 +140,8 @@ public:
     // new folder of it and the application a row is. Returns the folder's id.
     Q_INVOKABLE QString gather(int row, const QString &applicationId);
     // Makes a new folder of these applications, two or more, each leaving any
-    // folder it was in. Returns the folder's id, or empty when fewer than two
-    // are known.
+    // folder it was in; it starts open. Returns the folder's id, or empty when
+    // fewer than two are known.
     Q_INVOKABLE QString makeFolder(const QStringList &applicationIds);
     // Puts an application's row into a folder.
     Q_INVOKABLE void putInFolder(int row, const QString &folderId);
@@ -141,9 +166,6 @@ public:
     void setShowHidden(bool showHidden);
     [[nodiscard]] int hiddenCount() const;
     [[nodiscard]] bool softwareReady() const;
-    [[nodiscard]] QString openFolder() const;
-    void setOpenFolder(const QString &folderId);
-    [[nodiscard]] QString openFolderName() const;
     [[nodiscard]] int folderCount() const;
 
 Q_SIGNALS:
@@ -152,7 +174,6 @@ Q_SIGNALS:
     void showHiddenChanged();
     void hiddenCountChanged();
     void softwareReadyChanged();
-    void openFolderChanged();
     void foldersChanged();
 
 private:
@@ -171,9 +192,31 @@ private:
         QStringList applications;
     };
 
+    enum RowKind {
+        ApplicationRow,
+        MemberRow,
+        FolderRow,
+        SectionRow,
+    };
+
+    // A drawn row: an application or a folder by its index, or a section by
+    // its label.
+    struct Row {
+        RowKind kind;
+        int at;
+        QString label;
+    };
+
     void rebuildVisibleRows();
     void sortEntries(QVector<int> &rows) const;
     void storeFolders();
+    void storeOpenFolders();
+    // The section an application falls in under the order, as a key that
+    // sorts the sections and the label its row shows.
+    [[nodiscard]] QPair<QString, QString> sectionOf(int entry) const;
+    // When an application was last used, as one of Most used's sections.
+    [[nodiscard]] int useSpan(int entry) const;
+    [[nodiscard]] QPair<QString, QString> folderSection(int folder, const QVector<int> &members) const;
     [[nodiscard]] bool shown(const Entry &entry) const;
     [[nodiscard]] int entryIndex(const QString &applicationId) const;
     [[nodiscard]] int folderIndex(const QString &folderId) const;
@@ -185,15 +228,14 @@ private:
     [[nodiscard]] QString softwareId(const Entry &entry) const;
 
     QVector<Entry> m_entries;
-    // Each row: an entry's index, or a folder's as -1 - its index.
-    QVector<int> m_visibleRows;
+    QVector<Row> m_visibleRows;
     QVector<Folder> m_folders;
-    QString m_openFolder;
+    QSet<QString> m_openFolders;
     int m_drawnFolders = 0;
     QString m_filterText;
     int m_sortOrder = NameAscending;
     UseReader m_useReader;
-    QHash<QString, double> m_use;
+    QHash<QString, ApplicationUse> m_use;
     QSet<QString> m_hidden;
     bool m_showHidden = false;
     std::unique_ptr<AppStream::Pool> m_software;

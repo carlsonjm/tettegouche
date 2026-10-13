@@ -44,8 +44,11 @@ it in your web browser. Tettegouche does not learn from or rank results by your
 usage history.
 
 **Apps** shows installed applications when you would rather look than search.
-It sorts A to Z, Z to A, by most used or by newest installed, and keeps your
-choice. Drag one application onto another to make a folder. Touch and hold an
+It sorts A to Z, by most used or by newest installed, and keeps your choice,
+divided into sections: by letter, with the letters down the edge to jump
+along, or by when each was last used or arrived. Drag one application onto
+another to make a folder, which sits at the head of its section and opens and
+closes in place. Touch and hold an
 application for its sheet: its own actions, folders, Hide, and Edit
 Application… to change its name, icon or command in KDE's menu editor. Apps
 also has a launcher of its own, with its own icon, to pin to a dock.
