@@ -224,17 +224,20 @@ QList<RecentUse::Used> RecentUse::readRecord()
     return record;
 }
 
-QHash<QString, double> RecentUse::readApplicationUse()
+QHash<QString, ApplicationUse> RecentUse::readApplicationUse()
 {
     using namespace KActivities::Stats;
     using namespace KActivities::Stats::Terms;
     const Query query = UsedResources | HighScoredFirst | Agent::any() | Type::any()
         | Activity::any() | Url::startsWith(ApplicationScheme) | Limit(500);
-    QHash<QString, double> use;
+    QHash<QString, ApplicationUse> use;
     for (const ResultSet::Result &result : ResultSet(query)) {
         const QString id = result.resource().mid(ApplicationScheme.size());
         if (!id.isEmpty()) {
-            use[id] += result.score();
+            ApplicationUse &own = use[id];
+            own.score += result.score();
+            const QDateTime last = QDateTime::fromSecsSinceEpoch(result.lastUpdate());
+            if (!own.last.isValid() || last > own.last) own.last = last;
         }
     }
     return use;
