@@ -106,15 +106,14 @@ public:
     // time it opens.
     Q_INVOKABLE bool edit(int row);
 
-    // Sections. With nothing typed, Apps is divided by the order: by first
-    // letter A to Z, with # for any name that starts with no letter; under
-    // Most used by when each was last used (today, this week, this month,
-    // earlier), the most used first inside each; under Newest installed by
-    // when it arrived (this week, this month, this year, older). Each section
-    // opens with a row of its own, then its folders A to Z, then its
-    // applications in the order. A folder sits in the section of its name's
-    // letter, of its most used application's last use, or of its newest
-    // application's arrival.
+    // Order and sections. With nothing typed, A to Z is one run by name, each
+    // folder at its name's place among the applications. Most used is divided
+    // by when each was last used (today, this week, this month, earlier), the
+    // most used first inside each; Newest installed by when it arrived (this
+    // week, this month, this year, older). Each of their sections opens with a
+    // row of its own, then its folders A to Z, then its applications in the
+    // order; a folder sits in the section of its most used application's last
+    // use, or of its newest application's arrival.
     //
     // Folders. A folder is a row that opens or closes in place, its
     // applications below it in the order; whether each is open is kept. A
@@ -124,6 +123,9 @@ public:
     Q_INVOKABLE [[nodiscard]] QString kind(int row) const;
     // A row's roles by name, for a view that draws rows out of a model's own.
     Q_INVOKABLE [[nodiscard]] QVariantMap item(int row) const;
+    // The letter a row's name is filed under, # for one that starts with no
+    // letter; empty for a section's row.
+    Q_INVOKABLE [[nodiscard]] QString letter(int row) const;
     Q_INVOKABLE [[nodiscard]] bool isOpen(int row) const;
     // Opens or closes a folder's row, and keeps the choice.
     Q_INVOKABLE void setFolderOpen(const QString &folderId, bool open);
@@ -200,7 +202,7 @@ private:
     };
 
     // A drawn row: an application or a folder by its index, or a section by
-    // its label.
+    // its label. While A to Z is put in order, the label is the name.
     struct Row {
         RowKind kind;
         int at;
@@ -216,6 +218,8 @@ private:
     [[nodiscard]] QPair<QString, QString> sectionOf(int entry) const;
     // When an application was last used, as one of Most used's sections.
     [[nodiscard]] int useSpan(int entry) const;
+    // A folder's name as drawn.
+    [[nodiscard]] QString folderLabel(int folder) const;
     [[nodiscard]] QPair<QString, QString> folderSection(int folder, const QVector<int> &members) const;
     [[nodiscard]] bool shown(const Entry &entry) const;
     [[nodiscard]] int entryIndex(const QString &applicationId) const;

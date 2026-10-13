@@ -171,8 +171,9 @@ private Q_SLOTS:
         QVERIFY(!catalog.edit(-1));
     }
 
-    // Apps is divided by first letter, a folder heading its name's letter.
-    // A folder keeps its applications out of the letters and opens in place,
+    // A to Z is one run, a folder at its name's place among the
+    // applications. A folder keeps its applications out of the run and opens
+    // in place,
     // the choice kept; typing finds what is in it, and a folder left with one
     // application is no longer one. Folders are kept for the next catalog.
     void gathersApplicationsIntoFolders()
@@ -181,54 +182,52 @@ private Q_SLOTS:
         const QString beta = QStringLiteral("beta.desktop");
         const QString zulu = QStringLiteral("zulu.desktop");
         ApplicationCatalog catalog;
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§A"), alpha, QStringLiteral("§B"), beta,
-                                               QStringLiteral("§Z"), zulu}));
+        QCOMPARE(layout(catalog), (QStringList{alpha, beta, zulu}));
         QCOMPARE(catalog.folderCount(), 0);
         QVERIFY(catalog.gather(rowOf(catalog, alpha), alpha).isEmpty());
         const QString folder = catalog.gather(rowOf(catalog, alpha), beta);
         QVERIFY(!folder.isEmpty());
         QCOMPARE(catalog.folderCount(), 1);
         // A new folder starts open.
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§F"), QStringLiteral("[Folder]+"),
-                                               QStringLiteral(">") + alpha, QStringLiteral(">") + beta,
-                                               QStringLiteral("§Z"), zulu}));
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("[Folder]+"), QStringLiteral(">") + alpha,
+                                               QStringLiteral(">") + beta, zulu}));
         const int row = catalog.folderRow(folder);
-        QCOMPARE(row, 1);
+        QCOMPARE(row, 0);
         QVERIFY(catalog.isFolder(row));
-        QVERIFY(!catalog.isFolder(0));
+        QVERIFY(!catalog.isFolder(rowOf(catalog, zulu)));
+        QCOMPARE(catalog.letter(row), QStringLiteral("F"));
+        QCOMPARE(catalog.letter(rowOf(catalog, zulu)), QStringLiteral("Z"));
         QCOMPARE(catalog.folderId(row), folder);
         QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::FolderIconsRole).toStringList().size(), 2);
         QCOMPARE(catalog.data(catalog.index(row), ApplicationCatalog::SizeRole).toInt(), 2);
         QVERIFY(catalog.applicationId(row).isEmpty());
         QVERIFY(!catalog.launch(row));
-        QVERIFY(!catalog.launch(0));
+        QVERIFY(!catalog.launch(-1));
         QCOMPARE(catalog.folderOf(rowOf(catalog, alpha)), folder);
 
         catalog.setFolderOpen(folder, false);
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§F"), QStringLiteral("[Folder]"),
-                                               QStringLiteral("§Z"), zulu}));
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("[Folder]"), zulu}));
         catalog.setFilterText(QStringLiteral("eta"));
         QCOMPARE(layout(catalog), QStringList{beta});
         QCOMPARE(catalog.folderOf(0), folder);
         catalog.setFilterText({});
 
         catalog.putInFolder(rowOf(catalog, zulu), folder);
-        QCOMPARE(catalog.rowCount(), 2);
+        QCOMPARE(catalog.rowCount(), 1);
         catalog.renameFolder(folder, QStringLiteral(" Work "));
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]")}));
+        QCOMPARE(layout(catalog), QStringList{QStringLiteral("[Work]")});
         QCOMPARE(catalog.folderUrls(catalog.folderRow(folder)).size(), 3);
 
         ApplicationCatalog next;
-        QCOMPARE(layout(next), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]")}));
+        QCOMPARE(layout(next), QStringList{QStringLiteral("[Work]")});
         next.setFolderOpen(folder, true);
         ApplicationCatalog opened;
         QVERIFY(opened.isOpen(opened.folderRow(folder)));
 
         catalog.setFolderOpen(folder, true);
         catalog.takeOut(rowOf(catalog, zulu));
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§W"), QStringLiteral("[Work]+"),
-                                               QStringLiteral(">") + alpha, QStringLiteral(">") + beta,
-                                               QStringLiteral("§Z"), zulu}));
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("[Work]+"), QStringLiteral(">") + alpha,
+                                               QStringLiteral(">") + beta, zulu}));
         catalog.takeOut(rowOf(catalog, beta));
         // One left is no folder.
         QCOMPARE(catalog.folderCount(), 0);
@@ -236,8 +235,8 @@ private Q_SLOTS:
         QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
 
         const QString again = catalog.gather(rowOf(catalog, zulu), alpha);
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§B"), beta, QStringLiteral("§F"),
-                                               QStringLiteral("[Folder]+"), QStringLiteral(">") + alpha,
+        // The folder takes its place after beta.
+        QCOMPARE(layout(catalog), (QStringList{beta, QStringLiteral("[Folder]+"), QStringLiteral(">") + alpha,
                                                QStringLiteral(">") + zulu}));
         catalog.removeFolder(again);
         QCOMPARE(order(catalog), (QStringList{alpha, beta, zulu}));
@@ -266,8 +265,7 @@ private Q_SLOTS:
         const QString second = catalog.makeFolder({beta, zulu});
         QVERIFY(!second.isEmpty() && second != first);
         QCOMPARE(catalog.folderCount(), 1);
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§A"), alpha, QStringLiteral("§F"),
-                                               QStringLiteral("[Folder]+"), QStringLiteral(">") + beta,
+        QCOMPARE(layout(catalog), (QStringList{alpha, QStringLiteral("[Folder]+"), QStringLiteral(">") + beta,
                                                QStringLiteral(">") + zulu}));
         catalog.removeFolder(second);
         QCOMPARE(catalog.folderCount(), 0);

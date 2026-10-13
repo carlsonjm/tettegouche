@@ -108,8 +108,9 @@ Tettegouche-owned confidence policy. Its behavior is owned by
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
 Apps reads visible applications from `KApplicationTrader` and orders them by
-display name, by use, or by when each desktop file arrived, and divides them
-into sections by the same: first letter, last use, or arrival. Use is KDE's
+display name, by use, or by when each desktop file arrived. By name it is one
+run, each folder at its name's place; by use or arrival it is divided into
+sections by last use or arrival. Use is KDE's
 own score and last use from the activity service, summed over every activity
 and read again each time Apps opens while it decides the order; the order
 chosen is kept in Tettegouche's settings. Its folders live there too, as {id,

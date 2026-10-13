@@ -5,12 +5,12 @@ provenance.
 
 ## Unreleased
 
-- Apps is divided into sections. A to Z has a row for each letter, with the
-  letters down the right edge to jump to one; Most used divides by when each
-  was last used, and Newest installed by when each arrived. Folders are rows
-  at the head of their section that open and close in place, their
-  applications below them in the order, and each keeps whether it was left
-  open. Z to A is no longer offered; where it was chosen, Apps opens A to Z.
+- Apps A to Z is one run by name, each folder at its own name's place among
+  the applications, with the letters down the right edge to jump to one. Most
+  used is divided into sections by when each was last used, and Newest
+  installed by when each arrived, a folder at the head of its section.
+  Folders are rows that open and close in place, their applications below
+  them in the order, and each keeps whether it was left open. Z to A is no longer offered; where it was chosen, Apps opens A to Z.
 - Apps, Files, Notes and Ask share one header. Back stays on the left; the
   eye sits inside the search field by its search icon, and the sort button
   moves below, after New folder, in Files and in Apps alike; and the right corner holds Expand, which fills the screen and

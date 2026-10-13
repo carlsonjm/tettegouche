@@ -177,6 +177,8 @@ TestCase {
             return at.kind ? at.kind : at.isFolder === true ? "folder" : "application"
         }
         function item(row) { return row >= 0 && row < count ? get(row) : ({}) }
+        // A row's letter, where a test gives one.
+        function letter(row) { return row >= 0 && row < count && kind(row) !== "section" ? (get(row).letter || "") : "" }
         function isOpen(row) { return isFolder(row) && !!openSet[get(row).folderId] }
         function folderRow(id) {
             for (let i = 0; i < count; ++i) if (isFolder(i) && get(i).folderId === id) return i
@@ -726,25 +728,24 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Apps' sections: each has a row of its own, which the arrow keys pass
-    // over, and under A to Z the letters run down the right edge, where a
+    // A to Z is one run with no rows of its own: the arrow keys start on its
+    // first application, and the letters run down the right edge, where a
     // tap moves Apps to that letter.
-    function test_sections() {
+    function test_letters() {
         controller.opened()
-        catalog.append({name: "A", icon: "", kind: "section"})
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
-        catalog.append({name: "B", icon: "", kind: "section"})
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
+        for (let i = 0; i < 30; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application", letter: "A"})
+        for (let i = 0; i < 30; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application", letter: "B"})
         launcher.setDrawerOpen(true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const grid = findChild(launcher, "application-grid")
-        compare(grid.sections.length, 2)
-        compare(grid.sections[0].label, "A")
-        verify(!findChild(grid, "application-tile-0"))
+        compare(grid.letters.length, 2)
+        compare(grid.letters[0].label, "A")
+        compare(grid.letters[1].label, "B")
+        verify(!findChild(launcher, "apps-section-label"))
         launcher.forceActiveFocus()
         keyClick(Qt.Key_Down)
-        compare(grid.currentIndex, 1)
+        compare(grid.currentIndex, 0)
         const strip = findChild(launcher, "apps-jump-strip")
         verify(strip.visible)
         const lines = findChild(launcher, "application-lines")
@@ -758,6 +759,34 @@ TestCase {
         // So does an order with no letters.
         catalog.sortOrder = 2
         verify(!strip.visible)
+        catalog.sortOrder = 0
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Most used and Newest installed have sections, each with a row of its
+    // own, which the arrow keys pass over.
+    function test_sections() {
+        controller.opened()
+        catalog.sortOrder = 2
+        catalog.append({name: "Used today", icon: "", kind: "section"})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
+        catalog.append({name: "Earlier", icon: "", kind: "section"})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const grid = findChild(launcher, "application-grid")
+        compare(grid.letters.length, 0)
+        verify(findChild(launcher, "apps-section-label"))
+        verify(!findChild(grid, "application-tile-0"))
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 1)
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 5)
+        verify(!findChild(launcher, "apps-jump-strip").visible)
         catalog.sortOrder = 0
         catalog.clear()
         launcher.setDrawerOpen(false)

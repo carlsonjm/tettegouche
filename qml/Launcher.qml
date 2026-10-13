@@ -2115,9 +2115,10 @@ Item {
                 }
             }
 
-            // Apps, drawn as lines: a section's row, a folder's row, or a row
-            // of applications. The applications of an open folder lie under
-            // its row on the folder's own ground. Rows are the catalog's, so
+            // Apps, drawn as lines: a section's row (Most used and Newest
+            // installed only), a folder's row, or a row of applications. The
+            // applications of an open folder lie under its row on the
+            // folder's own ground. Rows are the catalog's, so
             // currentIndex and every tile's index are the catalog's rows.
             Item {
                 id: applicationGrid
@@ -2134,7 +2135,7 @@ Item {
                 z: 3
 
                 readonly property bool stripShown: root.applicationCatalog.sortOrder === 0
-                    && root.applicationCatalog.filterText === "" && sections.length >= 2
+                    && root.applicationCatalog.filterText === "" && letters.length >= 2
                 readonly property real tilesWidth: width - (stripShown ? jumpStrip.width : 0)
                 readonly property int columns: Math.max(3, Math.min(6, Math.floor(tilesWidth / 126)))
                 readonly property real cellWidth: tilesWidth / columns
@@ -2145,7 +2146,8 @@ Item {
                 // Enter opens: it shows, and stays in view.
                 property bool keyChosen: false
                 property var lines: []
-                property var sections: []
+                // Under A to Z, each letter there is and the line it starts on.
+                property var letters: []
                 // Each choosable row, in order, and the line each row lies on.
                 property var choices: []
                 property var lineOf: ({})
@@ -2156,12 +2158,21 @@ Item {
                     const catalog = root.applicationCatalog
                     const total = catalog.rowCount()
                     const built = []
-                    const sectionLines = []
+                    const letterLines = []
+                    const byLetter = catalog.sortOrder === 0 && catalog.filterText === ""
                     const chosen = []
                     const where = {}
                     let tiles = null
                     for (let row = 0; row < total; ++row) {
                         const kind = catalog.kind(row) || "application"
+                        if (byLetter && kind !== "member" && kind !== "section") {
+                            const letter = catalog.letter(row)
+                            if (letterLines.length === 0 || letterLines[letterLines.length - 1].label !== letter) {
+                                const line = kind === "application" && tiles && !tiles.member
+                                    && tiles.rows.length < columns ? built.length - 1 : built.length
+                                letterLines.push({ label: letter, line: line })
+                            }
+                        }
                         if (kind === "application" || kind === "member") {
                             const member = kind === "member"
                             if (!tiles || tiles.member !== member || tiles.rows.length >= columns) {
@@ -2176,7 +2187,6 @@ Item {
                         if (tiles && tiles.member) tiles.last = true
                         tiles = null
                         if (kind === "section") {
-                            sectionLines.push({ label: catalog.item(row).name, line: built.length })
                             built.push({ kind: "section", row: row })
                         } else {
                             chosen.push(row)
@@ -2194,7 +2204,7 @@ Item {
                     count = total
                     choices = chosen
                     lineOf = where
-                    sections = sectionLines
+                    letters = letterLines
                     lines = built
                     if (keep) {
                         applicationLines.forceLayout()
@@ -2257,10 +2267,10 @@ Item {
                     }
                     choose(to)
                 }
-                // Scrolls to a section's row from the strip.
+                // Scrolls to the line a letter starts on, from the strip.
                 function jumpTo(at) {
-                    if (at < 0 || at >= sections.length) return
-                    applicationLines.positionViewAtIndex(sections[at].line, ListView.Beginning)
+                    if (at < 0 || at >= letters.length) return
+                    applicationLines.positionViewAtIndex(letters[at].line, ListView.Beginning)
                 }
 
                 ListView {
@@ -2283,7 +2293,7 @@ Item {
                         height: kind === "section" ? 36 : kind === "folder" ? 56
                             : applicationGrid.cellHeight + (modelData.last ? 6 : 0)
 
-                        // A section's row: its letter or its time, over a line.
+                        // A section's row: its time, over a line.
                         Item {
                             visible: line.kind === "section"
                             anchors.fill: parent
@@ -2349,14 +2359,14 @@ Item {
                     width: 24
                     height: parent.height
                     visible: applicationGrid.stripShown
-                    readonly property real letterHeight: Math.min(18, (height - 8) / Math.max(1, applicationGrid.sections.length))
+                    readonly property real letterHeight: Math.min(18, (height - 8) / Math.max(1, applicationGrid.letters.length))
                     Accessible.role: Accessible.ScrollBar
                     Accessible.name: words.i18n("Letters")
                     Column {
-                        id: letters
+                        id: letterColumn
                         anchors.centerIn: parent
                         Repeater {
-                            model: applicationGrid.sections
+                            model: applicationGrid.letters
                             delegate: Text {
                                 required property var modelData
                                 width: jumpStrip.width
@@ -2374,8 +2384,8 @@ Item {
                         anchors.fill: parent
                         preventStealing: true
                         function jump(y) {
-                            const at = Math.floor((y - letters.y) / jumpStrip.letterHeight)
-                            applicationGrid.jumpTo(Math.max(0, Math.min(applicationGrid.sections.length - 1, at)))
+                            const at = Math.floor((y - letterColumn.y) / jumpStrip.letterHeight)
+                            applicationGrid.jumpTo(Math.max(0, Math.min(applicationGrid.letters.length - 1, at)))
                         }
                         onPressed: mouse => jump(mouse.y)
                         onPositionChanged: mouse => { if (pressed) jump(mouse.y) }

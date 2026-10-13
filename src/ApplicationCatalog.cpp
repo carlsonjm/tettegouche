@@ -346,6 +346,13 @@ QString ApplicationCatalog::kind(int row) const
     return row >= 0 && row < m_visibleRows.size() ? data(index(row), KindRole).toString() : QString();
 }
 
+QString ApplicationCatalog::letter(int row) const
+{
+    if (folderAt(row)) return letterOf(folderLabel(m_visibleRows.at(row).at));
+    const Entry *entry = entryAt(row);
+    return entry ? letterOf(entry->name) : QString();
+}
+
 bool ApplicationCatalog::isOpen(int row) const
 {
     const Folder *folder = folderAt(row);
@@ -856,20 +863,20 @@ QPair<QString, QString> ApplicationCatalog::sectionOf(int entry) const
         if (span == 2) return {key, i18nc("@title a section of Apps", "This year")};
         return {key, i18nc("@title a section of Apps", "Older")};
     }
-    default: {
-        const QString letter = letterOf(own.name);
-        return {letter, letter};
+    default:
+        // A to Z runs as one, with no sections.
+        return {};
     }
-    }
+}
+
+QString ApplicationCatalog::folderLabel(int folder) const
+{
+    return m_folders.at(folder).name.isEmpty()
+        ? i18nc("@label an Apps folder with no name", "Folder") : m_folders.at(folder).name;
 }
 
 QPair<QString, QString> ApplicationCatalog::folderSection(int folder, const QVector<int> &members) const
 {
-    if (m_sortOrder == NameAscending) {
-        const QString letter = letterOf(m_folders.at(folder).name.isEmpty()
-            ? i18nc("@label an Apps folder with no name", "Folder") : m_folders.at(folder).name);
-        return {letter, letter};
-    }
     // Its first application in the order: the most used, or the newest.
     QVector<int> ordered = members;
     std::sort(ordered.begin(), ordered.end());
@@ -904,51 +911,69 @@ void ApplicationCatalog::rebuildVisibleRows()
         sortEntries(entries);
         for (int at : entries) m_visibleRows.append({ApplicationRow, at, {}});
     } else {
-        struct Section {
-            QString label;
-            QVector<int> folders;
-            QVector<int> entries;
-        };
-        QMap<QString, Section> sections;
         QSet<int> inFolders;
-        for (auto folder = drawn.cbegin(); folder != drawn.cend(); ++folder) {
-            for (int at : folder.value()) inFolders.insert(at);
-            const auto [key, label] = folderSection(folder.key(), folder.value());
-            sections[key].label = label;
-            sections[key].folders.append(folder.key());
+        for (const QVector<int> &members : drawn) {
+            for (int at : members) inFolders.insert(at);
         }
-        for (int at = 0; at < m_entries.size(); ++at) {
-            if (!shown(m_entries.at(at)) || inFolders.contains(at)) continue;
-            const auto [key, label] = sectionOf(at);
-            sections[key].label = label;
-            sections[key].entries.append(at);
-        }
-        // Letters A to Z as the language orders them, # before them; the
-        // other orders' keys are already in theirs.
-        QStringList keys = sections.keys();
+        // An open folder's row, then its applications in the order.
+        const auto appendFolder = [this, &drawn](int folder) {
+            m_visibleRows.append({FolderRow, folder, {}});
+            if (!m_openFolders.contains(m_folders.at(folder).id)) return;
+            QVector<int> members = drawn.value(folder);
+            sortEntries(members);
+            for (int at : members) m_visibleRows.append({MemberRow, at, {}});
+        };
         if (m_sortOrder == NameAscending) {
-            std::sort(keys.begin(), keys.end(), [](const QString &left, const QString &right) {
-                if ((left == QStringLiteral("#")) != (right == QStringLiteral("#")))
-                    return left == QStringLiteral("#");
-                return QString::localeAwareCompare(left, right) < 0;
-            });
-        }
-        for (const QString &key : keys) {
-            Section &section = sections[key];
-            m_visibleRows.append({SectionRow, -1, section.label});
-            std::sort(section.folders.begin(), section.folders.end(), [this](int left, int right) {
-                const int byName = QString::localeAwareCompare(m_folders.at(left).name, m_folders.at(right).name);
-                return byName != 0 ? byName < 0 : left < right;
-            });
-            for (int folder : section.folders) {
-                m_visibleRows.append({FolderRow, folder, {}});
-                if (!m_openFolders.contains(m_folders.at(folder).id)) continue;
-                QVector<int> members = drawn.value(folder);
-                sortEntries(members);
-                for (int at : members) m_visibleRows.append({MemberRow, at, {}});
+            // One run A to Z, each folder among the applications at its
+            // name's place; a folder goes before an application of its name.
+            QVector<Row> run;
+            for (auto folder = drawn.cbegin(); folder != drawn.cend(); ++folder) {
+                run.append({FolderRow, folder.key(), folderLabel(folder.key())});
             }
-            sortEntries(section.entries);
-            for (int at : section.entries) m_visibleRows.append({ApplicationRow, at, {}});
+            for (int at = 0; at < m_entries.size(); ++at) {
+                if (shown(m_entries.at(at)) && !inFolders.contains(at)) {
+                    run.append({ApplicationRow, at, m_entries.at(at).name});
+                }
+            }
+            std::stable_sort(run.begin(), run.end(), [](const Row &left, const Row &right) {
+                const int byName = QString::localeAwareCompare(left.label, right.label);
+                if (byName != 0) return byName < 0;
+                if (left.kind != right.kind) return left.kind == FolderRow;
+                return left.at < right.at;
+            });
+            for (const Row &row : run) {
+                if (row.kind == FolderRow) appendFolder(row.at);
+                else m_visibleRows.append({ApplicationRow, row.at, {}});
+            }
+        } else {
+            struct Section {
+                QString label;
+                QVector<int> folders;
+                QVector<int> entries;
+            };
+            // The keys are already in the order's own.
+            QMap<QString, Section> sections;
+            for (auto folder = drawn.cbegin(); folder != drawn.cend(); ++folder) {
+                const auto [key, label] = folderSection(folder.key(), folder.value());
+                sections[key].label = label;
+                sections[key].folders.append(folder.key());
+            }
+            for (int at = 0; at < m_entries.size(); ++at) {
+                if (!shown(m_entries.at(at)) || inFolders.contains(at)) continue;
+                const auto [key, label] = sectionOf(at);
+                sections[key].label = label;
+                sections[key].entries.append(at);
+            }
+            for (auto section = sections.begin(); section != sections.end(); ++section) {
+                m_visibleRows.append({SectionRow, -1, section->label});
+                std::sort(section->folders.begin(), section->folders.end(), [this](int left, int right) {
+                    const int byName = QString::localeAwareCompare(folderLabel(left), folderLabel(right));
+                    return byName != 0 ? byName < 0 : left < right;
+                });
+                for (int folder : section->folders) appendFolder(folder);
+                sortEntries(section->entries);
+                for (int at : section->entries) m_visibleRows.append({ApplicationRow, at, {}});
+            }
         }
     }
     endResetModel();
