@@ -9,8 +9,9 @@ provenance.
   the applications, with no letter rows or letters down the edge. Most
   used is divided into sections by when each was last used, and Newest
   installed by when each arrived, a folder at the head of its section.
-  Folders are rows that open and close in place, their applications below
-  them in the order, and each keeps whether it was left open. Z to A is no longer offered; where it was chosen, Apps opens A to Z.
+  A folder is a single tile in the row, showing up to four of its
+  applications; it opens and closes in place, its applications on lines
+  under its tile's line in the order, and keeps whether it was left open. Z to A is no longer offered; where it was chosen, Apps opens A to Z.
 - Apps, Files, Notes and Ask share one header. Back stays on the left; the
   eye sits inside the search field by its search icon, and the sort button
   moves below, after New folder, in Files and in Apps alike; and the right corner holds Expand, which fills the screen and

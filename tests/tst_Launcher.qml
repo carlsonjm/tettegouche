@@ -632,9 +632,9 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // A folder is a row in Apps that a tap or Enter opens and closes in
-    // place, its applications below it; its sheet renames it on its row or
-    // removes it. An application's sheet puts it in a folder, or takes it out
+    // A folder is a single tile among Apps' applications that a tap or Enter
+    // opens and closes in place, its applications on a line under its own;
+    // its sheet renames it under its tile or removes it. An application's sheet puts it in a folder, or takes it out
     // of the one it is in. A folder carried leaves as one.
     function test_folders() {
         controller.opened()
@@ -649,10 +649,15 @@ TestCase {
         const header = () => findChild(grid, "apps-folder-0")
         verify(header().visible)
         verify(findChild(header(), "apps-folder-tile").visible)
+        compare(grid.lines[0].rows[0], 0)
+        verify(grid.lines.every(line => !line.member))
         mouseClick(header(), header().width / 2, header().height / 2)
         verify(catalog.openSet.f1)
         compare(controller.catalogActivated, -1)
         verify(launcher.drawerOpen)
+        verify(grid.lines[0].rows.indexOf(3) < 0)
+        verify(grid.lines[1].member)
+        compare(JSON.stringify(grid.lines[1].rows), JSON.stringify([3]))
         mouseClick(header(), header().width / 2, header().height / 2)
         verify(!catalog.openSet.f1)
         // Enter on a chosen folder opens it too.

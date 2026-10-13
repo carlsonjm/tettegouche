@@ -117,8 +117,9 @@ chosen is kept in Tettegouche's settings. Its folders live there too, as {id,
 name, apps} by desktop file id, with the ids of those left open; a folder is
 drawn while two or more of its applications are here and shown. The catalog
 is one list of rows, each a section, a folder, an application or an
-application in an open folder, and `Launcher.qml` lays them out in lines,
-sections and folders on lines of their own. An application carried from Apps carries its desktop file and
+application in an open folder, and `Launcher.qml` lays them out in lines:
+sections on lines of their own, folders as tiles among the applications, and
+an open folder's applications on lines of their own under its tile's line. An application carried from Apps carries its desktop file and
 `application/x-tettegouche-application` with its id, which a tile reads to make
 a folder; a folder carried carries its applications' desktop files and
 `application/x-tettegouche-folder` with `{"name": …}`, which Shuffle's dock reads

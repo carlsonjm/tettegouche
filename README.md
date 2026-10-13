@@ -46,8 +46,8 @@ usage history.
 **Apps** shows installed applications when you would rather look than search.
 It sorts A to Z, or by most used or newest installed, divided into sections by
 when each was last used or arrived, and keeps your choice. Drag one application onto another to make a
-folder, which takes its name's place A to Z, or heads its section, and opens
-and closes in place. Touch and hold an
+folder, a single tile that takes its name's place A to Z, or heads its
+section, and opens and closes in place. Touch and hold an
 application for its sheet: its own actions, folders, Hide, and Edit
 Application… to change its name, icon or command in KDE's menu editor. Apps
 also has a launcher of its own, with its own icon, to pin to a dock.
