@@ -632,9 +632,9 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // A folder is a row in Apps that a tap or Enter opens and closes in
-    // place, its applications below it; its sheet renames it on its row or
-    // removes it. An application's sheet puts it in a folder, or takes it out
+    // A folder is a single tile among Apps' applications that a tap or Enter
+    // opens and closes in place, its applications on a line under its own;
+    // its sheet renames it under its tile or removes it. An application's sheet puts it in a folder, or takes it out
     // of the one it is in. A folder carried leaves as one.
     function test_folders() {
         controller.opened()
@@ -649,10 +649,15 @@ TestCase {
         const header = () => findChild(grid, "apps-folder-0")
         verify(header().visible)
         verify(findChild(header(), "apps-folder-tile").visible)
+        compare(grid.lines[0].rows[0], 0)
+        verify(grid.lines.every(line => !line.member))
         mouseClick(header(), header().width / 2, header().height / 2)
         verify(catalog.openSet.f1)
         compare(controller.catalogActivated, -1)
         verify(launcher.drawerOpen)
+        verify(grid.lines[0].rows.indexOf(3) < 0)
+        verify(grid.lines[1].member)
+        compare(JSON.stringify(grid.lines[1].rows), JSON.stringify([3]))
         mouseClick(header(), header().width / 2, header().height / 2)
         verify(!catalog.openSet.f1)
         // Enter on a chosen folder opens it too.
@@ -726,38 +731,49 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Apps' sections: each has a row of its own, which the arrow keys pass
-    // over, and under A to Z the letters run down the right edge, where a
-    // tap moves Apps to that letter.
-    function test_sections() {
+    // A to Z is one run with no rows of its own, applications of different
+    // letters sharing a line, and no letters down the edge: the arrow keys
+    // start on its first application.
+    function test_oneRun() {
         controller.opened()
-        catalog.append({name: "A", icon: "", kind: "section"})
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
-        catalog.append({name: "B", icon: "", kind: "section"})
-        for (let i = 0; i < 30; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
+        for (let i = 0; i < 4; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
+        for (let i = 0; i < 4; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
         launcher.setDrawerOpen(true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const grid = findChild(launcher, "application-grid")
-        compare(grid.sections.length, 2)
-        compare(grid.sections[0].label, "A")
+        verify(grid.lines.every(line => line.kind === "tiles"))
+        verify(!findChild(launcher, "apps-jump-strip"))
+        compare(grid.lines.length, Math.ceil(8 / grid.columns))
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 0)
+        catalog.clear()
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Most used and Newest installed have sections, each with a row of its
+    // own, which the arrow keys pass over.
+    function test_sections() {
+        controller.opened()
+        catalog.sortOrder = 2
+        catalog.append({name: "Used today", icon: "", kind: "section"})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
+        catalog.append({name: "Earlier", icon: "", kind: "section"})
+        for (let i = 0; i < 3; ++i) catalog.append({name: "Banana " + i, icon: "application-x-executable", kind: "application"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const grid = findChild(launcher, "application-grid")
+        compare(grid.lines.filter(line => line.kind === "section").length, 2)
+        verify(findChild(launcher, "apps-section-label"))
         verify(!findChild(grid, "application-tile-0"))
         launcher.forceActiveFocus()
         keyClick(Qt.Key_Down)
         compare(grid.currentIndex, 1)
-        const strip = findChild(launcher, "apps-jump-strip")
-        verify(strip.visible)
-        const lines = findChild(launcher, "application-lines")
-        compare(lines.contentY, lines.originY)
-        mouseClick(strip, strip.width / 2, strip.height / 2 + strip.letterHeight / 2)
-        verify(lines.contentY > lines.originY)
-        // Typing leaves the letters.
-        catalog.filterText = "x"
-        verify(!strip.visible)
-        catalog.filterText = ""
-        // So does an order with no letters.
-        catalog.sortOrder = 2
-        verify(!strip.visible)
+        keyClick(Qt.Key_Down)
+        compare(grid.currentIndex, 5)
         catalog.sortOrder = 0
         catalog.clear()
         launcher.setDrawerOpen(false)

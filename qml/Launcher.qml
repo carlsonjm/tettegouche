@@ -1697,7 +1697,7 @@ Item {
                         HoverHandler { id: hover }
                         TapHandler {
                             enabled: !root.guestDragged
-                                && !root.applicationLaunchPending
+                                && !root.applicationLaunchPending && !catalogDelegate.renaming
                             onPressedChanged: {
                                 if (pressed) {
                                     root.selectedChildKey = ""
@@ -2115,9 +2115,10 @@ Item {
                 }
             }
 
-            // Apps, drawn as lines: a section's row, a folder's row, or a row
-            // of applications. The applications of an open folder lie under
-            // its row on the folder's own ground. Rows are the catalog's, so
+            // Apps, drawn as lines: a section's row (Most used and Newest
+            // installed only), a folder's row, or a row of applications. The
+            // applications of an open folder lie under its row on the
+            // folder's own ground. Rows are the catalog's, so
             // currentIndex and every tile's index are the catalog's rows.
             Item {
                 id: applicationGrid
@@ -2133,11 +2134,8 @@ Item {
                     && !root.applicationLaunchPending
                 z: 3
 
-                readonly property bool stripShown: root.applicationCatalog.sortOrder === 0
-                    && root.applicationCatalog.filterText === "" && sections.length >= 2
-                readonly property real tilesWidth: width - (stripShown ? jumpStrip.width : 0)
-                readonly property int columns: Math.max(3, Math.min(6, Math.floor(tilesWidth / 126)))
-                readonly property real cellWidth: tilesWidth / columns
+                readonly property int columns: Math.max(3, Math.min(6, Math.floor(width / 126)))
+                readonly property real cellWidth: width / columns
                 readonly property real cellHeight: root.launcherController.drawerExpanded ? 112 : 94
                 property int count: 0
                 property int currentIndex: -1
@@ -2145,7 +2143,6 @@ Item {
                 // Enter opens: it shows, and stays in view.
                 property bool keyChosen: false
                 property var lines: []
-                property var sections: []
                 // Each choosable row, in order, and the line each row lies on.
                 property var choices: []
                 property var lineOf: ({})
@@ -2156,35 +2153,55 @@ Item {
                     const catalog = root.applicationCatalog
                     const total = catalog.rowCount()
                     const built = []
-                    const sectionLines = []
                     const chosen = []
                     const where = {}
-                    let tiles = null
+                    // Applications and folders share lines; an open folder's
+                    // applications follow on lines of their own under the line
+                    // its tile is on.
+                    const members = {}
                     for (let row = 0; row < total; ++row) {
-                        const kind = catalog.kind(row) || "application"
-                        if (kind === "application" || kind === "member") {
-                            const member = kind === "member"
-                            if (!tiles || tiles.member !== member || tiles.rows.length >= columns) {
-                                tiles = { kind: "tiles", member: member, last: false, rows: [] }
-                                built.push(tiles)
-                            }
-                            tiles.rows.push(row)
-                            chosen.push(row)
-                            where[row] = built.length - 1
-                            continue
-                        }
-                        if (tiles && tiles.member) tiles.last = true
+                        if (catalog.kind(row) !== "member") continue
+                        const folder = catalog.folderOf(row)
+                        if (!members[folder]) members[folder] = []
+                        members[folder].push(row)
+                    }
+                    let tiles = null
+                    const finish = () => {
+                        if (!tiles) return
+                        const opened = tiles.rows.filter(row => catalog.kind(row) === "folder")
+                            .map(row => members[catalog.folderId(row)] || [])
+                            .filter(inside => inside.length > 0)
                         tiles = null
-                        if (kind === "section") {
-                            sectionLines.push({ label: catalog.item(row).name, line: built.length })
-                            built.push({ kind: "section", row: row })
-                        } else {
-                            chosen.push(row)
-                            where[row] = built.length
-                            built.push({ kind: "folder", row: row })
+                        for (const inside of opened) {
+                            for (let at = 0; at < inside.length; at += columns) {
+                                const rows = inside.slice(at, at + columns)
+                                built.push({ kind: "tiles", member: true, first: at === 0,
+                                             last: at + columns >= inside.length, rows: rows })
+                                for (const row of rows) {
+                                    chosen.push(row)
+                                    where[row] = built.length - 1
+                                }
+                            }
                         }
                     }
-                    if (tiles && tiles.member) tiles.last = true
+                    for (let row = 0; row < total; ++row) {
+                        const kind = catalog.kind(row) || "application"
+                        if (kind === "member") continue
+                        if (kind === "section") {
+                            finish()
+                            built.push({ kind: "section", row: row })
+                            continue
+                        }
+                        if (tiles && tiles.rows.length >= columns) finish()
+                        if (!tiles) {
+                            tiles = { kind: "tiles", member: false, first: false, last: false, rows: [] }
+                            built.push(tiles)
+                        }
+                        tiles.rows.push(row)
+                        chosen.push(row)
+                        where[row] = built.length - 1
+                    }
+                    finish()
                     // A folder opened or closed keeps Apps where it was; a new
                     // order or new words start at the top.
                     const keep = builtFilter === catalog.filterText && builtOrder === catalog.sortOrder
@@ -2194,7 +2211,6 @@ Item {
                     count = total
                     choices = chosen
                     lineOf = where
-                    sections = sectionLines
                     lines = built
                     if (keep) {
                         applicationLines.forceLayout()
@@ -2243,7 +2259,7 @@ Item {
                         return
                     }
                     const fromLine = lines[lineOf[from]]
-                    const place = fromLine.kind === "tiles" ? fromLine.rows.indexOf(from) : 0
+                    const place = fromLine.rows.indexOf(from)
                     let line = lineOf[from]
                     let to = from
                     for (let steps = Math.abs(down || 0); steps > 0; --steps) {
@@ -2252,21 +2268,15 @@ Item {
                             next += down > 0 ? 1 : -1
                         if (next < 0 || next >= lines.length) break
                         line = next
-                        to = lines[line].kind === "folder" ? lines[line].row
-                            : lines[line].rows[Math.min(place, lines[line].rows.length - 1)]
+                        to = lines[line].rows[Math.min(place, lines[line].rows.length - 1)]
                     }
                     choose(to)
-                }
-                // Scrolls to a section's row from the strip.
-                function jumpTo(at) {
-                    if (at < 0 || at >= sections.length) return
-                    applicationLines.positionViewAtIndex(sections[at].line, ListView.Beginning)
                 }
 
                 ListView {
                     id: applicationLines
                     objectName: "application-lines"
-                    width: applicationGrid.tilesWidth
+                    width: parent.width
                     height: parent.height
                     model: applicationGrid.lines
                     boundsBehavior: Flickable.StopAtBounds
@@ -2280,10 +2290,10 @@ Item {
                         required property int index
                         readonly property string kind: modelData.kind
                         width: ListView.view.width
-                        height: kind === "section" ? 36 : kind === "folder" ? 56
+                        height: kind === "section" ? 36
                             : applicationGrid.cellHeight + (modelData.last ? 6 : 0)
 
-                        // A section's row: its letter or its time, over a line.
+                        // A section's row: its time, over a line.
                         Item {
                             visible: line.kind === "section"
                             anchors.fill: parent
@@ -2319,15 +2329,10 @@ Item {
                             height: parent.height - (line.modelData.last ? 6 : 0)
                             color: root.controlColor
                             opacity: 0.5
+                            topLeftRadius: line.modelData.first ? root.paperRadius : 0
+                            topRightRadius: line.modelData.first ? root.paperRadius : 0
                             bottomLeftRadius: line.modelData.last ? root.paperRadius : 0
                             bottomRightRadius: line.modelData.last ? root.paperRadius : 0
-                        }
-
-                        Loader {
-                            active: line.kind === "folder"
-                            anchors.fill: parent
-                            sourceComponent: folderRowComponent
-                            property var lineData: line.modelData
                         }
 
                         Row {
@@ -2336,222 +2341,6 @@ Item {
                                 model: line.kind === "tiles" ? line.modelData.rows : []
                                 delegate: catalogTileComponent
                             }
-                        }
-                    }
-                }
-
-                // A to Z, the letters there are, down the right edge: a tap or
-                // a slide along it moves Apps to that letter.
-                Item {
-                    id: jumpStrip
-                    objectName: "apps-jump-strip"
-                    anchors.right: parent.right
-                    width: 24
-                    height: parent.height
-                    visible: applicationGrid.stripShown
-                    readonly property real letterHeight: Math.min(18, (height - 8) / Math.max(1, applicationGrid.sections.length))
-                    Accessible.role: Accessible.ScrollBar
-                    Accessible.name: words.i18n("Letters")
-                    Column {
-                        id: letters
-                        anchors.centerIn: parent
-                        Repeater {
-                            model: applicationGrid.sections
-                            delegate: Text {
-                                required property var modelData
-                                width: jumpStrip.width
-                                height: jumpStrip.letterHeight
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                text: modelData.label
-                                color: root.secondaryText
-                                font.pixelSize: Math.min(11, jumpStrip.letterHeight - 2)
-                                font.weight: Font.DemiBold
-                            }
-                        }
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        preventStealing: true
-                        function jump(y) {
-                            const at = Math.floor((y - letters.y) / jumpStrip.letterHeight)
-                            applicationGrid.jumpTo(Math.max(0, Math.min(applicationGrid.sections.length - 1, at)))
-                        }
-                        onPressed: mouse => jump(mouse.y)
-                        onPositionChanged: mouse => { if (pressed) jump(mouse.y) }
-                    }
-                }
-            }
-
-            // A folder's row: a tap opens or closes it, its name, how many it
-            // holds, and a chevron; held or right-clicked, its sheet. Carried,
-            // its applications leave as one; an application let go on it goes in.
-            Component {
-                id: folderRowComponent
-                Item {
-                    id: folderRow
-                    readonly property int row: parent.lineData.row
-                    readonly property var info: root.applicationCatalog.item(row)
-                    readonly property string folder: root.applicationCatalog.folderId(row)
-                    readonly property bool open: root.applicationCatalog.isOpen(row)
-                    readonly property bool chosen: applicationGrid.keyChosen
-                        && applicationGrid.currentIndex === row
-                    readonly property bool renaming: root.renamingFolder !== "" && root.renamingFolder === folder
-                    objectName: "apps-folder-" + row
-                    Accessible.role: Accessible.Button
-                    Accessible.name: words.i18n("%1, folder", info.name)
-                    Accessible.expandable: true
-                    Accessible.expanded: open
-                    Accessible.onPressAction: root.runCatalogApplication(row, info.name)
-                    onRenamingChanged: if (renaming) Qt.callLater(folderRow.startRename)
-                    Component.onCompleted: if (renaming) Qt.callLater(folderRow.startRename)
-                    function startRename() {
-                        folderRowName.forceActiveFocus()
-                        folderRowName.selectAll()
-                    }
-
-                    DropArea {
-                        id: folderDrop
-                        anchors.fill: parent
-                        readonly property string format: "application/x-tettegouche-application"
-                        onEntered: drag => {
-                            drag.accepted = drag.formats.indexOf(format) >= 0
-                        }
-                        onDropped: drop => {
-                            const id = String(drop.getDataAsString(format))
-                            const row = folderRow.row
-                            drop.accept(Qt.CopyAction)
-                            Qt.callLater(() => root.applicationCatalog.gather(row, id))
-                        }
-                    }
-
-                    Rectangle {
-                        id: folderGround
-                        objectName: "apps-folder-tile"
-                        x: 5
-                        y: 6
-                        width: parent.width - 10
-                        height: parent.height - 6
-                        radius: root.paperRadius
-                        bottomLeftRadius: folderRow.open ? 0 : root.paperRadius
-                        bottomRightRadius: folderRow.open ? 0 : root.paperRadius
-                        color: folderPress.pressed ? tone.controlPressed
-                            : folderHover.hovered || folderRow.chosen || folderDrop.containsDrag
-                            ? tone.controlHover : root.controlColor
-                        opacity: root.choosingFolder ? 0.45 : 1
-                        scale: folderRow.chosen ? 1.01 : 1
-                        Behavior on scale { NumberAnimation { duration: root.ms(120) } }
-
-                        SuiteIcon {
-                            id: folderChevron
-                            glyph: "chevron-down"
-                            width: 16; height: 16
-                            x: 14
-                            anchors.verticalCenter: parent.verticalCenter
-                            rotation: folderRow.open ? 0 : -90
-                            Behavior on rotation { NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic } }
-                        }
-                        // Up to four of its applications, side by side.
-                        Row {
-                            id: folderIcons
-                            anchors.left: folderChevron.right
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 4
-                            Repeater {
-                                model: folderRow.info.folderIcons || []
-                                delegate: Kirigami.Icon {
-                                    required property var modelData
-                                    width: 22; height: 22
-                                    source: modelData
-                                }
-                            }
-                        }
-                        TextInput {
-                            id: folderRowName
-                            objectName: "apps-folder-name"
-                            anchors.left: folderIcons.right
-                            anchors.leftMargin: 12
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: Math.min(parent.width - x - folderCount.width - 30, Math.max(80, contentWidth + 4))
-                            text: folderRow.info.name
-                            color: root.primaryText
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
-                            readOnly: !folderRow.renaming
-                            enabled: folderRow.renaming
-                            selectByMouse: true
-                            maximumLength: 40
-                            clip: true
-                            Accessible.role: Accessible.EditableText
-                            Accessible.name: words.i18n("Folder name")
-                            function keep() {
-                                if (!folderRow.renaming) return
-                                if (text.trim().length > 0 && text.trim() !== folderRow.info.name)
-                                    root.applicationCatalog.renameFolder(folderRow.folder, text)
-                                root.renamingFolder = ""
-                            }
-                            onAccepted: { keep(); root.forceActiveFocus() }
-                            onActiveFocusChanged: if (!activeFocus) keep()
-                            Keys.onEscapePressed: event => {
-                                text = folderRow.info.name
-                                root.renamingFolder = ""
-                                root.forceActiveFocus()
-                                event.accepted = true
-                            }
-                        }
-                        Rectangle {
-                            anchors.top: folderRowName.bottom
-                            anchors.left: folderRowName.left
-                            width: folderRowName.width
-                            height: 1
-                            color: root.surfaceOutline
-                            visible: folderRowName.activeFocus
-                        }
-                        Text {
-                            id: folderCount
-                            anchors.right: parent.right
-                            anchors.rightMargin: 16
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: words.i18np("%1 app", "%1 apps", folderRow.info.size || 0)
-                            color: root.secondaryText
-                            font.pixelSize: 13
-                        }
-
-                        HoverHandler {
-                            id: folderHover
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                        }
-                        TapHandler {
-                            id: folderPress
-                            enabled: !folderRow.renaming && !root.applicationLaunchPending
-                            longPressThreshold: 0.5
-                            property bool held: false
-                            onPressedChanged: if (pressed) held = false
-                            onTapped: root.runCatalogApplication(folderRow.row, folderRow.info.name)
-                            onLongPressed: {
-                                held = true
-                                root.showFolderSheet(folderRow.row, folderGround, point.position)
-                            }
-                        }
-                        DragHandler {
-                            target: null
-                            enabled: !folderRow.renaming && !root.applicationLaunchPending
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                            onActiveChanged: if (active) root.carryFolder(folderRow.row)
-                        }
-                        DragHandler {
-                            target: null
-                            enabled: !folderRow.renaming && !root.applicationLaunchPending
-                            acceptedDevices: PointerDevice.TouchScreen
-                            dragThreshold: folderPress.held ? Qt.styleHints.startDragDistance : 32767
-                            onActiveChanged: if (active) root.carryFolder(folderRow.row)
-                        }
-                        TapHandler {
-                            enabled: !folderRow.renaming && !root.applicationLaunchPending
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                            acceptedButtons: Qt.RightButton
-                            onTapped: eventPoint => root.showFolderSheet(folderRow.row, folderGround, eventPoint.position)
                         }
                     }
                 }
@@ -2564,17 +2353,38 @@ Item {
                     required property var modelData
                     readonly property int row: modelData
                     readonly property var info: root.applicationCatalog.item(row)
-                    objectName: "application-tile-" + row
+                    // A folder is a tile of its own: up to four of its
+                    // applications on one face, its name under it. A tap opens
+                    // it in place, its applications on lines under its own.
+                    readonly property bool isFolder: info.kind === "folder"
+                    readonly property string folder: isFolder ? root.applicationCatalog.folderId(row) : ""
+                    readonly property bool open: isFolder && root.applicationCatalog.isOpen(row)
+                    readonly property bool renaming: isFolder && root.renamingFolder !== ""
+                        && root.renamingFolder === folder
+                    objectName: (isFolder ? "apps-folder-" : "application-tile-") + row
                     Accessible.role: Accessible.Button
-                    Accessible.name: info.name
+                    Accessible.name: isFolder ? words.i18n("%1, folder", info.name) : info.name
                     Accessible.focused: chosen
+                    Accessible.expandable: isFolder
+                    Accessible.expanded: open
                     function carry() {
-                        root.carryApplication(row)
+                        if (isFolder) root.carryFolder(row)
+                        else root.carryApplication(row)
                     }
+                    function showSheet(at) {
+                        if (isFolder) root.showFolderSheet(row, catalogTile, at)
+                        else root.showApplicationSheet(row, catalogTile, at)
+                    }
+                    function startRename() {
+                        folderName.forceActiveFocus()
+                        folderName.selectAll()
+                    }
+                    onRenamingChanged: if (renaming) Qt.callLater(catalogDelegate.startRename)
+                    Component.onCompleted: if (renaming) Qt.callLater(catalogDelegate.startRename)
                     Accessible.onPressAction: root.runCatalogApplication(row, info.name)
-                    Accessible.checkable: root.choosingFolder
+                    Accessible.checkable: root.choosingFolder && !isFolder
                     Accessible.checked: picked
-                    readonly property bool picked: root.choosingFolder
+                    readonly property bool picked: root.choosingFolder && !isFolder
                         && root.folderPicks.indexOf(root.applicationCatalog.applicationId(row)) >= 0
                     readonly property bool chosen: applicationGrid.keyChosen
                         && applicationGrid.currentIndex === row
@@ -2582,7 +2392,7 @@ Item {
                     height: applicationGrid.cellHeight
 
                     // An application carried onto another makes a folder of
-                    // the two; onto one in an open folder, it goes in.
+                    // the two; onto a folder or one in an open folder, it goes in.
                     DropArea {
                         id: gatherDrop
                         anchors.fill: parent
@@ -2607,9 +2417,11 @@ Item {
                         radius: root.paperRadius
                         color: catalogDelegate.picked ? tone.controlPressed
                             : catalogHover.hovered || catalogDelegate.chosen || gatherDrop.containsDrag
-                            ? tone.tileHover : "transparent"
-                        // A hidden application, shown by the eye, is dimmed.
-                        opacity: catalogDelegate.info.hidden ? 0.45 : 1
+                            ? tone.tileHover : catalogDelegate.open ? root.controlColor : "transparent"
+                        // A hidden application, shown by the eye, is dimmed,
+                        // as is a folder while applications are chosen.
+                        opacity: catalogDelegate.info.hidden
+                            || (root.choosingFolder && catalogDelegate.isFolder) ? 0.45 : 1
 
                         // Chosen for the new folder.
                         Rectangle {
@@ -2642,10 +2454,87 @@ Item {
                             anchors.topMargin: 10
                             width: root.launcherController.drawerExpanded ? 52 : 42
                             height: width
-                            source: catalogDelegate.info.icon
+                            visible: !catalogDelegate.isFolder
+                            source: catalogDelegate.isFolder ? "" : catalogDelegate.info.icon
+                        }
+
+                        Rectangle {
+                            id: folderFace
+                            objectName: "apps-folder-tile"
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 10
+                            width: root.launcherController.drawerExpanded ? 52 : 42
+                            height: width
+                            radius: width * 0.26
+                            visible: catalogDelegate.isFolder
+                            color: root.controlColor
+                            border.width: 1
+                            border.color: root.surfaceOutline
+                            Grid {
+                                anchors.centerIn: parent
+                                columns: 2
+                                spacing: parent.width * 0.06
+                                Repeater {
+                                    model: catalogDelegate.isFolder ? (catalogDelegate.info.folderIcons || []) : []
+                                    delegate: Kirigami.Icon {
+                                        required property var modelData
+                                        width: folderFace.width * 0.36
+                                        height: width
+                                        source: modelData
+                                    }
+                                }
+                            }
+                        }
+
+                        TextInput {
+                            id: folderName
+                            objectName: "apps-folder-name"
+                            visible: catalogDelegate.isFolder
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            anchors.leftMargin: 7
+                            anchors.rightMargin: 7
+                            anchors.bottomMargin: 8
+                            horizontalAlignment: TextInput.AlignHCenter
+                            text: catalogDelegate.isFolder ? catalogDelegate.info.name : ""
+                            color: root.primaryText
+                            font.pixelSize: 12
+                            font.weight: Font.DemiBold
+                            readOnly: !catalogDelegate.renaming
+                            enabled: catalogDelegate.renaming
+                            selectByMouse: true
+                            maximumLength: 40
+                            clip: true
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: words.i18n("Folder name")
+                            function keep() {
+                                if (!catalogDelegate.renaming) return
+                                if (text.trim().length > 0 && text.trim() !== catalogDelegate.info.name)
+                                    root.applicationCatalog.renameFolder(catalogDelegate.folder, text)
+                                root.renamingFolder = ""
+                            }
+                            onAccepted: { keep(); root.forceActiveFocus() }
+                            onActiveFocusChanged: if (!activeFocus) keep()
+                            Keys.onEscapePressed: event => {
+                                text = catalogDelegate.info.name
+                                root.renamingFolder = ""
+                                root.forceActiveFocus()
+                                event.accepted = true
+                            }
+                        }
+                        Rectangle {
+                            anchors.top: folderName.bottom
+                            anchors.horizontalCenter: folderName.horizontalCenter
+                            width: Math.min(folderName.width, folderName.contentWidth + 8)
+                            height: 1
+                            color: root.surfaceOutline
+                            visible: folderName.activeFocus
                         }
 
                         Text {
+                            visible: !catalogDelegate.isFolder
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.bottom: parent.bottom
@@ -2663,7 +2552,7 @@ Item {
                         TapHandler {
                             id: catalogTap
                             enabled: !root.guestDragged
-                                && !root.applicationLaunchPending
+                                && !root.applicationLaunchPending && !catalogDelegate.renaming
                             longPressThreshold: 0.5
                             // A hold that then moves carries the application.
                             property bool held: false
@@ -2673,8 +2562,7 @@ Item {
                                 catalogDelegate.info.name)
                             onLongPressed: {
                                 held = true
-                                root.showApplicationSheet(
-                                    catalogDelegate.row, catalogTile, point.position)
+                                catalogDelegate.showSheet(point.position)
                             }
                         }
                         // Carried by a mouse at once; by touch after a hold,
@@ -2697,8 +2585,7 @@ Item {
                             enabled: !root.applicationLaunchPending
                             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
                             acceptedButtons: Qt.RightButton
-                            onTapped: eventPoint => root.showApplicationSheet(
-                                catalogDelegate.row, catalogTile, eventPoint.position)
+                            onTapped: eventPoint => catalogDelegate.showSheet(eventPoint.position)
                         }
                     }
                 }
