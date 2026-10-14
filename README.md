@@ -131,6 +131,9 @@ Uninstalling removes the installed files without deleting this source folder.
 - CMake and a C++20 compiler
 - gettext, for translations and the checks on them
 
+Build again after each Plasma update: until then, Ambient leaves out waiting
+applications and Plasma's own transfers.
+
 Bluetooth hardware and Kadunce are optional. Some related-setting results use
 optional local system tools; those results are simply omitted when a tool is not
 available.

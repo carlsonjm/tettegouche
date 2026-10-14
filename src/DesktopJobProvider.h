@@ -9,7 +9,9 @@ class QDBusServiceWatcher;
 class DesktopJobProvider : public QObject {
     Q_OBJECT
 public:
-    explicit DesktopJobProvider(QObject *parent = nullptr);
+    // Without `reads`, Plasma's jobs model is never made: nothing shows, and
+    // the job service is left to whoever holds it.
+    explicit DesktopJobProvider(QObject *parent = nullptr, bool reads = true);
     QVariantList activities() const;
     void invoke(const QString &id, int generation, const QString &action);
     // Whether Ambient holds the job service itself, as it does where no

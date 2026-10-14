@@ -29,6 +29,12 @@ Current sources are:
 - windows raising Plasma's attention flag, from Plasma's window list
   (§ Waiting applications).
 
+Plasma's jobs model and window list come from Plasma's own libraries, which
+change between releases, so a build reads them only on the Plasma it was built
+for. On another, those two sources stay off, with a warning in the log, until a
+rebuild; every other source runs as before. A Plasma or build that names no
+version counts as a match.
+
 Static system status, completed work past its end's minute (§ Ends),
 ordinary notifications, and historical activity do not remain in Ambient. Ambient owns composition and routing; it does
 not own the source operation or retain a completion history.

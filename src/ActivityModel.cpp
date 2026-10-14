@@ -1,6 +1,9 @@
 #include "ActivityModel.h"
 #include "ActivityUtils.h"
+#include "PlasmaMatch.h"
 #include <taskmanager/windowtasksmodel.h>
+#include <QCoreApplication>
+#include <QDebug>
 #include <QStandardPaths>
 #include <QTimer>
 #include <QFileInfo>
@@ -17,21 +20,33 @@ QString destinationKey(const QVariantMap &row) {
     return path + QLatin1Char('\n') + identity;
 }
 }
+bool ActivityModel::readsPlasma() {
+    // The panel's host names the running Plasma as its own version.
+    static const bool reads = [] {
+        const QString built = QStringLiteral(TETTE_BUILT_PLASMA);
+        const QString running = QCoreApplication::applicationVersion();
+        if (Tettegouche::plasmaMatches(built, running)) return true;
+        qWarning() << "Tettegouche built for Plasma" << built << "but Plasma" << running
+                   << "is running; Ambient leaves waiting applications and desktop jobs off until a rebuild";
+        return false;
+    }();
+    return reads;
+}
 std::shared_ptr<ActivityModel> ActivityModel::acquire() {
     static std::weak_ptr<ActivityModel> instance;
     auto model = instance.lock();
     if (!model) {
         // Plasma's own window list, shared in process with its task manager.
-        auto *windows = new TaskManager::WindowTasksModel;
+        auto *windows = readsPlasma() ? new TaskManager::WindowTasksModel : nullptr;
         model = std::make_shared<ActivityModel>(QDBusConnection::sessionBus(),
             QStandardPaths::writableLocation(QStandardPaths::DownloadLocation), windows);
-        windows->setParent(model.get());
+        if (windows) windows->setParent(model.get());
         instance = model;
     }
     return model;
 }
 ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows, QObject *parent)
-    : QObject(parent), m_media(bus, this), m_jobs(this), m_files(downloads, this), m_tette(bus, this),
+    : QObject(parent), m_media(bus, this), m_jobs(this, readsPlasma()), m_files(downloads, this), m_tette(bus, this),
       m_notices(bus, downloads, this), m_drives(bus, this), m_screen(bus, this), m_waiting(windows, this) {
     const auto update = [this] {
         if (m_refreshPending) return;

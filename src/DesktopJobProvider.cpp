@@ -32,8 +32,9 @@ QString writtenFile(const NotificationManager::Job &job) {
     return {};
 }
 }
-DesktopJobProvider::DesktopJobProvider(QObject *parent) : QObject(parent),
-    m_jobs(NotificationManager::JobsModel::createJobsModel()) {
+DesktopJobProvider::DesktopJobProvider(QObject *parent, bool reads) : QObject(parent) {
+    if (!reads) return;
+    m_jobs = NotificationManager::JobsModel::createJobsModel();
     // Plasma's Notifications widget holds the job service where it runs, and
     // this provider shares its model. Where nothing holds it, as in a panel
     // without that widget, applications would report their transfers to
@@ -59,7 +60,7 @@ DesktopJobProvider::DesktopJobProvider(QObject *parent) : QObject(parent),
     QTimer::singleShot(0, this, &DesktopJobProvider::changed);
 }
 void DesktopJobProvider::holdIfFree() {
-    if (m_jobs->isValid()) return;
+    if (!m_jobs || m_jobs->isValid()) return;
     auto call = QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.DBus"), QStringLiteral("/org/freedesktop/DBus"),
                                                QStringLiteral("org.freedesktop.DBus"), QStringLiteral("NameHasOwner"));
     call.setArguments({JobService});
@@ -76,7 +77,7 @@ void DesktopJobProvider::holdIfFree() {
 // close it, and a closed job leaves the model.
 void DesktopJobProvider::settleEnded() {
     m_settlePending = false;
-    if (!m_holding || !m_jobs->isValid()) return;
+    if (!m_holding || !m_jobs || !m_jobs->isValid()) return;
     for (int i = m_jobs->rowCount() - 1; i >= 0; --i) {
         const auto index = m_jobs->index(i, 0);
         const auto *job = m_jobs->data(index, N::JobDetailsRole).value<NotificationManager::Job *>();
@@ -102,7 +103,7 @@ void DesktopJobProvider::settleEnded() {
 }
 QVariantList DesktopJobProvider::activities() const {
     QVariantList rows;
-    if (!m_jobs->isValid()) return rows;
+    if (!m_jobs || !m_jobs->isValid()) return rows;
     for (int i = 0; i < m_jobs->rowCount(); ++i) {
         const auto index = m_jobs->index(i, 0);
         const auto *job = m_jobs->data(index, N::JobDetailsRole).value<NotificationManager::Job *>();
@@ -135,7 +136,7 @@ QVariantList DesktopJobProvider::activities() const {
     return rows;
 }
 void DesktopJobProvider::invoke(const QString &id, int generation, const QString &action) {
-    if (generation != m_generation || !m_jobs->isValid()) return;
+    if (generation != m_generation || !m_jobs || !m_jobs->isValid()) return;
     for (int i = 0; i < m_jobs->rowCount(); ++i) {
         const auto index = m_jobs->index(i, 0);
         const auto *job = m_jobs->data(index, N::JobDetailsRole).value<NotificationManager::Job *>();

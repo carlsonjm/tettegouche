@@ -620,6 +620,25 @@ private Q_SLOTS:
         QVERIFY2(error!=0 && error!=1,qPrintable(QString::number(error)));
     }
 
+    // On a Plasma other than the one built for, Plasma's jobs are not read:
+    // nothing shows, and the job service is left for another to hold.
+    void unreadJobsShowNothingAndHoldNothing() {
+        DesktopJobProvider off(nullptr, false);
+        QTest::qWait(200);
+        QVERIFY(!off.holding());
+        QVERIFY(off.activities().isEmpty());
+        off.invoke(QStringLiteral("job:1"), 1, QStringLiteral("cancel"));
+        DesktopJobProvider provider;
+        QTRY_VERIFY(provider.holding());
+        QProcess producer;
+        producer.start(QCoreApplication::applicationFilePath(),{QStringLiteral("--job-producer-v2")});
+        QVERIFY(producer.waitForStarted());
+        QTRY_COMPARE_WITH_TIMEOUT(provider.activities().size(),1,5000);
+        QVERIFY(off.activities().isEmpty());
+        producer.kill(); producer.waitForFinished();
+        QTRY_VERIFY_WITH_TIMEOUT(provider.activities().isEmpty(),5000);
+    }
+
     // Files on a network or user-space mount are never looked at, so a
     // server that went away cannot hold the panel; the deepest mount decides.
     void remoteMountsAreNotLookedAt() {

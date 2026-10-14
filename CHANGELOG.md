@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- After a Plasma update that Search was not built for, Ambient leaves
+  waiting applications and Plasma's own transfers out, and says so in the
+  log, until Search is rebuilt for it. Media, downloads, drives, the shared
+  screen and Search itself work as before.
 - Filling the screen, Apps, Files and Notes stay above Shuffle's dock, with
   the cards' 10 px gutter, on every display; floating Search centres in the
   same room. Before, on a display outside Spread, they covered the dock.
