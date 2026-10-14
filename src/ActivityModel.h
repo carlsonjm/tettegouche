@@ -15,6 +15,10 @@ class ActivityModel : public QObject {
     Q_OBJECT
 public:
     static std::shared_ptr<ActivityModel> acquire();
+    // Whether this Plasma is the one the build read Plasma's window list and
+    // job list for (PlasmaMatch.h). On another, waiting applications and
+    // Plasma's desktop jobs stay off, with a warning in the log.
+    static bool readsPlasma();
     // `windows` is Plasma's window list, for applications waiting on the
     // person; without one, none wait.
     explicit ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows = nullptr,

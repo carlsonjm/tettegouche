@@ -117,7 +117,8 @@ The compact search model combines an allowlisted set of KRunner providers and a
 Tettegouche-owned confidence policy. Its behavior is owned by
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
-Apps reads visible applications from `KApplicationTrader` and orders them by
+Apps reads visible applications from `KApplicationTrader`, again whenever
+KDE's application list changes, and orders them by
 display name, by use, or by when each desktop file arrived. By name it is one
 run, each folder at its name's place; by use or arrival it is divided into
 sections by last use or arrival. Use is KDE's

@@ -325,6 +325,69 @@ private Q_SLOTS:
         ApplicationCatalog last;
         QCOMPARE(last.sortOrder(), int(ApplicationCatalog::NameAscending));
     }
+
+    // Installed while Search runs, an application joins Apps once KDE's
+    // application list has it, and removed, it leaves. The words typed, the
+    // applications hidden and the folders hold over each change; a folder
+    // left with one application here is no longer drawn.
+    void followsKdesApplicationList()
+    {
+        const QString yankee = QStringLiteral("yankee.desktop");
+        const QString path = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/") + yankee;
+        ApplicationCatalog catalog;
+        QCOMPARE(rowOf(catalog, yankee), -1);
+        catalog.setFilterText(QStringLiteral("ankee"));
+        QCOMPARE(catalog.rowCount(), 0);
+        QSignalSpy reset(&catalog, &QAbstractItemModel::modelReset);
+
+        write(path, "[Desktop Entry]\nType=Application\nName=Yankee\nExec=true\n");
+        QTRY_VERIFY_WITH_TIMEOUT(rowOf(catalog, yankee) >= 0, 15000);
+        QVERIFY(reset.size() >= 1);
+        QCOMPARE(catalog.filterText(), QStringLiteral("ankee"));
+        QCOMPARE(order(catalog), QStringList{yankee});
+
+        catalog.setFilterText({});
+        const QString folder = catalog.makeFolder({QStringLiteral("alpha.desktop"), yankee});
+        QVERIFY(!folder.isEmpty());
+        QCOMPARE(catalog.folderCount(), 1);
+        catalog.setHidden(rowOf(catalog, QStringLiteral("beta.desktop")), true);
+        QCOMPARE(catalog.hiddenCount(), 1);
+        QSignalSpy folders(&catalog, &ApplicationCatalog::foldersChanged);
+
+        QVERIFY(QFile::remove(path));
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(yankee) < 0, 15000);
+        QCOMPARE(catalog.folderCount(), 0);
+        QCOMPARE(folders.size(), 1);
+        QVERIFY(catalog.applicationRow(QStringLiteral("alpha.desktop")) >= 0);
+        QCOMPARE(catalog.hiddenCount(), 1);
+        QCOMPARE(catalog.applicationRow(QStringLiteral("beta.desktop")), -1);
+
+        catalog.removeFolder(folder);
+        catalog.setShowHidden(true);
+        catalog.setHidden(catalog.applicationRow(QStringLiteral("beta.desktop")), false);
+        catalog.setShowHidden(false);
+        QCOMPARE(catalog.hiddenCount(), 0);
+    }
+
+    // Flatpak exports an application as a link, in a system folder of links
+    // that nothing in KDE rebuilds its list for. Apps finds it on its own.
+    void followsAFlatpakInstall()
+    {
+        const QString exports = qEnvironmentVariable("XDG_DATA_DIRS") + QStringLiteral("/applications");
+        const QString app = qEnvironmentVariable("HOME") + QStringLiteral("/flatpak/app/org.example.Zulu/export");
+        QVERIFY(QDir().mkpath(exports));
+        QVERIFY(QDir().mkpath(app));
+        const QString zulu = QStringLiteral("org.example.Zulu.desktop");
+        write(app + QLatin1Char('/') + zulu, "[Desktop Entry]\nType=Application\nName=Zulu\nExec=true\n");
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.applicationRow(zulu), -1);
+
+        QVERIFY(QFile::link(app + QLatin1Char('/') + zulu, exports + QLatin1Char('/') + zulu));
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) >= 0, 15000);
+
+        QVERIFY(QFile::remove(exports + QLatin1Char('/') + zulu));
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) < 0, 15000);
+    }
 };
 
 int main(int argc, char **argv)

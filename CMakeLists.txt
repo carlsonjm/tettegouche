@@ -43,12 +43,15 @@ add_library(tettegouche-activities STATIC
     src/FinishNotices.cpp src/FinishNotices.h
     src/DriveActivityProvider.cpp src/DriveActivityProvider.h src/DriveRules.h
     src/WaitingAppProvider.cpp src/WaitingAppProvider.h
-    src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h)
+    src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h src/PlasmaMatch.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
 target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
+# The Plasma whose window list and job list this build reads; on another,
+# ActivityModel::readsPlasma() leaves both off (src/PlasmaMatch.h).
+target_compile_definitions(tettegouche-activities PRIVATE TETTE_BUILT_PLASMA="${LibTaskManager_VERSION}")
 
 add_library(tettegouche-context STATIC
     src/WorkspaceContext.cpp
@@ -240,7 +243,7 @@ if(BUILD_TESTING)
     qt_add_executable(application-catalog-test tests/ApplicationCatalogTest.cpp
         src/ApplicationCatalog.cpp src/ApplicationCatalog.h src/UseRecord.h)
     target_include_directories(application-catalog-test PRIVATE src)
-    target_link_libraries(application-catalog-test PRIVATE KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
+    target_link_libraries(application-catalog-test PRIVATE KF6::CoreAddons KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
     target_compile_definitions(application-catalog-test PRIVATE TRANSLATION_DOMAIN="tettegouche")
     add_test(NAME application-catalog-test COMMAND application-catalog-test)
     qt_add_executable(recent-use-test tests/RecentUseTest.cpp src/RecentUse.cpp src/RecentUse.h src/UseRecord.h)
@@ -279,6 +282,10 @@ if(BUILD_TESTING)
     target_include_directories(dock-band-test PRIVATE src)
     target_link_libraries(dock-band-test PRIVATE Qt6::Core)
     add_test(NAME dock-band-test COMMAND dock-band-test)
+    qt_add_executable(plasma-match-test tests/PlasmaMatchTest.cpp src/PlasmaMatch.h)
+    target_include_directories(plasma-match-test PRIVATE src)
+    target_link_libraries(plasma-match-test PRIVATE Qt6::Core)
+    add_test(NAME plasma-match-test COMMAND plasma-match-test)
     qt_add_executable(runner-identity-test tests/RunnerIdentityTest.cpp)
     target_include_directories(runner-identity-test PRIVATE src)
     target_link_libraries(runner-identity-test PRIVATE KF6::Runner Qt6::Core)

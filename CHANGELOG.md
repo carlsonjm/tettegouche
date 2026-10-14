@@ -5,6 +5,15 @@ provenance.
 
 ## Unreleased
 
+- Apps follows KDE's application list while Search is ready in the
+  background: an application installed shows, and one removed leaves,
+  without a restart, Flatpak's included, whose installs KDE's list missed. Open, Apps keeps where it is scrolled to, the
+  application the keys chose and an open sheet on its application; a sheet
+  whose application has gone closes.
+- After a Plasma update that Search was not built for, Ambient leaves
+  waiting applications and Plasma's own transfers out, and says so in the
+  log, until Search is rebuilt for it. Media, downloads, drives, the shared
+  screen and Search itself work as before.
 - Filling the screen, Apps, Files and Notes stay above Shuffle's dock, with
   the cards' 10 px gutter, on every display; floating Search centres in the
   same room. Before, on a display outside Spread, they covered the dock.

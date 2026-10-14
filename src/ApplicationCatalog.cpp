@@ -13,7 +13,9 @@
 #include <KIO/CommandLauncherJob>
 #include <KIO/OpenUrlJob>
 #include <KApplicationTrader>
+#include <KDirWatch>
 #include <KLocalizedString>
+#include <KSycoca>
 
 #include <QSettings>
 #include <QDir>
@@ -22,8 +24,10 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
+#include <QProcess>
 #include <QRandomGenerator>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QUrl>
 
 #include <algorithm>
@@ -66,30 +70,25 @@ QDateTime installedAt(const KService::Ptr &service)
 
 ApplicationCatalog::ApplicationCatalog(QObject *parent)
     : QAbstractListModel(parent)
+    , m_entries(readEntries())
 {
-    QSet<QString> seen;
-    const KService::List applications = KApplicationTrader::query(
-        [](const KService::Ptr &service) {
-            return service && service->isApplication()
-                && !service->noDisplay() && !service->name().trimmed().isEmpty()
-                && !service->exec().trimmed().isEmpty();
-        });
-    for (const KService::Ptr &service : applications) {
-        const QString id = service->storageId().trimmed();
-        if (id.isEmpty() || seen.contains(id)
-            || id.compare(QStringLiteral(
-                    "io.github.carlsonjm.Tettegouche.desktop"),
-                    Qt::CaseInsensitive) == 0) {
-            continue;
-        }
-        seen.insert(id);
-        m_entries.append({service, service->name().trimmed(),
-                          service->icon().trimmed(), id, installedAt(service)});
-    }
-    std::sort(m_entries.begin(), m_entries.end(),
-              [](const Entry &left, const Entry &right) {
-        return QString::localeAwareCompare(left.name, right.name) < 0;
-    });
+    // Installed, removed or edited while Search runs, Apps follows.
+    connect(KSycoca::self(), &KSycoca::databaseChanged, this, &ApplicationCatalog::reload);
+    // KDE's list only changes when something rebuilds it, and nothing does
+    // when an application arrives from pacman or Flatpak (whose exports are a
+    // folder of links). So Search watches every folder applications are
+    // installed to, the missing ones included, and once the installer has
+    // settled asks for the list to be checked, which rebuilds it.
+    auto *settle = new QTimer(this);
+    settle->setSingleShot(true);
+    settle->setInterval(2000);
+    connect(settle, &QTimer::timeout, this, &ApplicationCatalog::checkInstalled);
+    auto *installs = new KDirWatch(this);
+    const QStringList data = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+    for (const QString &dir : data) installs->addDir(dir + QStringLiteral("/applications"));
+    connect(installs, &KDirWatch::dirty, settle, qOverload<>(&QTimer::start));
+    connect(installs, &KDirWatch::created, settle, qOverload<>(&QTimer::start));
+    connect(installs, &KDirWatch::deleted, settle, qOverload<>(&QTimer::start));
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
@@ -116,6 +115,76 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
 }
 
 ApplicationCatalog::~ApplicationCatalog() = default;
+
+QVector<ApplicationCatalog::Entry> ApplicationCatalog::readEntries()
+{
+    QVector<Entry> entries;
+    QSet<QString> seen;
+    const KService::List applications = KApplicationTrader::query(
+        [](const KService::Ptr &service) {
+            return service && service->isApplication()
+                && !service->noDisplay() && !service->name().trimmed().isEmpty()
+                && !service->exec().trimmed().isEmpty();
+        });
+    for (const KService::Ptr &service : applications) {
+        const QString id = service->storageId().trimmed();
+        if (id.isEmpty() || seen.contains(id)
+            || id.compare(QStringLiteral(
+                    "io.github.carlsonjm.Tettegouche.desktop"),
+                    Qt::CaseInsensitive) == 0) {
+            continue;
+        }
+        seen.insert(id);
+        entries.append({service, service->name().trimmed(),
+                        service->icon().trimmed(), id, installedAt(service)});
+    }
+    std::sort(entries.begin(), entries.end(),
+              [](const Entry &left, const Entry &right) {
+        return QString::localeAwareCompare(left.name, right.name) < 0;
+    });
+    return entries;
+}
+
+void ApplicationCatalog::checkInstalled()
+{
+    // KDE checks only the folders its list was built from. One made since,
+    // as Flatpak's first install makes its exports, is never looked at, so
+    // the list is rebuilt outright; the rebuilt list arrives as a change.
+    QSet<QString> known;
+    const QStringList built = KSycoca::self()->allResourceDirs();
+    for (const QString &dir : built) known.insert(QDir::cleanPath(dir));
+    const QStringList folders = QStandardPaths::locateAll(
+        QStandardPaths::GenericDataLocation, QStringLiteral("applications"), QStandardPaths::LocateDirectory);
+    for (const QString &dir : folders) {
+        if (!known.contains(QDir::cleanPath(dir))) {
+            QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
+            return;
+        }
+    }
+    KSycoca::self()->ensureCacheValid();
+}
+
+void ApplicationCatalog::reload()
+{
+    // Folders, hidden applications, the order and the words typed are kept
+    // by id, so they hold over the new list; a folder whose applications have
+    // gone stops being drawn, as it would at the next start.
+    const int wasHidden = hiddenCount();
+    QVector<Entry> entries = readEntries();
+    rebuildVisibleRows(&entries);
+    if (hiddenCount() != wasHidden) Q_EMIT hiddenCountChanged();
+}
+
+int ApplicationCatalog::applicationRow(const QString &applicationId) const
+{
+    if (applicationId.isEmpty()) return -1;
+    for (int row = 0; row < m_visibleRows.size(); ++row) {
+        const Row &drawn = m_visibleRows.at(row);
+        if ((drawn.kind == ApplicationRow || drawn.kind == MemberRow)
+            && m_entries.at(drawn.at).applicationId == applicationId) return row;
+    }
+    return -1;
+}
 
 int ApplicationCatalog::rowCount(const QModelIndex &parent) const
 {
@@ -874,10 +943,11 @@ QPair<QString, QString> ApplicationCatalog::folderSection(int folder, const QVec
     return sectionOf(first);
 }
 
-void ApplicationCatalog::rebuildVisibleRows()
+void ApplicationCatalog::rebuildVisibleRows(QVector<Entry> *entries)
 {
     const int wasDrawn = m_drawnFolders;
     beginResetModel();
+    if (entries) m_entries.swap(*entries);
     m_visibleRows.clear();
     m_visibleRows.reserve(m_entries.size());
 
