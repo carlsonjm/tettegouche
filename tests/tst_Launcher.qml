@@ -536,8 +536,11 @@ TestCase {
         const lines = findChild(launcher, "application-lines")
         const query = findChild(launcher, "search-query")
         const sheet = findChild(launcher, "application-sheet")
-        query.forceActiveFocus()
-        keyClick(Qt.Key_Down)
+        // Right in the search box moves its cursor, so the keys choose from
+        // Search itself, as when the drawer has just opened.
+        launcher.forceActiveFocus()
+        verify(!query.activeFocus)
+        keyClick(Qt.Key_Right)
         keyClick(Qt.Key_Right)
         keyClick(Qt.Key_Right)
         compare(grid.currentIndex, 2)
