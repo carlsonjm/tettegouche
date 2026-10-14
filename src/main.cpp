@@ -197,7 +197,8 @@ public:
             QDBusServiceWatcher::WatchForOwnerChange, this);
         connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
                 [this]() { bridgeLost(); });
-        for (QScreen *screen : QGuiApplication::screens()) {
+        // Every display, those plugged in later included.
+        const auto watchScreen = [this](QScreen *screen) {
             const auto boundsChanged = [this, screen] {
                 if (screen != m_view->screen()) return;
                 const bool expanded = m_requestedExpanded;
@@ -212,7 +213,9 @@ public:
             };
             connect(screen, &QScreen::geometryChanged, this, boundsChanged);
             connect(screen, &QScreen::availableGeometryChanged, this, boundsChanged);
-        }
+        };
+        for (QScreen *screen : QGuiApplication::screens()) watchScreen(screen);
+        connect(qGuiApp, &QGuiApplication::screenAdded, this, watchScreen);
     }
 
     bool contextAvailable() const { return m_context.available(); }

@@ -102,9 +102,15 @@ public:
     // entry in.
     Q_INVOKABLE [[nodiscard]] bool canEdit(int row) const;
     // Opens the application's menu entry in KDE's menu editor, where its name,
-    // icon and command change for this person; Apps reads the change the next
-    // time it opens.
+    // icon and command change for this person; Apps reads the change when
+    // KDE's application list does.
     Q_INVOKABLE bool edit(int row);
+    // Reads KDE's application list again, as it does whenever that list
+    // changes, keeping folders, hidden applications, the order and the words
+    // typed.
+    void reload();
+    // The row an application is drawn at, by its desktop file id, or -1.
+    Q_INVOKABLE [[nodiscard]] int applicationRow(const QString &applicationId) const;
 
     // Order and sections. With nothing typed, A to Z is one run by name, each
     // folder at its name's place among the applications. Most used is divided
@@ -206,7 +212,10 @@ private:
         QString label;
     };
 
-    void rebuildVisibleRows();
+    // With `entries`, they replace the list read before, inside the same
+    // reset of the model.
+    void rebuildVisibleRows(QVector<Entry> *entries = nullptr);
+    [[nodiscard]] static QVector<Entry> readEntries();
     void sortEntries(QVector<int> &rows) const;
     void storeFolders();
     void storeOpenFolders();

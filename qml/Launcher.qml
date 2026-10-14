@@ -528,6 +528,7 @@ Item {
     function showApplicationSheet(index, tile, point) {
         root.applicationCatalog.prepareSoftware()
         applicationSheet.row = index
+        applicationSheet.applicationId = root.applicationCatalog.applicationId(index)
         applicationSheet.actions = root.applicationCatalog.actions(index)
         applicationSheet.hidden = root.applicationCatalog.isHidden(index)
         applicationSheet.pinned = root.launcherController.dockPresent
@@ -2105,6 +2106,21 @@ Item {
                 property var lineOf: ({})
                 property string builtFilter: ""
                 property int builtOrder: -1
+                // What the keys have chosen, by identity rather than row, so
+                // a catalog read again keeps the choice where it was.
+                property string chosenKey: ""
+                onCurrentIndexChanged: chosenKey = keyOf(currentIndex)
+                function keyOf(row) {
+                    const catalog = root.applicationCatalog
+                    if (catalog.isFolder(row)) return "folder:" + catalog.folderId(row)
+                    const id = catalog.applicationId(row)
+                    return id ? "app:" + id : ""
+                }
+                function rowOf(key) {
+                    const catalog = root.applicationCatalog
+                    if (key.startsWith("folder:")) return catalog.folderRow(key.slice(7))
+                    return key.startsWith("app:") ? catalog.applicationRow(key.slice(4)) : -1
+                }
 
                 function build() {
                     const catalog = root.applicationCatalog
@@ -2173,11 +2189,28 @@ Item {
                         applicationLines.forceLayout()
                         applicationLines.contentY = applicationLines.originY
                             + Math.max(0, Math.min(top, applicationLines.contentHeight - applicationLines.height))
+                        // Applications installed or removed meanwhile move
+                        // rows: the keys' choice and an open sheet stay with
+                        // what they were on, and a sheet whose application
+                        // or folder has gone closes.
+                        if (keyChosen) {
+                            const kept = rowOf(chosenKey)
+                            if (kept >= 0) currentIndex = kept
+                        }
+                        if (applicationSheet.opened && applicationSheet.applicationId !== "") {
+                            const at = catalog.applicationRow(applicationSheet.applicationId)
+                            if (at >= 0) applicationSheet.row = at
+                            else applicationSheet.close()
+                        }
+                        if (folderSheet.opened && folderSheet.folder !== ""
+                                && catalog.folderRow(folderSheet.folder) < 0)
+                            folderSheet.close()
                     }
                     if (choices.indexOf(currentIndex) < 0) {
                         currentIndex = choices.length > 0 ? choices[0] : -1
                         keyChosen = false
                     }
+                    chosenKey = keyOf(currentIndex)
                 }
                 onColumnsChanged: build()
                 Component.onCompleted: build()
@@ -2559,6 +2592,9 @@ Item {
                 bottomMargin: root.keysReach
                 keysReach: root.keysReach
                 property int row: -1
+                // The application the sheet is for, which keeps its row
+                // when Apps is read again.
+                property string applicationId: ""
                 property var actions: []
                 property bool hidden: false
                 property bool pinned: false

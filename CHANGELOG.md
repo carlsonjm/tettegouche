@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Apps follows KDE's application list while Search is ready in the
+  background: an application installed shows, and one removed leaves,
+  without a restart. Open, Apps keeps where it is scrolled to, the
+  application the keys chose and an open sheet on its application; a sheet
+  whose application has gone closes.
 - After a Plasma update that Search was not built for, Ambient leaves
   waiting applications and Plasma's own transfers out, and says so in the
   log, until Search is rebuilt for it. Media, downloads, drives, the shared

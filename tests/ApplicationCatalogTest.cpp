@@ -325,6 +325,49 @@ private Q_SLOTS:
         ApplicationCatalog last;
         QCOMPARE(last.sortOrder(), int(ApplicationCatalog::NameAscending));
     }
+
+    // Installed while Search runs, an application joins Apps once KDE's
+    // application list has it, and removed, it leaves. The words typed, the
+    // applications hidden and the folders hold over each change; a folder
+    // left with one application here is no longer drawn.
+    void followsKdesApplicationList()
+    {
+        const QString yankee = QStringLiteral("yankee.desktop");
+        const QString path = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/") + yankee;
+        ApplicationCatalog catalog;
+        QCOMPARE(rowOf(catalog, yankee), -1);
+        catalog.setFilterText(QStringLiteral("ankee"));
+        QCOMPARE(catalog.rowCount(), 0);
+        QSignalSpy reset(&catalog, &QAbstractItemModel::modelReset);
+
+        write(path, "[Desktop Entry]\nType=Application\nName=Yankee\nExec=true\n");
+        QTRY_VERIFY_WITH_TIMEOUT((KSycoca::self()->ensureCacheValid(), rowOf(catalog, yankee) >= 0), 10000);
+        QVERIFY(reset.size() >= 1);
+        QCOMPARE(catalog.filterText(), QStringLiteral("ankee"));
+        QCOMPARE(order(catalog), QStringList{yankee});
+
+        catalog.setFilterText({});
+        const QString folder = catalog.makeFolder({QStringLiteral("alpha.desktop"), yankee});
+        QVERIFY(!folder.isEmpty());
+        QCOMPARE(catalog.folderCount(), 1);
+        catalog.setHidden(rowOf(catalog, QStringLiteral("beta.desktop")), true);
+        QCOMPARE(catalog.hiddenCount(), 1);
+        QSignalSpy folders(&catalog, &ApplicationCatalog::foldersChanged);
+
+        QVERIFY(QFile::remove(path));
+        QTRY_VERIFY_WITH_TIMEOUT((KSycoca::self()->ensureCacheValid(), catalog.applicationRow(yankee) < 0), 10000);
+        QCOMPARE(catalog.folderCount(), 0);
+        QCOMPARE(folders.size(), 1);
+        QVERIFY(catalog.applicationRow(QStringLiteral("alpha.desktop")) >= 0);
+        QCOMPARE(catalog.hiddenCount(), 1);
+        QCOMPARE(catalog.applicationRow(QStringLiteral("beta.desktop")), -1);
+
+        catalog.removeFolder(folder);
+        catalog.setShowHidden(true);
+        catalog.setHidden(catalog.applicationRow(QStringLiteral("beta.desktop")), false);
+        catalog.setShowHidden(false);
+        QCOMPARE(catalog.hiddenCount(), 0);
+    }
 };
 
 int main(int argc, char **argv)

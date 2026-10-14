@@ -185,8 +185,15 @@ TestCase {
             for (let i = 0; i < count; ++i)
                 if (get(i).inFolder === id) setProperty(i, "kind", open ? "member" : "application")
         }
+        // An application is known by its appId where it has one, else by
+        // its row.
         function applicationId(row) {
-            return row >= 0 && row < count && (kind(row) === "application" || kind(row) === "member") ? "app" + row : ""
+            if (row < 0 || row >= count || (kind(row) !== "application" && kind(row) !== "member")) return ""
+            return get(row).appId ? get(row).appId : "app" + row
+        }
+        function applicationRow(id) {
+            for (let i = 0; i < count; ++i) if (applicationId(i) === id) return i
+            return -1
         }
         property var made: []
         function makeFolder(ids) { made = ids; return ids.length >= 2 ? "made" : "" }
@@ -510,6 +517,52 @@ TestCase {
         catalog.softwareAsked = false
         catalog.ran = []
         catalog.uninstalled = -1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // Apps read again while it is open, as when an application is installed
+    // or removed meanwhile, keeps the person's place: where Apps is scrolled
+    // to, the application the keys chose, and an open sheet on its own
+    // application. A sheet whose application has gone closes.
+    function test_appsReadAgainKeepsThePlace() {
+        controller.opened()
+        for (let i = 0; i < 40; ++i)
+            catalog.append({name: "App " + i, icon: "application-x-executable", appId: "app-" + i + ".desktop"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(600)
+        const grid = findChild(launcher, "application-grid")
+        const lines = findChild(launcher, "application-lines")
+        const query = findChild(launcher, "search-query")
+        const sheet = findChild(launcher, "application-sheet")
+        query.forceActiveFocus()
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Right)
+        compare(grid.currentIndex, 2)
+        lines.contentY = lines.originY + 120
+        const top = lines.contentY
+        // Installed meanwhile, ahead of the rest.
+        catalog.insert(0, {name: "Aardvark", icon: "application-x-executable", appId: "aardvark.desktop"})
+        verify(Math.abs(lines.contentY - top) < 0.5)
+        compare(catalog.applicationId(grid.currentIndex), "app-2.desktop")
+        lines.contentY = lines.originY
+        tryVerify(function() { const chosen = findChild(grid, "application-tile-3"); return chosen && chosen.chosen })
+
+        // The sheet keeps to its application as rows move.
+        const tile = findChild(grid, "application-tile-5")
+        mouseClick(tile, tile.width / 2, tile.height / 2, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        compare(sheet.applicationId, "app-4.desktop")
+        catalog.remove(0)
+        compare(sheet.row, 4)
+        verify(sheet.opened)
+        // Removed meanwhile, it closes rather than act on another.
+        catalog.remove(4)
+        tryCompare(sheet, "opened", false)
+
+        catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
