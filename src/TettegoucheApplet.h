@@ -52,6 +52,9 @@ public:
     Q_INVOKABLE QRectF screenRect(QQuickItem *item) const;
     Q_INVOKABLE bool prepareIslandSurface(QWindow *window, QQuickItem *panelItem) const;
 
+private Q_SLOTS:
+    void launcherShown(bool visible);
+
 Q_SIGNALS:
     void invocationRequested();
     void launcherActiveChanged();
@@ -69,6 +72,10 @@ private:
                        const QString &drive = {});
 
     QProcess *m_process = nullptr;
+    // A launcher kept ready runs on hidden; it says when it shows or hides.
+    bool m_launcherShown = false;
+    // The settings the running launcher was started with.
+    QStringList m_launchFlags;
     QString m_productName;
     QVariantList m_ambientActivities;
     QStringList m_pearlDoors{QStringLiteral("apps"), QStringLiteral("files")};

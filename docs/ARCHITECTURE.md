@@ -23,9 +23,12 @@ Standalone mode uses a full-display input surface
 with a centered sheet; while files are carried out of Files, input narrows to
 the sheet so the drop can land on a window beside it. Kadunce guest mode keeps
 the layer-shell surface but masks input to Kadunce's negotiated guest geometry.
-Neither mode reserves workspace. Dismissal normally ends the process; an outstanding asynchronous file
-operation may keep its event loop alive after the surface hides, and Files' own
-window keeps it until the window closes. That window is an ordinary one beside
+Neither mode reserves workspace. Dismissal hides the surface and keeps the
+process ready, so the next open shows at once; it releases its graphics
+resources, skips workspace updates while hidden, and tells the applet it hid.
+It ends instead when its program was replaced since it started, when
+`tettegoucherc` `[Launcher] StayReady=false`, or for an applet whose settings
+changed. Files' own window keeps it until the window closes. That window is an ordinary one beside
 the layer-shell surface, sharing its QML engine and `FileBrowser`
 ([FILES-CONTRACT.md](FILES-CONTRACT.md) § Files' own window).
 
