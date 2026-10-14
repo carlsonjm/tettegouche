@@ -997,6 +997,18 @@ private:
             QStringLiteral("co.goodinput.Kadunce"), method);
     }
 
+    void floatOn(const QString &outputName)
+    {
+        if (outputName.isEmpty()) return;
+        for (QScreen *screen : QGuiApplication::screens()) {
+            if (screen->name() != outputName || screen == m_view->screen()) continue;
+            m_view->setScreen(screen);
+            LayerShellQt::Window::get(m_view)->setScreen(screen);
+            m_view->resize(screen->geometry().size());
+            return;
+        }
+    }
+
     void tryBeginGuest()
     {
         m_guestMode = false;
@@ -1035,6 +1047,10 @@ private:
             || root.value(QStringLiteral("protocol")).toInt() != 3
             || !root.value(QStringLiteral("accepted")).toBool()
             || card.isEmpty()) {
+            // Declined, Kadunce may name the display the person is working
+            // on; the launcher floats there.
+            if (error.error == QJsonParseError::NoError)
+                floatOn(root.value(QStringLiteral("output")).toString());
             Q_EMIT guestChanged();
             return;
         }

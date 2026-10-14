@@ -85,7 +85,8 @@ not duplicate that history in Ambient.
 
 At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads
 workspace-context schema version 1; no other versions are accepted. Unsupported,
-absent, or malformed endpoints fall back to the standalone launcher. Context
+absent, or malformed endpoints fall back to the standalone launcher; a declined
+guest that names an output floats the launcher on that display. Context
 refreshes on Kadunce change signals and before window selection; there is no
 timer or heartbeat.
 
