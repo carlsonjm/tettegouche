@@ -37,11 +37,6 @@ QtObject {
     // Words on a pill filled with the text colour.
     readonly property color textOnInk: dark ? "#141414" : ground
 
-    // Genie's answer, a panel of its own inside the sheet.
-    readonly property color answerSurface: dark ? "#1C1C1C" : over(0.04)
-    readonly property color answerText: dark ? "#E4E4EA" : wash(0.88)
-    readonly property color answerNote: dark ? "#A8A8B0" : wash(0.62)
-    readonly property color answerPlaceholder: dark ? "#8E929A" : wash(0.5)
     // Small capitals and hints over the note's own controls.
     readonly property color hintText: dark ? "#8A8A90" : wash(0.55)
 

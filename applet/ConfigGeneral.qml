@@ -14,8 +14,6 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
     property bool cfg_showNotesPillDefault
-    property bool cfg_offerGenie
-    property bool cfg_offerGenieDefault
     property bool cfg_showAmbient
     property bool cfg_showAmbientDefault
     property bool cfg_animateIndicator
@@ -50,12 +48,6 @@ KCMUtils.SimpleKCM {
             enabled: cfg_offerNotes
             checked: cfg_showNotesPill
             onToggled: cfg_showNotesPill = checked
-        }
-
-        QQC2.CheckBox {
-            text: i18n("Show Genie when Split Rock is installed")
-            checked: cfg_offerGenie
-            onToggled: cfg_offerGenie = checked
         }
 
         QQC2.CheckBox {

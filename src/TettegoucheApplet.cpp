@@ -2,7 +2,6 @@
 
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
-#include "GenieChat.h"
 #include "LauncherKeys.h"
 #include "NotesDoor.h"
 #include "ProductName.h"
@@ -298,46 +297,13 @@ void TettegoucheApplet::launch(bool useKadunce)
 void TettegoucheApplet::openDrawer(const QString &drawer)
 {
     if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")
-        && drawer != QLatin1String("notes") && drawer != QLatin1String("genie")) return;
+        && drawer != QLatin1String("notes")) return;
     startLauncher(setting(QStringLiteral("useKadunce"), true), {}, drawer);
 }
 
 void TettegoucheApplet::refreshPearlDoors()
 {
     setPearlDoors();
-    // Genie is offered where it answers or the bus can start it; asking
-    // the bus starts nothing.
-    if (!setting(QStringLiteral("offerGenie"), true)) {
-        m_genieThere = false;
-        setPearlDoors();
-        return;
-    }
-    const QString service = QString::fromLatin1(GenieChat::Service);
-    auto bus = QDBusConnection::sessionBus();
-    const auto busMethod = [](const QString &name) {
-        return QDBusMessage::createMethodCall(QStringLiteral("org.freedesktop.DBus"),
-            QStringLiteral("/org/freedesktop/DBus"), QStringLiteral("org.freedesktop.DBus"), name);
-    };
-    QDBusMessage owner = busMethod(QStringLiteral("NameHasOwner"));
-    owner.setArguments({service});
-    auto *ownerWatch = new QDBusPendingCallWatcher(bus.asyncCall(owner, 2000), this);
-    connect(ownerWatch, &QDBusPendingCallWatcher::finished, this, [this, ownerWatch, bus, busMethod, service] {
-        const QDBusPendingReply<bool> answers = *ownerWatch;
-        ownerWatch->deleteLater();
-        if (!answers.isError() && answers.value()) {
-            m_genieThere = true;
-            setPearlDoors();
-            return;
-        }
-        auto *startable = new QDBusPendingCallWatcher(
-            bus.asyncCall(busMethod(QStringLiteral("ListActivatableNames")), 2000), this);
-        connect(startable, &QDBusPendingCallWatcher::finished, this, [this, startable, service] {
-            const QDBusPendingReply<QStringList> names = *startable;
-            startable->deleteLater();
-            m_genieThere = !names.isError() && names.value().contains(service);
-            setPearlDoors();
-        });
-    });
 }
 
 void TettegoucheApplet::setPearlDoors()
@@ -355,7 +321,6 @@ void TettegoucheApplet::setPearlDoors()
             }
         }
     }
-    if (m_genieThere && setting(QStringLiteral("offerGenie"), true)) doors << QStringLiteral("genie");
     if (doors == m_pearlDoors) return;
     m_pearlDoors = doors;
     Q_EMIT pearlDoorsChanged();
@@ -381,8 +346,6 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.
     else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
-    // And Genie, where Split Rock is installed, unless that is off.
-    if (!setting(QStringLiteral("offerGenie"), true)) flags << QStringLiteral("--no-genie");
     // A launcher kept ready with settings since changed starts again with them.
     if (m_process->state() == QProcess::Running && !m_launcherShown && flags != m_launchFlags) {
         m_process->terminate();

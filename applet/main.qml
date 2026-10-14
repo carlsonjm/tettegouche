@@ -230,8 +230,7 @@ PlasmoidItem {
                         SuiteIcon {
                             visible: doorItem.door !== "apps"
                             anchors.verticalCenter: parent.verticalCenter
-                            glyph: doorItem.door === "notes" || doorItem.door === "genie"
-                                ? doorItem.door : "folder-open"
+                            glyph: doorItem.door === "notes" ? "notes" : "folder-open"
                             ink: doorItem.chosen ? tone.textOnInk : tone.text
                             width: 15
                             height: 15

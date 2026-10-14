@@ -69,6 +69,7 @@ target_compile_definitions(tettegouche-related PRIVATE TRANSLATION_DOMAIN="tette
 qt_add_executable(tettegouche
     src/main.cpp
     src/ProductName.h
+    src/DockBand.h
     src/OmniResults.h
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
@@ -78,8 +79,6 @@ qt_add_executable(tettegouche
     src/NotesDoor.h
     src/QuickNote.cpp
     src/QuickNote.h
-    src/GenieChat.cpp
-    src/GenieChat.h
     src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
     src/FileDetails.cpp src/FileDetails.h
@@ -88,7 +87,7 @@ qt_add_executable(tettegouche
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/GeniePane.qml qml/ModePill.qml qml/SuiteIcon.qml
+    FILES qml/Launcher.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml
         assets/icons/lucide/ellipsis-vertical.svg
@@ -97,7 +96,6 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/maximize-2.svg
         assets/icons/lucide/minimize-2.svg
         assets/icons/lucide/square-arrow-out-up-right.svg
-        assets/icons/suite/genie.svg
         assets/icons/suite/notes.svg
         assets/icons/lucide/square.svg
         assets/icons/lucide/skip-back.svg
@@ -196,7 +194,6 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/suite/notes.svg
-        assets/icons/suite/genie.svg
 )
 target_link_libraries(co.goodinput.tettegouche PRIVATE
     LayerShellQt::Interface
@@ -268,13 +265,6 @@ if(BUILD_TESTING)
     add_test(NAME quick-note-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:quick-note-test>)
     set_tests_properties(quick-note-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 90 SKIP_RETURN_CODE 77)
-    qt_add_executable(genie-chat-test tests/GenieChatTest.cpp src/GenieChat.cpp src/GenieChat.h)
-    target_include_directories(genie-chat-test PRIVATE src)
-    target_link_libraries(genie-chat-test PRIVATE Qt6::DBus Qt6::Test)
-    # A stand-in for Split Rock's conversation, on a private bus.
-    add_test(NAME genie-chat-test COMMAND dbus-run-session
-        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:genie-chat-test>)
-    set_tests_properties(genie-chat-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     add_test(NAME recent-use-record-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/verify-recent-use.sh $<TARGET_FILE:recent-use-test>)
     set_tests_properties(recent-use-record-test PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
@@ -285,6 +275,10 @@ if(BUILD_TESTING)
     target_link_libraries(omni-results-test PRIVATE KF6::Runner KF6::I18n Qt6::Gui Qt6::DBus)
     add_test(NAME omni-results-test COMMAND omni-results-test)
     set_tests_properties(omni-results-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    qt_add_executable(dock-band-test tests/DockBandTest.cpp src/DockBand.h)
+    target_include_directories(dock-band-test PRIVATE src)
+    target_link_libraries(dock-band-test PRIVATE Qt6::Core)
+    add_test(NAME dock-band-test COMMAND dock-band-test)
     qt_add_executable(runner-identity-test tests/RunnerIdentityTest.cpp)
     target_include_directories(runner-identity-test PRIVATE src)
     target_link_libraries(runner-identity-test PRIVATE KF6::Runner Qt6::Core)

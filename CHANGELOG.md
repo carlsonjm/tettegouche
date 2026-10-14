@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Filling the screen, Apps, Files and Notes stay above Shuffle's dock, with
+  the cards' 10 px gutter, on every display; floating Search centres in the
+  same room. Before, on a display outside Spread, they covered the dock.
+- Search no longer offers Ask: its pill, its door on the dot's slide, its
+  screen and its setting are gone. Apps, Files and Notes are unchanged.
 - Apps A to Z is one run by name, each folder at its own name's place among
   the applications, with no letter rows or letters down the edge. Most
   used is divided into sections by when each was last used, and Newest
