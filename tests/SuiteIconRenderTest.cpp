@@ -35,7 +35,7 @@ private Q_SLOTS:
             QStringLiteral("refresh-cw"), QStringLiteral("ellipsis-vertical"), QStringLiteral("check"),
             QStringLiteral("chevron-down"), QStringLiteral("chevron-left"), QStringLiteral("square"),
             QStringLiteral("circle"), QStringLiteral("eye"), QStringLiteral("eye-off"),
-            QStringLiteral("sticky-note"), QStringLiteral("genie"), QStringLiteral("notes"),
+            QStringLiteral("sticky-note"), QStringLiteral("notes"),
             QStringLiteral("maximize-2"), QStringLiteral("minimize-2"),
             QStringLiteral("square-arrow-out-up-right")
         };

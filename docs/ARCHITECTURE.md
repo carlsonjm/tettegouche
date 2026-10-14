@@ -40,7 +40,7 @@ Qt gives as the keyboard rectangle, and keeps its sheet above them itself.
 settings, under Tettegouche, by whichever Tettegouche widget came first. A
 press starts the launcher with `--drawer apps` or `--drawer files`, or asks a
 running one through `openDrawer` on its D-Bus interface; a slide from the dot
-does the same for any of `apps`, `files`, `notes` or `genie`. The Apps desktop
+does the same for any of `apps`, `files` or `notes`. The Apps desktop
 entry, `io.github.carlsonjm.Tettegouche.Apps.desktop`, runs `--drawer apps`.
 The widget declares itself Plasma's application launcher
 (`org.kde.plasma.launchermenu`), so Plasma's launcher key reaches it as it
@@ -100,7 +100,13 @@ returns to search. Horizontal guest drag sends only motion deltas, leaving
 commit/cancel and real-card selection to Kadunce. Expanded Apps and Files
 drawers request the negotiated presentation capability and otherwise use
 standalone expansion. The expanded drawer has one treatment, fitted to the
-tablet's Active card or the screen. Every drawer and mode opens from Search's
+tablet's Active card or the screen's work area. Floating, the launcher reads
+the work area as the screen reports it, less the band Shuffle's dock reserves
+there: on Wayland the screen reports itself whole. The band comes from the
+Bottom Surface's `dockExtent` (version 1) as the launcher opens and as it
+changes; the one Bottom Surface on the bus answers for the display it presents,
+and a display it does not answer for takes the same band. With no Bottom
+Surface, the work area is the screen's report. Every drawer and mode opens from Search's
 pills at Search's size, a card in Spread, and from `openDrawer` (the dot's slide,
 Meta+G, Meta+E) filling the screen; Expand, in the corner they all share, fills the screen and
 brings it back, and moving between Apps and Files keeps the size chosen.
@@ -138,10 +144,8 @@ each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
 the session bus, and `NotesPane` draws the note in Search's window; with an
 older Gooseberry, `NotesDoor` runs the Capture action through
 `KIO::ApplicationLauncherJob` instead
-([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes). `GenieChat` speaks Split
-Rock's conversation interface the same way and `GeniePane` draws it (§ Genie).
-Both modes share the launcher's mode state, its drawer easing and its hand-off
-to the application's own window.
+([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes). Notes uses the launcher's
+mode state, its drawer easing and its hand-off to the application's own window.
 
 `RecentUse` reads KDE's record of use through PlasmaActivitiesStats when Search
 opens, for the first screen ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § First

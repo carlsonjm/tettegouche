@@ -32,11 +32,9 @@ Item {
     // off. Notes is one of Search's modes while the notes application speaks
     // its interface, and opens that application's own card otherwise.
     property var quickNote: null
-    // Genie's chat, kept by Split Rock; null when the setting is off.
-    property var genie: null
-    // Search's modes, Notes and Genie: each opens in this window with the
-    // drawer's motion and grows into its application's own window. The shown
-    // mode stays while it closes, until its motion ends.
+    // Search's mode, Notes: it opens in this window with the drawer's motion
+    // and grows into its application's own window. The shown mode stays while
+    // it closes, until its motion ends.
     property string modeShown: ""
     property bool modeOpen: false
     property real modeProgress: 0
@@ -54,8 +52,6 @@ Item {
     readonly property real notesProgress: modeShown === "notes" ? modeProgress : 0
     readonly property bool notesGrowing: modeGrowing && modeShown === "notes"
     readonly property bool notesHandoff: modeHandoff && modeShown === "notes"
-    readonly property bool genieOpen: modeOpen && modeShown === "genie"
-    readonly property real genieProgress: modeShown === "genie" ? modeProgress : 0
     property bool filesMode: false
     // Plasma's animation speed, read through Kirigami's durations: 1 at the
     // default, smaller when faster, 0 for instant. Search's travel, the sheet,
@@ -223,9 +219,9 @@ Item {
                     }
                 }
                 SuiteIcon {
-                    visible: pill.glyph === "files" || pill.glyph === "notes" || pill.glyph === "genie"
+                    visible: pill.glyph === "files" || pill.glyph === "notes"
                     anchors.verticalCenter: parent.verticalCenter
-                    glyph: pill.glyph === "notes" || pill.glyph === "genie" ? pill.glyph : "folder-open"
+                    glyph: pill.glyph === "notes" ? "notes" : "folder-open"
                     width: 18
                     height: 18
                 }
@@ -604,10 +600,9 @@ Item {
     }
 
     // A mode opens in Search's window with the drawer's motion and the
-    // window keeps its size: Notes turns the field into the note pad, Genie
-    // carries it into the header with the question.
+    // window keeps its size: Notes turns the field into the note pad.
     function openMode(name) {
-        const client = name === "notes" ? root.quickNote : root.genie
+        const client = name === "notes" ? root.quickNote : null
         if (!client || !client.available || root.modeGrowing) return false
         client.start()
         root.modeShown = name
@@ -615,8 +610,7 @@ Item {
         root.sortMenuOpen = false
         modeSettle.to = 1
         modeSettle.restart()
-        if (name === "notes") notesPane.focusPad()
-        else geniePane.focusField()
+        notesPane.focusPad()
         return true
     }
     // An older notes application without the interface gets its own card,
@@ -627,12 +621,11 @@ Item {
         root.launcherController.finishLaunch()
         return true
     }
-    function openGenie() { return root.openMode("genie") }
-    // Notes or Ask asked for from outside Search, as the dot's slide asks:
-    // that mode opens, or Search closes when it is the mode already open.
-    // Search may have only just opened, before Notes or Genie has answered
-    // whether it is there; the mode then waits for the answer, and Notes
-    // falls back to its own sheet if Gooseberry's interface never answers.
+    // Notes asked for from outside Search, as the dot's slide asks: it opens,
+    // or Search closes when it is the mode already open. Search may have only
+    // just opened, before Notes has answered whether it is there; the mode
+    // then waits for the answer, and falls back to its own sheet if
+    // Gooseberry's interface never answers.
     function openModeDirectly(name) {
         modeWait.stop()
         root.modeAwaited = ""
@@ -642,12 +635,10 @@ Item {
         }
         if (root.drawerOpen) root.setDrawerOpen(false)
         if (root.modeOpen) return
-        const client = name === "notes" ? root.quickNote : root.genie
-        if (name === "notes" && !root.notesDoor) return
-        if (name === "genie" && !client) return
+        if (name !== "notes" || !root.notesDoor) return
+        const client = root.quickNote
         if (client && client.available) {
-            if (name === "notes") root.openNotes()
-            else root.openGenie()
+            root.openNotes()
             return
         }
         root.modeAwaited = name
@@ -656,12 +647,11 @@ Item {
     function settleAwaitedMode(late) {
         const name = root.modeAwaited
         if (!name) return
-        const client = name === "notes" ? root.quickNote : root.genie
+        const client = root.quickNote
         if (!late && !(client && client.available)) return
         modeWait.stop()
         root.modeAwaited = ""
-        if (name === "notes") root.openNotes()
-        else root.openGenie()
+        root.openNotes()
     }
     property string modeAwaited: ""
     Timer {
@@ -670,7 +660,7 @@ Item {
         onTriggered: root.settleAwaitedMode(true)
     }
     Connections {
-        target: root.modeAwaited === "notes" ? root.quickNote : root.modeAwaited === "genie" ? root.genie : null
+        target: root.modeAwaited === "notes" ? root.quickNote : null
         ignoreUnknownSignals: true
         function onAvailableChanged() { root.settleAwaitedMode(false) }
     }
@@ -690,16 +680,13 @@ Item {
     // once it has drawn, since Kadunce puts it in the card's place.
     function growMode() {
         if (!root.modeOpen || root.modeGrowing) return
-        const notes = root.modeShown === "notes"
         root.modeExpandedBefore = root.launcherController.drawerExpanded
         root.modeGrowing = true
         root.modeToken = Math.random().toString(36).slice(2) + Date.now().toString(36)
         root.launcherController.setDrawerExpanded(true)
         root.modeHandoff = root.launcherController.guestMode
-            && (notes ? root.launcherController.beginGuestNotesLaunch()
-                      : root.launcherController.beginGuestGenieLaunch())
-        const opened = notes ? root.quickNote.openBoard(root.modeToken)
-                             : root.genie.openWindow(root.modeToken)
+            && root.launcherController.beginGuestNotesLaunch()
+        const opened = root.quickNote.openBoard(root.modeToken)
         if (!opened) {
             root.stopGrowingMode()
             return
@@ -887,7 +874,6 @@ Item {
             filesHandoffTimeout.stop()
             root.filesHandoff = false
             if (root.quickNote) root.quickNote.refresh()
-            if (root.genie) root.genie.refresh()
             root.forceActiveFocus()
             root.guestDrag = 0
             root.guestExiting = false
@@ -906,7 +892,7 @@ Item {
         // straight from one to the next and Back leads to search.
         function onDrawerRequested(mode) {
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
-            if (mode === "notes" || mode === "genie") {
+            if (mode === "notes") {
                 const shown = root.modeOpen && root.modeShown === mode
                 root.openModeDirectly(mode)
                 const coming = (root.modeOpen && root.modeShown === mode) || root.modeAwaited === mode
@@ -985,9 +971,7 @@ Item {
         readonly property real restHeight: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
-                ? Math.max(1, root.launcherController.availableArea.height - 20
-                    - (root.launcherController.availableArea.y
-                        + root.launcherController.availableArea.height < root.height - 1 ? 10 : 0))
+                ? Math.max(1, root.launcherController.availableArea.height - 20)
                 : Math.min(maxRestHeight, Math.round(root.launcherController.availableArea.height * 0.64))
         // Floating on a large display, the sheet stays about a card's size
         // rather than growing with the display.
@@ -1307,7 +1291,6 @@ Item {
                 readonly property real pillsWidth: appsPill.width
                     + (filesPill.visible ? pillGap + filesPill.width : 0)
                     + (notesPill.visible ? pillGap + notesPill.width : 0)
-                    + (geniePill.visible ? pillGap + geniePill.width : 0)
                 readonly property real naturalWidth: Math.max(pillsWidth,
                     Math.min(offered, most) * tileWidth)
                 readonly property bool roomBelow: parent.height >= 58 + gap + pillsHeight + divide + tileHeight
@@ -1322,7 +1305,7 @@ Item {
                 // sends the row away whole, sinking a little, and clearing
                 // the field brings it back the same way it first came.
                 readonly property int doors: 1 + (filesPill.visible ? 1 : 0)
-                    + (notesPill.visible ? 1 : 0) + (geniePill.visible ? 1 : 0)
+                    + (notesPill.visible ? 1 : 0)
                 readonly property int step: 260
                 readonly property int stagger: 45
                 readonly property int span: step + doors * stagger
@@ -1423,15 +1406,6 @@ Item {
                         glyph: "notes"
                         visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
                         onActivated: root.openNotes()
-                    }
-                    FirstPill {
-                        id: geniePill
-                        reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0) + (notesPill.visible ? 1 : 0))
-                        objectName: "genie-pill"
-                        label: words.i18n("Ask")
-                        glyph: "genie"
-                        visible: !!root.genie && root.genie.available
-                        onActivated: root.openGenie()
                     }
                 }
                 Repeater {
@@ -1949,27 +1923,6 @@ Item {
                 onDismiss: root.launcherController.close()
                 onGrow: root.growNotes()
                 onFinished: root.launcherController.close()
-            }
-
-            GeniePane {
-                id: geniePane
-                objectName: "genie-pane"
-                anchors.fill: parent
-                z: 5
-                genie: root.genie
-                progress: root.genieProgress
-                fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
-                growing: root.modeGrowing
-                expanded: root.launcherController.drawerExpanded
-                keysUp: root.keysUp
-                surfaceColor: root.surfaceColor
-                surfaceOutline: root.surfaceOutline
-                controlColor: root.controlColor
-                primaryText: root.primaryText
-                onBack: root.closeMode()
-                onExpand: root.toggleExpanded()
-                onDismiss: root.launcherController.close()
-                onGrow: root.growMode()
             }
 
             Loader {
@@ -2888,11 +2841,6 @@ Item {
         target: root.quickNote
         ignoreUnknownSignals: true
         function onBoardShown(requestToken) { root.modeWindowShown(requestToken) }
-    }
-    Connections {
-        target: root.genie
-        ignoreUnknownSignals: true
-        function onWindowShown(requestToken) { root.modeWindowShown(requestToken) }
     }
 
     Timer {

@@ -21,17 +21,11 @@ than repeat it.
 | Tap or click Back, or `Esc`, in Notes | Returns to Search; Notes resumes the same note. |
 | Tap or click a colour, in Notes | Sets the note's colour. |
 | Tap or click Folder or Stuck to, in Notes | Opens its choices under it: the folders and a field for a new one, or the windows and Don't stick to a window. A choice, or Enter in the field, sets it and returns to the pad; `Esc` closes the choices. With an older Gooseberry, Belongs to is there instead, and a place under it sets what the note belongs to. |
-| Tap or click Expand, at the header's right, in Notes or Genie | Search fills the screen and the mode stays in it; again, Search returns to its size. Back returns to Search at its size. |
+| Tap or click Expand, at the header's right, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. Back returns to Search at its size. |
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
-| Tap or click Ask, after Notes | Genie opens: the field travels into the header for the question, in the same window. Ask is there only while Split Rock answers. |
-| Type, then Enter, or tap a suggestion, in Genie | Asks Genie; the answer arrives below. |
-| Tap or click Keep this or That fixed it, in Genie | Files the answer in Genie's notebook, or records that it fixed the problem. |
-| Tap or click Remember or Not now, in Genie | Genie writes down what it offered to remember about you, or leaves it. |
-| Tap or click Back, or `Esc`, in Genie | Returns to Search; the conversation stays. |
-| Tap or click Pop out, beside Expand, in Genie | Search grows and Genie's own window takes its place. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
-| Tab, with nothing typed | Moves between Apps, Files, Notes, Ask and what was used lately; Enter or Space opens the one focused. |
+| Tab, with nothing typed | Moves between Apps, Files, Notes and what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
@@ -39,13 +33,13 @@ than repeat it.
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows on the way. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. |
 | Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. |
-| Turn the mouse wheel over the results, or over an answer in Genie | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
+| Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …" | Searches the web in the browser. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
 | Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
 | Esc | Closes an open menu, then an open drawer, then Search. |
 | Tap or click outside Search | Closes it. Inside Kadunce's Spread, the space round Search belongs to Spread. |
-| Tap or click Close, last in the header's right corner, in Apps, Files, Notes or Genie | Closes Search, as a tap outside it does. |
+| Tap or click Close, last in the header's right corner, in Apps, Files or Notes | Closes Search, as a tap outside it does. |
 | Drag Search sideways inside Kadunce's Spread | Search follows and tells Spread how far it has moved. Let go: if Spread moves on, Search slides away to that side and closes; if not, it springs back. |
 | With the on-screen keys up | Search rises only as far as it must to stay above them, then shortens, so the search field and its results, or an open drawer, stay in view. Inside Kadunce's Spread it keeps its place and shortens instead. It returns as the keys go down. |
 
@@ -54,7 +48,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
-| Press the dot and slide right, by finger or mouse | Search's doors, Apps, Files, Notes and Ask, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and Back leads to search. Notes and Ask are there as Search's first screen offers them. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Press the dot and slide right, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen above the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and Back leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -62,10 +56,9 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Show recent files and apps", off | Search opens with its doors, Apps, Files, Notes and Ask, alone under the field, and nothing used lately is read. |
+| Setting "Show recent files and apps", off | Search opens with its doors, Apps, Files and Notes, alone under the field, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The first screen leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
-| Setting "Show Genie when Split Rock is installed", off | Search never offers Genie. On, its default, Genie appears whenever Split Rock answers. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 

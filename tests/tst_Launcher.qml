@@ -20,10 +20,7 @@ TestCase {
         notesStub.opened = 0
         launcher.quickNote = null
         quickStub.reset()
-        launcher.genie = null
-        genieStub.reset()
         controller.notesLaunches = 0
-        controller.genieLaunches = 0
         controller.guestLaunches = 0
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
         controller.drawerExpanded = false
@@ -110,8 +107,6 @@ TestCase {
         function cancelGuestApplicationLaunch() { launchCancels++ }
         property int handoffs: 0
         function completeGuestHandoff() { handoffs++ }
-        property int genieLaunches: 0
-        function beginGuestGenieLaunch() { genieLaunches++; return guestMode }
         function searchWeb(text) { webSearches++; return true }
     }
     ListModel {
@@ -286,47 +281,6 @@ TestCase {
         function tuckAway() { tucks++; open = false }
         function remove() {}
         function openBoard(token) { if (!boardOpens) return false; boards = boards.concat([token]); return true }
-    }
-    // Split Rock's conversation interface, as Search speaks it.
-    QtObject {
-        id: genieStub
-        property bool available: true
-        property string phase: "ready"
-        property string assistant: "Codex"
-        property string question: ""
-        property string answer: ""
-        property var steps: []
-        property var suggestions: ["Make the writing bigger", "Why is my battery draining?"]
-        property bool canDoIt: false
-        property string doItReason: "Changes come in a later version."
-        property bool kept: false
-        property var more: []
-        property string remember: ""
-        property bool fixed: false
-        property string problem: ""
-        property int starts: 0
-        property var asked: []
-        property var acts: []
-        property int cancels: 0
-        property var windows: []
-        signal conversationChanged()
-        signal windowShown(string requestToken)
-        function reset() {
-            available = true; phase = "ready"; question = ""; answer = ""; steps = []; kept = false
-            more = []; remember = ""; fixed = false
-            problem = ""; starts = 0; asked = []; acts = []; cancels = 0; windows = []
-        }
-        function refresh() {}
-        function start() { starts++ }
-        function ask(text) { asked = asked.concat([text]); question = text; phase = "answering"; conversationChanged() }
-        function cancel() { cancels++; phase = "ready" }
-        function act(action) {
-            acts = acts.concat([action])
-            if (action === "keep") kept = true
-            if (action === "fixed") fixed = true
-            if (action === "remember" || action === "dont-remember") remember = ""
-        }
-        function openWindow(token) { windows = windows.concat([token]); return true }
     }
     function fillRecent(n) {
         recentStub.clear()
@@ -920,7 +874,9 @@ TestCase {
         compare(controller.drawerExpanded, false)
         controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "width", 980)
-        tryCompare(sheet, "height", 710)
+        // Above a dock, as above any edge, it keeps the cards' 10 px gutter.
+        tryCompare(sheet, "height", 720)
+        compare(sheet.y + sheet.height, 730)
         compare(controller.drawerExpanded, true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
@@ -2256,14 +2212,13 @@ TestCase {
 
     // Close puts Search away from any drawer or mode.
     function test_close_data() {
-        return [{ tag: "apps" }, { tag: "files" }, { tag: "notes" }, { tag: "genie" }]
+        return [{ tag: "apps" }, { tag: "files" }, { tag: "notes" }]
     }
     function test_close(data) {
         let close
-        if (data.tag === "notes" || data.tag === "genie") {
-            if (data.tag === "notes") openNotesMode()
-            else openGenieMode()
-            close = findChild(launcher, data.tag + "-close")
+        if (data.tag === "notes") {
+            openNotesMode()
+            close = findChild(launcher, "notes-close")
         } else {
             launcher.fileBrowser = filesMock
             filesMock.placeKind = "folder"
@@ -2277,24 +2232,19 @@ TestCase {
         mouseClick(close, close.width / 2, close.height / 2)
         compare(controller.closes, before + 1)
         if (data.tag === "notes") launcher.closeNotes()
-        else if (data.tag === "genie") launcher.closeMode()
         else launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
         tryCompare(launcher, "modeProgress", 0)
     }
 
-    // Notes and Ask have the same corner. Expand fills the screen and the
-    // mode stays in Search; Back brings Search back to its size.
-    function test_modeExpand_data() {
-        return [{ tag: "notes" }, { tag: "genie" }]
-    }
-    function test_modeExpand(data) {
-        if (data.tag === "notes") openNotesMode()
-        else openGenieMode()
+    // Notes has the drawers' corner. Expand fills the screen and the mode
+    // stays in Search; Back brings Search back to its size.
+    function test_modeExpand() {
+        openNotesMode()
         const sheet = findChild(launcher, "launcher-sheet")
-        const expand = findChild(launcher, data.tag + "-expand")
-        const popOut = findChild(launcher, data.tag + "-pop-out")
-        const close = findChild(launcher, data.tag + "-close")
+        const expand = findChild(launcher, "notes-expand")
+        const popOut = findChild(launcher, "notes-pop-out")
+        const close = findChild(launcher, "notes-close")
         verify(expand.opacity > 0.99 && popOut.visible && close.visible)
         verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
         verify(popOut.mapToItem(sheet, 0, 0).x < close.mapToItem(sheet, 0, 0).x)
@@ -2302,9 +2252,8 @@ TestCase {
         compare(controller.drawerExpanded, true)
         verify(controller.expansionChosen)
         tryCompare(sheet, "width", 980)
-        verify(data.tag === "notes" ? launcher.notesOpen : launcher.genieOpen)
+        verify(launcher.notesOpen)
         compare(quickStub.boards.length, 0)
-        compare(genieStub.windows.length, 0)
         compare(controller.closes, 0)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, false)
@@ -2512,9 +2461,8 @@ TestCase {
         verify(!launcher.drawerOpen)
         compare(controller.closes, 2)
     }
-    // The dot's slide asks for Notes or Ask as Meta+G asks for Apps: that
-    // mode opens, and asked again, Search closes. Asked before Genie has
-    // answered, Ask waits for it.
+    // The dot's slide asks for Notes as Meta+G asks for Apps: Notes opens,
+    // and asked again, Search closes.
     function test_modeRequests() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
@@ -2531,30 +2479,6 @@ TestCase {
         compare(quickStub.starts, 1)
         tryCompare(launcher, "notesProgress", 1)
         controller.drawerRequested("notes")
-        compare(controller.closes, 1)
-
-        launcher.genie = genieStub
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        genieStub.available = false
-        controller.drawerRequested("genie")
-        wait(50)
-        verify(!launcher.genieOpen)
-        genieStub.available = true
-        tryCompare(launcher, "genieOpen", true)
-        compare(genieStub.starts, 1)
-        compare(controller.closes, 1)
-
-        // Without Genie, Ask leaves Search as it is.
-        launcher.genie = null
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        controller.drawerExpanded = false
-        controller.drawerRequested("genie")
-        wait(50)
-        verify(!launcher.modeOpen)
-        compare(controller.drawerExpanded, false)
-        compare(launcher.modeAwaited, "")
         compare(controller.closes, 1)
     }
     // Both drawers share one header: Back on the left returns to search,
@@ -2766,8 +2690,6 @@ TestCase {
     // From a mode the dot's slide opened, the next slide goes straight to
     // the drawer or mode chosen, and Back from it leads to search.
     function test_slideMovesOnFromAMode() {
-        launcher.genie = genieStub
-        genieStub.available = true
         openNotesMode()
         controller.drawerRequested("apps")
         verify(!launcher.notesOpen)
@@ -2775,10 +2697,8 @@ TestCase {
         compare(controller.drawerExpanded, true)
         controller.drawerRequested("notes")
         verify(launcher.notesOpen && !launcher.drawerOpen)
-        controller.drawerRequested("genie")
-        verify(launcher.genieOpen && !launcher.notesOpen)
         compare(controller.drawerExpanded, true)
-        tryCompare(launcher, "genieProgress", 1)
+        tryCompare(launcher, "notesProgress", 1)
         controller.drawerRequested("files")
         verify(!launcher.modeOpen)
         tryCompare(launcher, "drawerProgress", 1)
@@ -2788,7 +2708,6 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
         verify(!launcher.modeOpen && !launcher.drawerOpen)
         compare(controller.drawerExpanded, false)
-        launcher.genie = null
     }
     function openNotesMode() {
         launcher.fileBrowser = filesMock
@@ -3000,161 +2919,14 @@ TestCase {
         compare(controller.drawerExpanded, false)
         verify(launcher.notesOpen)
     }
-    function openGenieMode() {
-        launcher.fileBrowser = filesMock
-        launcher.genie = genieStub
-        controller.closes = 0
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        const pill = findChild(launcher, "genie-pill")
-        verify(pill.visible)
-        mouseClick(pill, pill.width / 2, pill.height / 2)
-        tryCompare(launcher, "genieProgress", 1)
-    }
-    // Genie follows Files, and is there only while Split Rock answers.
-    function test_genieOffered() {
-        launcher.fileBrowser = filesMock
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        const row = findChild(launcher, "first-row")
-        const genie = findChild(launcher, "genie-pill")
-        verify(!genie.visible)
-        launcher.genie = genieStub
-        verify(genie.visible)
-        compare(genie.label, "Ask")
-        compare(row.pillsWidth, findChild(launcher, "apps-pill").width + findChild(launcher, "files-pill").width
-            + genie.width + 2 * row.pillGap)
-        genieStub.available = false
-        verify(!genie.visible)
-    }
-    // Turned off in the settings, Notes and Ask are absent however the
-    // launcher was told so, as null or as nothing at all.
+    // Turned off in the settings, Notes is absent however the launcher was
+    // told so, as null or as nothing at all. Search has no Ask pill.
     function test_doorsOffWhenNotOffered() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = undefined
-        launcher.genie = undefined
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         verify(!findChild(launcher, "notes-pill").visible)
-        verify(!findChild(launcher, "genie-pill").visible)
-    }
-    // Genie opens in Search's own window with the drawer's motion: the field
-    // travels into the header for the question, the answer comes below, and
-    // the window keeps its size.
-    function test_genieModeOpensInSearch() {
-        const sheet = findChild(launcher, "launcher-sheet")
-        launcher.fileBrowser = filesMock
-        launcher.genie = genieStub
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        controller.closes = 0
-        const rest = Qt.size(sheet.width, sheet.height)
-        const pill = findChild(launcher, "genie-pill")
-        mouseClick(pill, pill.width / 2, pill.height / 2)
-        verify(launcher.genieOpen)
-        compare(genieStub.starts, 1)
-        tryCompare(launcher, "genieProgress", 1)
-        compare(sheet.width, rest.width)
-        compare(sheet.height, rest.height)
-        compare(controller.drawerExpanded, false)
-        verify(findChild(launcher, "search-field").opacity < 0.01)
-        const question = findChild(launcher, "genie-question")
-        verify(question.activeFocus)
-        const back = findChild(launcher, "genie-back")
-        const expand = findChild(launcher, "genie-pop-out")
-        const body = findChild(launcher, "genie-answer")
-        const fieldTop = question.mapToItem(sheet, 0, 0).y
-        verify(Math.abs(fieldTop - back.mapToItem(sheet, 0, back.height / 2).y) < question.height)
-        verify(body.mapToItem(sheet, 0, 0).y > fieldTop)
-        verify(expand.mapToItem(sheet, 0, 0).x > sheet.width / 2)
-        // Typing asks Genie, not search.
-        keyClick(Qt.Key_H)
-        keyClick(Qt.Key_I)
-        keyClick(Qt.Key_Return)
-        compare(genieStub.asked, ["hi"])
-        compare(findChild(launcher, "search-query").text, "")
-        mouseClick(back, back.width / 2, back.height / 2)
-        tryCompare(launcher, "genieProgress", 0)
-        verify(!launcher.genieOpen)
-        compare(controller.closes, 0)
-    }
-    // A suggestion is asked as typed; an answer offers Do it, Show me how and
-    // Keep this; Stop cancels an answer in progress.
-    function test_genieModeAnswers() {
-        openGenieMode()
-        const suggestion = findChild(launcher, "genie-suggestion")
-        mouseClick(suggestion, suggestion.width / 2, suggestion.height / 2)
-        compare(genieStub.asked.length, 1)
-        const stop = findChild(launcher, "genie-stop")
-        tryVerify(function() { return stop.visible && stop.width > 0 })
-        wait(50)
-        mouseClick(stop, stop.width / 2, stop.height / 2)
-        compare(genieStub.cancels, 1)
-        genieStub.answer = "Your screen dims after 2 minutes on battery."
-        genieStub.steps = ["Open System Settings.", "Find Dim screen."]
-        genieStub.phase = "ready"
-        genieStub.conversationChanged()
-        const keep = findChild(launcher, "genie-keep")
-        tryVerify(function() { return keep.visible && keep.width > 0 })
-        wait(50)
-        mouseClick(keep, keep.width / 2, keep.height / 2)
-        compare(genieStub.acts, ["keep"])
-        tryCompare(keep, "label", "Kept")
-    }
-    // Pop out grows the window and Genie's own window takes its place, over
-    // an Active card once it has drawn, and in Spread through Kadunce.
-    function test_geniePopsOut() {
-        openGenieMode()
-        const expand = findChild(launcher, "genie-pop-out")
-        mouseClick(expand, expand.width / 2, expand.height / 2)
-        compare(controller.drawerExpanded, true)
-        compare(controller.genieLaunches, 0)
-        compare(genieStub.windows.length, 1)
-        genieStub.windowShown(genieStub.windows[0])
-        tryCompare(controller, "closes", 1)
-        controller.guestMode = true
-        controller.handoffs = 0
-        controller.drawerExpanded = false
-        openGenieMode()
-        mouseClick(expand, expand.width / 2, expand.height / 2)
-        compare(controller.genieLaunches, 1)
-        controller.guestLaunchReady()
-        tryCompare(controller, "handoffs", 1)
-        controller.guestMode = false
-    }
-    // Before an assistant is ready, Genie says what it needs, and Open Genie
-    // grows into its window to finish it.
-    function test_genieNeedsSignIn() {
-        genieStub.phase = "sign-in"
-        openGenieMode()
-        const open = findChild(launcher, "genie-open")
-        tryVerify(function() { return open.visible })
-        mouseClick(open, open.width / 2, open.height / 2)
-        compare(genieStub.windows.length, 1)
-    }
-    // A longer answer shows its other paragraphs; That fixed it is offered
-    // beside Keep this; Remember that? asks before anything is written.
-    function test_genieRemembers() {
-        openGenieMode()
-        genieStub.answer = "Your screen dims on battery."
-        genieStub.steps = ["Open Power Management."]
-        genieStub.more = ["It saves power while you read."]
-        genieStub.remember = "You read on battery most evenings."
-        genieStub.phase = "ready"
-        genieStub.conversationChanged()
-        const more = findChild(launcher, "genie-more")
-        tryVerify(function() { return more && more.visible })
-        compare(more.text, "It saves power while you read.")
-        const fixed = findChild(launcher, "genie-fixed")
-        tryVerify(function() { return fixed.visible && fixed.width > 0 })
-        wait(50)
-        mouseClick(fixed, fixed.width / 2, fixed.height / 2)
-        tryCompare(fixed, "label", "Fixed")
-        const offer = findChild(launcher, "genie-remember-offer")
-        verify(offer.visible)
-        const notNow = findChild(launcher, "genie-not-now")
-        mouseClick(notNow, notNow.width / 2, notNow.height / 2)
-        compare(genieStub.acts, ["fixed", "dont-remember"])
-        tryVerify(function() { return !offer.visible })
+        verify(findChild(launcher, "genie-pill") === null)
     }
 }

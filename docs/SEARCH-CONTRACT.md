@@ -7,8 +7,7 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 ## First screen
 
 Before anything is typed, Search offers its doors, Apps and Files, then Notes
-where Gooseberry is installed and Ask where Split Rock answers, centred under
-the field, and on a row below them
+where Gooseberry is installed, centred under the field, and on a row below them
 what was used lately, newest first: at most six, as many as the field's width
 holds, centred as one group. A sheet too short for the second row keeps the
 doors alone. Its source is KDE's record of use for the current activity, read when
@@ -74,35 +73,6 @@ application and Tettegouche never depends on it.
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
   pill, and the dot's Notes door with it; notes still answer a search.
-
-### Genie
-
-Genie is one of Search's modes, as Notes is. Split Rock keeps the
-conversation; Search draws it in its own window and loads none of Split Rock's
-code, and Tettegouche never depends on it.
-
-- Genie is offered while Split Rock's conversation service is running or can
-  be started from the session bus and answers version 1
-  (`io.github.carlsonjm.splitrock`, `/Conversation`). Without it, the first
-  screen has no Genie.
-- Genie opens in the same window with the drawer's motion: the field travels
-  into the header and holds the question, Back comes in on its left and the
-  corner, Expand, Pop out and Close, on its right, and the answer arrives below.
-  The window keeps its size. Enter asks; a suggestion is asked as typed. An
-  answer shows its steps and any paragraphs after them, and offers Do it
-  where it asks for a change, Show me how, Keep this and That fixed it; Stop ends one in progress. What Genie
-  offers to remember about the person is asked as "Remember that?", and
-  written only after Remember. Before an assistant is chosen
-  or signed in, Genie says so and Open Genie finishes it in Genie's window.
-  Back or `Esc` returns to Search and the conversation stays.
-- Expand fills the screen as Apps does and Genie stays in Search; again, or
-  Back, returns Search to its size.
-- Pop out grows the window as Apps does, and Genie's own window takes its place
-  with no Back: inside Kadunce's Spread through its launch hand-off, over an
-  Active card once the window has drawn. A window that does not draw within ten
-  seconds leaves Genie as it was.
-- The widget's setting "Show Genie when Split Rock is installed" is on by
-  default; off, Genie is never offered.
 
 ## Eligibility and confidence
 

@@ -13,8 +13,8 @@
 #include "RelatedInfo.h"
 #include "NotesDoor.h"
 #include "QuickNote.h"
-#include "GenieChat.h"
 #include "ProductName.h"
+#include "DockBand.h"
 
 #include <memory>
 #include "RecentUse.h"
@@ -190,6 +190,9 @@ public:
         bus.connect(QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
                     QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("pinnedApplicationsChanged"),
                     this, SLOT(askPinned()));
+        bus.connect(QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
+                    QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("dockExtentChanged"),
+                    this, SLOT(dockExtentUpdated()));
         auto *owner = new QDBusServiceWatcher(QStringLiteral("org.kde.KWin"), bus,
             QDBusServiceWatcher::WatchForOwnerChange, this);
         connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
@@ -204,6 +207,7 @@ public:
                 m_expansionChosen = chosen;
                 m_drawerExpanded = expanded && (chosen || tabletSurface());
                 m_view->resize(screen->geometry().size());
+                readDockBand();
                 Q_EMIT guestChanged();
             };
             connect(screen, &QScreen::geometryChanged, this, boundsChanged);
@@ -327,9 +331,11 @@ public:
     int guestY() const { return m_guestRect.y(); }
     int guestWidth() const { return m_guestRect.width(); }
     int guestHeight() const { return m_guestRect.height(); }
+    // Floating, Search keeps to the room above Shuffle's dock, as cards do.
     QRect availableArea() const {
         const auto *screen = m_view->screen();
-        return screen ? screen->availableGeometry().translated(-screen->geometry().topLeft())
+        return screen ? workArea(screen->availableGeometry().translated(-screen->geometry().topLeft()),
+                                 screen->geometry().size(), m_dockBand)
                       : QRect(0, 0, m_view->width(), m_view->height());
     }
 
@@ -428,6 +434,15 @@ public Q_SLOTS:
         });
     }
 
+    // The dock's band changed, or moved to another display, while Search is
+    // shown; hidden, it reads the band again as it opens.
+    void dockExtentUpdated()
+    {
+        if (!m_view->isVisible()) return;
+        readDockBand();
+        Q_EMIT guestChanged();
+    }
+
     void bridgeLost()
     {
         ++m_presentationGeneration;
@@ -508,7 +523,7 @@ public Q_SLOTS:
     Q_SCRIPTABLE void showItemProperties(const QStringList &locations) { reveal(locations, true); }
 
     // Meta+G opens Apps and Meta+E Files, and the dot's slide any of Apps,
-    // Files, Notes or Ask ("notes", "genie"); the one already open closes
+    // Files or Notes ("notes"); the one already open closes
     // the launcher instead. With Files in its own window, Files brings that
     // window forward.
     Q_SCRIPTABLE void openDrawer(const QString &drawer)
@@ -520,7 +535,7 @@ public Q_SLOTS:
         }
         if (!m_view->isVisible()) open();
         if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
-            || drawer == QLatin1String("notes") || drawer == QLatin1String("genie"))
+            || drawer == QLatin1String("notes"))
             Q_EMIT drawerRequested(drawer);
     }
 
@@ -531,6 +546,7 @@ public Q_SLOTS:
         m_launchToken.clear();
         endGuestLease();
         tryBeginGuest();
+        readDockBand();
         refreshContext();
         m_runnerManager->setupMatchSession();
         m_results->setQueryString(QString());
@@ -723,12 +739,6 @@ public Q_SLOTS:
     Q_INVOKABLE bool beginGuestNotesLaunch()
     {
         return prepareGuestIdentity(QString::fromLatin1(NotesDoor::ApplicationId));
-    }
-
-    // The assistant's full window, awaited the same way.
-    Q_INVOKABLE bool beginGuestGenieLaunch()
-    {
-        return prepareGuestIdentity(QString::fromLatin1(GenieChat::ApplicationId));
     }
 
     Q_INVOKABLE void cancelGuestApplicationLaunch()
@@ -1022,6 +1032,30 @@ private:
             QStringLiteral("co.goodinput.Kadunce"), method);
     }
 
+    // The band Shuffle's dock reserves on Search's display. One dock answers
+    // on the bus for the display it presents; the others are its copies, so
+    // a display it does not answer for takes the same band. With no dock
+    // there, none.
+    void readDockBand()
+    {
+        m_dockBand = 0;
+        const auto *screen = m_view->screen();
+        if (!screen) return;
+        const auto ask = [](const QString &outputName) {
+            QDBusMessage request = QDBusMessage::createMethodCall(
+                QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
+                QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("dockExtent"));
+            request << outputName;
+            const QDBusReply<QString> reply = QDBusConnection::sessionBus().call(request, QDBus::Block, 250);
+            return reply.isValid() ? reply.value().toUtf8() : QByteArray();
+        };
+        const QByteArray here = ask(screen->name());
+        if (here.isEmpty()) return;
+        m_dockBand = dockBandHeight(here);
+        if (m_dockBand == 0 && !QJsonDocument::fromJson(here).object().value(QStringLiteral("presenting")).toBool())
+            m_dockBand = dockBandHeight(ask(QString()));
+    }
+
     void floatOn(const QString &outputName)
     {
         if (outputName.isEmpty()) return;
@@ -1199,6 +1233,7 @@ private:
     WorkspaceContext m_context;
     QRect m_guestRect;
     QRect m_compactGuestRect, m_activeGuestRect;
+    int m_dockBand = 0;
     bool m_drawerExpanded = false;
     bool m_requestedExpanded = false;
     bool m_expansionChosen = false;
@@ -1362,10 +1397,6 @@ int main(int argc, char **argv)
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;
     if (offerNotes) quickNote = std::make_unique<QuickNote>();
-    // Genie's chat, kept by Split Rock; with the setting off, never offered.
-    const bool offerGenie = !application.arguments().contains(QStringLiteral("--no-genie"));
-    std::unique_ptr<GenieChat> genie;
-    if (offerGenie) genie = std::make_unique<GenieChat>();
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
@@ -1409,7 +1440,6 @@ int main(int argc, char **argv)
         {QStringLiteral("notesPillShown"),
          !application.arguments().contains(QStringLiteral("--no-notes-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
-        {QStringLiteral("genie"), QVariant::fromValue<QObject *>(genie.get())},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

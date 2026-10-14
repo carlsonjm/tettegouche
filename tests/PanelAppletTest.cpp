@@ -179,12 +179,12 @@ private Q_SLOTS:
         m_window->resize(520, 100);
         m_face->setSize(QSizeF(400, 42));
         QTest::qWait(50);
-        // Apps and Files come first; Notes and Genie follow where this
-        // computer has them, so only their order is checked.
+        // Apps and Files come first; Notes follows where this computer has
+        // it, so only their order is checked.
         const QStringList doors = m_applet->property("pearlDoors").toStringList();
         QCOMPARE(doors.mid(0, 2), (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
         const QStringList known{QStringLiteral("apps"), QStringLiteral("files"),
-                                QStringLiteral("notes"), QStringLiteral("genie")};
+                                QStringLiteral("notes")};
         int last = -1;
         for (const QString &door : doors) {
             QVERIFY2(known.indexOf(door) > last, qPrintable(doors.join(QLatin1Char(','))));
@@ -313,13 +313,6 @@ private Q_SLOTS:
         QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes-pill")});
         QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
         configure(QStringLiteral("showNotesPill"), true);
-        // With Genie off, Search is told so as it starts.
-        configure(QStringLiteral("offerGenie"), false);
-        m_applet->activated();
-        QTRY_COMPARE(started.count(), 5);
-        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-genie")});
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
-        configure(QStringLiteral("offerGenie"), true);
     }
 
     void repeatedActivationToggles()
@@ -501,7 +494,7 @@ private Q_SLOTS:
         const QStringList glyphs{
             QStringLiteral("skip-back"), QStringLiteral("play"), QStringLiteral("pause"),
             QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x"),
-            QStringLiteral("folder-open"), QStringLiteral("notes"), QStringLiteral("genie")
+            QStringLiteral("folder-open"), QStringLiteral("notes")
         };
         // Stand-ins for a dark and a light Plasma style. The software renderer
         // the test runs on draws no layer effects, so the light glyph's

@@ -21,7 +21,7 @@ Item {
         objectName: "suiteIconImage"
         anchors.fill: parent
         // Lucide's glyphs, and the suite's own marks beside them.
-        source: Qt.resolvedUrl("../assets/icons/" + (suiteIcon.glyph === "genie" || suiteIcon.glyph === "notes" ? "suite/" : "lucide/")
+        source: Qt.resolvedUrl("../assets/icons/" + (suiteIcon.glyph === "notes" ? "suite/" : "lucide/")
             + suiteIcon.glyph + ".svg")
         fillMode: Image.PreserveAspectFit
         smooth: true

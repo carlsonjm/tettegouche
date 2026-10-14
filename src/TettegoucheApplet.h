@@ -26,7 +26,7 @@ class TettegoucheApplet final : public Plasma::Applet
     Q_PROPERTY(QVariantList ambientActivities READ ambientActivities WRITE setAmbientActivities
                NOTIFY ambientActivitiesChanged)
     // What a slide from the dot can open, in Search's order: "apps", "files",
-    // then "notes" and "genie" where Search offers them.
+    // then "notes" where Search offers it.
     Q_PROPERTY(QStringList pearlDoors READ pearlDoors NOTIFY pearlDoorsChanged)
 
 public:
@@ -39,10 +39,10 @@ public:
     void setAmbientActivities(const QVariantList &activities);
     Q_INVOKABLE void launch(bool useKadunce);
     // "apps" or "files": opens the launcher on that drawer, as Meta+G and Meta+E do;
-    // "notes" or "genie" opens it on that mode, as the dot's slide does.
+    // "notes" opens it on Notes, as the dot's slide does.
     Q_INVOKABLE void openDrawer(const QString &drawer);
     QStringList pearlDoors() const { return m_pearlDoors; }
-    // Looks again for Notes and Genie, as a press on the dot does.
+    // Looks again for Notes, as a press on the dot does.
     Q_INVOKABLE void refreshPearlDoors();
     Q_INVOKABLE int availablePanelWidth(QQuickItem *visualParent, int minimumWidth, int gap) const;
     Q_INVOKABLE void watchPanelGeometry(QQuickItem *visualParent);
@@ -79,8 +79,6 @@ private:
     QString m_productName;
     QVariantList m_ambientActivities;
     QStringList m_pearlDoors{QStringLiteral("apps"), QStringLiteral("files")};
-    // Whether Genie answers on the bus, or the bus can start it.
-    bool m_genieThere = false;
     void setPearlDoors();
     QList<QPointer<QQuickItem>> m_watchedGeometryItems;
     bool m_watchingContainment = false;

@@ -27,8 +27,7 @@ takes `Meta+E` when it is installed; give the key to Tettegouche there. Every ot
 ## Search
 
 Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
-and Files, Notes where Gooseberry is installed and Ask where Split Rock is,
-and below them what you used lately: files, and applications that are not
+and Files, Notes where Gooseberry is installed, and below them what you used lately: files, and applications that are not
 already open or pinned in the dock. To go straight to one of them, press the
 dot and slide right onto it. Start typing and Search can find:
 
