@@ -132,6 +132,8 @@ TestCase {
         property int sortOrder: 0
         property int useReads: 0
         function refreshUse() { useReads++ }
+        property int installChecks: 0
+        function checkInstalled() { installChecks++ }
         property bool showHidden: false
         property bool softwareReady: false
         property bool softwareAsked: false
@@ -2710,6 +2712,7 @@ TestCase {
         controller.closes = 0
         catalog.sortOrder = 0
         catalog.useReads = 0
+        catalog.installChecks = 0
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const label = findChild(launcher, "apps-pill")
@@ -2728,6 +2731,8 @@ TestCase {
         // Three rows of 38 with 4 between, inside 6 on each side.
         compare(menu.height, 134)
         verify(catalog.useReads >= 1)
+        // Opening Apps asks whether anything was installed meanwhile.
+        verify(catalog.installChecks >= 1)
         // Each by its place in the menu and the catalog's number for it.
         const rows = [["Most used", 2, 1], ["Newest installed", 3, 2], ["A to Z", 0, 0]]
         for (let i = 0; i < rows.length; ++i) {

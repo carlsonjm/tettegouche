@@ -382,7 +382,11 @@ Item {
         if (open) {
             root.searchEngaged = false
             root.forceActiveFocus()
-            if (!root.filesMode) root.applicationCatalog.refreshUse()
+            if (!root.filesMode) {
+                root.applicationCatalog.refreshUse()
+                // An application installed a moment ago shows as Apps opens.
+                root.applicationCatalog.checkInstalled()
+            }
             // Request the shared presentation first; listing must not precede
             // the drawer handshake or run at launcher construction time.
             if (root.filesMode && root.fileBrowser) Qt.callLater(function() {
@@ -1675,8 +1679,7 @@ Item {
                         height: 62
                         HoverHandler { id: hover }
                         TapHandler {
-                            enabled: !root.guestDragged
-                                && !root.applicationLaunchPending && !catalogDelegate.renaming
+                            enabled: !root.guestDragged && !root.applicationLaunchPending
                             onPressedChanged: {
                                 if (pressed) {
                                     root.selectedChildKey = ""

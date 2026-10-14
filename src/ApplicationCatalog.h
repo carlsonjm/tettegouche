@@ -109,6 +109,10 @@ public:
     // changes, keeping folders, hidden applications, the order and the words
     // typed.
     void reload();
+    // Asks KDE whether its application list is out of date, which rebuilds
+    // it when an application was installed or removed; called when Apps
+    // opens and when a folder applications live in changes.
+    Q_INVOKABLE void checkInstalled();
     // The row an application is drawn at, by its desktop file id, or -1.
     Q_INVOKABLE [[nodiscard]] int applicationRow(const QString &applicationId) const;
 

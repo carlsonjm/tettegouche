@@ -341,7 +341,7 @@ private Q_SLOTS:
         QSignalSpy reset(&catalog, &QAbstractItemModel::modelReset);
 
         write(path, "[Desktop Entry]\nType=Application\nName=Yankee\nExec=true\n");
-        QTRY_VERIFY_WITH_TIMEOUT((KSycoca::self()->ensureCacheValid(), rowOf(catalog, yankee) >= 0), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(rowOf(catalog, yankee) >= 0, 15000);
         QVERIFY(reset.size() >= 1);
         QCOMPARE(catalog.filterText(), QStringLiteral("ankee"));
         QCOMPARE(order(catalog), QStringList{yankee});
@@ -355,7 +355,7 @@ private Q_SLOTS:
         QSignalSpy folders(&catalog, &ApplicationCatalog::foldersChanged);
 
         QVERIFY(QFile::remove(path));
-        QTRY_VERIFY_WITH_TIMEOUT((KSycoca::self()->ensureCacheValid(), catalog.applicationRow(yankee) < 0), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(yankee) < 0, 15000);
         QCOMPARE(catalog.folderCount(), 0);
         QCOMPARE(folders.size(), 1);
         QVERIFY(catalog.applicationRow(QStringLiteral("alpha.desktop")) >= 0);
@@ -367,6 +367,26 @@ private Q_SLOTS:
         catalog.setHidden(catalog.applicationRow(QStringLiteral("beta.desktop")), false);
         catalog.setShowHidden(false);
         QCOMPARE(catalog.hiddenCount(), 0);
+    }
+
+    // Flatpak exports an application as a link, in a system folder of links
+    // that nothing in KDE rebuilds its list for. Apps finds it on its own.
+    void followsAFlatpakInstall()
+    {
+        const QString exports = qEnvironmentVariable("XDG_DATA_DIRS") + QStringLiteral("/applications");
+        const QString app = qEnvironmentVariable("HOME") + QStringLiteral("/flatpak/app/org.example.Zulu/export");
+        QVERIFY(QDir().mkpath(exports));
+        QVERIFY(QDir().mkpath(app));
+        const QString zulu = QStringLiteral("org.example.Zulu.desktop");
+        write(app + QLatin1Char('/') + zulu, "[Desktop Entry]\nType=Application\nName=Zulu\nExec=true\n");
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.applicationRow(zulu), -1);
+
+        QVERIFY(QFile::link(app + QLatin1Char('/') + zulu, exports + QLatin1Char('/') + zulu));
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) >= 0, 15000);
+
+        QVERIFY(QFile::remove(exports + QLatin1Char('/') + zulu));
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) < 0, 15000);
     }
 };
 

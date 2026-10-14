@@ -13,6 +13,7 @@
 #include <KIO/CommandLauncherJob>
 #include <KIO/OpenUrlJob>
 #include <KApplicationTrader>
+#include <KDirWatch>
 #include <KLocalizedString>
 #include <KSycoca>
 
@@ -23,8 +24,10 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMap>
+#include <QProcess>
 #include <QRandomGenerator>
 #include <QStandardPaths>
+#include <QTimer>
 #include <QUrl>
 
 #include <algorithm>
@@ -71,6 +74,21 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
 {
     // Installed, removed or edited while Search runs, Apps follows.
     connect(KSycoca::self(), &KSycoca::databaseChanged, this, &ApplicationCatalog::reload);
+    // KDE's list only changes when something rebuilds it, and nothing does
+    // when an application arrives from pacman or Flatpak (whose exports are a
+    // folder of links). So Search watches every folder applications are
+    // installed to, the missing ones included, and once the installer has
+    // settled asks for the list to be checked, which rebuilds it.
+    auto *settle = new QTimer(this);
+    settle->setSingleShot(true);
+    settle->setInterval(2000);
+    connect(settle, &QTimer::timeout, this, &ApplicationCatalog::checkInstalled);
+    auto *installs = new KDirWatch(this);
+    const QStringList data = QStandardPaths::standardLocations(QStandardPaths::GenericDataLocation);
+    for (const QString &dir : data) installs->addDir(dir + QStringLiteral("/applications"));
+    connect(installs, &KDirWatch::dirty, settle, qOverload<>(&QTimer::start));
+    connect(installs, &KDirWatch::created, settle, qOverload<>(&QTimer::start));
+    connect(installs, &KDirWatch::deleted, settle, qOverload<>(&QTimer::start));
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
@@ -125,6 +143,25 @@ QVector<ApplicationCatalog::Entry> ApplicationCatalog::readEntries()
         return QString::localeAwareCompare(left.name, right.name) < 0;
     });
     return entries;
+}
+
+void ApplicationCatalog::checkInstalled()
+{
+    // KDE checks only the folders its list was built from. One made since,
+    // as Flatpak's first install makes its exports, is never looked at, so
+    // the list is rebuilt outright; the rebuilt list arrives as a change.
+    QSet<QString> known;
+    const QStringList built = KSycoca::self()->allResourceDirs();
+    for (const QString &dir : built) known.insert(QDir::cleanPath(dir));
+    const QStringList folders = QStandardPaths::locateAll(
+        QStandardPaths::GenericDataLocation, QStringLiteral("applications"), QStandardPaths::LocateDirectory);
+    for (const QString &dir : folders) {
+        if (!known.contains(QDir::cleanPath(dir))) {
+            QProcess::startDetached(QStringLiteral("kbuildsycoca6"), {});
+            return;
+        }
+    }
+    KSycoca::self()->ensureCacheValid();
 }
 
 void ApplicationCatalog::reload()
