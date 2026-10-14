@@ -988,7 +988,11 @@ Item {
                 ? Math.max(1, root.launcherController.availableArea.height - 20
                     - (root.launcherController.availableArea.y
                         + root.launcherController.availableArea.height < root.height - 1 ? 10 : 0))
-                : Math.round(root.launcherController.availableArea.height * 0.64)
+                : Math.min(maxRestHeight, Math.round(root.launcherController.availableArea.height * 0.64))
+        // Floating on a large display, the sheet stays about a card's size
+        // rather than growing with the display.
+        readonly property real maxRestWidth: 1120
+        readonly property real maxRestHeight: 720
         // With the keys up the sheet rises only as far as it must, never
         // leaving the room Kadunce gave a guest, then shortens to fit.
         readonly property real keysLine: root.height - root.keysReach
@@ -1009,7 +1013,7 @@ Item {
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
-                : Math.round(root.launcherController.availableArea.width * 0.64)
+                : Math.min(maxRestWidth, Math.round(root.launcherController.availableArea.width * 0.64))
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }

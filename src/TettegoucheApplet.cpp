@@ -47,8 +47,14 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     setHasConfigurationInterface(true);
     openConfigureInSuiteSettings(this, QStringLiteral("search"));
 
-    connect(m_process, &QProcess::stateChanged, this,
-            [this] { Q_EMIT launcherActiveChanged(); });
+    connect(m_process, &QProcess::stateChanged, this, [this](QProcess::ProcessState state) {
+        // A launcher starting is one about to show.
+        m_launcherShown = state != QProcess::NotRunning;
+        Q_EMIT launcherActiveChanged();
+    });
+    QDBusConnection::sessionBus().connect(QStringLiteral("io.github.carlsonjm.Tettegouche"),
+        QStringLiteral("/Launcher"), QStringLiteral("io.github.carlsonjm.Tettegouche"),
+        QStringLiteral("shown"), this, SLOT(launcherShown(bool)));
 
     connect(this, &Plasma::Applet::activated, this, [this] {
         launch(setting(QStringLiteral("useKadunce"), true));
@@ -114,7 +120,14 @@ QString TettegoucheApplet::productName() const
 
 bool TettegoucheApplet::launcherActive() const
 {
-    return m_process->state() != QProcess::NotRunning;
+    return m_process->state() != QProcess::NotRunning && m_launcherShown;
+}
+
+void TettegoucheApplet::launcherShown(bool visible)
+{
+    if (m_process->state() == QProcess::NotRunning || visible == m_launcherShown) return;
+    m_launcherShown = visible;
+    Q_EMIT launcherActiveChanged();
 }
 
 QVariantList TettegoucheApplet::ambientActivities() const
@@ -361,7 +374,22 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
 void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
                                       const QString &drive)
 {
-    if (launcherActive()) {
+    QStringList flags = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
+    // Search's first screen offers what was used lately unless that is off.
+    if (!setting(QStringLiteral("offerRecent"), true)) flags << QStringLiteral("--no-recent");
+    // It offers Notes, where the notes application is installed, unless that is off.
+    if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
+    // Its pill alone can be left out; notes still answer a search.
+    else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+    // And Genie, where Split Rock is installed, unless that is off.
+    if (!setting(QStringLiteral("offerGenie"), true)) flags << QStringLiteral("--no-genie");
+    // A launcher kept ready with settings since changed starts again with them.
+    if (m_process->state() == QProcess::Running && !m_launcherShown && flags != m_launchFlags) {
+        m_process->terminate();
+        if (!m_process->waitForFinished(1000)) m_process->kill();
+        m_process->waitForFinished(1000);
+    }
+    if (m_process->state() != QProcess::NotRunning) {
         if (m_process->state() == QProcess::Running) {
             auto request = QDBusMessage::createMethodCall(
                 QStringLiteral("io.github.carlsonjm.Tettegouche"),
@@ -384,15 +412,8 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     }
 
     m_process->setProgram(executable);
-    QStringList arguments = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
-    // Search's first screen offers what was used lately unless that is off.
-    if (!setting(QStringLiteral("offerRecent"), true)) arguments << QStringLiteral("--no-recent");
-    // It offers Notes, where the notes application is installed, unless that is off.
-    if (!setting(QStringLiteral("offerNotes"), true)) arguments << QStringLiteral("--no-notes");
-    // Its pill alone can be left out; notes still answer a search.
-    else if (!setting(QStringLiteral("showNotesPill"), true)) arguments << QStringLiteral("--no-notes-pill");
-    // And Genie, where Split Rock is installed, unless that is off.
-    if (!setting(QStringLiteral("offerGenie"), true)) arguments << QStringLiteral("--no-genie");
+    m_launchFlags = flags;
+    QStringList arguments = flags;
     if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
     else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
     else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;

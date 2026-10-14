@@ -45,7 +45,10 @@
 #include <QProcess>
 #include <QMimeDatabase>
 #include <QUrlQuery>
+#include <QDateTime>
 #include <QFileInfo>
+#include <KConfigGroup>
+#include <KSharedConfig>
 #include <QGuiApplication>
 #include <QInputMethod>
 #include <QJsonDocument>
@@ -394,7 +397,9 @@ public:
     }
 
 public Q_SLOTS:
-    void workspaceUpdated() { refreshContext(); }
+    // Kept ready while hidden, the launcher reads the workspace again when it
+    // opens, not at every change while nobody sees it.
+    void workspaceUpdated() { if (m_view->isVisible() || filesWindowOpen()) refreshContext(); }
 
     // The applications pinned in Shuffle's dock, which it publishes; with no
     // dock there, none.
@@ -640,7 +645,7 @@ public Q_SLOTS:
     // request has shown it.
     void leaveIfUnused()
     {
-        if (!m_view->isVisible()) finishOrDeferQuit();
+        if (!m_view->isVisible()) finishOrDeferQuit(false);
     }
 
     Q_INVOKABLE void updateGuestDrag(double horizontalDelta)
@@ -885,6 +890,9 @@ Q_SIGNALS:
     void guestNavigationReady(int slot);
     void guestBridgeLost();
     void filesWindowChanged();
+    // Search shown or hidden, for the widget: a launcher kept ready runs on
+    // hidden, so a running launcher is not an open one.
+    Q_SCRIPTABLE void shown(bool visible);
 
 public:
     void setFileBrowser(FileBrowser *browser) {
@@ -980,15 +988,32 @@ private:
     QTimer m_lateQuit;
     // Files carried out are offered until the other application takes them.
     bool m_carrying=false;
-    void finishOrDeferQuit() {
+    // A launcher never shown, started only as the file manager, is not kept.
+    void finishOrDeferQuit(bool keepReady = true) {
         m_quitAfterFiles=true;
         // Files' own window keeps the launcher, and with it Files, running.
         if (filesWindowOpen()) return;
         if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
+        // Closed, the launcher stays ready, hidden, so the next open shows at
+        // once; it gives back what it drew with. One whose program was
+        // replaced since it started leaves, so an update takes effect.
+        if (keepReady && stayReady()) {
+            m_view->releaseResources();
+            return;
+        }
         // A copy that just failed is told to Ambient before the launcher goes.
         if (m_fileBrowser && m_fileBrowser->failedJustNow()) m_lateQuit.start();
         else QGuiApplication::quit();
     }
+    bool stayReady() const
+    {
+        if (qEnvironmentVariableIsSet("TETTEGOUCHE_QUIT_ON_CLOSE")) return false;
+        if (!KSharedConfig::openConfig(QStringLiteral("tettegoucherc"))->group(QStringLiteral("Launcher"))
+                 .readEntry("StayReady", true)) return false;
+        const QFileInfo program(QCoreApplication::applicationFilePath());
+        return program.exists() && program.lastModified() == m_programModified;
+    }
+    const QDateTime m_programModified = QFileInfo(QCoreApplication::applicationFilePath()).lastModified();
     static QDBusMessage guestMethod(const QString &method)
     {
         return QDBusMessage::createMethodCall(
@@ -1396,7 +1421,8 @@ int main(int argc, char **argv)
     session.registerObject(QStringLiteral("/Activities"), &activities,
                            QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals);
     session.registerObject(QStringLiteral("/Launcher"), &controller,
-                           QDBusConnection::ExportScriptableSlots);
+                           QDBusConnection::ExportScriptableSlots | QDBusConnection::ExportScriptableSignals);
+    QObject::connect(&view, &QWindow::visibleChanged, &controller, &LauncherController::shown);
     session.registerService(QString::fromLatin1(ServiceName));
     // Answering as the file manager is switched on by pointing D-Bus at this
     // launcher; a launcher started any other way leaves it to whoever answers
