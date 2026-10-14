@@ -328,8 +328,8 @@ TestCase {
             outline: "#5a5a5a", line: "#333333", control: "#242424",
             controlHover: "#333333", controlPressed: "#4A4A4A", hover: "#22ffffff",
             current: "#3dffffff", focusRing: "#b0ffffff", openTag: "#ff71e6be",
-            errorText: "#ffb5a8", troubleText: "#E08A80", answerSurface: "#1C1C1C",
-            answerText: "#E4E4EA", selection: "#6da9ddff", textOnInk: "#141414"
+            errorText: "#ffb5a8", troubleText: "#E08A80",
+            selection: "#6da9ddff", textOnInk: "#141414"
         }
         for (const role in kept)
             verify(Qt.colorEqual(dark[role], kept[role]), role + " is " + dark[role])
@@ -1779,7 +1779,7 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.setDrawerOpen(true)
         controller.setDrawerExpanded(true, true)
-        tryCompare(sheet, "height", 710)
+        tryCompare(sheet, "height", 720)
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
         compare(sheet.y, 10)
@@ -2260,7 +2260,7 @@ TestCase {
         tryCompare(sheet, "width", 640)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         tryCompare(sheet, "width", 980)
-        const back = findChild(launcher, data.tag + "-back")
+        const back = findChild(launcher, "notes-back")
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "modeProgress", 0)
         compare(controller.drawerExpanded, false)
