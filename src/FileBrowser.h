@@ -42,7 +42,10 @@
 #include <QDateTime>
 #include <QDBusConnection>
 #include <QDBusMessage>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <memory>
 
@@ -703,51 +706,65 @@ public:
         for(const auto &p:selectedPaths()) { const auto u=QUrl::fromLocalFile(p); if(listedItem(p).isNull())return; urls.append(u); }
         auto *job=KIO::trash(urls,KIO::HideProgressInfo);
         job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
-        connect(job,&KIO::CopyJob::copyingDone,this,[](KIO::Job*,const QUrl&,const QUrl &to,const QDateTime&,bool,bool){
+        // Each record names the item in Trash with where it came from and
+        // when it went, so Restore can tell it from another item given the
+        // same place in Trash once Trash was emptied elsewhere.
+        connect(job,&KIO::CopyJob::copyingDone,this,[](KIO::Job*,const QUrl &from,const QUrl &to,const QDateTime&,bool,bool){
             if(to.scheme()!=QStringLiteral("trash"))return;
+            const QString record=QString::fromUtf8(QJsonDocument(QJsonObject{
+                {QStringLiteral("url"),to.toString()},
+                {QStringLiteral("from"),from.toLocalFile()},
+                {QStringLiteral("at"),QDateTime::currentSecsSinceEpoch()}}).toJson(QJsonDocument::Compact));
             QSettings s; auto entries=s.value(QStringLiteral("Files/restoreTrash")).toStringList();
-            if(!entries.contains(to.toString()))entries.append(to.toString());
+            entries.removeIf([&to](const QString &entry){ return trashRecordUrl(entry)==to; });
+            entries.append(record);
             s.setValue(QStringLiteral("Files/restoreTrash"),entries);
         });
         watchOperation(job,i18n("Moving to Trash…"),true);
     }
     Q_INVOKABLE void restoreTrash() {
         if(m_restoring || m_busy || m_opening)return;
-        const auto entries=QSettings().value(QStringLiteral("Files/restoreTrash")).toStringList();
-        QList<QUrl> urls; for(const auto &s:entries)if(QUrl(s).scheme()==QStringLiteral("trash"))urls.append(QUrl(s));
-        if(urls.isEmpty())return;
+        QStringList entries=QSettings().value(QStringLiteral("Files/restoreTrash")).toStringList();
+        entries.removeIf([](const QString &entry){ return trashRecordUrl(entry).scheme()!=QStringLiteral("trash"); });
+        if(entries.isEmpty())return;
         // Restore one at a time so partial failure preserves pending recovery.
-        // A record whose item has left Trash elsewhere is dropped, so it
-        // cannot stand in front of the ones that are still there; one that
-        // failed for any other reason, such as a name already taken, stays.
-        const QString record=urls.last().toString();
-        auto *job=KIO::restoreFromTrash({urls.last()},KIO::HideProgressInfo);
-        job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+        // A record whose item has left Trash, or whose place in Trash another
+        // item now holds, is dropped, so it cannot stand in front of the ones
+        // that are still there; one that failed for any other reason, such as
+        // a name already taken, stays.
+        const QString record=entries.last();
+        const QUrl url=trashRecordUrl(record);
         m_restoring=true;
-        // KJob reports finished before result, so this runs after the
+        const auto forget=[record]{
+            QSettings s; auto remaining=s.value(QStringLiteral("Files/restoreTrash")).toStringList();
+            remaining.removeAll(record); s.setValue(QStringLiteral("Files/restoreTrash"),remaining);
+        };
+        // Trash itself says what it holds there, where it came from and when.
+        auto *stat=KIO::stat(url,KIO::StatJob::SourceSide,KIO::StatDefaultDetails,KIO::HideProgressInfo);
+        stat->setUiDelegate(nullptr);
+        // KJob reports finished before result, so these run after the
         // general finish and can say what actually happened.
-        connect(job,&KJob::result,this,[this,record](KJob *j){
-            const auto forget=[record]{
-                QSettings s; auto remaining=s.value(QStringLiteral("Files/restoreTrash")).toStringList();
-                remaining.removeAll(record); s.setValue(QStringLiteral("Files/restoreTrash"),remaining);
-            };
-            if(!j->error()){ forget(); m_restoring=false; Q_EMIT operationChanged(); return; }
-            // Ask Trash itself whether the item is still there.
-            auto *stat=KIO::stat(QUrl(record),KIO::StatJob::SourceSide,KIO::StatBasic,KIO::HideProgressInfo);
-            stat->setUiDelegate(nullptr);
-            connect(stat,&KJob::result,this,[this,forget](KJob *s){
+        connect(stat,&KJob::result,this,[this,stat,record,url,forget](KJob *){
+            if(stat->error() || !trashRecordMatches(record,stat->statResult())){
                 m_restoring=false;
-                if(s->error()){
-                    forget();
-                    m_operationStatus=i18n("That item is no longer in Trash.");
-                    m_error.clear();
-                    QSettings().remove(QStringLiteral("Files/lastOperationError"));
-                    Q_EMIT changed();
-                }
+                forget();
+                m_operationStatus=i18n("That item is no longer in Trash.");
+                m_error.clear();
+                QSettings().remove(QStringLiteral("Files/lastOperationError"));
+                Q_EMIT changed();
+                Q_EMIT operationChanged();
+                return;
+            }
+            auto *job=KIO::restoreFromTrash({url},KIO::HideProgressInfo);
+            job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+            connect(job,&KJob::result,this,[this,forget](KJob *j){
+                m_restoring=false;
+                if(!j->error())forget();
                 Q_EMIT operationChanged();
             });
+            watchOperation(job,i18n("Restoring from Trash…"));
         });
-        watchOperation(job,i18n("Restoring from Trash…"));
+        watchOperation(stat,i18n("Restoring from Trash…"));
     }
     Q_INVOKABLE void copyDropped(const QStringList &paths, const QString &destination) {
         if (m_busy || m_opening || !m_lister || paths.isEmpty()) return;
@@ -984,6 +1001,25 @@ private:
         m_drivePaths=paths;
         for(const auto &id:QSet<QString>(m_ejectAfter)) if(!findDrive(id).mounted)m_ejectAfter.remove(id);
         rebuildPlaces();
+    }
+    // A Restore record's place in Trash. A record from before records named
+    // where the item came from is that place alone.
+    static QUrl trashRecordUrl(const QString &record) {
+        const auto object=QJsonDocument::fromJson(record.toUtf8()).object();
+        return QUrl(object.isEmpty() ? record : object.value(QStringLiteral("url")).toString());
+    }
+    // Whether what Trash holds at a record's place is the item the record
+    // names: from the same place, gone to Trash at the same time, within the
+    // minute Trash's own clock and this one may differ by.
+    static bool trashRecordMatches(const QString &record,const KIO::UDSEntry &held) {
+        const auto object=QJsonDocument::fromJson(record.toUtf8()).object();
+        if(object.isEmpty())return true;
+        const QString from=object.value(QStringLiteral("from")).toString();
+        const QString origin=held.stringValue(KIO::UDSEntry::UDS_EXTRA);
+        if(!from.isEmpty() && !origin.isEmpty() && QDir::cleanPath(from)!=QDir::cleanPath(origin))return false;
+        const QDateTime deleted=QDateTime::fromString(held.stringValue(KIO::UDSEntry::UDS_EXTRA+1),Qt::ISODate);
+        const qint64 at=object.value(QStringLiteral("at")).toInteger();
+        return at<=0 || !deleted.isValid() || std::abs(deleted.toSecsSinceEpoch()-at)<=60;
     }
     static bool within(const QString &p,const QString &root) {
         return p==root || p.startsWith(root.endsWith(QLatin1Char('/')) ? root : root+QLatin1Char('/'));
