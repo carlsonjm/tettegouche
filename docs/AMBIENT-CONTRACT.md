@@ -27,7 +27,9 @@ Current sources are:
 - drives plugged in that nothing has mounted, from Solid (§ Drives);
 - a screen shared or recorded through Plasma's portal (§ Shared screen);
 - windows raising Plasma's attention flag, from Plasma's window list
-  (§ Waiting applications).
+  (§ Waiting applications);
+- a fact Split Rock's Core asks attention for, such as the drive filling up,
+  from Core's bus interface where Split Rock is installed (§ Core).
 
 Plasma's jobs model and window list come from Plasma's own libraries, which
 change between releases, so a build reads them only on the Plasma it was built
@@ -139,6 +141,23 @@ application and its dialog forward. It lasts while the flag does and leaves no
 line and no history. With several waiting, the island shows the newest. A
 window moving or restacking is not read.
 
+### Core
+
+Split Rock's Core watches the computer and decides, by its own fixed limits,
+when a fact deserves the island: a drive that has crossed a mark or is filling
+fast, never a fact merely restated. Ambient shows a fact only while Core says
+it wants the island, and asks Core nothing on a timer: it reads Core's facts
+when Core appears, the first question starting Core where Split Rock is
+installed, and follows `FactChanged` after that. A Core that speaks another
+version of its interface is left alone. The island shows the fact's icon, what
+it is and how it stands ("Storage · 91% full") and, below, its detail and what
+can be done ("45 GB free · Free up space"). A tap on the island, or on the
+bubble holding it, asks Core to open the card that acts on it; Core opens it
+and takes the fact off the island. Setting it aside tells Core it was
+dismissed, and Core stays quiet about it until it gets worse. Core owns the
+fact and its history; Ambient keeps neither. Without Split Rock there is no
+Core island and nothing else changes.
+
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
@@ -166,7 +185,8 @@ merely because the applet starts.
 
 Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
-screen (§ Shared screen) and applications waiting (§ Waiting applications). The islands sit side by side in the order
+screen (§ Shared screen), applications waiting (§ Waiting applications) and
+Core's facts (§ Core). The islands sit side by side in the order
 they arrived, an end in its transfer's place, the group centred in the width
 the panel hands Ambient, or set against one end of it where the host asks
 (§ Host settings). They are clear, so the panel shows through them. While
@@ -182,7 +202,8 @@ The islands share the width by turns (`applet/IslandRoom.js`). Every island
 keeps its first piece; then each takes one more piece per turn in its own
 order, and stops at the first that does not fit. The newest island takes its
 turn first for 2.4 s; after that the more urgent goes first: a waiting
-application, a shared screen, a drive, a transfer's end, a transfer, then media. Names, such as a player or where
+application, a shared screen, a drive, a transfer's end, a transfer, media,
+then a fact from Core, which never takes room from what is happening now. Names, such as a player or where
 a transfer comes from, wait until every island has had the rest, so they are
 the first to go; a song's title and artist are not names. What cannot keep even
 its first piece folds into a round bubble after the islands, which counts what
@@ -197,6 +218,7 @@ together and settle without overshoot.
 | Drive | icon, size, Open, name |
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
+| Core | icon, what it is and how it stands, detail and what can be done |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title

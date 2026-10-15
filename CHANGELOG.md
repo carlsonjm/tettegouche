@@ -9,6 +9,12 @@ provenance.
   icons of a waiting application or a drive take the size and shape of an
   application's icon in the dock, and islands stand clearly apart from each
   other and from the dock. Outlined islands are unchanged.
+- Where Split Rock is installed, its Core can bring a fact to Ambient when it
+  needs attention, such as "Storage · 91% full": a tap opens the card that
+  acts on it, and setting it aside quiets it until it gets worse. Search finds
+  the same facts by their words, as "storage" or "disk", and opens Split
+  Rock's upkeep cards on their own: "update", "health", "what changed",
+  "install pdf editor". Without Split Rock nothing changes.
 - Apps follows KDE's application list while Search is ready in the
   background: an application installed shows, and one removed leaves,
   without a restart, Flatpak's included, whose installs KDE's list missed. Open, Apps keeps where it is scrolled to, the
