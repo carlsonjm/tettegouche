@@ -396,33 +396,31 @@ private Q_SLOTS:
     }
 
     // An application arrives when Apps first finds it. One updated since,
-    // its desktop file written anew, keeps when it arrived.
+    // its desktop file written anew, keeps when it arrived. Both happen while
+    // Apps is open, as an install does, and Apps follows KDE's list to them.
     void newestInstalledIsWhenAppsFirstFoundIt()
     {
         const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/");
         const QString xray = QStringLiteral("xray.desktop");
-        // Past the coarsest file system clock, so KDE's list sees the change.
-        QTest::qSleep(1100);
-        write(applications + xray, "[Desktop Entry]\nType=Application\nName=X-ray\nExec=true\n");
+        const QStringList expected{QStringLiteral("§This week"), xray, QStringLiteral("§Older"),
+                                   QStringLiteral("alpha.desktop"), QStringLiteral("beta.desktop"),
+                                   QStringLiteral("zulu.desktop")};
+        ApplicationCatalog catalog;
+        catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
+        QCOMPARE(catalog.applicationRow(xray), -1);
+
         QVERIFY(QFile::remove(applications + QStringLiteral("beta.desktop")));
         write(applications + QStringLiteral("beta.desktop"),
               "[Desktop Entry]\nType=Application\nName=Beta\nExec=true\nComment=Updated\n");
-        KSycoca::self()->ensureCacheValid();
+        write(applications + xray, "[Desktop Entry]\nType=Application\nName=X-ray\nExec=true\n");
+        QTRY_COMPARE_WITH_TIMEOUT(layout(catalog), expected, 15000);
 
-        ApplicationCatalog catalog;
-        catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
-        // KDE's list may take a moment to have X-ray; Apps follows it.
-        QTRY_COMPARE_WITH_TIMEOUT(layout(catalog),
-                                  (QStringList{QStringLiteral("§This week"), xray, QStringLiteral("§Older"),
-                                               QStringLiteral("alpha.desktop"), QStringLiteral("beta.desktop"),
-                                               QStringLiteral("zulu.desktop")}),
-                                  15000);
         ApplicationCatalog next;
-        QCOMPARE(next.applicationRow(xray), 1);
+        QCOMPARE(layout(next), expected);
         next.setSortOrder(ApplicationCatalog::NameAscending);
 
         QVERIFY(QFile::remove(applications + xray));
-        KSycoca::self()->ensureCacheValid();
+        QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(xray) < 0, 15000);
     }
 };
 
