@@ -18,7 +18,15 @@ content and its input target are QML items.
 
 The launcher is a single-instance process. A second invocation forwards its
 request over D-Bus, whether a toggle, a drawer, a folder, a drive or files to show, and
-exits; one that finds the running launcher already leaving takes its place.
+exits; one that finds the launcher still starting waits, a few seconds at most,
+until it answers, and one that finds it already leaving takes its place.
+The applet starts the launcher as a command in a scope of its own
+(`KIO::CommandLauncherJob`), not as its child, so restarting or removing the
+panel leaves the launcher, Files' window and any copy running. The applet knows
+the launcher by its name on the bus, whoever started it. Before it forwards a
+request it asks the launcher to leave for the widget's current settings
+(`leaveFor`); one started with others leaves when hidden and idle, and the
+request goes to the launcher started in its place.
 Standalone mode uses a full-display input surface
 with a centered sheet; while files are carried out of Files, input narrows to
 the sheet so the drop can land on a window beside it. Kadunce guest mode keeps
@@ -27,8 +35,8 @@ Neither mode reserves workspace. Dismissal hides the surface and keeps the
 process ready, so the next open shows at once; it releases its graphics
 resources, skips workspace updates while hidden, and tells the applet it hid.
 It ends instead when its program was replaced since it started, when
-`tettegoucherc` `[Launcher] StayReady=false`, or for an applet whose settings
-changed. Files' own window keeps it until the window closes. That window is an ordinary one beside
+`tettegoucherc` `[Launcher] StayReady=false`, or when an applet whose settings
+changed asks it to leave for them. Files' own window keeps it until the window closes. That window is an ordinary one beside
 the layer-shell surface, sharing its QML engine and `FileBrowser`
 ([FILES-CONTRACT.md](FILES-CONTRACT.md) § Files' own window).
 
@@ -94,7 +102,14 @@ refreshes on Kadunce change signals and before window selection; there is no
 timer or heartbeat.
 
 Open application matches carry a live window identifier. Tettegouche asks Kadunce
-to activate that exact window. New launches use Plasma's normal application job
+to activate that exact window. Where Kadunce does not answer, what is open
+comes from Plasma's own window list instead, through the task manager's QML
+module (`org.kde.taskmanager`, so no private library is linked), read the
+first time Kadunce is found absent: OPEN, Recent's exclusions and bringing an
+open application forward work the same, and the list activates the window. The
+launcher's desktop entry asks KWin for the window-management interface this
+needs. A tap uses what was read as Search opened and at each change, and waits
+for Kadunce only while that reading has not answered. New launches use Plasma's normal application job
 and may hold the guest until Kadunce sees a matching window; a bounded timeout
 returns to search. Horizontal guest drag sends only motion deltas, leaving
 commit/cancel and real-card selection to Kadunce. Expanded Apps and Files
@@ -119,7 +134,9 @@ Tettegouche-owned confidence policy. Its behavior is owned by
 
 Apps reads visible applications from `KApplicationTrader`, again whenever
 KDE's application list changes, and orders them by
-display name, by use, or by when each desktop file arrived. By name it is one
+display name, by use, or by when each application arrived: when Apps first
+found it, kept by desktop file id, since a desktop file's own dates change at
+every update. Those already there when Apps began keeping count are Older. By name it is one
 run, each folder at its name's place; by use or arrival it is divided into
 sections by last use or arrival. Use is KDE's
 own score and last use from the activity service, summed over every activity
@@ -200,7 +217,8 @@ Settings is installed (desktop entry `co.goodinput.Shuffle.Settings`),
 Configure opens it at this widget's page instead, passing the page's name, `search`,
 as its one argument. The entry is looked for at each press, so there is one
 build and no switch, and a Plasma that wires Configure some other way keeps the
-widget's own page.
+widget's own page and says so in the log; the panel test checks both ways
+against the Plasma it builds with.
 
 ## Related settings
 
@@ -251,7 +269,9 @@ counts follow the language.
 
 ## Verification boundaries
 
-Native tests cover search policy, workspace schema, Files operations, related
+Native tests cover the launcher controller against a stand-in Kadunce on a
+private bus (guest handshake, launch, activation and Plasma's window list in
+Kadunce's absence), search policy, workspace schema, Files operations, related
 providers, activity providers, and icon rendering. QML and private-bus tests
 cover launcher controls, Ambient composition, panel geometry/input, and package
 integration. A words test draws Files with test catalogs that mark every

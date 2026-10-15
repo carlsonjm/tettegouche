@@ -137,10 +137,12 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 - Compress and Extract are Ark's own batch jobs, which Plasma tracks, so Ambient
   shows them. Files starts them and owns none of their progress.
 - Trash requires confirmation and has no permanent-delete fallback. Recovery is
-  limited to the latest Tette-recorded item, persists its URL, refuses overwrite,
-  and retains the record after failure. When a restore fails and Trash no longer
-  holds the item, because Trash changed elsewhere, the record is dropped so the
-  one behind it can be restored.
+  limited to the latest Tette-recorded item, persists its place in Trash with
+  where it came from and when it went, refuses overwrite, and retains the
+  record after failure. Before restoring, Files asks Trash what it holds there;
+  when Trash no longer holds the item, or holds another item there, from
+  elsewhere or trashed at another time, because Trash changed elsewhere, the
+  record is dropped so the one behind it can be restored.
 
 ## Files' own window
 

@@ -174,6 +174,34 @@ private Q_SLOTS:
         browser.restoreTrash(); QTRY_VERIFY(!browser.working());
         QVERIFY(QFile::exists(kept)); QVERIFY(!browser.canRestoreTrash());
     }
+    // Trash emptied elsewhere, another item trashed elsewhere with the same
+    // name takes the same place in Trash; Restore leaves it there.
+    void restoreKnowsItsOwnItem() {
+        if(!qgetenv("XDG_DATA_HOME").contains("tette-trash-test."))QSKIP("Requires isolated tette-trash-test.* data directory on the home filesystem");
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        QSettings().remove(QStringLiteral("Files/restoreTrash"));
+        QDir root(dir.path());
+        QVERIFY(root.mkdir(QStringLiteral("mine"))); QVERIFY(root.mkdir(QStringLiteral("theirs")));
+        const auto mine=root.filePath(QStringLiteral("mine/same.txt")), theirs=root.filePath(QStringLiteral("theirs/same.txt"));
+        { QFile f(mine); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("mine"); }
+        FileBrowser browser; browser.navigate(root.filePath(QStringLiteral("mine"))); QTRY_VERIFY(!browser.busy());
+        browser.setSelectedPath(mine); browser.trashSelected(); QTRY_VERIFY(!browser.working());
+        QVERIFY(!QFile::exists(mine)); QVERIFY(browser.canRestoreTrash());
+        // Emptied elsewhere.
+        auto *empty=KIO::emptyTrash(); empty->setUiDelegate(nullptr); QVERIFY(empty->exec());
+        // Another item, trashed elsewhere under the same name.
+        { QFile f(theirs); QVERIFY(f.open(QIODevice::WriteOnly)); f.write("theirs"); }
+        auto *other=KIO::trash({QUrl::fromLocalFile(theirs)},KIO::HideProgressInfo); other->setUiDelegate(nullptr); QVERIFY(other->exec());
+        QVERIFY(!QFile::exists(theirs));
+        browser.restoreTrash();
+        QTRY_COMPARE(browser.operationStatus(),QStringLiteral("That item is no longer in Trash."));
+        QVERIFY(!browser.working());
+        QVERIFY(!QFile::exists(theirs)); QVERIFY(!QFile::exists(mine));
+        QVERIFY(!browser.canRestoreTrash());
+        auto *tidy=KIO::emptyTrash(); tidy->setUiDelegate(nullptr); QVERIFY(tidy->exec());
+    }
     void operationsRunSideBySide() {
         QTemporaryDir dir; QVERIFY(dir.isValid());
         QSettings::setDefaultFormat(QSettings::IniFormat);

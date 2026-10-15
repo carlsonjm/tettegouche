@@ -75,8 +75,13 @@ target_include_directories(tettegouche-related PUBLIC src)
 target_link_libraries(tettegouche-related PUBLIC Qt6::DBus KF6::BluezQt KF6::I18n KF6::Solid KF6::Service)
 target_compile_definitions(tettegouche-related PRIVATE TRANSLATION_DOMAIN="tettegouche")
 
-qt_add_executable(tettegouche
-    src/main.cpp
+# Everything the launcher is but its start, so its tests build the same code.
+add_library(tettegouche-launcher STATIC
+    src/LauncherController.cpp
+    src/LauncherController.h
+    src/KadunceClient.h
+    src/OpenWindows.cpp
+    src/OpenWindows.h
     src/ProductName.h
     src/DockBand.h
     src/OmniResults.h
@@ -93,6 +98,37 @@ qt_add_executable(tettegouche
     src/FileDetails.cpp src/FileDetails.h
     src/FileThumbnails.cpp src/FileThumbnails.h
     src/TransferActivityBridge.cpp src/TransferActivityBridge.h
+)
+target_include_directories(tettegouche-launcher PUBLIC src)
+target_link_libraries(tettegouche-launcher PUBLIC
+    tettegouche-context
+    tettegouche-related
+    tettegouche-screenshare
+    Plasma::ActivitiesStats
+    Qt6::Core
+    Qt6::DBus
+    Qt6::Gui
+    Qt6::Qml
+    Qt6::Quick
+    KF6::ConfigCore
+    KF6::CoreAddons
+    KF6::FileMetaData
+    KF6::I18n
+    KF6::I18nQml
+    KF6::KIOGui
+    KF6::Runner
+    KF6::Service
+    KF6::BluezQt
+    KF6::Solid
+    AppStreamQt
+    KF6Kirigami
+    KF6::KirigamiPlatform
+    LayerShellQt::Interface
+)
+target_compile_definitions(tettegouche-launcher PRIVATE TRANSLATION_DOMAIN="tettegouche")
+
+qt_add_executable(tettegouche
+    src/main.cpp
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
@@ -126,29 +162,8 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/sticky-note.svg
 )
 target_link_libraries(tettegouche PRIVATE
-    tettegouche-context
     tettegouche-core
-    tettegouche-related
-    tettegouche-screenshare
-    Plasma::ActivitiesStats
-    Qt6::Core
-    Qt6::DBus
-    Qt6::Gui
-    Qt6::Qml
-    Qt6::Quick
-    KF6::CoreAddons
-    KF6::FileMetaData
-    KF6::I18n
-    KF6::I18nQml
-    KF6::KIOGui
-    KF6::Runner
-    KF6::Service
-    KF6::BluezQt
-    KF6::Solid
-    AppStreamQt
-    KF6Kirigami
-    KF6::KirigamiPlatform
-    LayerShellQt::Interface
+    tettegouche-launcher
 )
 
 target_compile_definitions(tettegouche PRIVATE TRANSLATION_DOMAIN="tettegouche")
@@ -253,6 +268,14 @@ if(BUILD_TESTING)
     target_link_libraries(application-catalog-test PRIVATE KF6::CoreAddons KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
     target_compile_definitions(application-catalog-test PRIVATE TRANSLATION_DOMAIN="tettegouche")
     add_test(NAME application-catalog-test COMMAND application-catalog-test)
+    qt_add_executable(launcher-controller-test tests/LauncherControllerTest.cpp)
+    target_link_libraries(launcher-controller-test PRIVATE tettegouche-launcher Qt6::Test)
+    target_compile_definitions(launcher-controller-test PRIVATE TRANSLATION_DOMAIN="tettegouche")
+    # A private bus with a stand-in Kadunce on KWin's name.
+    add_test(NAME launcher-controller-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:launcher-controller-test>)
+    set_tests_properties(launcher-controller-test PROPERTIES TIMEOUT 60
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
     qt_add_executable(recent-use-test tests/RecentUseTest.cpp src/RecentUse.cpp src/RecentUse.h src/UseRecord.h)
     target_include_directories(recent-use-test PRIVATE src)
     target_link_libraries(recent-use-test PRIVATE KF6::KIOGui KF6::Service Plasma::ActivitiesStats Qt6::DBus Qt6::Test)
@@ -326,7 +349,7 @@ if(BUILD_TESTING)
     qt_add_executable(panel-applet-test tests/PanelAppletTest.cpp src/LauncherKeys.cpp src/LauncherKeys.h src/ProductName.h)
     target_include_directories(panel-applet-test PRIVATE src)
     target_link_libraries(panel-applet-test PRIVATE
-        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::ConfigGui KF6::Package KF6::GlobalAccel KF6::I18n)
+        Qt6::Widgets Qt6::Quick Qt6::Test Qt6::DBus Plasma::Plasma Plasma::PlasmaQuick KF6::ConfigGui KF6::Package KF6::GlobalAccel KF6::I18n KF6::Service)
     target_compile_definitions(panel-applet-test PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
     add_dependencies(panel-applet-test co.goodinput.tettegouche)
     add_test(NAME panel-applet-test

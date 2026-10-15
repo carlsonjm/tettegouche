@@ -8,12 +8,12 @@
 #include <QList>
 #include <QStringList>
 #include <QPointer>
+#include <QTimer>
 #include <QVariantList>
 #include <memory>
 class ActivityModel;
 class LauncherKeys;
 
-class QProcess;
 class QQuickItem;
 class QWindow;
 
@@ -70,12 +70,31 @@ private:
     bool setting(const QString &key, bool fallback);
     void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
                        const QString &drive = {});
+    // What is asked of the launcher: the widget's settings as its arguments,
+    // and a file to show, a drawer or a drive; with none of them, a toggle.
+    struct Request {
+        QStringList flags;
+        QString showFile, drawer, drive;
+    };
+    // The widget's settings, as the launcher's arguments.
+    QStringList launchFlags();
+    void request(const Request &request);
+    // Asks the running launcher.
+    void forward(const Request &request);
+    // Starts a launcher for the request.
+    void start(const Request &request);
+    void setLauncherRunning(bool running);
 
-    QProcess *m_process = nullptr;
+    // Whether the launcher's name is on the bus.
+    bool m_launcherRunning = false;
+    // Running from a start, until its name is on the bus or a while has passed.
+    QTimer m_starting;
     // A launcher kept ready runs on hidden; it says when it shows or hides.
     bool m_launcherShown = false;
-    // The settings the running launcher was started with.
-    QStringList m_launchFlags;
+    // Asked to leave for the widget's new settings; the request waits for
+    // the launcher that takes its place.
+    bool m_leaving = false;
+    Request m_pending;
     QString m_productName;
     QVariantList m_ambientActivities;
     QStringList m_pearlDoors{QStringLiteral("apps"), QStringLiteral("files")};

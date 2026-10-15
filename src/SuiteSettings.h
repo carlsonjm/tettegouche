@@ -21,12 +21,14 @@
 //
 // Plasma connects Configure to the widget's own settings by the slot's name.
 // That one connection is taken over; a Plasma that connects it some other way
-// keeps its own settings page, which is the safe way round.
-inline void openConfigureInSuiteSettings(Plasma::Applet *applet, const QString &page)
+// keeps its own settings page, which is the safe way round, and the log says
+// so. False when Configure was not taken over.
+inline bool openConfigureInSuiteSettings(Plasma::Applet *applet, const QString &page)
 {
     QAction *configure = applet->internalAction(QStringLiteral("configure"));
     if (!configure || !QObject::disconnect(configure, SIGNAL(triggered()), applet, SLOT(requestConfiguration()))) {
-        return;
+        qWarning("Configure keeps the widget's own settings page: this Plasma does not connect it as expected");
+        return false;
     }
     QObject::connect(configure, &QAction::triggered, applet, [applet, page] {
         const KService::Ptr settings = KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
@@ -39,4 +41,5 @@ inline void openConfigureInSuiteSettings(Plasma::Applet *applet, const QString &
         job->setDesktopName(settings->desktopEntryName());
         job->start();
     });
+    return true;
 }
