@@ -97,8 +97,11 @@ application and Tettegouche never depends on it.
 ## Providers and execution
 
 Allowed local sources are applications/services, Baloo and recent documents,
-KDE settings, calculator, unit conversion, and notes from a running
-Gooseberry. Shell, session/kill actions, browser history, and online runners
+KDE settings, calculator, unit conversion, notes from a running
+Gooseberry, and facts from Split Rock's Core where it is installed. Core's
+facts are held as Core last told them and found by the start of their words or
+a query holding one, three letters or more, so typing asks Core nothing; Enter
+on one asks Core to open the card that acts on it. Shell, session/kill actions, browser history, and online runners
 are excluded.
 
 Application results may activate an exact existing Kadunce window. Files and

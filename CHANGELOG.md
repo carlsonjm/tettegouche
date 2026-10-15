@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Where Split Rock is installed, its Core can bring a fact to Ambient when it
+  needs attention, such as "Storage · 91% full": a tap opens the card that
+  acts on it, and setting it aside quiets it until it gets worse. Search finds
+  the same facts by their words, as "storage" or "disk". Without Split Rock
+  nothing changes.
 - Apps follows KDE's application list while Search is ready in the
   background: an application installed shows, and one removed leaves,
   without a restart, Flatpak's included, whose installs KDE's list missed. Open, Apps keeps where it is scrolled to, the

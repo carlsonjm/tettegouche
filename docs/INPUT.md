@@ -32,7 +32,7 @@ than repeat it.
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows on the way. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. |
-| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. |
+| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it. |
 | Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …" | Searches the web in the browser. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
@@ -187,12 +187,13 @@ than repeat it.
 | Tap or click the folder on an arrival's island | Opens Files at the file, selected. |
 | Tap or click a drive's island, or its Open | Files opens the drive, mounting it first. |
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
+| Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click another island away from its controls | Opens it in place, larger. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
-| Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now. |
+| Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |
 | With an island focused, Delete | Sets it aside. |
-| Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward. |
+| Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward; holding a Core fact, opens its card. |
 | With an island or the bubble focused, Enter or Space | Does what a tap on it does. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |
 | In the open island, with the track focused, Left or Right | Moves the media five seconds back or ahead, when the player allows it. |

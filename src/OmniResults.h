@@ -1,4 +1,5 @@
 #pragma once
+#include <functional>
 #include "SearchPolicy.h"
 #include "RunnerIdentity.h"
 
@@ -96,6 +97,37 @@ public:
     void match(KRunner::RunnerContext &) override {}
 };
 
+// Facts from Split Rock's Core, such as how full the drive is, found by the
+// words Core gives each; Core opens the card that acts on one. Never
+// registered with KRunner.
+class CoreRunner : public KRunner::AbstractRunner {
+public:
+    static constexpr const char *Id = "split-rock-core";
+    CoreRunner() : AbstractRunner(nullptr, KPluginMetaData(QJsonObject{
+        {QStringLiteral("KPlugin"), QJsonObject{{QStringLiteral("Id"), QString::fromLatin1(Id)}, {QStringLiteral("Name"), QStringLiteral("Core")}}}},
+        QString::fromLatin1(Id))) {}
+    void match(KRunner::RunnerContext &) override {}
+};
+
+inline bool coreMatch(const KRunner::QueryMatch &match) {
+    return match.runner() && match.runner()->id() == QLatin1String(CoreRunner::Id);
+}
+
+// Whether a query asks for a Core fact: the start of one of its words, or a
+// query that holds one ("disk space"). Two letters say too little.
+inline bool coreFactFits(const QVariantMap &fact, const QString &query) {
+    const auto asked = query.trimmed().toLower();
+    if (asked.size() < 3) return false;
+    auto words = fact.value(QStringLiteral("keywords")).toStringList();
+    words.append(fact.value(QStringLiteral("title")).toString());
+    for (const auto &word : std::as_const(words)) {
+        const auto known = word.toLower();
+        if (known.isEmpty()) continue;
+        if (known.startsWith(asked) || asked.contains(known)) return true;
+    }
+    return false;
+}
+
 inline bool noteMatch(const KRunner::QueryMatch &match) {
     return match.runner() && match.runner()->id() == QLatin1String(NotesRunner::Id);
 }
@@ -187,7 +219,7 @@ inline int searchTier(const QString &id)
         || id == QStringLiteral("krunner_recentdocuments")) return 1;
     if (id == QStringLiteral("krunner_systemsettings") || id == QStringLiteral("systemsettings")
         || id == QStringLiteral("calculator") || id == QStringLiteral("unitconverter")
-        || id == QLatin1String(NotesRunner::Id)) return 2;
+        || id == QLatin1String(NotesRunner::Id) || id == QLatin1String(CoreRunner::Id)) return 2;
     return 3;
 }
 
@@ -198,7 +230,7 @@ inline int searchTier(const KRunner::QueryMatch &match)
 
 inline int resultPriority(const KRunner::QueryMatch &match, const QString &query) {
     const int tier = searchTier(match);
-    if (noteMatch(match)) {
+    if (noteMatch(match) || coreMatch(match)) {
         // Gooseberry found the words in the note, its folder or its window;
         // a title that matches ranks as any name does.
         auto evidence = SearchPolicy::name(match.text(), query);
@@ -281,6 +313,8 @@ public:
         m_combined.addSourceModel(&m_aliases);
         m_notes.setColumnCount(1);
         m_combined.addSourceModel(&m_notes);
+        m_core.setColumnCount(1);
+        m_combined.addSourceModel(&m_core);
         setSourceModel(&m_combined);
         m_modules = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings"));
         m_modules.append(KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings_qwidgets")));
@@ -361,10 +395,44 @@ public:
         }
         invalidate();
     }
+    // Core's facts, as its provider holds them, and how to ask Core to open
+    // one's card. Asked of nothing while typing: the facts are already here.
+    void setCoreFacts(std::function<QList<QVariantMap>()> facts, std::function<void(const QString &)> open) {
+        m_coreFacts = std::move(facts);
+        m_openCore = std::move(open);
+    }
+    void showCore(const QString &query) {
+        m_core.removeRows(0, m_core.rowCount());
+        if (!m_coreFacts) return;
+        for (const auto &fact : m_coreFacts()) {
+            if (!coreFactFits(fact, query)) continue;
+            const auto topic = fact.value(QStringLiteral("topic")).toString();
+            const auto title = fact.value(QStringLiteral("title")).toString();
+            const auto line = fact.value(QStringLiteral("line")).toString();
+            const auto text = line.isEmpty() ? title : i18nc("@info what Core watches, then how it stands", "%1 · %2", title, line);
+            QStringList under;
+            for (const auto &key : {QStringLiteral("detail"), QStringLiteral("actionText")}) {
+                const auto part = fact.value(key).toString();
+                if (!part.isEmpty()) under.append(part);
+            }
+            KRunner::QueryMatch match(&m_coreRunner);
+            match.setId(topic);
+            match.setText(text);
+            match.setSubtext(under.join(QStringLiteral(" · ")));
+            match.setData(topic);
+            auto *item = new QStandardItem(QIcon::fromTheme(fact.value(QStringLiteral("icon")).toString()), text);
+            item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+            item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
+            item->setData(true, KRunner::ResultsModel::EnabledRole);
+            m_core.appendRow(item);
+        }
+        invalidate();
+    }
     void setQueryString(const QString &query) {
         releaseSelection();
         m_aliases.removeRows(0, m_aliases.rowCount());
         askNotes(query);
+        showCore(query);
         for (const auto &module : m_modules) {
             if (!settingIntent(module.pluginId(), query)) continue;
             KRunner::QueryMatch match(&m_aliasRunner);
@@ -390,6 +458,7 @@ public:
         ++m_notesAsk;
         m_aliases.removeRows(0, m_aliases.rowCount());
         m_notes.removeRows(0, m_notes.rowCount());
+        m_core.removeRows(0, m_core.rowCount());
         m_results.clear();
     }
     Q_INVOKABLE bool run(const QModelIndex &index) {
@@ -401,6 +470,12 @@ public:
                 QString::fromLatin1(NotesPath), QString::fromLatin1(NotesInterface), QStringLiteral("OpenNote"));
             request.setArguments({getQueryMatch(index).data().toString()});
             return QDBusConnection::sessionBus().send(request);
+        }
+        if (source.model() == &m_core) {
+            // Core opens the card; Search waits for nothing.
+            if (!m_openCore) return false;
+            m_openCore(getQueryMatch(index).data().toString());
+            return true;
         }
         if (source.model() == &m_aliases) {
             const auto module = getQueryMatch(index).data().toString();
@@ -541,9 +616,13 @@ private:
     mutable QHash<QString, bool> m_repoDirectories;
     SettingsAliasRunner m_aliasRunner;
     NotesRunner m_notesRunner;
+    CoreRunner m_coreRunner;
+    std::function<QList<QVariantMap>()> m_coreFacts;
+    std::function<void(const QString &)> m_openCore;
     SearchSource m_results;
     QStandardItemModel m_aliases;
     QStandardItemModel m_notes;
+    QStandardItemModel m_core;
     SearchSources m_combined;
     QList<KPluginMetaData> m_modules;
 };

@@ -12,6 +12,7 @@
 #include "OmniResults.h"
 #include "RelatedInfo.h"
 #include "NotesDoor.h"
+#include "CoreFactProvider.h"
 #include "QuickNote.h"
 #include "ProductName.h"
 #include "DockBand.h"
@@ -1396,6 +1397,10 @@ int main(int argc, char **argv)
     // Notes found by their words are listed among the results, as Gooseberry
     // answers, only while Notes is offered.
     results.setNotesOffered(offerNotes);
+    // Split Rock's Core, where it is installed: its facts are found by their
+    // words, and Core opens the card that acts on one.
+    CoreFactProvider core(QDBusConnection::sessionBus());
+    results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     // The quick note itself, written in Search's window and kept by the notes
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;
