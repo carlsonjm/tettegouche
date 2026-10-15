@@ -11,3 +11,4 @@ MimeType=inode/directory;
 Categories=System;FileManager;
 X-KDE-Protocols=KIO
 StartupNotify=false
+X-KDE-Wayland-Interfaces=org_kde_plasma_window_management

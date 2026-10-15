@@ -16,34 +16,12 @@ if rg -n -i 'tette[[:space:]]+files' --glob '!build*/**' --glob '!tests/verify-s
     exit 1
 fi
 
-rg -q 'QStringLiteral\("workspaceContext"\)' "${project_root}/src/main.cpp"
+# Kadunce's launcher-guest handshake, the calls the launcher makes as it
+# opens, launches and closes, and what is open, are exercised by
+# launcher-controller-test against a stand-in Kadunce.
 rg -q 'co\.goodinput\.kadunce\.workspace-context' \
     "${project_root}/src/WorkspaceContext.cpp"
 rg -q 'SupportedVersion = 1' "${project_root}/src/WorkspaceContext.cpp"
-rg -q 'Q_INVOKABLE void finishLaunch\(\)' "${project_root}/src/main.cpp"
-rg -Fq 'QTimer::singleShot(750' "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("activateApplicationWindow"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("launcherGuestProtocolVersion"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'protocol\.value\(\) != 3' "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("beginLauncherGuest"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'sessionBus\(\)\.baseService\(\)' "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("updateLauncherGuest"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("finishLauncherGuest"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("endLauncherGuest"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("prepareLauncherGuestLaunch"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QStringLiteral\("cancelLauncherGuestLaunch"\)' \
-    "${project_root}/src/main.cpp"
-rg -q 'QDBusConnection::ExportScriptableSlots' "${project_root}/src/main.cpp"
-rg -q 'Q_INVOKABLE void completeGuestHandoff' "${project_root}/src/main.cpp"
-rg -q 'Q_SCRIPTABLE void completeGuestNavigation' \
-    "${project_root}/src/main.cpp"
 rg -q 'enabled: root\.launcherController\.guestMode' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'Easing\.OutBack' "${project_root}/qml/Launcher.qml"
@@ -61,7 +39,7 @@ rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
 rg -Fq 'text: words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
-rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/main.cpp"
+rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/LauncherController.h"
 rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'required property var applicationCatalog' \
@@ -83,8 +61,7 @@ rg -q 'KApplicationTrader::query' \
     "${project_root}/src/ApplicationCatalog.cpp"
 rg -q 'KIO::ApplicationLauncherJob' \
     "${project_root}/src/ApplicationCatalog.cpp"
-rg -q 'activateCatalogIfOpen' "${project_root}/src/main.cpp" \
-    "${project_root}/qml/Launcher.qml"
+rg -q 'activateCatalogIfOpen' "${project_root}/qml/Launcher.qml"
 rg -q '\-\-standalone' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q 'cfg_useKadunce' \

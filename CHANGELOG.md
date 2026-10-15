@@ -5,6 +5,23 @@ provenance.
 
 ## Unreleased
 
+- Restarting or removing the panel no longer ends Search: a copy running in
+  Files, and Files' own window, carry on. A request made while Search is still
+  starting, such as a second Meta+E or Show in Files, is answered once it is
+  up instead of being lost.
+- Without Kadunce, Search reads what is open from Plasma's own window list:
+  choosing an open application brings its window forward instead of opening
+  another, OPEN marks it, and Recent leaves it out.
+- Newest installed is when Apps first found each application, so an update no
+  longer makes long-installed applications look new; those already there when
+  Apps began keeping count are under Older. Under Most used, a folder sits in
+  the section of its first application.
+- Restore puts back only the item Files sent to Trash, never another item
+  given the same place in Trash after Trash was emptied elsewhere.
+- Edit Application… runs KDE's menu editor by its program alone, wherever its
+  entry adds options. Tapping an application no longer waits on KWin to read
+  what is open, and opening no longer waits on the dock's band.
+
 - Apps follows KDE's application list while Search is ready in the
   background: an application installed shows, and one removed leaves,
   without a restart, Flatpak's included, whose installs KDE's list missed. Open, Apps keeps where it is scrolled to, the
