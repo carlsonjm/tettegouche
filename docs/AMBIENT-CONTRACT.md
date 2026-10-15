@@ -242,6 +242,19 @@ an opaque background, an island takes the style's ground whatever
 `islandOutline` says. A host that places two widgets, one showing media and one
 the others, shows every island exactly once.
 
+Without an outline, only room parts one island from the next: they stand
+24 px apart, three of Kirigami's large spacing, and the group keeps the same
+24 px from the end of its width it is set against, where the host places
+something of its own, such as the dock; centred, it keeps none. Each island's
+pieces then start and end at its own edges. Album art, a waiting application's
+icon and a drive's take an application's place in Shuffle's dock, whose icon
+square is five sevenths of the band's height: art as large as an
+application's artwork in that square, 42 of its 48, which is 40 px in a 64 px
+band, with the corners of a folder's tile in Apps, 0.26 of its side; an icon
+drawn at the whole square, as the dock draws one. The words beside them begin
+8 px away. Outlined, art keeps to its pill, 68% of the island's height with
+8 px corners, and the icons are 24 px, each a little less on a short panel.
+
 ## Interaction and safety
 
 - Touch, mouse, and keyboard must reach equivalent source-supported actions;

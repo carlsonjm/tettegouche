@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- On Shuffle's band, where the islands draw no outline, album art and the
+  icons of a waiting application or a drive take the size and shape of an
+  application's icon in the dock, and islands stand clearly apart from each
+  other and from the dock. Outlined islands are unchanged.
 - Apps follows KDE's application list while Search is ready in the
   background: an application installed shows, and one removed leaves,
   without a restart, Flatpak's included, whose installs KDE's list missed. Open, Apps keeps where it is scrolled to, the
