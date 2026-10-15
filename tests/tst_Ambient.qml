@@ -315,7 +315,7 @@ TestCase {
         // The dock's square in a 64 px band is 46; artwork fills 42 of 48.
         compare(art.width, 40);
         compare(art.height, 40);
-        compare(art.corner, 10);
+        compare(art.corner, 6);
         verify(art.height <= open.pillHeight);
         const shape = island(open, "media");
         fuzzyCompare(leftOf(open, art), leftOf(open, shape), 1);

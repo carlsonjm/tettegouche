@@ -82,14 +82,14 @@ Item {
     // A picture: album art, or the icon of a waiting application or a drive.
     // In a pill it keeps to the pill. Without one it takes an application's
     // place in Shuffle's dock: the dock's icon square is five sevenths of the
-    // band, and an application's artwork fills 42 of its 48. Art takes the
-    // corners of a folder's tile among the applications in Apps, 0.26 of its
-    // side. Its words follow one large step away, the suite's room from an
+    // band, and an application's artwork fills 42 of its 48. Art is a square
+    // with softened corners, 0.15 of its side, so a cover reads as a cover
+    // beside the icons' own shapes. Its words follow one large step away, the suite's room from an
     // icon to its label; a column of words brings 6 px of its own.
     readonly property int appSquare: Math.max(24, Math.round(height * 5 / 7))
     readonly property int pictureSize: outlined ? artSize
         : Math.min(pillHeight, Math.round(appSquare * 42 / 48))
-    readonly property real pictureCorner: outlined ? (artSize > 26 ? 8 : 6) : Math.round(pictureSize * 0.26)
+    readonly property real pictureCorner: outlined ? (artSize > 26 ? 8 : 6) : Math.round(pictureSize * 0.15)
     readonly property real pictureLead: outlined ? lead : pictureSize + Kirigami.Units.largeSpacing - 6
     // Tall enough for a second line of words.
     readonly property bool tall: pillHeight >= 40

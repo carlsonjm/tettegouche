@@ -6,9 +6,10 @@ provenance.
 ## Unreleased
 
 - On Shuffle's band, where the islands draw no outline, album art and the
-  icons of a waiting application or a drive take the size and shape of an
-  application's icon in the dock, and islands stand clearly apart from each
-  other and from the dock. Outlined islands are unchanged.
+  icons of a waiting application or a drive take the size of an application's
+  icon in the dock, art as a square with softened corners, and islands stand
+  clearly apart from each other and from the dock. Outlined islands are
+  unchanged.
 - Where Split Rock is installed, its Core can bring a fact to Ambient when it
   needs attention, such as "Storage · 91% full": a tap opens the card that
   acts on it, and setting it aside quiets it until it gets worse. Search finds
