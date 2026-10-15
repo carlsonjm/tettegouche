@@ -32,7 +32,7 @@ than repeat it.
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows on the way. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. |
-| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its upkeep cards, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
+| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its Helpers, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
 | Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …" | Searches the web in the browser. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
