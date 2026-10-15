@@ -265,6 +265,13 @@ int main(int argc, char **argv)
         if (core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("45 GB free · Free up space")) return 74;
         if (!core.run(core.index(0, 0)) || opened != QStringList{QStringLiteral("storage")}) return 75;
         if (searchTier(QStringLiteral("split-rock-core")) != 2) return 76;
+        // A Core row comes before a folder of the same name, after an app
+        // named exactly what was typed.
+        KRunner::QueryMatch folder(&files), exactApp(&apps);
+        folder.setText(QStringLiteral("update"));
+        exactApp.setText(QStringLiteral("Update"));
+        if (resultPriority(match, QStringLiteral("update")) >= resultPriority(folder, QStringLiteral("update"))) return 81;
+        if (resultPriority(match, QStringLiteral("update")) <= resultPriority(exactApp, QStringLiteral("update"))) return 82;
         // The upkeep cards, found by their words; Install an app gets what was typed.
         const QVariantMap install{{QStringLiteral("id"), QStringLiteral("install")}, {QStringLiteral("title"), QStringLiteral("Install an app")},
             {QStringLiteral("sub"), QStringLiteral("Say what you need, or remove one")}, {QStringLiteral("icon"), QStringLiteral("system-software-install")},

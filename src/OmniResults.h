@@ -230,7 +230,12 @@ inline int searchTier(const KRunner::QueryMatch &match)
 
 inline int resultPriority(const KRunner::QueryMatch &match, const QString &query) {
     const int tier = searchTier(match);
-    if (noteMatch(match) || coreMatch(match)) {
+    // Core's rows are listed only when the query asks for one by its words
+    // (coreFactFits), so they come before any file or folder of the same
+    // name: typing "update" means the Helper, not a folder called update.
+    // Only an app named exactly what was typed stays ahead.
+    if (coreMatch(match)) return SearchPolicy::priority({SearchPolicy::Exact, 0}, 0) + 50;
+    if (noteMatch(match)) {
         // Gooseberry found the words in the note, its folder or its window;
         // a title that matches ranks as any name does.
         auto evidence = SearchPolicy::name(match.text(), query);
