@@ -68,11 +68,29 @@ Item {
     // allows, 44 px across.
     readonly property real pillHeight: Math.max(24, Math.min(44, height - 8))
     readonly property real reach: Math.max(pillHeight, Math.min(44, height))
-    readonly property real gap: 8
-    readonly property real inset: 6
-    // Art, a ring or a mark sits as far from the island's edge as its top.
-    readonly property real lead: pillHeight - 2 * inset
+    // Outlined, a pill's edge parts one island from the next. Without one,
+    // only room does: three of Kirigami's large steps, the suite's 24 px
+    // between sections, more than any room inside an island. The group keeps
+    // the same room from whatever the host sets at the end it is gathered
+    // against, such as the dock.
+    readonly property real gap: outlined ? 8 : 3 * Kirigami.Units.largeSpacing
+    readonly property real inset: outlined ? 6 : 0
+    readonly property real margin: outlined || align === "center" ? 0 : gap
+    // Art, a ring or a mark sits as far from the pill's edge as its top.
+    readonly property real lead: pillHeight - 12
     readonly property real artSize: Math.round(pillHeight * 0.68)
+    // A picture: album art, or the icon of a waiting application or a drive.
+    // In a pill it keeps to the pill. Without one it takes an application's
+    // place in Shuffle's dock: the dock's icon square is five sevenths of the
+    // band, and an application's artwork fills 42 of its 48. Art is a square
+    // with softened corners, 0.15 of its side, so a cover reads as a cover
+    // beside the icons' own shapes. Its words follow one large step away, the suite's room from an
+    // icon to its label; a column of words brings 6 px of its own.
+    readonly property int appSquare: Math.max(24, Math.round(height * 5 / 7))
+    readonly property int pictureSize: outlined ? artSize
+        : Math.min(pillHeight, Math.round(appSquare * 42 / 48))
+    readonly property real pictureCorner: outlined ? (artSize > 26 ? 8 : 6) : Math.round(pictureSize * 0.15)
+    readonly property real pictureLead: outlined ? lead : pictureSize + Kirigami.Units.largeSpacing - 6
     // Tall enough for a second line of words.
     readonly property bool tall: pillHeight >= 40
     readonly property int labelSize: tall ? 13 : 12
@@ -102,7 +120,7 @@ Item {
     property string room: ""
 
     readonly property bool alone: bandKinds.length === 1 && bandKinds[0] === "media"
-    readonly property var plan: IslandRoom.layout(bandKinds, room, width, measure, available, gap, pillHeight)
+    readonly property var plan: IslandRoom.layout(bandKinds, room, Math.max(0, width - margin), measure, available, gap, pillHeight)
     readonly property var folded: plan.folded
     readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
     readonly property int bubbleCount: folded.reduce((count, kind) => count
@@ -110,7 +128,10 @@ Item {
             : kind === "drive" ? drives.length : kind === "screen" ? screens.length
             : kind === "waiting" ? waitings.length : kind === "core" ? cores.length : 1), 0)
     // The least the band needs: each island's first piece.
-    readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
+    readonly property int minimumUsefulWidth: {
+        const least = IslandRoom.minimumWidth(bandKinds, measure, available, gap);
+        return least > 0 ? least + margin : 0;
+    }
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
         || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
@@ -390,7 +411,7 @@ Item {
     // time and player on the other, the sides alike so the controls stay put.
     // With nothing yet on one side, it keeps no empty half.
     function mediaStart(items) {
-        return (items.indexOf("art") >= 0 ? lead : 0) + mediaWords(items.indexOf("title") >= 0);
+        return (items.indexOf("art") >= 0 ? pictureLead : 0) + mediaWords(items.indexOf("title") >= 0);
     }
     function mediaEnd(items) {
         return mediaClock(items.indexOf("time") >= 0, items.indexOf("duration") >= 0)
@@ -418,13 +439,13 @@ Item {
             return 2 * inset + (has("mark") ? lead : 0) + (has("show") ? reach : 0)
                 + endingWordsWidth(has("name"), has("words"));
         if (kind === "drive")
-            return 2 * inset + (has("icon") ? lead : 0) + (has("open") ? openWidth() : 0)
+            return 2 * inset + (has("icon") ? pictureLead : 0) + (has("open") ? openWidth() : 0)
                 + driveWords(has("name"), has("size"));
         if (kind === "screen")
             return 2 * inset + (has("dot") ? dotWidth : 0) + screenWords(has("who"))
                 + (has("stop") ? pillWidth(stopLabel) : 0);
         if (kind === "waiting")
-            return 2 * inset + (has("icon") ? lead : 0) + waitingWords(has("name"), has("question"));
+            return 2 * inset + (has("icon") ? pictureLead : 0) + waitingWords(has("name"), has("question"));
         if (kind === "core")
             return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
         return 0;
@@ -489,7 +510,7 @@ Item {
         const space = gap * Math.min(before, bubble.presence);
         if (kind === "fold") at = total + space;
         total += space + bubble.slotWidth;
-        const start = align === "start" ? 0 : align === "end" ? width - total : (width - total) / 2;
+        const start = align === "start" ? margin : align === "end" ? width - margin - total : (width - total) / 2;
         return Math.round(start) + at;
     }
 
@@ -931,13 +952,17 @@ Item {
         Piece {
             island: mediaIsland
             name: "art"
-            size: surface.lead
+            size: surface.pictureLead
+            // Centred in a pill; on the panel alone, at the island's edge
+            // with its words a step away.
             Art {
-                anchors.centerIn: parent
-                width: surface.artSize
-                height: surface.artSize
+                objectName: "ambient-media-art"
+                x: surface.outlined ? (parent.width - width) / 2 : 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.pictureSize
+                height: surface.pictureSize
                 activity: surface.player
-                corner: surface.artSize > 26 ? 8 : 6
+                corner: surface.pictureCorner
             }
         }
         Piece {
@@ -1186,12 +1211,16 @@ Item {
         Piece {
             island: driveIsland
             name: "icon"
-            size: surface.lead
+            size: surface.pictureLead
+            // On the panel alone, the drive's picture as large as a
+            // waiting application's.
             Kirigami.Icon {
                 objectName: "ambient-drive-icon"
-                anchors.centerIn: parent
-                width: surface.artSize > 26 ? 24 : 18
+                x: surface.outlined ? (parent.width - width) / 2 : (surface.pictureSize - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.outlined ? (surface.artSize > 26 ? 24 : 18) : surface.appSquare
                 height: width
+                roundToIconSize: surface.outlined
                 source: surface.driveShown && surface.driveShown.icon ? surface.driveShown.icon : "drive-removable-media"
             }
         }
@@ -1338,12 +1367,16 @@ Item {
         Piece {
             island: waitingIsland
             name: "icon"
-            size: surface.lead
+            size: surface.pictureLead
+            // On the panel alone, drawn as the dock draws an application:
+            // the whole icon square, its artwork filling a picture's place.
             Kirigami.Icon {
                 objectName: "ambient-waiting-icon"
-                anchors.centerIn: parent
-                width: surface.artSize > 26 ? 24 : 18
+                x: surface.outlined ? (parent.width - width) / 2 : (surface.pictureSize - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.outlined ? (surface.artSize > 26 ? 24 : 18) : surface.appSquare
                 height: width
+                roundToIconSize: surface.outlined
                 source: surface.waitingIcon
             }
         }

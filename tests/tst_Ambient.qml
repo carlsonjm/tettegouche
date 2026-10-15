@@ -295,6 +295,70 @@ TestCase {
         compare(island(surface, "transfer").color, shape.color);
     }
 
+    // Outlined, each island is a pill and album art keeps to it. Without an
+    // outline, art takes an application's place in Shuffle's dock, its words a
+    // step away; islands stand apart by the suite's room between sections,
+    // and the group keeps that room from the end it is gathered against.
+    function test_without_an_outline_art_takes_an_applications_place() {
+        const pill = createSurface(640, [media]);
+        settle();
+        const pillArt = findChild(pill, "ambient-media-art");
+        compare(pillArt.width, 30);
+        compare(pillArt.corner, 8);
+        compare(pill.gap, 8);
+        compare(pill.margin, 0);
+
+        const open = createSurface(640, [media]);
+        open.outlined = false;
+        settle();
+        const art = findChild(open, "ambient-media-art");
+        // The dock's square in a 64 px band is 46; artwork fills 42 of 48.
+        compare(art.width, 40);
+        compare(art.height, 40);
+        compare(art.corner, 6);
+        verify(art.height <= open.pillHeight);
+        const shape = island(open, "media");
+        fuzzyCompare(leftOf(open, art), leftOf(open, shape), 1);
+        fuzzyCompare(leftOf(open, findChild(open, "ambient-media-title")) - rightOf(open, art), 8, 1);
+    }
+
+    function test_without_an_outline_islands_stand_apart() {
+        const surface = createSurface(640, [transfer, media]);
+        surface.outlined = false;
+        settle();
+        const first = island(surface, "transfer"), second = island(surface, "media");
+        compare(surface.gap, 24);
+        fuzzyCompare(leftOf(surface, second) - rightOf(surface, first), 24, 1);
+        fuzzyCompare(leftOf(surface, first) + rightOf(surface, second), surface.width, 2);
+        surface.align = "start";
+        settle();
+        fuzzyCompare(leftOf(surface, first), 24, 1);
+        surface.align = "end";
+        settle();
+        fuzzyCompare(rightOf(surface, second), surface.width - 24, 1);
+        // The room it keeps is part of the least it needs.
+        const least = surface.minimumUsefulWidth;
+        surface.outlined = true;
+        verify(surface.minimumUsefulWidth < least);
+        settle();
+        fuzzyCompare(rightOf(surface, second), surface.width, 1);
+    }
+
+    // A waiting application's icon and a drive's are drawn as the dock draws
+    // an application without an outline, and as before inside a pill.
+    function test_without_an_outline_icons_are_pictures() {
+        const waiting = {id: "waiting:w3", generation: 1, kind: "waiting", state: "running",
+            title: "Kate", icon: "kate", capabilities: {raise: true}};
+        const surface = createSurface(640, [waiting, drive]);
+        settle();
+        compare(findChild(surface, "ambient-waiting-icon").width, 24);
+        compare(findChild(surface, "ambient-drive-icon").width, 24);
+        surface.outlined = false;
+        settle();
+        compare(findChild(surface, "ambient-waiting-icon").width, 46);
+        compare(findChild(surface, "ambient-drive-icon").width, 46);
+    }
+
     // On a dark style Ambient keeps the suite's values; on a light one its
     // ground and ink are the style's, and its washes are that ink.
     function test_colours_follow_the_style() {
