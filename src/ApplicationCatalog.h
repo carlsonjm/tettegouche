@@ -122,8 +122,9 @@ public:
     // most used first inside each; Newest installed by when it arrived (this
     // week, this month, this year, older). Each of their sections opens with a
     // row of its own, then its folders A to Z, then its applications in the
-    // order; a folder sits in the section of its most used application's last
-    // use, or of its newest application's arrival.
+    // order; a folder sits in the section of its first application in the
+    // order. An application arrives when Apps first finds it; those already
+    // here when Apps began keeping count are Older.
     //
     // Folders. A folder is a row that opens or closes in place, its
     // applications below it in the order; whether each is open is kept. A
@@ -191,7 +192,8 @@ private:
         QString name;
         QString icon;
         QString applicationId;
-        // When its desktop file arrived, as near as the file system says.
+        // When Apps first found it; none for one already here when Apps
+        // began keeping count.
         QDateTime installed;
     };
 
@@ -230,7 +232,11 @@ private:
     [[nodiscard]] int useSpan(int entry) const;
     // A folder's name as drawn.
     [[nodiscard]] QString folderLabel(int folder) const;
-    [[nodiscard]] QPair<QString, QString> folderSection(int folder, const QVector<int> &members) const;
+    // The section a folder of these applications sits in.
+    [[nodiscard]] QPair<QString, QString> folderSection(const QVector<int> &members) const;
+    // Gives each application the time Apps first found it, noting those new
+    // to it now.
+    static void noteArrivals(QVector<Entry> &entries);
     [[nodiscard]] bool shown(const Entry &entry) const;
     [[nodiscard]] int entryIndex(const QString &applicationId) const;
     [[nodiscard]] int folderIndex(const QString &folderId) const;

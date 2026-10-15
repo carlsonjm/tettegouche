@@ -10,14 +10,16 @@
 #include <KConfigGroup>
 #include <KConfigLoader>
 #include <KPluginFactory>
+#include <KIO/CommandLauncherJob>
 #include <KService>
-#include <QProcess>
 #include <QStandardPaths>
 #include <QDBusConnection>
+#include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusPendingCall>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusServiceWatcher>
 #include <QQuickItem>
 #include <QTimer>
 #include <Plasma/Containment>
@@ -31,11 +33,18 @@
 #include <cmath>
 #include <chrono>
 
+namespace
+{
+const QString LauncherService = QStringLiteral("io.github.carlsonjm.Tettegouche");
+// How long a launcher just started is taken to be on its way, until its name
+// is on the bus.
+constexpr int StartingMs = 5000;
+}
+
 TettegoucheApplet::TettegoucheApplet(QObject *parent,
                                      const KPluginMetaData &data,
                                      const QVariantList &args)
     : Plasma::Applet(parent, data, args)
-    , m_process(new QProcess(this))
     , m_productName(tettegouche::productName())
 {
     // Menus and the widget's title read the shown name; where Shuffle is
@@ -46,13 +55,31 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     setHasConfigurationInterface(true);
     openConfigureInSuiteSettings(this, QStringLiteral("search"));
 
-    connect(m_process, &QProcess::stateChanged, this, [this](QProcess::ProcessState state) {
-        // A launcher starting is one about to show.
-        m_launcherShown = state != QProcess::NotRunning;
+    // The launcher is a process of its own, started in a scope of its own,
+    // so restarting or removing the panel leaves it and its work running. It
+    // is known by its name on the bus.
+    auto *launcher = new QDBusServiceWatcher(LauncherService, QDBusConnection::sessionBus(),
+        QDBusServiceWatcher::WatchForRegistration | QDBusServiceWatcher::WatchForUnregistration, this);
+    connect(launcher, &QDBusServiceWatcher::serviceRegistered, this, [this] { setLauncherRunning(true); });
+    connect(launcher, &QDBusServiceWatcher::serviceUnregistered, this, [this] { setLauncherRunning(false); });
+    if (QDBusConnectionInterface *bus = QDBusConnection::sessionBus().interface()) {
+        auto *watcher = new QDBusPendingCallWatcher(bus->asyncCall(QStringLiteral("NameHasOwner"), LauncherService), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+            watcher->deleteLater();
+            const QDBusPendingReply<bool> reply = *watcher;
+            if (!reply.isError() && reply.value()) setLauncherRunning(true);
+        });
+    }
+    m_starting.setSingleShot(true);
+    m_starting.setInterval(StartingMs);
+    connect(&m_starting, &QTimer::timeout, this, [this] {
+        // Started, it never came: nothing is open.
+        if (m_launcherRunning) return;
+        m_launcherShown = false;
         Q_EMIT launcherActiveChanged();
     });
-    QDBusConnection::sessionBus().connect(QStringLiteral("io.github.carlsonjm.Tettegouche"),
-        QStringLiteral("/Launcher"), QStringLiteral("io.github.carlsonjm.Tettegouche"),
+    QDBusConnection::sessionBus().connect(LauncherService,
+        QStringLiteral("/Launcher"), LauncherService,
         QStringLiteral("shown"), this, SLOT(launcherShown(bool)));
 
     connect(this, &Plasma::Applet::activated, this, [this] {
@@ -119,13 +146,32 @@ QString TettegoucheApplet::productName() const
 
 bool TettegoucheApplet::launcherActive() const
 {
-    return m_process->state() != QProcess::NotRunning && m_launcherShown;
+    return (m_launcherRunning || m_starting.isActive()) && m_launcherShown;
 }
 
 void TettegoucheApplet::launcherShown(bool visible)
 {
-    if (m_process->state() == QProcess::NotRunning || visible == m_launcherShown) return;
+    if ((!m_launcherRunning && !m_starting.isActive()) || visible == m_launcherShown) return;
     m_launcherShown = visible;
+    Q_EMIT launcherActiveChanged();
+}
+
+void TettegoucheApplet::setLauncherRunning(bool running)
+{
+    if (running == m_launcherRunning) return;
+    m_launcherRunning = running;
+    if (running) {
+        m_starting.stop();
+    } else {
+        m_launcherShown = false;
+        // A launcher that left for one with the widget's new settings.
+        if (m_leaving) {
+            m_leaving = false;
+            const Request request = m_pending;
+            m_pending = {};
+            start(request);
+        }
+    }
     Q_EMIT launcherActiveChanged();
 }
 
@@ -336,53 +382,121 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
     return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
 
-void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
-                                      const QString &drive)
+QStringList TettegoucheApplet::launchFlags()
 {
-    QStringList flags = useKadunce ? QStringList{} : QStringList{QStringLiteral("--standalone")};
+    QStringList flags = setting(QStringLiteral("useKadunce"), true) ? QStringList{} : QStringList{QStringLiteral("--standalone")};
     // Search's first screen offers what was used lately unless that is off.
     if (!setting(QStringLiteral("offerRecent"), true)) flags << QStringLiteral("--no-recent");
     // It offers Notes, where the notes application is installed, unless that is off.
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.
     else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
-    // A launcher kept ready with settings since changed starts again with them.
-    if (m_process->state() == QProcess::Running && !m_launcherShown && flags != m_launchFlags) {
-        m_process->terminate();
-        if (!m_process->waitForFinished(1000)) m_process->kill();
-        m_process->waitForFinished(1000);
-    }
-    if (m_process->state() != QProcess::NotRunning) {
-        if (m_process->state() == QProcess::Running) {
-            auto request = QDBusMessage::createMethodCall(
-                QStringLiteral("io.github.carlsonjm.Tettegouche"),
-                QStringLiteral("/Launcher"),
-                QStringLiteral("io.github.carlsonjm.Tettegouche"),
-                !showFile.isEmpty() ? QStringLiteral("showFile")
-                    : !drive.isEmpty() ? QStringLiteral("showDrive")
-                    : !drawer.isEmpty() ? QStringLiteral("openDrawer") : QStringLiteral("toggle"));
-            if (!showFile.isEmpty()) request.setArguments({showFile});
-            else if (!drive.isEmpty()) request.setArguments({drive});
-            else if (!drawer.isEmpty()) request.setArguments({drawer});
-            QDBusConnection::sessionBus().asyncCall(request);
-        }
+    return flags;
+}
+
+void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
+                                      const QString &drive)
+{
+    QStringList flags = launchFlags();
+    // Activation asks for its own way into Kadunce, whatever the setting says.
+    flags.removeAll(QStringLiteral("--standalone"));
+    if (!useKadunce) flags.prepend(QStringLiteral("--standalone"));
+    request({flags, showFile, drawer, drive});
+}
+
+void TettegoucheApplet::request(const Request &request)
+{
+    // Asked again while a launcher leaves, the latest request waits for the
+    // one that takes its place.
+    if (m_leaving) {
+        m_pending = request;
         return;
     }
+    if (!m_launcherRunning) {
+        start(request);
+        return;
+    }
+    // A launcher kept ready with other settings leaves for one started with
+    // these, unless something keeps it; one that cannot be asked keeps going.
+    auto leave = QDBusMessage::createMethodCall(LauncherService, QStringLiteral("/Launcher"),
+        LauncherService, QStringLiteral("leaveFor"));
+    leave.setArguments({request.flags});
+    m_leaving = true;
+    m_pending = request;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(leave, 1000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        watcher->deleteLater();
+        const QDBusPendingReply<bool> reply = *watcher;
+        if (!reply.isError() && reply.value()) {
+            // It is going; its name leaving starts the next one. A launcher
+            // that is slow to go is not waited on for ever.
+            QTimer::singleShot(3000, this, [this] {
+                if (!m_leaving) return;
+                m_leaving = false;
+                const Request waiting = m_pending;
+                m_pending = {};
+                forward(waiting);
+            });
+            return;
+        }
+        m_leaving = false;
+        const Request waiting = m_pending;
+        m_pending = {};
+        forward(waiting);
+    });
+}
 
+void TettegoucheApplet::forward(const Request &request)
+{
+    if (!m_launcherRunning) {
+        start(request);
+        return;
+    }
+    auto call = QDBusMessage::createMethodCall(LauncherService, QStringLiteral("/Launcher"), LauncherService,
+        !request.showFile.isEmpty() ? QStringLiteral("showFile")
+            : !request.drive.isEmpty() ? QStringLiteral("showDrive")
+            : !request.drawer.isEmpty() ? QStringLiteral("openDrawer") : QStringLiteral("toggle"));
+    if (!request.showFile.isEmpty()) call.setArguments({request.showFile});
+    else if (!request.drive.isEmpty()) call.setArguments({request.drive});
+    else if (!request.drawer.isEmpty()) call.setArguments({request.drawer});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(call), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, request] {
+        watcher->deleteLater();
+        // A launcher that went as it was asked is started again for it.
+        const QDBusPendingReply<> reply = *watcher;
+        if (reply.isError() && (reply.error().type() == QDBusError::ServiceUnknown
+                                || (reply.error().type() == QDBusError::NoReply && !m_launcherRunning)))
+            start(request);
+    });
+}
+
+void TettegoucheApplet::start(const Request &request)
+{
     const QString executable = QStandardPaths::findExecutable(QStringLiteral("tettegouche"));
     if (executable.isEmpty()) {
         return;
     }
-
-    m_process->setProgram(executable);
-    m_launchFlags = flags;
-    QStringList arguments = flags;
-    if (!showFile.isEmpty()) arguments << QStringLiteral("--show-file") << showFile;
-    else if (!drive.isEmpty()) arguments << QStringLiteral("--drive") << drive;
-    else if (!drawer.isEmpty()) arguments << QStringLiteral("--drawer") << drawer;
-    m_process->setArguments(arguments);
+    QStringList arguments = request.flags;
+    if (!request.showFile.isEmpty()) arguments << QStringLiteral("--show-file") << request.showFile;
+    else if (!request.drive.isEmpty()) arguments << QStringLiteral("--drive") << request.drive;
+    else if (!request.drawer.isEmpty()) arguments << QStringLiteral("--drawer") << request.drawer;
+    // Started while another is still on its way, the new process hands its
+    // request to that one once it answers.
+    m_launcherShown = true;
+    m_starting.start();
+    Q_EMIT launcherActiveChanged();
     Q_EMIT invocationRequested();
-    m_process->start();
+    // In a scope of its own, as a command started from a launcher is, so the
+    // panel going does not take the launcher with it. It is started as a
+    // command, not as its desktop entry, so no startup is announced for it.
+    auto *job = new KIO::CommandLauncherJob(executable, arguments, this);
+    connect(job, &KJob::result, this, [this](KJob *started) {
+        if (!started->error() || m_launcherRunning) return;
+        m_starting.stop();
+        m_launcherShown = false;
+        Q_EMIT launcherActiveChanged();
+    });
+    job->start();
 }
 
 K_PLUGIN_CLASS_WITH_JSON(TettegoucheApplet, "metadata.json")
