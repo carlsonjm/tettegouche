@@ -15,6 +15,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDir>
 #include <cmath>
 #include <memory>
 
@@ -25,12 +27,18 @@ class ToggleEndpoint : public QObject
 public:
     int calls = 0;
     QStringList drawers;
+    // The settings it was asked to leave for, joined; and whether it leaves.
+    QStringList leaves;
+    bool leaving = false;
 public Q_SLOTS:
     Q_SCRIPTABLE void toggle() { ++calls; }
+    Q_SCRIPTABLE bool leaveFor(const QStringList &settings) { leaves << settings.join(QLatin1Char(' ')); return leaving; }
     Q_SCRIPTABLE void openDrawer(const QString &drawer) { drawers << drawer; }
 };
 
 #include <KConfigGroup>
+#include <KService>
+#include <KSycoca>
 #include <KPackage/Package>
 #include <KPackage/PackageLoader>
 #include <KConfigLoader>
@@ -71,10 +79,11 @@ private Q_SLOTS:
         userDirs.write("XDG_DOWNLOAD_DIR=\"" + m_fixture.path().toUtf8() + "/Downloads\"\n");
         userDirs.close();
         qputenv("XDG_CONFIG_HOME",m_fixture.path().toUtf8());
+        // The stand-in writes down each start, one line of arguments each,
+        // and leaves at once.
         m_executable = m_fixture.filePath(QStringLiteral("tettegouche"));
-        const QString trueExecutable = QStandardPaths::findExecutable(QStringLiteral("true"));
-        QVERIFY(!trueExecutable.isEmpty());
-        QVERIFY(QFile::link(trueExecutable, m_executable));
+        m_launches = m_fixture.filePath(QStringLiteral("launches"));
+        QVERIFY(writeScript(m_executable, m_launches));
         const QByteArray testPath = m_fixture.path().toLocal8Bit() + ':' + qgetenv("PATH");
         qputenv("PATH", testPath);
         QCOMPARE(QStandardPaths::findExecutable(QStringLiteral("tettegouche")), m_executable);
@@ -98,8 +107,6 @@ private Q_SLOTS:
 
         m_face = PlasmaQuick::AppletQuickItem::itemForApplet(m_applet);
         QVERIFY(m_face);
-        m_process = m_applet->findChild<QProcess *>();
-        QVERIFY(m_process);
         m_window = new QQuickWindow;
         m_window->setColor(QColor(QStringLiteral("#141414")));
         m_window->resize(120, 100);
@@ -152,25 +159,21 @@ private Q_SLOTS:
     {
         m_panel->setFormFactor(Plasma::Types::Horizontal);
         m_face->setSize(QSizeF(44, 42));
-        QSignalSpy started(m_process, &QProcess::started);
+        const int before = launches().size();
         const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
         QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, center);
-        QTRY_COMPARE(started.count(), 1);
-        QCOMPARE(m_process->program(), m_executable);
-        QCOMPARE(m_process->arguments(), QStringList());
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().constLast(), QString());
 
         // The usable target includes the panel slot outside the small glyph.
         const QPoint edge = m_face->mapToScene(QPointF(2, 2)).toPoint();
         QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, edge);
-        QTRY_COMPARE(started.count(), 2);
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 2);
 
         auto *touchDevice = QTest::createTouchDevice();
         QTest::touchEvent(m_window, touchDevice).press(0, center, m_window);
         QTest::touchEvent(m_window, touchDevice).release(0, center, m_window);
-        QTRY_COMPARE(started.count(), 3);
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 3);
     }
 
     void pearlSlide()
@@ -190,7 +193,7 @@ private Q_SLOTS:
             QVERIFY2(known.indexOf(door) > last, qPrintable(doors.join(QLatin1Char(','))));
             last = known.indexOf(door);
         }
-        QSignalSpy started(m_process, &QProcess::started);
+        const int before = launches().size();
         const QPoint center = m_face->mapToScene(QPointF(21, 21)).toPoint();
         // The doors are the row's items rather than its QObject children.
         auto *row = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-pearl-doors"));
@@ -222,10 +225,9 @@ private Q_SLOTS:
         QCOMPARE(m_face->property("scrubChoice").toString(), QStringLiteral("apps"));
         QTest::mouseMove(m_window, middle(files));
         QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, middle(files));
-        QTRY_COMPARE(started.count(), 1);
-        QCOMPARE(m_process->arguments(), (QStringList{QStringLiteral("--drawer"), QStringLiteral("files")}));
+        QTRY_COMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer files"));
         QVERIFY(!m_face->property("scrubbing").toBool());
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
 
         // Held still, the doors come too; let go back on the dot, nothing opens.
         QTest::mousePress(m_window, Qt::LeftButton, Qt::NoModifier, center);
@@ -235,7 +237,7 @@ private Q_SLOTS:
         QCOMPARE(m_face->property("scrubChoice").toString(), QString());
         QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, center);
         QTest::qWait(50);
-        QCOMPARE(started.count(), 1);
+        QCOMPARE(launches().size(), before + 1);
         QVERIFY(!m_face->property("scrubbing").toBool());
 
         // A finger does the same.
@@ -244,9 +246,8 @@ private Q_SLOTS:
         QTest::touchEvent(m_window, touchDevice).move(0, center + QPoint(30, 0), m_window);
         QTest::touchEvent(m_window, touchDevice).move(0, middle(apps), m_window);
         QTest::touchEvent(m_window, touchDevice).release(0, middle(apps), m_window);
-        QTRY_COMPARE(started.count(), 2);
-        QCOMPARE(m_process->arguments(), (QStringList{QStringLiteral("--drawer"), QStringLiteral("apps")}));
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 2);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer apps"));
 
         // Down a side of the screen the dot keeps its tap alone.
         m_panel->setFormFactor(Plasma::Types::Vertical);
@@ -258,7 +259,7 @@ private Q_SLOTS:
         QVERIFY(!m_face->property("scrubbing").toBool());
         QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, center + QPoint(30, 0));
         QTest::qWait(50);
-        QCOMPARE(started.count(), 2);
+        QCOMPARE(launches().size(), before + 2);
 
         m_panel->setFormFactor(Plasma::Types::Horizontal);
         m_window->resize(120, 100);
@@ -285,84 +286,144 @@ private Q_SLOTS:
     void configuredActivation()
     {
         configure(QStringLiteral("useKadunce"), false);
-        QSignalSpy started(m_process, &QProcess::started);
+        const int before = launches().size();
         // The same signal Plasma emits for a configured global shortcut.
         m_applet->activated();
-        QTRY_COMPARE(started.count(), 1);
-        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--standalone")});
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().constLast(), QStringLiteral("--standalone"));
         configure(QStringLiteral("useKadunce"), true);
         // With recent use off, Search is told so as it starts.
         configure(QStringLiteral("offerRecent"), false);
         m_applet->activated();
-        QTRY_COMPARE(started.count(), 2);
-        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-recent")});
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 2);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent"));
         configure(QStringLiteral("offerRecent"), true);
         // With Notes off, Search is told so as it starts.
         configure(QStringLiteral("offerNotes"), false);
         m_applet->activated();
-        QTRY_COMPARE(started.count(), 3);
-        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes")});
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 3);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes"));
         configure(QStringLiteral("offerNotes"), true);
         // With only the Notes pill off, Search is told so as it starts.
         configure(QStringLiteral("showNotesPill"), false);
         m_applet->activated();
-        QTRY_COMPARE(started.count(), 4);
-        QCOMPARE(m_process->arguments(), QStringList{QStringLiteral("--no-notes-pill")});
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 4);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill"));
         configure(QStringLiteral("showNotesPill"), true);
     }
 
+    // A running launcher is known by its name on the bus, whoever started
+    // it, and asked rather than started again; once it says it is shown, the
+    // widget is open. It is asked first whether it leaves for the widget's
+    // settings, and one that stays is asked for the toggle.
     void repeatedActivationToggles()
     {
         ToggleEndpoint endpoint;
         auto bus = QDBusConnection::sessionBus();
-        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
         QVERIFY(bus.registerObject(QStringLiteral("/Launcher"), &endpoint,
             QDBusConnection::ExportScriptableSlots));
-        // A harmless child represents the running launcher in this private bus.
-        m_process->start(QStringLiteral("sleep"), {QStringLiteral("30")});
-        QTRY_COMPARE(m_process->state(), QProcess::Running);
+        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
+        QTest::qWait(100);
+        const int before = launches().size();
+        QDBusMessage shown = QDBusMessage::createSignal(QStringLiteral("/Launcher"),
+            QStringLiteral("io.github.carlsonjm.Tettegouche"), QStringLiteral("shown"));
+        shown << true;
+        QVERIFY(bus.send(shown));
         QTRY_COMPARE(m_applet->status(), Plasma::Types::AcceptingInputStatus);
         m_applet->activated();
         QTRY_COMPARE(endpoint.calls, 1);
-        QCOMPARE(m_process->state(), QProcess::Running); // No kill/duplicate launch.
-        m_process->terminate();
-        QVERIFY(m_process->waitForFinished());
-        QTRY_COMPARE(m_applet->status(), Plasma::Types::ActiveStatus);
+        QCOMPARE(endpoint.leaves, QStringList{QString()});
+        QCOMPARE(launches().size(), before); // No duplicate launch.
         bus.unregisterObject(QStringLiteral("/Launcher"));
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+        QTRY_COMPARE_WITH_TIMEOUT(m_applet->status(), Plasma::Types::ActiveStatus, 10000);
+    }
+
+    // A launcher kept ready with other settings leaves when asked, and the
+    // request goes to the one started in its place.
+    void changedSettingsStartAgain()
+    {
+        ToggleEndpoint endpoint;
+        endpoint.leaving = true;
+        auto bus = QDBusConnection::sessionBus();
+        QVERIFY(bus.registerObject(QStringLiteral("/Launcher"), &endpoint,
+            QDBusConnection::ExportScriptableSlots));
+        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
+        QTest::qWait(100);
+        const int before = launches().size();
+        configure(QStringLiteral("offerRecent"), false);
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("apps"))));
+        QTRY_COMPARE(endpoint.leaves, QStringList{QStringLiteral("--no-recent")});
+        QTest::qWait(100);
+        QCOMPARE(launches().size(), before);
+        // It goes.
+        bus.unregisterObject(QStringLiteral("/Launcher"));
+        bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+        QTRY_COMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --drawer apps"));
+        QCOMPARE(endpoint.drawers, QStringList());
+        configure(QStringLiteral("offerRecent"), true);
     }
 
     void drawerKeys()
     {
         // Meta+G and Meta+E start the launcher on their drawer.
-        QSignalSpy started(m_process, &QProcess::started);
+        const int before = launches().size();
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("files"))));
-        QTRY_COMPARE(started.count(), 1);
-        QCOMPARE(m_process->arguments(), (QStringList{QStringLiteral("--drawer"), QStringLiteral("files")}));
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer files"));
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("elsewhere"))));
         QTest::qWait(50);
-        QCOMPARE(started.count(), 1);
+        QCOMPARE(launches().size(), before + 1);
 
         // A running launcher is asked for the drawer instead.
         ToggleEndpoint endpoint;
         auto bus = QDBusConnection::sessionBus();
-        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
         QVERIFY(bus.registerObject(QStringLiteral("/Launcher"), &endpoint,
             QDBusConnection::ExportScriptableSlots));
-        m_process->start(QStringLiteral("sleep"), {QStringLiteral("30")});
-        QTRY_COMPARE(m_process->state(), QProcess::Running);
+        QVERIFY(bus.registerService(QStringLiteral("io.github.carlsonjm.Tettegouche")));
+        QTest::qWait(100);
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("apps"))));
         QTRY_COMPARE(endpoint.drawers, QStringList{QStringLiteral("apps")});
         QCOMPARE(endpoint.calls, 0);
-        m_process->terminate();
-        QVERIFY(m_process->waitForFinished());
+        QCOMPARE(launches().size(), before + 1);
         bus.unregisterObject(QStringLiteral("/Launcher"));
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+        QTest::qWait(100);
+    }
+
+    // Where Shuffle Settings is installed, Configure opens it at Search's
+    // page instead of the widget's own: Plasma still connects Configure as
+    // the widget expects.
+    void configureOpensSuiteSettings()
+    {
+        const QString record = m_fixture.filePath(QStringLiteral("settings-opened"));
+        const QString program = m_fixture.filePath(QStringLiteral("shuffle-settings"));
+        QVERIFY(writeScript(program, record));
+        const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications");
+        QVERIFY(QDir().mkpath(applications));
+        QFile entry(applications + QStringLiteral("/co.goodinput.Shuffle.Settings.desktop"));
+        QVERIFY(entry.open(QIODevice::WriteOnly));
+        entry.write("[Desktop Entry]\nType=Application\nName=Shuffle Settings\nExec=" + program.toUtf8() + " %u\n");
+        entry.close();
+        KSycoca::self()->ensureCacheValid();
+        QVERIFY(KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings")));
+
+        QSignalSpy ownPage(m_panel, &Plasma::Containment::configureRequested);
+        QAction *configure = m_applet->internalAction(QStringLiteral("configure"));
+        QVERIFY(configure);
+        configure->trigger();
+        QTRY_VERIFY(QFile::exists(record));
+        QFile opened(record);
+        QVERIFY(opened.open(QIODevice::ReadOnly));
+        QCOMPARE(QString::fromUtf8(opened.readAll()).trimmed(), QStringLiteral("search"));
+        QCOMPARE(ownPage.count(), 0);
+
+        // Without it, Configure opens the widget's own page.
+        QVERIFY(QFile::remove(entry.fileName()));
+        KSycoca::self()->ensureCacheValid();
+        configure->trigger();
+        QTRY_COMPARE(ownPage.count(), 1);
     }
 
     void launcherKeysAnswerOnce()
@@ -598,13 +659,11 @@ private Q_SLOTS:
         auto *button = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-button"));
         QVERIFY(button);
         button->forceActiveFocus();
-        QSignalSpy started(m_process, &QProcess::started);
+        const int before = launches().size();
         QTest::keyClick(m_window, Qt::Key_Return);
-        QTRY_COMPARE(started.count(), 1);
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 1);
         QTest::keyClick(m_window, Qt::Key_Space);
-        QTRY_COMPARE(started.count(), 2);
-        QTRY_COMPARE(m_process->state(), QProcess::NotRunning);
+        QTRY_COMPARE(launches().size(), before + 2);
     }
 
 private:
@@ -618,13 +677,33 @@ private:
         m_applet->configScheme()->save();
     }
 
+    // A stand-in program that writes its arguments, as one line, to a file.
+    static bool writeScript(const QString &path, const QString &record)
+    {
+        QFile script(path);
+        if (!script.open(QIODevice::WriteOnly)) return false;
+        script.write("#!/bin/sh\nprintf '%s\\n' \"$*\" >> '" + record.toUtf8() + "'\n");
+        script.close();
+        return script.setPermissions(QFile::ReadOwner | QFile::WriteOwner | QFile::ExeOwner);
+    }
+
+    // Each start of the stand-in launcher, by its arguments.
+    QStringList launches() const
+    {
+        QFile file(m_launches);
+        if (!file.open(QIODevice::ReadOnly)) return {};
+        QStringList lines = QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+        if (!lines.isEmpty() && lines.constLast().isEmpty()) lines.removeLast();
+        return lines;
+    }
+
     QTemporaryDir m_fixture;
     QString m_executable;
+    QString m_launches;
     TestCorona *m_corona = nullptr;
     Plasma::Containment *m_panel = nullptr;
     Plasma::Applet *m_applet = nullptr;
     PlasmaQuick::AppletQuickItem *m_face = nullptr;
-    QProcess *m_process = nullptr;
     QQuickWindow *m_window = nullptr;
 };
 
