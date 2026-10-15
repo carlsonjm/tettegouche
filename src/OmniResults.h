@@ -441,7 +441,7 @@ public:
             match.setId(QStringLiteral("action:") + id);
             match.setText(title);
             match.setSubtext(action.value(QStringLiteral("sub")).toString());
-            match.setData(QStringLiteral("action:") + id);
+            match.setData(QString(QStringLiteral("action:") + id));
             auto *item = new QStandardItem(QIcon::fromTheme(action.value(QStringLiteral("icon")).toString()), title);
             item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
             item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
