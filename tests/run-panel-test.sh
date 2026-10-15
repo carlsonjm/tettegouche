@@ -3,7 +3,7 @@ set -euo pipefail
 
 test_root="$(mktemp -d "${TMPDIR:-/tmp}/tette-panel-test.XXXXXX")"
 trap 'rm -rf -- "$test_root"' EXIT
-mkdir -p "$test_root/runtime" "$test_root/config" "$test_root/data" "$test_root/cache"
+mkdir -p "$test_root/runtime" "$test_root/config" "$test_root/data/applications" "$test_root/cache"
 chmod 700 "$test_root/runtime"
 export XDG_RUNTIME_DIR="$test_root/runtime"
 export XDG_CONFIG_HOME="$test_root/config"

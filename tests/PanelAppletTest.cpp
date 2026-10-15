@@ -402,12 +402,18 @@ private Q_SLOTS:
         QVERIFY(writeScript(program, record));
         const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications");
         QVERIFY(QDir().mkpath(applications));
+        // KDE's application list notices a change only past the coarsest
+        // file system clock, and is read again until it has it.
+        const auto installed = [] {
+            KSycoca::self()->ensureCacheValid();
+            return bool(KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings")));
+        };
+        QTest::qSleep(1100);
         QFile entry(applications + QStringLiteral("/co.goodinput.Shuffle.Settings.desktop"));
         QVERIFY(entry.open(QIODevice::WriteOnly));
         entry.write("[Desktop Entry]\nType=Application\nName=Shuffle Settings\nExec=" + program.toUtf8() + " %u\n");
         entry.close();
-        KSycoca::self()->ensureCacheValid();
-        QVERIFY(KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings")));
+        QTRY_VERIFY_WITH_TIMEOUT(installed(), 15000);
 
         QSignalSpy ownPage(m_panel, &Plasma::Containment::configureRequested);
         QAction *configure = m_applet->internalAction(QStringLiteral("configure"));
@@ -420,8 +426,9 @@ private Q_SLOTS:
         QCOMPARE(ownPage.count(), 0);
 
         // Without it, Configure opens the widget's own page.
+        QTest::qSleep(1100);
         QVERIFY(QFile::remove(entry.fileName()));
-        KSycoca::self()->ensureCacheValid();
+        QTRY_VERIFY_WITH_TIMEOUT(!installed(), 15000);
         configure->trigger();
         QTRY_COMPARE(ownPage.count(), 1);
     }

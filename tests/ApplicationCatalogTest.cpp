@@ -401,6 +401,8 @@ private Q_SLOTS:
     {
         const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/");
         const QString xray = QStringLiteral("xray.desktop");
+        // Past the coarsest file system clock, so KDE's list sees the change.
+        QTest::qSleep(1100);
         write(applications + xray, "[Desktop Entry]\nType=Application\nName=X-ray\nExec=true\n");
         QVERIFY(QFile::remove(applications + QStringLiteral("beta.desktop")));
         write(applications + QStringLiteral("beta.desktop"),
@@ -409,9 +411,12 @@ private Q_SLOTS:
 
         ApplicationCatalog catalog;
         catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
-        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§This week"), xray, QStringLiteral("§Older"),
+        // KDE's list may take a moment to have X-ray; Apps follows it.
+        QTRY_COMPARE_WITH_TIMEOUT(layout(catalog),
+                                  (QStringList{QStringLiteral("§This week"), xray, QStringLiteral("§Older"),
                                                QStringLiteral("alpha.desktop"), QStringLiteral("beta.desktop"),
-                                               QStringLiteral("zulu.desktop")}));
+                                               QStringLiteral("zulu.desktop")}),
+                                  15000);
         ApplicationCatalog next;
         QCOMPARE(next.applicationRow(xray), 1);
         next.setSortOrder(ApplicationCatalog::NameAscending);
