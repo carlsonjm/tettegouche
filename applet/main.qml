@@ -13,7 +13,7 @@ PlasmoidItem {
     function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)); }
 
     Plasmoid.icon: "co.goodinput.tettegouche-logo"
-    Plasmoid.status: Plasmoid.launcherActive
+    Plasmoid.status: root.hasLauncher && Plasmoid.launcherActive
         ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus
     Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground
     activationTogglesExpanded: false
@@ -22,7 +22,22 @@ PlasmoidItem {
     // The launcher is a touch square at the panel's start with its dot centred
     // in it. A filled disc weighs more than an outlined status icon, so the dot
     // is a little smaller than one.
-    readonly property int endpointWidth: 44
+    readonly property int endpointWidth: hasLauncher ? 44 : 0
+    // Where the dot sits: before the islands, after them, or nowhere, for a
+    // widget holding islands alone. A host that sets the dot beside a
+    // centred row of its own puts it at the end, nearest that row, and a
+    // second widget beyond the row can carry the islands that go there.
+    readonly property string launcherPlacement: Plasmoid.configuration.launcherPlacement || "start"
+    readonly property bool hasLauncher: launcherPlacement !== "none"
+    readonly property bool launcherAtEnd: hasLauncher && launcherPlacement === "end" && !vertical
+    // Which islands this widget shows: every kind, media alone, or every
+    // kind but media.
+    readonly property string ambientShows: Plasmoid.configuration.ambientShows || "all"
+    function shows(activity) {
+        if (ambientShows === "media") return activity.kind === "media";
+        if (ambientShows === "others") return activity.kind !== "media";
+        return true;
+    }
     // With Ambient off the widget is the launcher's dot alone.
     readonly property bool showAmbient: Plasmoid.configuration.showAmbient !== false
     readonly property int ambientCoreWidth: showAmbient ? ambient.minimumUsefulWidth : 0
@@ -42,12 +57,13 @@ PlasmoidItem {
         function onInvocationRequested() {
             // Use Plasma's panel focus lifecycle, not minimization/show-desktop.
             // The launcher subsequently takes focus on its overlay surface.
+            if (!root.hasLauncher) return;
             Plasmoid.status = PlasmaCore.Types.AcceptingInputStatus;
             launcherButton.forceActiveFocus(Qt.ShortcutFocusReason);
             if (root.Window.window) root.Window.window.requestActivate();
         }
         function onLauncherActiveChanged() {
-            Plasmoid.status = Plasmoid.launcherActive
+            Plasmoid.status = root.hasLauncher && Plasmoid.launcherActive
                 ? PlasmaCore.Types.AcceptingInputStatus : PlasmaCore.Types.ActiveStatus;
         }
     }
@@ -101,8 +117,10 @@ PlasmoidItem {
         id: ambient
         objectName: "tettegouche-ambient-surface"
         visible: root.showAmbient && !root.vertical && width > 0
-        anchors.left: launcherButton.right
-        anchors.right: parent.right
+        // Placed by position rather than by anchors, so the dot can change
+        // sides while the widget runs.
+        x: root.launcherAtEnd ? 0 : launcherButton.width
+        width: Math.max(0, parent.width - launcherButton.width)
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         // The doors take the band while a slide from the dot is on it.
@@ -111,7 +129,9 @@ PlasmoidItem {
             enabled: root.animateIndicator
             NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
         }
-        activities: Plasmoid.ambientActivities
+        activities: Plasmoid.ambientActivities.filter(activity => root.shows(activity))
+        align: Plasmoid.configuration.ambientAlign || "center"
+        outlined: Plasmoid.configuration.islandOutline !== false
         opaque: root.bandOpaque
         rises: Plasmoid.location !== PlasmaCore.Types.TopEdge
         monotonicClock: () => Plasmoid.monotonicNowUs()
@@ -121,7 +141,8 @@ PlasmoidItem {
         onKindsChanged: if (root.island && kinds.length === 0) root.island.dismiss()
     }
 
-    // A slide from the dot: press it and move right, and Search's doors,
+    // A slide from the dot: press it and move away from the dot's edge,
+    // right, or left where the dot sits at the end, and Search's doors,
     // Apps, Files, Notes and Ask, line up in the band; the one under the
     // finger or pointer is chosen and opens when it lets go. Held still,
     // the doors come up as well, to look before choosing. Let go back on the
@@ -146,7 +167,7 @@ PlasmoidItem {
     // the last keep a choice.
     function doorAt(x) {
         const local = pearlDoors.mapFromItem(launcherButton, x, 0).x;
-        if (x < launcherButton.width) return "";
+        if (launcherAtEnd ? x >= 0 : x < launcherButton.width) return "";
         let chosen = "";
         let distance = Infinity;
         for (let i = 0; i < pearlDoorsRepeater.count; ++i) {
@@ -165,9 +186,10 @@ PlasmoidItem {
     Row {
         id: pearlDoors
         objectName: "tettegouche-pearl-doors"
-        anchors.left: launcherButton.right
-        anchors.leftMargin: 2
+        x: root.launcherAtEnd ? launcherButton.x - 2 - width : launcherButton.x + launcherButton.width + 2
         anchors.verticalCenter: parent.verticalCenter
+        // The first door sits nearest the dot, whichever side that is.
+        layoutDirection: root.launcherAtEnd ? Qt.RightToLeft : Qt.LeftToRight
         spacing: 6
         visible: opacity > 0
         opacity: root.scrubbing ? 1 : 0
@@ -299,11 +321,12 @@ PlasmoidItem {
     Item {
         id: launcherButton
         objectName: "tettegouche-launcher-button"
-        anchors.left: parent.left
+        x: root.launcherAtEnd ? parent.width - width : 0
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: root.endpointWidth
-        activeFocusOnTab: true
+        visible: root.hasLauncher
+        activeFocusOnTab: root.hasLauncher
         Accessible.name: i18nc("@action:button %1 is the widget's name", "Open %1", Plasmoid.productName)
         Accessible.role: Accessible.Button
         Accessible.onPressAction: Plasmoid.launch(Plasmoid.configuration.useKadunce)
@@ -375,7 +398,8 @@ PlasmoidItem {
             }
             onPositionChanged: mouse => {
                 if (!root.canScrub) return;
-                if (!root.scrubbing && mouse.x - pressX > Qt.styleHints.startDragDistance) {
+                const away = root.launcherAtEnd ? pressX - mouse.x : mouse.x - pressX;
+                if (!root.scrubbing && away > Qt.styleHints.startDragDistance) {
                     pearlHold.stop();
                     root.beginScrub();
                 }
