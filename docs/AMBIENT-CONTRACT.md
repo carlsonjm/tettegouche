@@ -168,7 +168,8 @@ Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
 screen (§ Shared screen) and applications waiting (§ Waiting applications). The islands sit side by side in the order
 they arrived, an end in its transfer's place, the group centred in the width
-the panel hands Ambient. They are clear, so the panel shows through them. While
+the panel hands Ambient, or set against one end of it where the host asks
+(§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
 black, they take the Plasma style's ground, on a dark style the suite's black,
 `#141414`, the band's own, and melt into it. Their words and glyphs are the
@@ -218,6 +219,28 @@ ignoring spacers; with no widget there, it keeps only the island's core.
 Shuffle's band instead hands Ambient the whole of its side of the dock, so the
 islands never plan for room they will not get. It never pushes a centred dock off
 the display's centre. On a vertical panel only the launcher dot shows.
+
+### Host settings
+
+Four settings let a host lay the widget out around something of its own, such
+as a centred dock with a widget on each side. They are written by the host,
+not offered in the widget's settings, and their defaults are the widget as it
+is on an ordinary panel.
+
+| Setting | Values | Default |
+| --- | --- | --- |
+| `launcherPlacement` | `start`, the dot before the islands; `end`, after them; `none`, no dot, for a widget that shows islands alone | `start` |
+| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media | `all` |
+| `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
+| `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
+
+With the dot at the end, the slide that brings the doors runs left from it,
+and the doors line up leftward from the dot. A widget with no dot has
+no shortcut, takes no keyboard focus and opens nothing when Plasma's launcher
+key is pressed; its islands open as any island does. While the panel prefers
+an opaque background, an island takes the style's ground whatever
+`islandOutline` says. A host that places two widgets, one showing media and one
+the others, shows every island exactly once.
 
 ## Interaction and safety
 

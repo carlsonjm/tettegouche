@@ -37,6 +37,12 @@ Item {
     property bool opened: false
     // A player picked inside the open island, kept while it lasts.
     property string chosenPlayer: ""
+    // Where the group gathers in the width: centred, or against the start or
+    // the end, nearest whatever the host sets beside it.
+    property string align: "center"
+    // Each island a faint pill, or its words and glyphs on the panel alone.
+    // Where the panel is black the islands take its black either way.
+    property bool outlined: true
 
     // Plasma's animation speed, read through Kirigami's durations: 1 at the
     // default, smaller when faster, 0 for instant. The band's travel, pieces
@@ -463,7 +469,8 @@ Item {
         const space = gap * Math.min(before, bubble.presence);
         if (kind === "fold") at = total + space;
         total += space + bubble.slotWidth;
-        return Math.round((width - total) / 2) + at;
+        const start = align === "start" ? 0 : align === "end" ? width - total : (width - total) / 2;
+        return Math.round(start) + at;
     }
 
     // The open island shows music, or every transfer, the ended ones included.
@@ -657,8 +664,8 @@ Item {
             onWidthChanged: if (!island.peeling) island.restWidth = width
             height: surface.pillHeight
             radius: height / 2
-            color: surface.opaque ? tone.surface : tone.wash(0.07)
-            border.width: 1
+            color: surface.opaque ? tone.surface : surface.outlined ? tone.wash(0.07) : "transparent"
+            border.width: surface.outlined ? 1 : 0
             border.color: tone.wash(0.10)
             opacity: Math.min(1, Math.max(0, island.pop) * 2) * island.fade
                 * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
@@ -1355,8 +1362,10 @@ Item {
         width: surface.pillHeight
         height: surface.pillHeight
         radius: width / 2
-        color: surface.opaque ? tone.surface : tone.wash(0.07)
-        border.width: 1
+        // The fold keeps a faint ground without an outline, so its count
+        // still reads as one thing.
+        color: surface.opaque ? tone.surface : tone.wash(surface.outlined ? 0.07 : 0.12)
+        border.width: surface.outlined ? 1 : 0
         border.color: tone.wash(0.10)
         opacity: Math.min(1, Math.max(0, bubbleComes.pop) * 2)
         visible: opacity > 0 && !surface.opened

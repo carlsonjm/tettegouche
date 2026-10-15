@@ -25,6 +25,22 @@
       <label>Show Ambient's islands beside the launcher in the panel</label>
       <default>true</default>
     </entry>
+    <entry name="launcherPlacement" type="String">
+      <label>Where the launcher's dot sits in the widget: start, before the islands; end, after them; or none, for a widget that shows islands alone</label>
+      <default>start</default>
+    </entry>
+    <entry name="ambientShows" type="String">
+      <label>Which islands the widget shows: all, media alone, or others, every island but media</label>
+      <default>all</default>
+    </entry>
+    <entry name="ambientAlign" type="String">
+      <label>Where the islands gather in the widget's width: center, start or end</label>
+      <default>center</default>
+    </entry>
+    <entry name="islandOutline" type="Bool">
+      <label>Draw each island as a faint pill; off, the islands are words and glyphs on the panel alone</label>
+      <default>true</default>
+    </entry>
     <entry name="animateIndicator" type="Bool">
       <label>Animate the panel indicator when Tettegouche opens</label>
       <default>true</default>
