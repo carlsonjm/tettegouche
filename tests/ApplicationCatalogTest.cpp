@@ -271,9 +271,9 @@ private Q_SLOTS:
 
     // Each order, over the same applications, divided its own way: by when
     // each was last used, the most used first inside each, or by when it
-    // arrived. A folder heads the section of its most used application. The
-    // order chosen is the next catalog's, and Z to A, once kept, reads as
-    // A to Z.
+    // arrived, which for those here before Apps kept count is Older. A folder
+    // heads the section of its first application in the order. The order
+    // chosen is the next catalog's, and Z to A, once kept, reads as A to Z.
     void ordersThreeWaysAndKeepsTheChoice()
     {
         const QString alpha = QStringLiteral("alpha.desktop");
@@ -307,10 +307,16 @@ private Q_SLOTS:
                                                QStringLiteral(">") + zulu, QStringLiteral(">") + alpha,
                                                QStringLiteral("§This month"), beta}));
         catalog.removeFolder(folder);
+        // Beta is the more used, but Zulu was used today and leads the
+        // folder, which sits where Zulu does.
+        const QString used = catalog.makeFolder({beta, zulu});
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§Used today"), QStringLiteral("[Folder]+"),
+                                               QStringLiteral(">") + zulu, QStringLiteral(">") + beta,
+                                               QStringLiteral("§Earlier"), alpha}));
+        catalog.removeFolder(used);
 
         catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
-        QCOMPARE(layout(catalog).constFirst(), QStringLiteral("§This week"));
-        QCOMPARE(order(catalog).constFirst(), zulu);
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§Older"), alpha, beta, zulu}));
         catalog.setSortOrder(1);
         catalog.setSortOrder(7);
         QCOMPARE(catalog.sortOrder(), int(ApplicationCatalog::NewestInstalled));
@@ -387,6 +393,31 @@ private Q_SLOTS:
 
         QVERIFY(QFile::remove(exports + QLatin1Char('/') + zulu));
         QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) < 0, 15000);
+    }
+
+    // An application arrives when Apps first finds it. One updated since,
+    // its desktop file written anew, keeps when it arrived.
+    void newestInstalledIsWhenAppsFirstFoundIt()
+    {
+        const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/");
+        const QString xray = QStringLiteral("xray.desktop");
+        write(applications + xray, "[Desktop Entry]\nType=Application\nName=X-ray\nExec=true\n");
+        QVERIFY(QFile::remove(applications + QStringLiteral("beta.desktop")));
+        write(applications + QStringLiteral("beta.desktop"),
+              "[Desktop Entry]\nType=Application\nName=Beta\nExec=true\nComment=Updated\n");
+        KSycoca::self()->ensureCacheValid();
+
+        ApplicationCatalog catalog;
+        catalog.setSortOrder(ApplicationCatalog::NewestInstalled);
+        QCOMPARE(layout(catalog), (QStringList{QStringLiteral("§This week"), xray, QStringLiteral("§Older"),
+                                               QStringLiteral("alpha.desktop"), QStringLiteral("beta.desktop"),
+                                               QStringLiteral("zulu.desktop")}));
+        ApplicationCatalog next;
+        QCOMPARE(next.applicationRow(xray), 1);
+        next.setSortOrder(ApplicationCatalog::NameAscending);
+
+        QVERIFY(QFile::remove(applications + xray));
+        KSycoca::self()->ensureCacheValid();
     }
 };
 

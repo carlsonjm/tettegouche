@@ -15,6 +15,7 @@
 #include <KApplicationTrader>
 #include <KDirWatch>
 #include <KLocalizedString>
+#include <KShell>
 #include <KSycoca>
 
 #include <QSettings>
@@ -57,15 +58,9 @@ int spanOf(qint64 days, qint64 first, qint64 second, qint64 third)
     return days < first ? 0 : days < second ? 1 : days < third ? 2 : 3;
 }
 
-QDateTime installedAt(const KService::Ptr &service)
-{
-    QString path = service->entryPath();
-    if (QDir::isRelativePath(path))
-        path = QStandardPaths::locate(QStandardPaths::ApplicationsLocation, path);
-    const QFileInfo file(path);
-    const QDateTime born = file.birthTime();
-    return born.isValid() ? born : file.lastModified();
-}
+// When Apps first found each application, as JSON: {id: milliseconds since
+// the epoch}, 0 for one already here when Apps began keeping count.
+const QString ArrivalsKey = QStringLiteral("Browse/arrivals");
 }
 
 ApplicationCatalog::ApplicationCatalog(QObject *parent)
@@ -89,6 +84,7 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     connect(installs, &KDirWatch::dirty, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::created, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::deleted, settle, qOverload<>(&QTimer::start));
+    noteArrivals(m_entries);
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
@@ -136,13 +132,38 @@ QVector<ApplicationCatalog::Entry> ApplicationCatalog::readEntries()
         }
         seen.insert(id);
         entries.append({service, service->name().trimmed(),
-                        service->icon().trimmed(), id, installedAt(service)});
+                        service->icon().trimmed(), id, {}});
     }
     std::sort(entries.begin(), entries.end(),
               [](const Entry &left, const Entry &right) {
         return QString::localeAwareCompare(left.name, right.name) < 0;
     });
     return entries;
+}
+
+void ApplicationCatalog::noteArrivals(QVector<Entry> &entries)
+{
+    // A package manager replaces an application's desktop file at each
+    // update, and Flatpak's is a link into each update's own folder, so the
+    // file's dates say when it was last updated. Arrival is when Apps first
+    // found it instead, kept by its id.
+    QSettings settings;
+    const bool counting = settings.contains(ArrivalsKey);
+    QJsonObject arrivals = QJsonDocument::fromJson(settings.value(ArrivalsKey).toString().toUtf8()).object();
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    bool added = false;
+    for (Entry &entry : entries) {
+        if (!arrivals.contains(entry.applicationId)) {
+            // Those here as Apps begins keeping count arrived before it.
+            arrivals.insert(entry.applicationId, counting ? now : qint64(0));
+            added = true;
+        }
+        const qint64 at = arrivals.value(entry.applicationId).toInteger();
+        entry.installed = at > 0 ? QDateTime::fromMSecsSinceEpoch(at) : QDateTime();
+    }
+    if (added || !counting) {
+        settings.setValue(ArrivalsKey, QString::fromUtf8(QJsonDocument(arrivals).toJson(QJsonDocument::Compact)));
+    }
 }
 
 void ApplicationCatalog::checkInstalled()
@@ -171,6 +192,7 @@ void ApplicationCatalog::reload()
     // gone stops being drawn, as it would at the next start.
     const int wasHidden = hiddenCount();
     QVector<Entry> entries = readEntries();
+    noteArrivals(entries);
     rebuildVisibleRows(&entries);
     if (hiddenCount() != wasHidden) Q_EMIT hiddenCountChanged();
 }
@@ -778,7 +800,13 @@ bool ApplicationCatalog::edit(int row)
     }
     // The editor finds the entry by its desktop file id, which is its menu id,
     // in whichever menu holds it, and a running editor turns to it.
-    auto *job = new KIO::CommandLauncherJob(editor->exec(), {entryAt(row)->applicationId}, this);
+    // The editor's own command line may carry options and field codes after
+    // its program, which is all that is run here.
+    const QString program = KShell::splitArgs(editor->exec()).value(0);
+    if (program.isEmpty()) {
+        return false;
+    }
+    auto *job = new KIO::CommandLauncherJob(program, {entryAt(row)->applicationId}, this);
     job->setDesktopName(editor->desktopEntryName());
     job->start();
     return true;
@@ -928,19 +956,12 @@ QString ApplicationCatalog::folderLabel(int folder) const
         ? i18nc("@label an Apps folder with no name", "Folder") : m_folders.at(folder).name;
 }
 
-QPair<QString, QString> ApplicationCatalog::folderSection(int folder, const QVector<int> &members) const
+QPair<QString, QString> ApplicationCatalog::folderSection(const QVector<int> &members) const
 {
-    // Its first application in the order: the most used, or the newest.
+    // Its first application in the order, which its open folder shows first.
     QVector<int> ordered = members;
-    std::sort(ordered.begin(), ordered.end());
-    const int first = *std::min_element(ordered.cbegin(), ordered.cend(), [this](int left, int right) {
-        if (m_sortOrder == MostUsed) {
-            return m_use.value(m_entries.at(left).applicationId).score
-                > m_use.value(m_entries.at(right).applicationId).score;
-        }
-        return m_entries.at(left).installed > m_entries.at(right).installed;
-    });
-    return sectionOf(first);
+    sortEntries(ordered);
+    return sectionOf(ordered.constFirst());
 }
 
 void ApplicationCatalog::rebuildVisibleRows(QVector<Entry> *entries)
@@ -1008,7 +1029,7 @@ void ApplicationCatalog::rebuildVisibleRows(QVector<Entry> *entries)
             // The keys are already in the order's own.
             QMap<QString, Section> sections;
             for (auto folder = drawn.cbegin(); folder != drawn.cend(); ++folder) {
-                const auto [key, label] = folderSection(folder.key(), folder.value());
+                const auto [key, label] = folderSection(folder.value());
                 sections[key].label = label;
                 sections[key].folders.append(folder.key());
             }
