@@ -98,10 +98,14 @@ application and Tettegouche never depends on it.
 
 Allowed local sources are applications/services, Baloo and recent documents,
 KDE settings, calculator, unit conversion, notes from a running
-Gooseberry, and facts from Split Rock's Core where it is installed. Core's
-facts are held as Core last told them and found by the start of their words or
-a query holding one, three letters or more, so typing asks Core nothing; Enter
-on one asks Core to open the card that acts on it. Shell, session/kill actions, browser history, and online runners
+Gooseberry, and, where Split Rock is installed, its Core's facts and upkeep
+cards. Core's facts ("Storage · 91% full") and its cards (Check for updates,
+Free up space, Install an app, Health check, What changed, Restore points,
+Community apps) are held as Core last told them and found by the start of
+their words or a query holding one, three letters or more, so typing asks Core
+nothing. Enter on one asks Core to open the card on its own; Install an app
+gets what was typed, so "install pdf editor" opens it searching. A card changes
+nothing until the person's yes on it. Shell, session/kill actions, browser history, and online runners
 are excluded.
 
 Application results may activate an exact existing Kadunce window. Files and

@@ -97,9 +97,9 @@ public:
     void match(KRunner::RunnerContext &) override {}
 };
 
-// Facts from Split Rock's Core, such as how full the drive is, found by the
-// words Core gives each; Core opens the card that acts on one. Never
-// registered with KRunner.
+// Facts from Split Rock's Core, such as how full the drive is, and the upkeep
+// cards Core opens on their own, such as Check for updates, found by the
+// words Core gives each; Core opens the card. Never registered with KRunner.
 class CoreRunner : public KRunner::AbstractRunner {
 public:
     static constexpr const char *Id = "split-rock-core";
@@ -401,10 +401,16 @@ public:
         m_coreFacts = std::move(facts);
         m_openCore = std::move(open);
     }
+    // The upkeep cards Core opens on their own, found by their words; opening
+    // one passes what was typed, which Install an app searches for.
+    void setCoreActions(std::function<QList<QVariantMap>()> actions,
+                        std::function<void(const QString &, const QString &)> open) {
+        m_coreActions = std::move(actions);
+        m_openCoreAction = std::move(open);
+    }
     void showCore(const QString &query) {
         m_core.removeRows(0, m_core.rowCount());
-        if (!m_coreFacts) return;
-        for (const auto &fact : m_coreFacts()) {
+        for (const auto &fact : m_coreFacts ? m_coreFacts() : QList<QVariantMap>{}) {
             if (!coreFactFits(fact, query)) continue;
             const auto topic = fact.value(QStringLiteral("topic")).toString();
             const auto title = fact.value(QStringLiteral("title")).toString();
@@ -421,6 +427,22 @@ public:
             match.setSubtext(under.join(QStringLiteral(" · ")));
             match.setData(topic);
             auto *item = new QStandardItem(QIcon::fromTheme(fact.value(QStringLiteral("icon")).toString()), text);
+            item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+            item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
+            item->setData(true, KRunner::ResultsModel::EnabledRole);
+            m_core.appendRow(item);
+        }
+        for (const auto &action : m_coreActions ? m_coreActions() : QList<QVariantMap>{}) {
+            if (!coreFactFits(action, query)) continue;
+            const auto id = action.value(QStringLiteral("id")).toString();
+            const auto title = action.value(QStringLiteral("title")).toString();
+            if (id.isEmpty() || title.isEmpty()) continue;
+            KRunner::QueryMatch match(&m_coreRunner);
+            match.setId(QStringLiteral("action:") + id);
+            match.setText(title);
+            match.setSubtext(action.value(QStringLiteral("sub")).toString());
+            match.setData(QStringLiteral("action:") + id);
+            auto *item = new QStandardItem(QIcon::fromTheme(action.value(QStringLiteral("icon")).toString()), title);
             item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
             item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
             item->setData(true, KRunner::ResultsModel::EnabledRole);
@@ -473,8 +495,14 @@ public:
         }
         if (source.model() == &m_core) {
             // Core opens the card; Search waits for nothing.
+            const auto target = getQueryMatch(index).data().toString();
+            if (target.startsWith(QLatin1String("action:"))) {
+                if (!m_openCoreAction) return false;
+                m_openCoreAction(target.mid(7), queryString().trimmed());
+                return true;
+            }
             if (!m_openCore) return false;
-            m_openCore(getQueryMatch(index).data().toString());
+            m_openCore(target);
             return true;
         }
         if (source.model() == &m_aliases) {
@@ -619,6 +647,8 @@ private:
     CoreRunner m_coreRunner;
     std::function<QList<QVariantMap>()> m_coreFacts;
     std::function<void(const QString &)> m_openCore;
+    std::function<QList<QVariantMap>()> m_coreActions;
+    std::function<void(const QString &, const QString &)> m_openCoreAction;
     SearchSource m_results;
     QStandardItemModel m_aliases;
     QStandardItemModel m_notes;

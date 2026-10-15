@@ -265,6 +265,18 @@ int main(int argc, char **argv)
         if (core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("45 GB free · Free up space")) return 74;
         if (!core.run(core.index(0, 0)) || opened != QStringList{QStringLiteral("storage")}) return 75;
         if (searchTier(QStringLiteral("split-rock-core")) != 2) return 76;
+        // The upkeep cards, found by their words; Install an app gets what was typed.
+        const QVariantMap install{{QStringLiteral("id"), QStringLiteral("install")}, {QStringLiteral("title"), QStringLiteral("Install an app")},
+            {QStringLiteral("sub"), QStringLiteral("Say what you need, or remove one")}, {QStringLiteral("icon"), QStringLiteral("system-software-install")},
+            {QStringLiteral("keywords"), QStringList{QStringLiteral("install"), QStringLiteral("uninstall")}}};
+        QStringList actionsOpened;
+        core.setCoreActions([&install] { return QList<QVariantMap>{install}; },
+                            [&actionsOpened](const QString &id, const QString &query) { actionsOpened.append(id + QStringLiteral(": ") + query); });
+        core.testQuery = QStringLiteral("install pdf editor");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1) return 78;
+        if (core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Install an app")) return 79;
+        if (!core.run(core.index(0, 0)) || actionsOpened != QStringList{QStringLiteral("install: install pdf editor")}) return 80;
         core.clear();
         if (core.rowCount() != 0) return 77;
     }

@@ -28,6 +28,7 @@ void CoreFactProvider::ownerChanged(const QString &name, const QString &, const 
     if (name != service()) return;
     ++m_generation;
     m_owner = owner;
+    m_actions.clear();
     if (!m_facts.isEmpty()) { m_facts.clear(); Q_EMIT changed(); }
     if (!owner.isEmpty()) ask();
 }
@@ -46,6 +47,12 @@ void CoreFactProvider::ask() {
             const QDBusPendingReply<QList<QVariantMap>> reply = *facts; facts->deleteLater();
             if (reply.isError() || generation != m_generation) return;
             if (reply.value() != m_facts) { m_facts = reply.value(); Q_EMIT changed(); }
+        });
+        auto *actions = new QDBusPendingCallWatcher(m_bus.asyncCall(
+            QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Actions")), 5000), this);
+        connect(actions, &QDBusPendingCallWatcher::finished, this, [this, actions, generation] {
+            const QDBusPendingReply<QList<QVariantMap>> reply = *actions; actions->deleteLater();
+            if (!reply.isError() && generation == m_generation) m_actions = reply.value();
         });
     });
 }
@@ -94,6 +101,13 @@ void CoreFactProvider::dismiss(const QString &id) {
 
 void CoreFactProvider::open(const QString &topic) {
     act(topic, QStringLiteral("open"));
+}
+
+void CoreFactProvider::openAction(const QString &id, const QString &query) {
+    if (m_actions.isEmpty()) return;
+    auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("OpenAction"));
+    call.setArguments({id, query});
+    m_bus.asyncCall(call, 5000);
 }
 
 // Core answers with FactChanged, which takes the row away.

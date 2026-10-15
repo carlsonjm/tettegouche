@@ -13,7 +13,8 @@ class QDBusMessage;
 // says it wants the island; Open asks Core to open the fact's card, and
 // setting it aside tells Core the person dismissed it, so Core stays quiet
 // about it until it gets worse. Core decides when a fact speaks; nothing here
-// is asked on a timer. Without Core there are no rows and no facts.
+// is asked on a timer. Core also lists the upkeep cards Search can open by
+// their words. Without Core there are no rows, facts or actions.
 class CoreFactProvider : public QObject {
     Q_OBJECT
 public:
@@ -25,6 +26,11 @@ public:
     explicit CoreFactProvider(const QDBusConnection &bus, QObject *parent = nullptr);
     // Every fact Core has now, for Search, whatever it asks of the island.
     QList<QVariantMap> facts() const { return m_facts; }
+    // The upkeep cards Core can open, each with the words it is found by,
+    // for Search.
+    QList<QVariantMap> actions() const { return m_actions; }
+    // Asks Core to open one on its own, with what was typed.
+    void openAction(const QString &id, const QString &query);
     // The facts that want the island, as Ambient's rows.
     QVariantList activities() const;
     void invoke(const QString &id, int generation, const QString &action);
@@ -43,5 +49,6 @@ private:
     QDBusConnection m_bus;
     QString m_owner;
     QList<QVariantMap> m_facts;
+    QList<QVariantMap> m_actions;
     int m_generation = 0;
 };

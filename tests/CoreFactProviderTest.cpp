@@ -17,6 +17,11 @@ public Q_SLOTS:
     uint ProtocolVersion() const { return version; }
     QList<QVariantMap> Facts() const { return facts; }
     bool Act(const QString &topic, const QString &action) { acts.append(topic + QLatin1Char(' ') + action); return true; }
+    QList<QVariantMap> Actions() const {
+        return {{{QStringLiteral("id"), QStringLiteral("install")}, {QStringLiteral("title"), QStringLiteral("Install an app")},
+                 {QStringLiteral("keywords"), QStringList{QStringLiteral("install")}}}};
+    }
+    bool OpenAction(const QString &id, const QString &query) { acts.append(id + QStringLiteral(": ") + query); return true; }
 Q_SIGNALS:
     void FactChanged(const QVariantMap &fact);
 };
@@ -73,6 +78,12 @@ private Q_SLOTS:
         QTRY_COMPARE(core.acts.size(), 2);
         QCOMPARE(core.acts.last(), QStringLiteral("storage dismiss"));
 
+        // The upkeep cards, opened with what was typed.
+        QTRY_COMPARE(provider.actions().size(), 1);
+        provider.openAction(QStringLiteral("install"), QStringLiteral("install pdf editor"));
+        QTRY_COMPARE(core.acts.size(), 3);
+        QCOMPARE(core.acts.last(), QStringLiteral("install: install pdf editor"));
+
         QSignalSpy changed(&provider, &CoreFactProvider::changed);
         Q_EMIT core.FactChanged(storage(QStringLiteral("none")));
         QTRY_VERIFY(provider.activities().isEmpty());
@@ -83,6 +94,7 @@ private Q_SLOTS:
         // Core leaving takes its facts with it.
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
         QTRY_VERIFY(provider.facts().isEmpty());
+        QVERIFY(provider.actions().isEmpty());
         peer.unregisterObject(QStringLiteral("/Core"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-core"));
     }
