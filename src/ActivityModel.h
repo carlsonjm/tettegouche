@@ -7,6 +7,7 @@
 #include "WaitingAppProvider.h"
 #include "IncomingFileProvider.h"
 #include "TetteTransferProvider.h"
+#include "CoreFactProvider.h"
 #include <memory>
 #include <QSet>
 #include <QTimer>
@@ -24,6 +25,8 @@ public:
     explicit ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows = nullptr,
                            QObject *parent = nullptr);
     QVariantList activities() const { return m_rows; }
+    // Split Rock's Core, whose facts Search finds as well.
+    CoreFactProvider *core() { return &m_core; }
     void invoke(const QString &id, int generation, const QString &action, const QVariant &value = {});
     QUrl destinationForReveal(const QString &id, int generation) const;
     // Show in Files was used on this row; an end waiting there goes no further.
@@ -51,6 +54,7 @@ private:
     DriveActivityProvider m_drives;
     ScreenShareProvider m_screen;
     WaitingAppProvider m_waiting;
+    CoreFactProvider m_core;
     QVariantList m_rows;
     QMap<QString, QVariantMap> m_routes;
     QMap<QString, QString> m_presentations;

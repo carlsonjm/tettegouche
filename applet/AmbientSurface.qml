@@ -108,11 +108,11 @@ Item {
     readonly property int bubbleCount: folded.reduce((count, kind) => count
         + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length
             : kind === "drive" ? drives.length : kind === "screen" ? screens.length
-            : kind === "waiting" ? waitings.length : 1), 0)
+            : kind === "waiting" ? waitings.length : kind === "core" ? cores.length : 1), 0)
     // The least the band needs: each island's first piece.
     readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
-        || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling
+        || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -172,7 +172,7 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland, coreIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -319,6 +319,17 @@ Item {
     readonly property string waitingQuestion: waitingShown && waitingShown.question ? waitingShown.question : ""
     readonly property string waitingIcon: waitingShown && waitingShown.icon ? waitingShown.icon : "application-x-executable"
 
+    // A fact from Split Rock's Core that wants attention, such as the drive
+    // filling up: its icon, what it is and how it stands, and what can be
+    // done. The newest shows; a tap opens the card that does it.
+    readonly property var cores: activities.filter(activity => activity.kind === "core")
+    readonly property var coreShown: cores.length > 0 ? cores[cores.length - 1] : null
+    readonly property string coreName: coreShown
+        ? (coreShown.line ? words.i18n("%1 · %2", coreShown.title, coreShown.line) : coreShown.title || "") : ""
+    readonly property string coreDetail: coreShown
+        ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
+    readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -363,6 +374,10 @@ Item {
     function waitingWords(name, question) {
         return column(name ? textWidth(strongMetrics, waitingName) : 0,
             question ? textWidth(smallMetrics, waitingQuestion) : 0, 180);
+    }
+    function coreWords(name, detail) {
+        return column(name ? textWidth(strongMetrics, coreName) : 0,
+            detail ? textWidth(smallMetrics, coreDetail) : 0, 180);
     }
     // Who receives the screen, on one line.
     function screenWords(who) {
@@ -410,6 +425,8 @@ Item {
                 + (has("stop") ? pillWidth(stopLabel) : 0);
         if (kind === "waiting")
             return 2 * inset + (has("icon") ? lead : 0) + waitingWords(has("name"), has("question"));
+        if (kind === "core")
+            return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
         return 0;
     }
 
@@ -439,6 +456,8 @@ Item {
         case "screen.stop": return capability(screenShown, "stop");
         case "waiting.icon": case "waiting.name": return waitingShown !== null;
         case "waiting.question": return tall && waitingQuestion !== "";
+        case "core.icon": case "core.name": return coreShown !== null;
+        case "core.detail": return tall && coreDetail !== "";
         }
         return false;
     }
@@ -450,7 +469,8 @@ Item {
     function islandOf(kind) {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
             : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
-            : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland : null;
+            : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland
+            : kind === "core" ? coreIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -480,10 +500,11 @@ Item {
     // A drive's island is one tap: Files opens the drive, mounting it first.
     // A shared screen's island only tells, and stops: a tap opens nothing.
     // A waiting application's island brings the application forward, and its
-    // dialog with it.
+    // dialog with it. Core's island opens the card that does what it suggests.
     function open(kind) {
         if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
+        else if (kind === "core") invoke(coreShown, "open");
         else if (kind !== "screen") openRequested(openKind(kind));
     }
     // Where the open island grows from.
@@ -501,13 +522,16 @@ Item {
             ? words.i18n("%1 is waiting: %2, show it", waitingName, waitingQuestion)
             : words.i18n("%1 is waiting, show it", waitingName);
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
+        if (kind === "core") return coreShown && coreShown.actionText
+            ? words.i18n("%1, %2", coreName, coreShown.actionText) : coreName;
         return words.i18n("%1, open", endingName);
     }
     // What an island shows goes aside: the player it shows, or all it holds.
     function setAside(kind) {
         if (kind === "media") invoke(player, "setAside");
         else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives
-                : kind === "screen" ? screens : kind === "waiting" ? waitings : endings)
+                : kind === "screen" ? screens : kind === "waiting" ? waitings
+                : kind === "core" ? cores : endings)
             invoke(activity, "setAside");
     }
 
@@ -1349,6 +1373,51 @@ Item {
         }
     }
 
+    // A fact from Split Rock's Core: its icon, what it is and how it stands,
+    // and below, the detail and what can be done. The whole island is one
+    // tap, which opens the card that does it.
+    BandIsland {
+        id: coreIsland
+        kind: "core"
+        opens: surface.capability(surface.coreShown, "open")
+        Piece {
+            island: coreIsland
+            name: "icon"
+            size: surface.lead
+            Kirigami.Icon {
+                objectName: "ambient-core-icon"
+                anchors.centerIn: parent
+                width: surface.artSize > 26 ? 24 : 18
+                height: width
+                source: surface.coreIcon
+            }
+        }
+        Piece {
+            id: coreWordsPiece
+            island: coreIsland
+            shows: coreIsland.has("name") || coreIsland.has("detail")
+            size: surface.coreWords(coreIsland.has("name"), coreIsland.has("detail"))
+            Column {
+                x: 6
+                width: coreWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-core-name"
+                    width: parent.width
+                    visible: coreIsland.has("name")
+                    text: surface.coreName
+                    font.weight: Font.DemiBold
+                }
+                Detail {
+                    objectName: "ambient-core-detail"
+                    width: parent.width
+                    visible: coreIsland.has("detail")
+                    text: surface.coreDetail
+                }
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1415,6 +1484,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "waiting"
             source: surface.waitingIcon
+        }
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 24 : 18
+            height: width
+            visible: surface.bubbleKind === "core"
+            source: surface.coreIcon
         }
         Rectangle {
             objectName: "ambient-bubble-count"

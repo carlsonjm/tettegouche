@@ -243,5 +243,42 @@ int main(int argc, char **argv)
         if (notes.rowCount() != 0) return 65;
         if (searchTier(QStringLiteral("gooseberry-notes")) != 2) return 66;
     }
+    {
+        // Split Rock's Core: a fact found by the start of its words or a
+        // query that holds one, and Core asked to open its card.
+        const QVariantMap storage{{QStringLiteral("topic"), QStringLiteral("storage")}, {QStringLiteral("title"), QStringLiteral("Storage")},
+            {QStringLiteral("line"), QStringLiteral("91% full")}, {QStringLiteral("detail"), QStringLiteral("45 GB free")},
+            {QStringLiteral("actionText"), QStringLiteral("Free up space")}, {QStringLiteral("icon"), QStringLiteral("drive-harddisk")},
+            {QStringLiteral("keywords"), QStringList{QStringLiteral("storage"), QStringLiteral("disk"), QStringLiteral("free up space")}}};
+        if (!coreFactFits(storage, QStringLiteral("stor")) || !coreFactFits(storage, QStringLiteral("Disk space"))
+            || !coreFactFits(storage, QStringLiteral("free up"))) return 70;
+        if (coreFactFits(storage, QStringLiteral("st")) || coreFactFits(storage, QStringLiteral("firefox"))) return 71;
+        Results core;
+        QStringList opened;
+        core.setCoreFacts([&storage] { return QList<QVariantMap>{storage}; },
+                          [&opened](const QString &topic) { opened.append(topic); });
+        core.testQuery = QStringLiteral("storage");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1) return 72;
+        const auto match = core.getQueryMatch(core.index(0, 0));
+        if (!coreMatch(match) || match.text() != QStringLiteral("Storage · 91% full")) return 73;
+        if (core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("45 GB free · Free up space")) return 74;
+        if (!core.run(core.index(0, 0)) || opened != QStringList{QStringLiteral("storage")}) return 75;
+        if (searchTier(QStringLiteral("split-rock-core")) != 2) return 76;
+        // The upkeep cards, found by their words; Install an app gets what was typed.
+        const QVariantMap install{{QStringLiteral("id"), QStringLiteral("install")}, {QStringLiteral("title"), QStringLiteral("Install an app")},
+            {QStringLiteral("sub"), QStringLiteral("Say what you need, or remove one")}, {QStringLiteral("icon"), QStringLiteral("system-software-install")},
+            {QStringLiteral("keywords"), QStringList{QStringLiteral("install"), QStringLiteral("uninstall")}}};
+        QStringList actionsOpened;
+        core.setCoreActions([&install] { return QList<QVariantMap>{install}; },
+                            [&actionsOpened](const QString &id, const QString &query) { actionsOpened.append(id + QStringLiteral(": ") + query); });
+        core.testQuery = QStringLiteral("install pdf editor");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1) return 78;
+        if (core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Install an app")) return 79;
+        if (!core.run(core.index(0, 0)) || actionsOpened != QStringList{QStringLiteral("install: install pdf editor")}) return 80;
+        core.clear();
+        if (core.rowCount() != 0) return 77;
+    }
     return 0;
 }

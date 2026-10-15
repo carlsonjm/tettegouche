@@ -540,6 +540,37 @@ TestCase {
         verify(shown(surface, "screen").indexOf("stop") >= 0);
     }
 
+    // A fact from Split Rock's Core shows its icon, what it is and how it
+    // stands, and below, the detail and what can be done; a tap opens its card
+    // through Core and opens no island, and setting it aside tells Core.
+    function test_a_core_fact_opens_its_card() {
+        const fact = {id: "core:storage", generation: 3, kind: "core", state: "running",
+            title: "Storage", line: "91% full", detail: "45 GB free", actionText: "Free up space",
+            icon: "drive-harddisk", capabilities: {open: true}};
+        const surface = createSurface(460, [fact]);
+        settle();
+        const shape = island(surface, "core");
+        verify(shape.visible);
+        compare(shown(surface, "core"), ["icon", "name", "detail"]);
+        compare(findChild(surface, "ambient-core-icon").source, "drive-harddisk");
+        compare(findChild(surface, "ambient-core-name").text, "Storage · 91% full");
+        compare(findChild(surface, "ambient-core-detail").text, "45 GB free · Free up space");
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(shape, shape.width - 12, shape.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "core:storage");
+        compare(invoked.signalArguments[0][1], 3);
+        compare(invoked.signalArguments[0][2], "open");
+        compare(opens.count, 0);
+        surface.setAside("core");
+        compare(invoked.count, 2);
+        compare(invoked.signalArguments[1][2], "setAside");
+        surface.width = 60;
+        settle();
+        compare(shown(surface, "core"), ["icon"]);
+    }
+
     // An application waiting on the person shows its icon, its name and its
     // dialog's question; a tap anywhere on it brings it forward and opens
     // nothing, and narrow, it keeps its icon longest, then its name.
