@@ -29,6 +29,7 @@
 
 #include <QCoreApplication>
 #include <QDBusConnection>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
@@ -72,6 +73,7 @@ LauncherController::LauncherController(QQuickView *view,
                                        QObject *parent)
     : QObject(parent)
     , m_view(view)
+    , m_screen(view->screen())
     , m_runnerManager(runnerManager)
     , m_results(results)
     , m_catalog(catalog)
@@ -111,14 +113,14 @@ LauncherController::~LauncherController() = default;
 void LauncherController::watchScreen(QScreen *screen)
 {
     const auto boundsChanged = [this, screen] {
-        if (screen != m_view->screen()) return;
+        if (screen != placedScreen()) return;
         const bool expanded = m_requestedExpanded;
         const bool chosen = m_expansionChosen;
         endGuestLease();
         m_requestedExpanded = expanded;
         m_expansionChosen = chosen;
         m_drawerExpanded = expanded && (chosen || tabletSurface());
-        m_view->resize(screen->geometry().size());
+        m_view->setGeometry(screen->geometry());
         readDockBand();
         Q_EMIT guestChanged();
     };
@@ -175,7 +177,8 @@ QVariantList LauncherController::relatedItems(int row)
 
 bool LauncherController::tabletSurface() const
 {
-    return m_view->screen() && m_view->screen()->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
+    const QScreen *screen = placedScreen();
+    return screen && screen->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
 }
 
 void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
@@ -232,7 +235,7 @@ void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
 
 QRect LauncherController::availableArea() const
 {
-    const auto *screen = m_view->screen();
+    const auto *screen = placedScreen();
     return screen ? workArea(screen->availableGeometry().translated(-screen->geometry().topLeft()),
                              screen->geometry().size(), m_dockBand, m_contextBar)
                   : QRect(0, 0, m_view->width(), m_view->height());
@@ -659,7 +662,7 @@ bool LauncherController::showFilesWindow()
             ? m_compactGuestRect.size()
             : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
         m_filesWindow->resize(size.expandedTo(m_filesWindow->minimumSize()));
-        m_filesWindow->setScreen(m_view->screen());
+        m_filesWindow->setScreen(placedScreen());
         // A window takes the application's identity as it is shown, and
         // Files keeps it while its window is open.
         m_launcherApplicationId = QGuiApplication::desktopFileName();
@@ -881,22 +884,40 @@ bool LauncherController::stayReady() const
 // is read.
 void LauncherController::readContextBar()
 {
-    const auto *screen = m_view->screen();
+    const auto *screen = placedScreen();
     const quint64 generation = ++m_barGeneration;
+    m_barRetried = false;
     if (!screen) {
         m_contextBar = 0;
         return;
     }
+    askContextBar(screen->name(), generation, 250);
+}
+
+// The bar's shell can be slow to answer, most of all just after sign-in. An
+// unanswered read keeps the height already known and asks once more, longer,
+// rather than letting a full Search run over the bar. Only an answer, or no
+// bar on the bus at all, sets it to none.
+void LauncherController::askContextBar(const QString &outputName, quint64 generation, int timeout)
+{
     QDBusMessage request = QDBusMessage::createMethodCall(
         QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("/ContextBar"),
         QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("clockExtent"));
-    request << screen->name();
-    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 250), this);
-    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, generation] {
+    request << outputName;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, timeout), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, generation, outputName] {
         watcher->deleteLater();
         const QDBusPendingReply<QString> reply = *watcher;
+        if (generation != m_barGeneration) return;
+        if (reply.isError() && reply.error().type() != QDBusError::ServiceUnknown) {
+            if (!m_barRetried) {
+                m_barRetried = true;
+                askContextBar(outputName, generation, 1500);
+            }
+            return;
+        }
         const int bar = reply.isError() ? 0 : contextBarHeight(reply.value().toUtf8());
-        if (generation != m_barGeneration || bar == m_contextBar) return;
+        if (bar == m_contextBar) return;
         m_contextBar = bar;
         Q_EMIT guestChanged();
     });
@@ -905,7 +926,7 @@ void LauncherController::readContextBar()
 void LauncherController::readDockBand()
 {
     readContextBar();
-    const auto *screen = m_view->screen();
+    const auto *screen = placedScreen();
     if (!screen) {
         m_dockBand = 0;
         return;
@@ -951,12 +972,25 @@ void LauncherController::floatOn(const QString &outputName)
 {
     if (outputName.isEmpty()) return;
     for (QScreen *screen : QGuiApplication::screens()) {
-        if (screen->name() != outputName || screen == m_view->screen()) continue;
-        m_view->setScreen(screen);
-        if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(screen);
-        m_view->resize(screen->geometry().size());
+        if (screen->name() != outputName) continue;
+        placeOn(screen);
         return;
     }
+}
+
+void LauncherController::placeOn(QScreen *screen)
+{
+    m_screen = screen;
+    m_view->setScreen(screen);
+    if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(screen);
+    // The whole display, where it sits: a window left at the origin is taken
+    // by Qt for whichever display is there.
+    m_view->setGeometry(screen->geometry());
+}
+
+QScreen *LauncherController::placedScreen() const
+{
+    return m_screen ? m_screen.data() : m_view->screen();
 }
 
 void LauncherController::tryBeginGuest()
@@ -1018,9 +1052,7 @@ void LauncherController::tryBeginGuest()
         return;
     }
 
-    m_view->setScreen(guestScreen);
-    if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(guestScreen);
-    m_view->resize(guestScreen->geometry().size());
+    placeOn(guestScreen);
     const QRect globalCard(
         card.value(QStringLiteral("x")).toInt(),
         card.value(QStringLiteral("y")).toInt(),

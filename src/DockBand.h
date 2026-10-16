@@ -37,12 +37,13 @@ inline int contextBarHeight(const QByteArray &payload)
 // available, less a dock band along the bottom and a Context Bar along the
 // top that the report still reaches over. Qt on Wayland reports the whole
 // display, so both come off here; a report that already stops short of an
-// edge keeps its own.
+// edge keeps its own where it stops farther, and is cut back to the bar or
+// band where it stops short of them.
 inline QRect workArea(QRect available, const QSize &screen, int band, int bar = 0)
 {
-    if (band > 0 && available.bottom() >= screen.height() - 1)
+    if (band > 0 && available.bottom() > screen.height() - 1 - band)
         available.setBottom(std::max(available.top(), screen.height() - 1 - band));
-    if (bar > 0 && available.top() <= 0)
+    if (bar > 0 && available.top() < bar)
         available.setTop(std::min(available.bottom(), bar));
     return available;
 }
