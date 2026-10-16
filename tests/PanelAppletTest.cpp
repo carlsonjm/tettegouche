@@ -283,6 +283,23 @@ private Q_SLOTS:
         m_face->setSize(QSizeF(44, 42));
     }
 
+    // A host's spacing reaches the islands as it is written, held to 4 to
+    // 32 px; unset, the outlined islands keep 8.
+    void islandSpacingFollowsSettings()
+    {
+        auto *ambient = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-ambient-surface"));
+        QVERIFY(ambient);
+        QCOMPARE(ambient->property("gap").toReal(), 8.0);
+        configure(QStringLiteral("islandSpacing"), 12);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 12.0);
+        configure(QStringLiteral("islandSpacing"), 2);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 4.0);
+        configure(QStringLiteral("islandSpacing"), 40);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 32.0);
+        configure(QStringLiteral("islandSpacing"), 0);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 8.0);
+    }
+
     void configuredActivation()
     {
         configure(QStringLiteral("useKadunce"), false);
@@ -676,7 +693,7 @@ private Q_SLOTS:
 private:
     // As Plasma's settings page and scripting both do: through the
     // configuration main.xml declares.
-    void configure(const QString &key, bool value)
+    void configure(const QString &key, const QVariant &value)
     {
         auto *item = static_cast<KCoreConfigSkeleton *>(m_applet->configScheme())->findItem(key);
         QVERIFY(item);

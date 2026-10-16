@@ -132,6 +132,7 @@ PlasmoidItem {
         activities: Plasmoid.ambientActivities.filter(activity => root.shows(activity))
         align: Plasmoid.configuration.ambientAlign || "center"
         outlined: Plasmoid.configuration.islandOutline !== false
+        spacing: Plasmoid.configuration.islandSpacing || 0
         opaque: root.bandOpaque
         rises: Plasmoid.location !== PlasmaCore.Types.TopEdge
         monotonicClock: () => Plasmoid.monotonicNowUs()

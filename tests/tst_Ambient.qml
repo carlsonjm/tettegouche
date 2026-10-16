@@ -344,6 +344,38 @@ TestCase {
         fuzzyCompare(rightOf(surface, second), surface.width, 1);
     }
 
+    // Unset, each look keeps its own room. A host's spacing is the room in
+    // both, and the margin without an outline, held to 4 to 32 px, and it
+    // takes effect as it changes.
+    function test_a_hosts_spacing_parts_the_islands() {
+        const surface = createSurface(640, [transfer, media]);
+        settle();
+        const first = island(surface, "transfer"), second = island(surface, "media");
+        compare(surface.spacing, 0);
+        compare(surface.gap, 8);
+        surface.spacing = 14;
+        settle();
+        compare(surface.gap, 14);
+        fuzzyCompare(leftOf(surface, second) - rightOf(surface, first), 14, 1);
+        surface.outlined = false;
+        surface.align = "start";
+        settle();
+        compare(surface.gap, 14);
+        compare(surface.margin, 14);
+        fuzzyCompare(leftOf(surface, first), 14, 1);
+        fuzzyCompare(leftOf(surface, second) - rightOf(surface, first), 14, 1);
+        surface.spacing = 2;
+        compare(surface.gap, 4);
+        surface.spacing = 40;
+        compare(surface.gap, 32);
+        surface.spacing = -6;
+        compare(surface.gap, 4);
+        surface.spacing = 0;
+        compare(surface.gap, 24);
+        surface.outlined = true;
+        compare(surface.gap, 8);
+    }
+
     // A waiting application's icon and a drive's are drawn as the dock draws
     // an application without an outline, and as before inside a pill.
     function test_without_an_outline_icons_are_pictures() {

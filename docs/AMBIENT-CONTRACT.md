@@ -244,7 +244,7 @@ the display's centre. On a vertical panel only the launcher dot shows.
 
 ### Host settings
 
-Four settings let a host lay the widget out around something of its own, such
+Five settings let a host lay the widget out around something of its own, such
 as a centred dock with a widget on each side. They are written by the host,
 not offered in the widget's settings, and their defaults are the widget as it
 is on an ordinary panel.
@@ -255,6 +255,7 @@ is on an ordinary panel.
 | `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media | `all` |
 | `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
 | `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
+| `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
 
 With the dot at the end, the slide that brings the doors runs left from it,
 and the doors line up leftward from the dot. A widget with no dot has
@@ -267,7 +268,8 @@ the others, shows every island exactly once.
 Without an outline, only room parts one island from the next: they stand
 24 px apart, three of Kirigami's large spacing, and the group keeps the same
 24 px from the end of its width it is set against, where the host places
-something of its own, such as the dock; centred, it keeps none. Each island's
+something of its own, such as the dock; centred, it keeps none.
+`islandSpacing`, where a host writes it, takes the place of both. Each island's
 pieces then start and end at its own edges. Album art, a waiting application's
 icon and a drive's take an application's place in Shuffle's dock, whose icon
 square is five sevenths of the band's height: art as large as an
