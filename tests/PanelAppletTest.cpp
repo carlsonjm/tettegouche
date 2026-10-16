@@ -179,7 +179,8 @@ private Q_SLOTS:
         QCOMPARE(mark->size(), dot->size());
         QCOMPARE(mark->mapToItem(button, QPointF(mark->width() / 2, mark->height() / 2)),
                  dot->mapToItem(button, QPointF(dot->width() / 2, dot->height() / 2)));
-        QCOMPARE(mark->childItems().size(), 0);
+        // A ring and a handle, and no tile or backing behind them.
+        QCOMPARE(mark->childItems().size(), 2);
         QVERIFY(ring->parentItem() == button);
         // The press is the dot's, whichever mark it shows.
         const int before = launches().size();

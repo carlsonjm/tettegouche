@@ -4,7 +4,6 @@ import QtQuick
 import org.kde.kirigami as Kirigami
 import QtQuick.Window
 import QtQuick.Layouts
-import QtQuick.Shapes
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 
@@ -386,27 +385,43 @@ PlasmoidItem {
         }
 
         // The magnifier look: Lucide's search mark, a stroke in the dot's own
-        // Ghost White, drawn in the dot's 20 px square and nothing more.
-        Shape {
+        // Ghost White, drawn in the dot's 20 px square and nothing more. Its
+        // ring and handle are rounded rectangles, which the scene graph
+        // smooths at any scale, where a stroked path showed stepped edges.
+        Item {
             id: launcherMagnifier
             objectName: "tettegouche-launcher-magnifier"
+            // Lucide's 24 px drawing and its 2 px stroke, at the dot's size.
+            readonly property real unit: width / 24
             anchors.centerIn: parent
             width: launcherDimple.width
             height: launcherDimple.height
             visible: root.magnifier
             scale: launcherDimple.scale
-            layer.enabled: visible
-            layer.samples: 4
 
-            // Lucide's 24 px drawing and its 2 px stroke, at the dot's size.
-            ShapePath {
-                scale: Qt.size(launcherMagnifier.width / 24, launcherMagnifier.height / 24)
-                strokeColor: "#F8F8FF"
-                strokeWidth: 2 * launcherMagnifier.width / 24
-                fillColor: "transparent"
-                capStyle: ShapePath.RoundCap
-                joinStyle: ShapePath.RoundJoin
-                PathSvg { path: "M 21 21 L 16.66 16.66 M 19 11 A 8 8 0 1 1 3 11 A 8 8 0 1 1 19 11" }
+            // The ring: centred at 11, 11, radius 8, to the stroke's middle.
+            Rectangle {
+                x: 2 * launcherMagnifier.unit
+                y: 2 * launcherMagnifier.unit
+                width: 18 * launcherMagnifier.unit
+                height: width
+                radius: width / 2
+                color: "transparent"
+                border.width: 2 * launcherMagnifier.unit
+                border.color: "#F8F8FF"
+                antialiasing: true
+            }
+            // The handle: 16.66, 16.66 to 21, 21, with round ends.
+            Rectangle {
+                readonly property real length: (Math.SQRT2 * 4.34 + 2) * launcherMagnifier.unit
+                x: 18.83 * launcherMagnifier.unit - width / 2
+                y: 18.83 * launcherMagnifier.unit - height / 2
+                width: 2 * launcherMagnifier.unit
+                height: length
+                radius: width / 2
+                rotation: -45
+                color: "#F8F8FF"
+                antialiasing: true
             }
         }
 
