@@ -240,7 +240,11 @@ counts follow the language.
 - The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) dot, 20 px,
   lit from above and a shade deeper toward its lower edge, centred in a 44 px
   touch square at the panel's start, with a thin ring round it while the
-  launcher is open. No icon family replaces or redraws it.
+  launcher is open. No icon family replaces or redraws it. A host may set
+  `pearlLook` to draw Lucide's search mark in its place, a stroke in the same
+  Ghost White at the same size and place; the touch square, ring and press are
+  the dot's either way ([AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) § Host
+  settings).
 - Search follows the window's colour scheme, and Ambient the Plasma style's
   colours. On a dark one they keep the suite's dark values; on a light one
   their ground and text are the theme's, and every wash, control and line is

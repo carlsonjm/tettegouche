@@ -244,7 +244,7 @@ the display's centre. On a vertical panel only the launcher dot shows.
 
 ### Host settings
 
-Five settings let a host lay the widget out around something of its own, such
+Six settings let a host lay the widget out around something of its own, such
 as a centred dock with a widget on each side. They are written by the host,
 not offered in the widget's settings, and their defaults are the widget as it
 is on an ordinary panel.
@@ -256,6 +256,7 @@ is on an ordinary panel.
 | `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
 | `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
 | `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
+| `pearlLook` | `pearl`, the Tette Dot; `magnifier`, a magnifying-glass mark in the dot's Ghost White, at its size and place, with nothing drawn behind or round it | `pearl` |
 
 With the dot at the end, the slide that brings the doors runs left from it,
 and the doors line up leftward from the dot. A widget with no dot has

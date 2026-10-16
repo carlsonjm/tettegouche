@@ -4,6 +4,7 @@ import QtQuick
 import org.kde.kirigami as Kirigami
 import QtQuick.Window
 import QtQuick.Layouts
+import QtQuick.Shapes
 import org.kde.plasma.core as PlasmaCore
 import org.kde.plasma.plasmoid
 
@@ -29,6 +30,8 @@ PlasmoidItem {
     // second widget beyond the row can carry the islands that go there.
     readonly property string launcherPlacement: Plasmoid.configuration.launcherPlacement || "start"
     readonly property bool hasLauncher: launcherPlacement !== "none"
+    // How the dot is drawn: the pearl, or a host's magnifier mark in its place.
+    readonly property bool magnifier: Plasmoid.configuration.pearlLook === "magnifier"
     readonly property bool launcherAtEnd: hasLauncher && launcherPlacement === "end" && !vertical
     // Which islands this widget shows: every kind, media alone, or every
     // kind but media.
@@ -364,6 +367,7 @@ PlasmoidItem {
             anchors.centerIn: parent
             width: 20
             height: 20
+            visible: !root.magnifier
             radius: width / 2
             // Pearl: lit from above and a shade deeper toward its lower edge,
             // so it reads as a piece that rises rather than a flat disc.
@@ -378,6 +382,31 @@ PlasmoidItem {
             Behavior on scale {
                 enabled: root.animateIndicator
                 NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
+            }
+        }
+
+        // The magnifier look: Lucide's search mark, a stroke in the dot's own
+        // Ghost White, drawn in the dot's 20 px square and nothing more.
+        Shape {
+            id: launcherMagnifier
+            objectName: "tettegouche-launcher-magnifier"
+            anchors.centerIn: parent
+            width: launcherDimple.width
+            height: launcherDimple.height
+            visible: root.magnifier
+            scale: launcherDimple.scale
+            layer.enabled: visible
+            layer.samples: 4
+
+            // Lucide's 24 px drawing and its 2 px stroke, at the dot's size.
+            ShapePath {
+                scale: Qt.size(launcherMagnifier.width / 24, launcherMagnifier.height / 24)
+                strokeColor: "#F8F8FF"
+                strokeWidth: 2 * launcherMagnifier.width / 24
+                fillColor: "transparent"
+                capStyle: ShapePath.RoundCap
+                joinStyle: ShapePath.RoundJoin
+                PathSvg { path: "M 21 21 L 16.66 16.66 M 19 11 A 8 8 0 1 1 3 11 A 8 8 0 1 1 19 11" }
             }
         }
 
