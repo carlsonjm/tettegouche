@@ -247,6 +247,14 @@ bool LauncherController::resultIsOpen(int row) const
         m_results->data(index, Qt::DisplayRole).toString());
 }
 
+QString LauncherController::resultApplicationId(int row) const
+{
+    const QModelIndex index = m_results->index(row, 0);
+    if (!index.isValid() || searchTier(m_results->getQueryMatch(index)) != 0) return {};
+    const QString id = QFileInfo(runnerApplicationId(m_results->getQueryMatch(index))).fileName();
+    return id.endsWith(QStringLiteral(".desktop")) && !id.startsWith(QStringLiteral("kcm_")) ? id : QString();
+}
+
 int LauncherController::activateIfOpen(int row)
 {
     const QModelIndex index = m_results->index(row, 0);

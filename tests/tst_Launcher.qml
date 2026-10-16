@@ -108,6 +108,7 @@ TestCase {
         property int handoffs: 0
         function completeGuestHandoff() { handoffs++ }
         function searchWeb(text) { webSearches++; return true }
+        function resultApplicationId(row) { return row >= 0 && row < results.count ? (results.get(row).applicationId || "") : "" }
     }
     ListModel {
         id: results
@@ -148,6 +149,10 @@ TestCase {
         function prepareSoftware() { softwareAsked = true }
         function canUninstall(row) { return softwareReady && row === 1 }
         function uninstall(row) { uninstalled = row; return true }
+        property var removable: []
+        property string uninstalledApplication: ""
+        function canUninstallApplication(id) { return removable.indexOf(id) >= 0 }
+        function uninstallApplication(id) { uninstalledApplication = id; return true }
         property int edited: -1
         function canEdit(row) { return row === 1 }
         function edit(row) { edited = row; return true }
@@ -864,6 +869,52 @@ TestCase {
         query.text = ""
         launcher.submit()
         compare(controller.webSearches, 1)
+    }
+    // A found application's sheet uninstalls it; other results have none.
+    function test_resultSheetUninstalls() {
+        controller.opened()
+        const query = findChild(launcher, "search-query")
+        query.text = "vlc"
+        results.launches = 0
+        results.append({display: "VLC media player", decoration: "vlc", subtext: "Application", applicationId: "vlc.desktop"})
+        results.append({display: "vlc-notes.txt", decoration: "text-plain", subtext: "Document"})
+        catalog.removable = ["vlc.desktop"]
+        tryVerify(function() { return findChild(launcher, "result-1") !== null })
+        const sheet = findChild(launcher, "result-sheet")
+        const app = findChild(launcher, "result-0")
+        const file = findChild(launcher, "result-1")
+        verify(!sheet.opened)
+        mouseClick(file, file.width / 2, 31, Qt.RightButton)
+        wait(100)
+        verify(!sheet.opened)
+        mouseClick(app, app.width / 2, 31, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        verify(catalog.softwareAsked)
+        compare(results.launches, 0)
+        const uninstall = findChild(launcher, "result-sheet-uninstall")
+        const closes = controller.closes
+        mouseClick(uninstall, uninstall.width / 2, uninstall.height / 2)
+        compare(catalog.uninstalledApplication, "vlc.desktop")
+        compare(controller.closes, closes + 1)
+        tryCompare(sheet, "opened", false)
+        // A hold opens it too, and opens nothing else.
+        const touch = touchEvent(launcher)
+        touch.press(0, app, app.width / 2, 31).commit()
+        wait(700)
+        touch.release(0, app, app.width / 2, 31).commit()
+        tryCompare(sheet, "opened", true)
+        compare(results.launches, 0)
+        sheet.close()
+        tryCompare(sheet, "opened", false)
+        // An application nothing can uninstall has no sheet.
+        catalog.removable = []
+        mouseClick(app, app.width / 2, 31, Qt.RightButton)
+        wait(100)
+        verify(!sheet.opened)
+        catalog.uninstalledApplication = ""
+        catalog.softwareAsked = false
+        results.clear()
+        query.text = ""
     }
     function test_bluetoothChildrenCollapse() {
         controller.opened()

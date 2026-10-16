@@ -97,6 +97,9 @@ public:
     QRect availableArea() const;
 
     Q_INVOKABLE bool resultIsOpen(int row) const;
+    // The desktop file id of the application a result opens, or nothing for
+    // any other result.
+    Q_INVOKABLE QString resultApplicationId(int row) const;
     // A result or an application in Apps whose window is open: 1 when it was
     // brought forward, -1 when it is open but did not come, 0 when it is not
     // open and should start.

@@ -300,6 +300,9 @@ int main(int argc, char **argv)
     results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
+    // Where Core removes apps, an application's Uninstall goes to it.
+    catalog.setRemover([&core] { return core.removesApps(); },
+                       [&core](const QString &id, const QString &name) { core.removeApp(id, name); });
     // The quick note itself, written in Search's window and kept by the notes
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;
