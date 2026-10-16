@@ -155,6 +155,43 @@ private Q_SLOTS:
                  "The rendered control must contain a visible white dimple.");
     }
 
+    // The pearl unless a host asks for the magnifier, which takes the dot's
+    // size and place and leaves its button, ring and press as they are.
+    void pearlLookFollowsSettings()
+    {
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        m_face->setSize(QSizeF(44, 42));
+        QTest::qWait(20);
+        auto *button = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-button"));
+        auto *dot = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-dimple"));
+        auto *mark = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-magnifier"));
+        auto *ring = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-active-ring"));
+        QVERIFY(button);
+        QVERIFY(dot);
+        QVERIFY(mark);
+        QVERIFY(ring);
+        QVERIFY(dot->isVisible());
+        QVERIFY(!mark->isVisible());
+
+        configure(QStringLiteral("pearlLook"), QStringLiteral("magnifier"));
+        QTRY_VERIFY(mark->isVisible());
+        QVERIFY(!dot->isVisible());
+        QCOMPARE(mark->size(), dot->size());
+        QCOMPARE(mark->mapToItem(button, QPointF(mark->width() / 2, mark->height() / 2)),
+                 dot->mapToItem(button, QPointF(dot->width() / 2, dot->height() / 2)));
+        QCOMPARE(mark->childItems().size(), 0);
+        QVERIFY(ring->parentItem() == button);
+        // The press is the dot's, whichever mark it shows.
+        const int before = launches().size();
+        const QPoint center = mark->mapToScene(QPointF(mark->width() / 2, mark->height() / 2)).toPoint();
+        QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTRY_COMPARE(launches().size(), before + 1);
+
+        configure(QStringLiteral("pearlLook"), QStringLiteral("pearl"));
+        QTRY_VERIFY(dot->isVisible());
+        QVERIFY(!mark->isVisible());
+    }
+
     void mouseAndTouchLaunch()
     {
         m_panel->setFormFactor(Plasma::Types::Horizontal);

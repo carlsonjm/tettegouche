@@ -7,3 +7,6 @@ icons retain their MIT notice. The complete upstream notice is in
 replaced by this subset.
 
 Vendored SVG roots set `color="#F8F8FF"` (Ghost White) so Qt resolves the upstream `currentColor` strokes consistently; path geometry is unchanged.
+
+The panel widget's magnifier look draws Lucide's `search` geometry in
+`applet/main.qml` rather than from a file, under the same notice.

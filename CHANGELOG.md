@@ -10,6 +10,9 @@ provenance.
   removes the application, from Apps' sheet too: it finds the package that
   owns it and waits for a yes. Without Split Rock, the software centre opens
   on it as before.
+- A host can draw the launcher's dot as a magnifying glass with
+  `pearlLook`; it changes as the setting does, and everything the dot does
+  stays the same. Unset, the dot is the pearl.
 - A host can set the room between islands, from 4 to 32 px, with
   `islandSpacing`; it changes as the setting does. Unset, the islands keep
   their spacing.
