@@ -2408,8 +2408,10 @@ TestCase {
         compare(controller.closes, 1)
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
         // Pop out again opens another window.
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
         popOut = findChild(launcher, "drawer-pop-out")
-        tryVerify(() => popOut.visible)
+        verify(popOut.visible)
         mouseClick(popOut, popOut.width / 2, popOut.height / 2)
         compare(controller.filesWindows, 2)
         compare(controller.closes, 2)
