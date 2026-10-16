@@ -43,6 +43,9 @@ Item {
     // Each island a faint pill, or its words and glyphs on the panel alone.
     // Where the panel is black the islands take its black either way.
     property bool outlined: true
+    // The room between islands a host sets, held to 4 to 32 px; 0 leaves
+    // each look its own.
+    property int spacing: 0
 
     // Plasma's animation speed, read through Kirigami's durations: 1 at the
     // default, smaller when faster, 0 for instant. The band's travel, pieces
@@ -72,8 +75,9 @@ Item {
     // only room does: three of Kirigami's large steps, the suite's 24 px
     // between sections, more than any room inside an island. The group keeps
     // the same room from whatever the host sets at the end it is gathered
-    // against, such as the dock.
-    readonly property real gap: outlined ? 8 : 3 * Kirigami.Units.largeSpacing
+    // against, such as the dock. A host's spacing replaces both.
+    readonly property real gap: spacing !== 0 ? Math.max(4, Math.min(32, spacing))
+        : outlined ? 8 : 3 * Kirigami.Units.largeSpacing
     readonly property real inset: outlined ? 6 : 0
     readonly property real margin: outlined || align === "center" ? 0 : gap
     // Art, a ring or a mark sits as far from the pill's edge as its top.
