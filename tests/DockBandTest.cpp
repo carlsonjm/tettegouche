@@ -20,5 +20,19 @@ int main()
     if (workArea(QRect(0, 0, 2560, 1384), monitor, 56) != QRect(0, 0, 2560, 1384)) return 8;
     // No dock, no change.
     if (workArea(QRect(QPoint(), monitor), monitor, 0) != QRect(QPoint(), monitor)) return 9;
+
+    const QByteArray bar = R"({"available":{"left":648,"right":650},"bar":{"height":24},)"
+        R"("clock":{"center":732,"left":678,"right":787},"output":"eDP-1","presenting":true,)"
+        R"("schema":"co.goodinput.shuffle.clock-extent","version":1})";
+    if (contextBarHeight(bar) != 24) return 10;
+    // No bar on that display, another schema, or not an answer: nothing.
+    if (contextBarHeight(R"({"schema":"co.goodinput.shuffle.clock-extent","version":1,"presenting":false,"bar":{"height":24}})") != 0) return 11;
+    if (contextBarHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":true,"bar":{"height":24}})") != 0) return 12;
+    if (contextBarHeight("not json") != 0) return 13;
+    // A display reported whole loses the bar at its top and the band at its
+    // bottom.
+    if (workArea(QRect(QPoint(), monitor), monitor, 56, 24) != QRect(0, 24, 2560, 1360)) return 14;
+    // A report that already starts below the bar keeps its own edge.
+    if (workArea(QRect(0, 30, 2560, 1354), monitor, 56, 24) != QRect(0, 30, 2560, 1354)) return 15;
     return 0;
 }
