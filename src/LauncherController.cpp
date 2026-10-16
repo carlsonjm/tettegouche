@@ -362,7 +362,7 @@ void LauncherController::showDrive(const QString &id)
 {
     if (!m_fileBrowser) { open(); return; }
     showFiles();
-    m_fileBrowser->openDrive(id);
+    filesTarget()->openDrive(id);
 }
 
 void LauncherController::showFile(const QString &file)
@@ -371,7 +371,7 @@ void LauncherController::showFile(const QString &file)
     if (!m_fileBrowser || !info.isAbsolute() || !info.isFile() || info.isSymLink()) { open(); return; }
     if (filesWindowOpen()) {
         showFilesWindow();
-        m_fileBrowser->reveal({info.absoluteFilePath()});
+        filesTarget()->reveal({info.absoluteFilePath()});
         return;
     }
     open();
@@ -400,12 +400,13 @@ void LauncherController::showFolders(const QStringList &locations)
     if (!elsewhere.isEmpty()) handOn(elsewhere);
     if (!m_fileBrowser || (folders.isEmpty() && !recent && phones.isEmpty())) return;
     showFiles();
-    if (recent) m_fileBrowser->navigate(FileBrowser::recentLocation());
+    FileBrowser *files = filesTarget();
+    if (recent) files->navigate(FileBrowser::recentLocation());
     for (int i = 0; i < folders.size(); ++i) {
-        if (i == 0 && !recent) m_fileBrowser->navigate(folders[i]);
-        else m_fileBrowser->openTab(folders[i]);
+        if (i == 0 && !recent) files->navigate(folders[i]);
+        else files->openTab(folders[i]);
     }
-    if (folders.isEmpty() && !recent) m_fileBrowser->openDrive(phones.first());
+    if (folders.isEmpty() && !recent) files->openDrive(phones.first());
 }
 
 void LauncherController::revealItems(const QStringList &locations)
@@ -461,7 +462,7 @@ bool LauncherController::leaveFor(const QStringList &settings)
     theirs.sort();
     // Shown, or holding Files' window, a copy or a carry, it stays as it is.
     if (mine == theirs || m_view->isVisible() || filesWindowOpen() || m_carrying
-        || (m_fileBrowser && m_fileBrowser->working()))
+        || filesWorking())
         return false;
     // After this answer has gone.
     QTimer::singleShot(0, qApp, &QCoreApplication::quit);
@@ -477,10 +478,11 @@ void LauncherController::close()
     finishOrDeferQuit();
 }
 
-void LauncherController::carryOut(const QStringList &paths, const QRectF &sheet)
+void LauncherController::carryOut(const QStringList &paths, const QRectF &sheet, QObject *from)
 {
-    if (m_carrying || !m_fileBrowser) return;
-    QMimeData *mime = m_fileBrowser->carriedFiles(paths);
+    FileBrowser *files = from ? qobject_cast<FileBrowser *>(from) : m_fileBrowser;
+    if (m_carrying || !files) return;
+    QMimeData *mime = files->carriedFiles(paths);
     if (!mime) return;
     // KDE's document portal lets a sandboxed application read them too.
     KUrlMimeData::exportUrlsToPortal(mime);
@@ -627,52 +629,101 @@ void LauncherController::cancelGuestApplicationLaunch()
 
 bool LauncherController::filesWindowOpen() const
 {
-    return m_filesWindow && m_filesWindow->isVisible();
+    return frontFilesWindow() != nullptr;
+}
+
+LauncherController::FilesWindow *LauncherController::frontFilesWindow() const
+{
+    FilesWindow *open = nullptr;
+    for (const auto &window : m_filesWindows) {
+        if (!window->view->isVisible()) continue;
+        if (window->view.get() == m_lastFilesWindow) return window.get();
+        open = window.get();
+    }
+    return open;
+}
+
+FileBrowser *LauncherController::filesTarget() const
+{
+    const FilesWindow *window = frontFilesWindow();
+    return window ? window->files(m_fileBrowser) : m_fileBrowser;
 }
 
 bool LauncherController::showFilesWindow()
 {
+    if (!filesWindowOpen()) return popOutFilesWindow();
+    m_lateQuit.stop();
+    raiseFilesWindow();
+    return true;
+}
+
+bool LauncherController::popOutFilesWindow()
+{
     if (!m_fileBrowser) return false;
     m_lateQuit.stop();
-    if (!m_filesWindow) {
-        m_filesWindow = std::make_unique<QQuickView>(m_view->engine(), nullptr);
-        m_filesWindow->setTitle(i18n("Files"));
-        m_filesWindow->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
-        m_filesWindow->setResizeMode(QQuickView::SizeRootObjectToView);
-        m_filesWindow->setMinimumSize(QSize(420, 320));
-        m_filesWindow->setInitialProperties({
-            {QStringLiteral("fileBrowser"), QVariant::fromValue<QObject *>(m_fileBrowser)},
-            {QStringLiteral("launcherController"), QVariant::fromValue<QObject *>(this)},
-        });
-        m_filesWindow->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
-        if (m_filesWindow->status() == QQuickView::Error) {
-            m_filesWindow.reset();
-            return false;
-        }
-        connect(m_filesWindow.get(), &QWindow::visibleChanged, this, [this](bool visible) {
-            if (!visible) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
-            Q_EMIT filesWindowChanged();
-            // Closed with Search gone too, the launcher's work is done.
-            if (!visible && !m_view->isVisible()) finishOrDeferQuit();
-        });
-    }
-    if (!m_filesWindow->isVisible()) {
-        const QRect area = availableArea();
-        const QSize size = m_guestMode && m_compactGuestRect.isValid()
-            ? m_compactGuestRect.size()
-            : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
-        m_filesWindow->resize(size.expandedTo(m_filesWindow->minimumSize()));
-        m_filesWindow->setScreen(placedScreen());
-        // A window takes the application's identity as it is shown, and
-        // Files keeps it while its window is open.
-        m_launcherApplicationId = QGuiApplication::desktopFileName();
-        QGuiApplication::setDesktopFileName(QString::fromLatin1(FilesApplicationId));
-        m_filesWindow->show();
-        m_filesWindow->requestActivate();
-        Q_EMIT filesWindowChanged();
+    // Without a Files of its own to give each window, the one window shares
+    // Search's and is brought forward again.
+    if (!m_makeFileBrowser && filesWindowOpen()) {
+        raiseFilesWindow();
         return true;
     }
-    raiseFilesWindow();
+    FilesWindow *window = nullptr;
+    for (const auto &kept : m_filesWindows) {
+        if (!kept->view->isVisible() && !(kept->browser && kept->browser->working())) {
+            window = kept.get();
+            break;
+        }
+    }
+    if (!window) {
+        auto made = std::make_unique<FilesWindow>();
+        if (m_makeFileBrowser) {
+            made->browser = m_makeFileBrowser();
+            if (!made->browser) return false;
+            made->browser->setRemembered(false);
+        }
+        FileBrowser *files = made->files(m_fileBrowser);
+        made->view = std::make_unique<QQuickView>(m_view->engine(), nullptr);
+        QQuickView *view = made->view.get();
+        view->setTitle(i18n("Files"));
+        view->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
+        view->setResizeMode(QQuickView::SizeRootObjectToView);
+        view->setMinimumSize(QSize(420, 320));
+        view->setInitialProperties({
+            {QStringLiteral("fileBrowser"), QVariant::fromValue<QObject *>(files)},
+            {QStringLiteral("launcherController"), QVariant::fromValue<QObject *>(this)},
+        });
+        view->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
+        if (view->status() == QQuickView::Error) return false;
+        connect(view, &QWindow::visibleChanged, this, [this](bool visible) {
+            if (!visible && !filesWindowOpen()) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
+            Q_EMIT filesWindowChanged();
+            // The last closed with Search gone too, the launcher's work is done.
+            if (!visible && !m_view->isVisible()) finishOrDeferQuit();
+        });
+        connect(view, &QWindow::activeChanged, this, [this, view] {
+            if (view->isActive()) m_lastFilesWindow = view;
+        });
+        if (made->browser) watchFiles(made->browser.get(), made.get());
+        window = made.get();
+        m_filesWindows.push_back(std::move(made));
+    }
+    // It starts where Search's Files is.
+    if (window->browser) window->browser->adopt(*m_fileBrowser);
+    QQuickView *view = window->view.get();
+    const QRect area = availableArea();
+    const QSize size = m_guestMode && m_compactGuestRect.isValid()
+        ? m_compactGuestRect.size()
+        : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
+    view->resize(size.expandedTo(view->minimumSize()));
+    view->setScreen(placedScreen());
+    // A window takes the application's identity as it is shown, and Files
+    // keeps it while a window of its own is open.
+    if (!filesWindowOpen()) m_launcherApplicationId = QGuiApplication::desktopFileName();
+    QGuiApplication::setDesktopFileName(QString::fromLatin1(FilesApplicationId));
+    m_lastFilesWindow = view;
+    view->show();
+    view->requestActivate();
+    Q_EMIT filesWindowChanged();
     return true;
 }
 
@@ -761,14 +812,36 @@ void LauncherController::completeGuestNavigation(int slot)
 void LauncherController::setFileBrowser(FileBrowser *browser)
 {
     m_fileBrowser = browser;
+    watchFiles(browser, nullptr);
+}
+
+void LauncherController::watchFiles(FileBrowser *browser, FilesWindow *window)
+{
     connect(browser, &FileBrowser::operationChanged, this, [this] {
-        if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
+        if (m_quitAfterFiles && !filesWorking()) finishOrDeferQuit();
     });
     // A copy that meets a name already taken waits for an answer; the
-    // launcher comes back to Files to ask it rather than wait unseen.
-    connect(browser, &FileBrowser::questionChanged, this, [this] {
-        if (!m_view->isVisible() && !m_fileBrowser->question().isEmpty()) showFiles();
+    // launcher comes back to the Files that started it to ask it rather
+    // than wait unseen.
+    connect(browser, &FileBrowser::questionChanged, this, [this, browser, window] {
+        if (browser->question().isEmpty()) return;
+        if (!window) {
+            if (m_view->isVisible()) return;
+            open();
+            Q_EMIT filesRequested();
+            return;
+        }
+        if (!window->view->isVisible()) window->view->show();
+        m_lastFilesWindow = window->view.get();
+        raiseFilesWindow();
     });
+}
+
+bool LauncherController::filesWorking() const
+{
+    if (m_fileBrowser && m_fileBrowser->working()) return true;
+    return std::any_of(m_filesWindows.cbegin(), m_filesWindows.cend(),
+                       [](const auto &window) { return window->browser && window->browser->working(); });
 }
 
 void LauncherController::setRecentUse(RecentUse *recent)
@@ -816,9 +889,14 @@ void LauncherController::showFiles()
 
 void LauncherController::raiseFilesWindow()
 {
+    FilesWindow *window = frontFilesWindow();
+    if (!window) return;
+    // Through the window list, which also brings a minimized window back;
+    // the window itself, where that list cannot.
     if (bringForward(QString::fromLatin1(FilesApplicationId), QString()) == 1) return;
-    m_filesWindow->raise();
-    m_filesWindow->requestActivate();
+    window->view->showNormal();
+    window->view->raise();
+    window->view->requestActivate();
 }
 
 void LauncherController::reveal(const QStringList &locations, bool properties)
@@ -833,7 +911,7 @@ void LauncherController::reveal(const QStringList &locations, bool properties)
     if (!elsewhere.isEmpty()) handOn(elsewhere);
     if (paths.isEmpty() || !m_fileBrowser) return;
     showFiles();
-    m_fileBrowser->reveal(paths, properties);
+    filesTarget()->reveal(paths, properties);
 }
 
 void LauncherController::handOn(const QList<QUrl> &urls)
@@ -842,7 +920,7 @@ void LauncherController::handOn(const QList<QUrl> &urls)
     if (!dolphin) {
         if (!m_fileBrowser) return;
         showFiles();
-        m_fileBrowser->setStatus(i18n("Files cannot open %1, and Dolphin is not installed.", urls.first().toDisplayString()));
+        filesTarget()->setStatus(i18n("Files cannot open %1, and Dolphin is not installed.", urls.first().toDisplayString()));
         return;
     }
     auto *job = new KIO::ApplicationLauncherJob(dolphin);
@@ -856,7 +934,7 @@ void LauncherController::finishOrDeferQuit(bool keepReady)
     m_quitAfterFiles = true;
     // Files' own window keeps the launcher, and with it Files, running.
     if (filesWindowOpen()) return;
-    if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
+    if (m_carrying || filesWorking()) return;
     // Closed, the launcher stays ready, hidden, so the next open shows at
     // once; it gives back what it drew with. One whose program was
     // replaced since it started leaves, so an update takes effect.

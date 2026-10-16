@@ -182,6 +182,6 @@ Rectangle {
         y: header.y + header.height + 16
         width: window.width - 2 * window.contentInset
         height: Math.max(0, window.height - y - window.contentInset)
-        onCarryOut: paths => window.launcherController.carryOut(paths, Qt.rect(0, 0, window.width, window.height))
+        onCarryOut: paths => window.launcherController.carryOut(paths, Qt.rect(0, 0, window.width, window.height), window.fileBrowser)
     }
 }

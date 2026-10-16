@@ -255,12 +255,16 @@ int main(int argc, char **argv)
     ApplicationCatalog catalog;
     catalog.setUseReader(&RecentUse::readApplicationUse);
     FileDevices fileDevices;
+    // Search's Files and each Files window's own are set up alike.
+    const auto prepareFiles = [&fileDevices](FileBrowser &files) {
+        files.setDevices(&fileDevices);
+        files.setThumbnailSource([](const QString &path, const QString &mimeType, qint64 modified) {
+            return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
+        });
+        files.setDetailReader(readMediaDetails);
+    };
     FileBrowser fileBrowser;
-    fileBrowser.setDevices(&fileDevices);
-    fileBrowser.setThumbnailSource([](const QString &path, const QString &mimeType, qint64 modified) {
-        return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
-    });
-    fileBrowser.setDetailReader(readMediaDetails);
+    prepareFiles(fileBrowser);
     const bool guestAllowed =
         !application.arguments().contains(QStringLiteral("--standalone"));
 
@@ -309,31 +313,31 @@ int main(int argc, char **argv)
     if (offerNotes) quickNote = std::make_unique<QuickNote>();
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
-    QObject::connect(&fileBrowser, &FileBrowser::openRequested, &controller,
-                     [&fileBrowser, &controller](const QUrl &url) {
-        auto *job = new KIO::OpenUrlJob(url);
-        job->setRunExecutables(false);
-        job->setShowOpenOrExecuteDialog(false);
-        QObject::connect(job, &KJob::result, &controller,
-                         [&fileBrowser, &controller](KJob *completed) {
-            const QString error = completed->error() ? completed->errorString() : QString();
-            fileBrowser.finishOpen(error);
-            if (!completed->error()) controller.finishLaunch();
+    const auto openFrom = [&controller](FileBrowser *files) {
+        QObject::connect(files, &FileBrowser::openRequested, &controller, [files, &controller](const QUrl &url) {
+            auto *job = new KIO::OpenUrlJob(url);
+            job->setRunExecutables(false);
+            job->setShowOpenOrExecuteDialog(false);
+            QObject::connect(job, &KJob::result, files, [files, &controller](KJob *completed) {
+                const QString error = completed->error() ? completed->errorString() : QString();
+                files->finishOpen(error);
+                if (!completed->error()) controller.finishLaunch();
+            });
+            job->start();
         });
-        job->start();
-    });
-    QObject::connect(&fileBrowser, &FileBrowser::openWithRequested, &controller,
-                     [&fileBrowser, &controller](const QUrl &url, const QString &applicationId) {
-        auto *job = new KIO::ApplicationLauncherJob(KService::serviceByStorageId(applicationId));
-        job->setUrls({url});
-        QObject::connect(job, &KJob::result, &controller,
-                         [&fileBrowser, &controller](KJob *completed) {
-            const QString error = completed->error() ? completed->errorString() : QString();
-            fileBrowser.finishOpen(error);
-            if (!completed->error()) controller.finishLaunch();
+        QObject::connect(files, &FileBrowser::openWithRequested, &controller,
+                         [files, &controller](const QUrl &url, const QString &applicationId) {
+            auto *job = new KIO::ApplicationLauncherJob(KService::serviceByStorageId(applicationId));
+            job->setUrls({url});
+            QObject::connect(job, &KJob::result, files, [files, &controller](KJob *completed) {
+                const QString error = completed->error() ? completed->errorString() : QString();
+                files->finishOpen(error);
+                if (!completed->error()) controller.finishLaunch();
+            });
+            job->start();
         });
-        job->start();
-    });
+    };
+    openFrom(&fileBrowser);
     view.setInitialProperties({
         {QStringLiteral("fileBrowser"), QVariant::fromValue(static_cast<QObject *>(&fileBrowser))},
         {QStringLiteral("launcherController"),
@@ -358,6 +362,15 @@ int main(int argc, char **argv)
 
     QDBusConnection session = QDBusConnection::sessionBus();
     TransferActivityBridge activities(&fileBrowser);
+    // Each Files window has a Files of its own, whose copies Ambient hears of
+    // too.
+    controller.setFileBrowserMaker([&prepareFiles, &openFrom, &activities] {
+        auto files = std::make_unique<FileBrowser>();
+        prepareFiles(*files);
+        openFrom(files.get());
+        activities.add(files.get());
+        return files;
+    });
     session.registerObject(QStringLiteral("/Activities"), &activities,
                            QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals);
     session.registerObject(QStringLiteral("/Launcher"), &controller,
