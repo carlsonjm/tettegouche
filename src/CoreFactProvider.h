@@ -31,6 +31,12 @@ public:
     QList<QVariantMap> actions() const { return m_actions; }
     // Asks Core to open one on its own, with what was typed.
     void openAction(const QString &id, const QString &query);
+    // Whether Core removes apps: it lists Install an app.
+    bool removesApps() const;
+    // Asks Core to remove the application with that desktop file id, named
+    // as Search shows it: Core's Install an app finds what owns it and waits
+    // for the person's yes. A Core without RemoveApp is asked by its name.
+    void removeApp(const QString &applicationId, const QString &name);
     // The facts that want the island, as Ambient's rows.
     QVariantList activities() const;
     void invoke(const QString &id, int generation, const QString &action);

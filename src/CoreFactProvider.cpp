@@ -1,10 +1,13 @@
 #include "CoreFactProvider.h"
 #include <QDBusConnectionInterface>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusMetaType>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+
+#include <algorithm>
 
 namespace {
 const QString Prefix = QStringLiteral("core:");
@@ -108,6 +111,24 @@ void CoreFactProvider::openAction(const QString &id, const QString &query) {
     auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("OpenAction"));
     call.setArguments({id, query});
     m_bus.asyncCall(call, 5000);
+}
+
+bool CoreFactProvider::removesApps() const {
+    return std::any_of(m_actions.cbegin(), m_actions.cend(), [](const QVariantMap &action) {
+        return action.value(QStringLiteral("id")).toString() == QLatin1String("install");
+    });
+}
+
+void CoreFactProvider::removeApp(const QString &applicationId, const QString &name) {
+    if (!removesApps()) return;
+    auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("RemoveApp"));
+    call.setArguments({applicationId});
+    auto *watcher = new QDBusPendingCallWatcher(m_bus.asyncCall(call, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, name] {
+        const QDBusPendingReply<bool> reply = *watcher; watcher->deleteLater();
+        if (reply.isError() && reply.error().type() == QDBusError::UnknownMethod)
+            openAction(QStringLiteral("install"), QStringLiteral("uninstall ") + name);
+    });
 }
 
 // Core answers with FactChanged, which takes the row away.

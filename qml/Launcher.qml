@@ -544,6 +544,17 @@ Item {
         applicationSheet.openNear(at.x, at.y)
     }
 
+    // A found application's sheet, where it can be uninstalled; other
+    // results have none.
+    function showResultSheet(index, target, point) {
+        root.applicationCatalog.prepareSoftware()
+        const id = root.launcherController.resultApplicationId(index)
+        if (id === "" || !root.applicationCatalog.canUninstallApplication(id)) return
+        resultSheet.applicationId = id
+        const at = target.mapToItem(sheet, point.x, point.y)
+        resultSheet.openNear(at.x, at.y)
+    }
+
     function runCatalogApplication(index, applicationName) {
         // Choosing for a new folder, a tap or Enter chooses instead.
         if (root.choosingFolder) {
@@ -1675,11 +1686,13 @@ Item {
                             }
                         }
                         Item {
+                        id: resultTarget
                         width: parent.width
                         height: 62
                         HoverHandler { id: hover }
                         TapHandler {
                             enabled: !root.guestDragged && !root.applicationLaunchPending
+                            longPressThreshold: 0.5
                             onPressedChanged: {
                                 if (pressed) {
                                     root.selectedChildKey = ""
@@ -1690,6 +1703,13 @@ Item {
                             onTapped: {
                                 root.runResult(root.searchResults.selectedRow())
                             }
+                            onLongPressed: root.showResultSheet(resultDelegate.index, resultTarget, point.position)
+                        }
+                        TapHandler {
+                            enabled: !root.guestDragged && !root.applicationLaunchPending
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            acceptedButtons: Qt.RightButton
+                            onTapped: eventPoint => root.showResultSheet(resultDelegate.index, resultTarget, eventPoint.position)
                         }
                         }
                     }
@@ -2654,10 +2674,30 @@ Item {
                 SheetMenuItem {
                     objectName: "application-sheet-uninstall"
                     text: words.i18n("Uninstall…")
-                    visible: root.applicationCatalog.softwareReady
-                        && root.applicationCatalog.canUninstall(applicationSheet.row)
+                    visible: {
+                        root.applicationCatalog.softwareReady
+                        return root.applicationCatalog.canUninstall(applicationSheet.row)
+                    }
                     onTriggered: {
                         if (root.applicationCatalog.uninstall(applicationSheet.row))
+                            root.launcherController.finishLaunch()
+                    }
+                }
+            }
+
+            // A found application's sheet: Uninstall…, as from Apps.
+            SheetMenu {
+                id: resultSheet
+                objectName: "result-sheet"
+                bounds: sheet
+                bottomMargin: root.keysReach
+                keysReach: root.keysReach
+                property string applicationId: ""
+                SheetMenuItem {
+                    objectName: "result-sheet-uninstall"
+                    text: words.i18n("Uninstall…")
+                    onTriggered: {
+                        if (root.applicationCatalog.uninstallApplication(resultSheet.applicationId))
                             root.launcherController.finishLaunch()
                     }
                 }

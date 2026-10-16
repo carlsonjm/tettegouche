@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- An application among Search's results has a sheet: touch and hold it, or
+  right-click it, for Uninstall…. Where Split Rock is installed, its Core
+  removes the application, from Apps' sheet too: it finds the package that
+  owns it and waits for a yes. Without Split Rock, the software centre opens
+  on it as before.
 - On Shuffle's band, where the islands draw no outline, album art and the
   icons of a waiting application or a drive take the size of an application's
   icon in the dock, art as a square with softened corners, and islands stand

@@ -768,15 +768,35 @@ void ApplicationCatalog::prepareSoftware()
 bool ApplicationCatalog::canUninstall(int row) const
 {
     const Entry *entry = entryAt(row);
-    return entry && m_softwareReady
-        && KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/appstream"))
-        && !softwareId(*entry).isEmpty();
+    return entry && canUninstallApplication(entry->applicationId);
 }
 
 bool ApplicationCatalog::uninstall(int row)
 {
     const Entry *entry = entryAt(row);
-    const QString id = entry ? softwareId(*entry) : QString();
+    return entry && uninstallApplication(entry->applicationId);
+}
+
+bool ApplicationCatalog::canUninstallApplication(const QString &applicationId) const
+{
+    const int at = entryIndex(applicationId);
+    if (at < 0) return false;
+    if (m_canRemove && m_canRemove()) return true;
+    return m_softwareReady
+        && KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/appstream"))
+        && !softwareId(m_entries.at(at)).isEmpty();
+}
+
+bool ApplicationCatalog::uninstallApplication(const QString &applicationId)
+{
+    const int at = entryIndex(applicationId);
+    if (at < 0) return false;
+    const Entry &entry = m_entries.at(at);
+    if (m_canRemove && m_canRemove() && m_remove) {
+        m_remove(entry.applicationId, entry.name);
+        return true;
+    }
+    const QString id = softwareId(entry);
     if (id.isEmpty()) {
         return false;
     }
