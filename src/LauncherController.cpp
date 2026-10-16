@@ -92,6 +92,9 @@ LauncherController::LauncherController(QQuickView *view,
     bus.connect(QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
                 QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("dockExtentChanged"),
                 this, SLOT(dockExtentUpdated()));
+    bus.connect(QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("/ContextBar"),
+                QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("clockExtentChanged"),
+                this, SLOT(contextBarUpdated()));
     auto *owner = new QDBusServiceWatcher(Kadunce::service(), bus,
         QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
@@ -231,7 +234,7 @@ QRect LauncherController::availableArea() const
 {
     const auto *screen = m_view->screen();
     return screen ? workArea(screen->availableGeometry().translated(-screen->geometry().topLeft()),
-                             screen->geometry().size(), m_dockBand)
+                             screen->geometry().size(), m_dockBand, m_contextBar)
                   : QRect(0, 0, m_view->width(), m_view->height());
 }
 
@@ -305,6 +308,11 @@ void LauncherController::askPinned()
         if (m_recent) m_recent->refilter();
         Q_EMIT pinnedChanged();
     });
+}
+
+void LauncherController::contextBarUpdated()
+{
+    readContextBar();
 }
 
 void LauncherController::dockExtentUpdated()
@@ -859,8 +867,36 @@ bool LauncherController::stayReady() const
     return program.exists() && program.lastModified() == m_programModified;
 }
 
+// The Context Bar along the top of Search's display, which a full Search
+// stops below as it stops above the dock. Each display has its own bar, so a
+// display that has none takes none. Read with the dock's band, whenever that
+// is read.
+void LauncherController::readContextBar()
+{
+    const auto *screen = m_view->screen();
+    const quint64 generation = ++m_barGeneration;
+    if (!screen) {
+        m_contextBar = 0;
+        return;
+    }
+    QDBusMessage request = QDBusMessage::createMethodCall(
+        QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("/ContextBar"),
+        QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("clockExtent"));
+    request << screen->name();
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 250), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, generation] {
+        watcher->deleteLater();
+        const QDBusPendingReply<QString> reply = *watcher;
+        const int bar = reply.isError() ? 0 : contextBarHeight(reply.value().toUtf8());
+        if (generation != m_barGeneration || bar == m_contextBar) return;
+        m_contextBar = bar;
+        Q_EMIT guestChanged();
+    });
+}
+
 void LauncherController::readDockBand()
 {
+    readContextBar();
     const auto *screen = m_view->screen();
     if (!screen) {
         m_dockBand = 0;

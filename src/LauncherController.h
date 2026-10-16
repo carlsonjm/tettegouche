@@ -168,6 +168,7 @@ public Q_SLOTS:
     // The dock's band changed, or moved to another display, while Search is
     // shown; hidden, it reads the band again as it opens.
     void dockExtentUpdated();
+    void contextBarUpdated();
     void bridgeLost();
 
     Q_SCRIPTABLE void toggle();
@@ -239,6 +240,7 @@ private:
     // The band Shuffle's dock reserves on Search's display, asked without
     // waiting; until it answers, the band last read stands.
     void readDockBand();
+    void readContextBar();
     void floatOn(const QString &outputName);
     void tryBeginGuest();
     void endGuestLease();
@@ -276,6 +278,9 @@ private:
     QRect m_guestRect;
     QRect m_compactGuestRect, m_activeGuestRect;
     int m_dockBand = 0;
+    // The Context Bar's height along the top of Search's display.
+    int m_contextBar = 0;
+    quint64 m_barGeneration = 0;
     quint64 m_dockGeneration = 0;
     bool m_drawerExpanded = false;
     bool m_requestedExpanded = false;
