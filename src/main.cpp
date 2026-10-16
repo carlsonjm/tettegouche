@@ -72,7 +72,7 @@ void configureSurface(QQuickView *view, QScreen *screen)
     view->setScreen(screen);
     view->setColor(Qt::transparent);
     view->setResizeMode(QQuickView::SizeRootObjectToView);
-    view->resize(screen->geometry().size());
+    view->setGeometry(screen->geometry());
 
     auto *surface = LayerShellQt::Window::get(view);
     surface->setScreen(screen);

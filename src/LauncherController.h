@@ -11,6 +11,7 @@
 
 #include <QDateTime>
 #include <QObject>
+#include <QPointer>
 #include <QRect>
 #include <QRectF>
 #include <QSet>
@@ -244,7 +245,13 @@ private:
     // waiting; until it answers, the band last read stands.
     void readDockBand();
     void readContextBar();
+    void askContextBar(const QString &outputName, quint64 generation, int timeout);
     void floatOn(const QString &outputName);
+    // Puts Search's surface on a display. Qt's own idea of the window's
+    // display can drift from the output its surface was placed on, so Search
+    // keeps the display it chose and measures by it.
+    void placeOn(QScreen *screen);
+    QScreen *placedScreen() const;
     void tryBeginGuest();
     void endGuestLease();
     // What is open, read again: from Kadunce where it answers, otherwise from
@@ -255,6 +262,7 @@ private:
     void watchScreen(QScreen *screen);
 
     QQuickView *m_view;
+    QPointer<QScreen> m_screen;
     KRunner::RunnerManager *m_runnerManager;
     OmniResults *m_results;
     RelatedInfo m_related;
@@ -284,6 +292,8 @@ private:
     // The Context Bar's height along the top of Search's display.
     int m_contextBar = 0;
     quint64 m_barGeneration = 0;
+    // A read that went unanswered is asked once more before it is given up.
+    bool m_barRetried = false;
     quint64 m_dockGeneration = 0;
     bool m_drawerExpanded = false;
     bool m_requestedExpanded = false;

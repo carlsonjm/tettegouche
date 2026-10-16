@@ -34,5 +34,8 @@ int main()
     if (workArea(QRect(QPoint(), monitor), monitor, 56, 24) != QRect(0, 24, 2560, 1360)) return 14;
     // A report that already starts below the bar keeps its own edge.
     if (workArea(QRect(0, 30, 2560, 1354), monitor, 56, 24) != QRect(0, 30, 2560, 1354)) return 15;
+    // A report that stops short of the edges, but not of the bar and band,
+    // is cut back to them.
+    if (workArea(QRect(0, 8, 2560, 1424), monitor, 56, 24) != QRect(0, 24, 2560, 1360)) return 16;
     return 0;
 }
