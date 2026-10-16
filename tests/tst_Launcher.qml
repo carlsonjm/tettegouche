@@ -43,7 +43,7 @@ TestCase {
         property bool filesWindowOpen: false
         property bool filesWindowShows: true
         property int filesWindows: 0
-        function showFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
+        function popOutFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
         property int filesLaunches: 0
         function beginGuestFilesLaunch() { filesLaunches++; return guestMode }
         property rect availableArea: Qt.rect(0, 0, 1000, 740)
@@ -2400,11 +2400,21 @@ TestCase {
         verify(controller.filesWindowOpen)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        // With a Files window open, the Files pill opens Files here, and
+        // Search stays.
         const files = findChild(launcher, "files-pill")
         mouseClick(files, files.width / 2, files.height / 2)
+        compare(controller.filesWindows, 1)
+        compare(controller.closes, 1)
+        tryVerify(() => launcher.drawerOpen && launcher.filesMode)
+        // Pop out again opens another window.
+        popOut = findChild(launcher, "drawer-pop-out")
+        tryVerify(() => popOut.visible)
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
         compare(controller.filesWindows, 2)
         compare(controller.closes, 2)
-        verify(!launcher.drawerOpen)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
         controller.filesWindowOpen = false
 
         controller.guestMode = true

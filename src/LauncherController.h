@@ -19,7 +19,9 @@
 #include <QTimer>
 #include <QVariantList>
 
+#include <functional>
 #include <memory>
+#include <vector>
 
 class ApplicationCatalog;
 class FileBrowser;
@@ -122,7 +124,9 @@ public:
 
     // Files carried past the sheet's edge leave as a drag any application can
     // take, offered only as a copy.
-    Q_INVOKABLE void carryOut(const QStringList &paths, const QRectF &sheet);
+    // From Search's Files, or from the Files in a window of its own given
+    // as from.
+    Q_INVOKABLE void carryOut(const QStringList &paths, const QRectF &sheet, QObject *from = nullptr);
     // An application carried past its tile leaves as its desktop file, which
     // Shuffle's dock pins where it is let go, as it pins one from any other
     // launcher.
@@ -147,12 +151,19 @@ public:
     Q_INVOKABLE void cancelGuestApplicationLaunch();
 
     bool filesWindowOffered() const { return m_fileBrowser != nullptr; }
+    // Whether any Files window is open.
     bool filesWindowOpen() const;
-    // Files in a window of its own, with the same tabs, folder and work as
-    // Files in Search; shown, or brought forward when it already is. It opens
-    // at the size Search has as a card in Spread, or Search's own size
-    // elsewhere, and is an ordinary window after that.
+    // A new Files window, starting with the tabs, folder and view Files in
+    // Search has, and keeping its own after that; as many as are asked for.
+    // It opens at the size Search has as a card in Spread, or Search's own
+    // size elsewhere, and is an ordinary window after that.
+    Q_INVOKABLE bool popOutFilesWindow();
+    // The Files window last used brought forward, minimized or not; a new
+    // one where none is open.
     Q_INVOKABLE bool showFilesWindow();
+    // How a Files window gets a Files of its own; without it, there is one
+    // window, sharing Search's.
+    void setFileBrowserMaker(std::function<std::unique_ptr<FileBrowser>()> make) { m_makeFileBrowser = std::move(make); }
     // Files' window is awaited in Spread as an application started from
     // Search is, and takes Search's card.
     Q_INVOKABLE bool beginGuestFilesLaunch();
@@ -304,7 +315,23 @@ private:
     bool m_guestAllowed = true;
     quint64 m_contextGeneration = 0;
     QString m_launchToken;
-    std::unique_ptr<QQuickView> m_filesWindow;
+    struct FilesWindow {
+        std::unique_ptr<FileBrowser> browser;
+        // Declared after the Files it shows, so it goes first.
+        std::unique_ptr<QQuickView> view;
+        FileBrowser *files(FileBrowser *shared) const { return browser ? browser.get() : shared; }
+    };
+    FilesWindow *frontFilesWindow() const;
+    // The Files that requests from elsewhere go to: the window last used,
+    // while one is open, or Search's.
+    FileBrowser *filesTarget() const;
+    bool filesWorking() const;
+    void watchFiles(FileBrowser *browser, FilesWindow *window);
+    // Closed windows are kept, hidden, while their Files finishes a copy,
+    // and are used again for the next window.
+    std::vector<std::unique_ptr<FilesWindow>> m_filesWindows;
+    QPointer<QQuickView> m_lastFilesWindow;
+    std::function<std::unique_ptr<FileBrowser>()> m_makeFileBrowser;
     QString m_launcherApplicationId;
     QStringList m_startedWith;
     const QDateTime m_programModified;

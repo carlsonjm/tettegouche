@@ -357,12 +357,7 @@ Item {
     }
 
     function setDrawerOpen(open, mode) {
-        // With Files in its own window, Files is that window.
-        if (open && mode === "files" && root.launcherController.filesWindowOpen) {
-            root.launcherController.showFilesWindow()
-            root.launcherController.close()
-            return
-        }
+        // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
         // Every drawer opens at Search's own size, a card in Spread; Expand
@@ -606,7 +601,7 @@ Item {
         if (!root.drawerOpen || !root.filesMode || root.filesHandoff || !root.filesWindowOffered) return
         root.filesHandoff = root.launcherController.guestMode
             && root.launcherController.beginGuestFilesLaunch()
-        if (!root.launcherController.showFilesWindow()) {
+        if (!root.launcherController.popOutFilesWindow()) {
             if (root.filesHandoff) root.launcherController.cancelGuestApplicationLaunch()
             root.filesHandoff = false
             return

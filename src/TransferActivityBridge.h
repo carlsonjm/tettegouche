@@ -1,4 +1,6 @@
 #pragma once
+#include <QPointer>
+#include <QList>
 #include <QJsonArray>
 #include <QElapsedTimer>
 #include <QObject>
@@ -9,6 +11,8 @@ class TransferActivityBridge : public QObject {
     Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Tettegouche.Activities1")
 public:
     explicit TransferActivityBridge(FileBrowser *files, QObject *parent = nullptr);
+    // Another Files, in a window of its own, whose copies are told too.
+    void add(FileBrowser *files);
 public Q_SLOTS:
     QString snapshot() const;
     void cancel(const QString &id);
@@ -19,7 +23,7 @@ Q_SIGNALS:
 private:
     QJsonArray rows() const;
     void publish();
-    FileBrowser *m_files;
+    QList<QPointer<FileBrowser>> m_files;
     QTimer m_pending;
     QTimer m_later;
     QElapsedTimer m_sinceTold;
