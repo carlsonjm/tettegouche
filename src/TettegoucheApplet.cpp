@@ -318,11 +318,22 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
     return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
 
+QString TettegoucheApplet::textSetting(const QString &key, const QString &fallback)
+{
+    if (KConfigLoader *scheme = configScheme()) {
+        if (KConfigSkeletonItem *item = static_cast<KCoreConfigSkeleton *>(scheme)->findItem(key)) return item->property().toString();
+    }
+    return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
+}
+
 QStringList TettegoucheApplet::launchFlags()
 {
     QStringList flags = setting(QStringLiteral("useKadunce"), true) ? QStringList{} : QStringList{QStringLiteral("--standalone")};
     // Search's first screen offers what was used lately unless that is off.
     if (!setting(QStringLiteral("offerRecent"), true)) flags << QStringLiteral("--no-recent");
+    // As a grid of large tiles, unless a single row is chosen.
+    else if (textSetting(QStringLiteral("recentLayout"), QStringLiteral("grid")) == QLatin1String("row"))
+        flags << QStringLiteral("--recent-row");
     // It offers Notes, where the notes application is installed, unless that is off.
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.

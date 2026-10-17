@@ -86,6 +86,10 @@ Item {
     // the results.
     readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
     readonly property int modeRowReach: modeRowShown ? 52 : 0
+    // Search's field, the same on every screen.
+    readonly property int fieldHeight: 56
+    // What was used lately, before anything is typed: "grid" or "row".
+    property string recentLayout: "grid"
     property bool pendingLaunch: false
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
@@ -247,7 +251,10 @@ Item {
         required property int index
         required property var model
         objectName: "recent-" + index
-        height: 64
+        // Large in the grid, as Apps' tiles are; small along a row.
+        property bool large: false
+        readonly property real glyph: large ? 48 : 34
+        height: large ? 88 : 64
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: tile.model.name
@@ -257,7 +264,7 @@ Item {
         Rectangle {
             id: tileFace
             anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, 68)
+            width: Math.min(parent.width, tile.large ? 92 : 68)
             height: parent.height
             radius: root.paperRadius
             color: tileTap.pressed ? tone.tilePressed : tileHover.hovered ? tone.tileHover : "transparent"
@@ -266,10 +273,10 @@ Item {
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
             LiftShadow { lifted: tileTap.pressed }
             Item {
-                x: (parent.width - 34) / 2
-                y: 6
-                width: 34
-                height: 34
+                x: (parent.width - tile.glyph) / 2
+                y: tile.large ? 8 : 6
+                width: tile.glyph
+                height: tile.glyph
                 Kirigami.Icon {
                     anchors.fill: parent
                     visible: tile.model.thumbnail.length === 0
@@ -278,13 +285,13 @@ Item {
                 Rectangle {
                     anchors.fill: parent
                     visible: tile.model.thumbnail.length > 0
-                    radius: 6
+                    radius: tile.large ? 9 : 6
                     color: root.controlColor
                     clip: true
                     Image {
                         anchors.fill: parent
                         source: tile.model.thumbnail
-                        sourceSize: Qt.size(68, 68)
+                        sourceSize: Qt.size(tile.glyph * 2, tile.glyph * 2)
                         fillMode: Image.PreserveAspectCrop
                         asynchronous: true
                     }
@@ -292,13 +299,13 @@ Item {
             }
             Text {
                 x: 3
-                y: 44
+                y: tile.large ? 63 : 44
                 width: parent.width - 6
                 horizontalAlignment: Text.AlignHCenter
                 elide: Text.ElideRight
                 text: tile.model.name
-                color: root.secondaryText
-                font.pixelSize: 11
+                color: tile.large ? root.primaryText : root.secondaryText
+                font.pixelSize: tile.large ? 13 : 11
             }
         }
         Rectangle {
@@ -1078,92 +1085,112 @@ Item {
             Rectangle {
                 id: searchField
                 objectName: "search-field"
-                // Nothing typed and nothing found: search rests in the middle.
+                // Nothing typed and nothing found: the first screen.
                 readonly property bool idle:
                     query.text.length === 0
                     && resultList.count === 0
                     && !root.searchResults.querying
                     && !root.applicationLaunchPending
-                // Where search sits with the drawers shut: with the first
-                // row under it, the two centred together, and as wide as the
-                // row needs.
-                readonly property real compactWidth: idle ? Math.min(parent.width,
-                    Math.max(360, parent.width * 0.72, firstRow.naturalWidth)) : parent.width
-                readonly property real compactY: idle ? Math.max(0, Math.round(
-                    (parent.height - 58 - (firstRow.fits ? firstRow.reach : 0)) / 2)) : 0
-                // An open drawer holds search in its header, between the sort
-                // button and the corner; it travels there as the drawer opens.
-                width: compactWidth + (drawerHandle.fieldWidth - compactWidth) * root.drawerProgress
-                height: 58 + (drawerHandle.openHeight - 58) * root.drawerProgress
-                x: (parent.width - width) / 2
-                y: Math.round(compactY * (1 - root.drawerProgress))
+                // Lit while it holds the keys or what was typed.
+                readonly property bool lit: query.activeFocus || query.text.length > 0
+                // One field, in one place, on every screen: under the modes,
+                // the full width of the sheet. Only what is under it changes.
+                x: 0
+                y: 0
+                width: parent.width
+                height: root.fieldHeight
                 radius: height / 2
-                color: root.searchEngaged || query.text.length > 0
-                    ? root.controlColor : "transparent"
+                color: root.controlColor
                 opacity: (root.applicationLaunchPending ? 0 : 1)
                     * Math.max(0, 1 - root.modeProgress * 2)
+                    * root.openingControls
                 enabled: !root.applicationLaunchPending && !root.modeOpen
-                border.width: 0
-                border.color: root.surfaceOutline
 
+                // A hairline of light along its upper edge, as on a raised
+                // key, and a ring that comes up while it holds the keys.
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: parent.width * (0.6 + 0.4 * root.openingControls)
-                    height: parent.height
-                    radius: height / 2
+                    anchors.fill: parent
+                    radius: parent.radius
                     color: "transparent"
                     border.width: 1
-                    border.color: root.surfaceOutline
-                    opacity: root.openingControls
+                    border.color: tone.dark ? "#14ffffff" : "#0d000000"
+                    opacity: searchField.lit ? 0 : 1
+                    Behavior on opacity { NumberAnimation { duration: root.ms(150) } }
+                }
+                Rectangle {
+                    objectName: "search-ring"
+                    anchors.fill: parent
+                    anchors.margins: -3
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 3
+                    border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.16)
+                    opacity: searchField.lit ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: root.ms(150) } }
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 3
+                        radius: height / 2
+                        color: "transparent"
+                        border.width: 1
+                        border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.55)
+                    }
                 }
 
-                // The drawer's own motion carries search between its places;
-                // these ease only changes made while a drawer is shut or open.
-                Behavior on width {
-                    enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
-                    NumberAnimation { duration: root.ms(240); easing.type: Easing.OutCubic }
-                }
-                Behavior on y {
-                    enabled: root.drawerProgress <= 0 || root.drawerProgress >= 1
-                    NumberAnimation { duration: root.ms(260); easing.type: Easing.OutCubic }
-                }
                 Behavior on opacity {
                     // The notes pad grows out of the field; its own motion
                     // carries the fade.
                     enabled: root.modeProgress <= 0 || root.modeProgress >= 1
                     NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
                 }
-                Behavior on color {
-                    ColorAnimation { duration: root.ms(150); easing.type: Easing.OutCubic }
+
+                SuiteIcon {
+                    id: searchGlyph
+                    glyph: "search"
+                    anchors.left: parent.left
+                    anchors.leftMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20
+                    height: 20
+                    opacity: (searchField.lit ? 0.9 : 0.55) * root.openingIcon
+                    Behavior on opacity { NumberAnimation { duration: root.ms(150) } }
                 }
 
+                // Clears what was typed; with nothing typed, a hint of what
+                // Enter does takes its place.
                 Item {
                     id: trailingAction
+                    objectName: "search-clear"
                     Accessible.role: Accessible.Button
-                    Accessible.name: query.text.length > 0 ? words.i18n("Clear search") : words.i18n("Search")
+                    Accessible.name: words.i18n("Clear search")
                     Accessible.onPressAction: { root.searchEngaged = true; query.text = ""; query.forceActiveFocus() }
                     anchors.right: parent.right
-                    anchors.rightMargin: 9
+                    anchors.rightMargin: 8
                     anchors.verticalCenter: parent.verticalCenter
                     width: 40
                     height: 40
-                    opacity: root.openingIcon
-
-                    Kirigami.Icon {
+                    visible: query.text.length > 0
+                    Rectangle {
                         anchors.centerIn: parent
-                        width: 22
-                        height: 22
-                        source: query.text.length > 0
-                            ? "edit-clear-symbolic" : "system-search"
-                        color: root.primaryText
+                        width: 30
+                        height: 30
+                        radius: 15
+                        color: clearHover.hovered ? tone.controlHover : "transparent"
                     }
-
+                    SuiteIcon {
+                        anchors.centerIn: parent
+                        glyph: "x"
+                        width: 18
+                        height: 18
+                    }
+                    HoverHandler {
+                        id: clearHover
+                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                    }
                     TapHandler {
                         onTapped: {
                             root.searchEngaged = true
-                            if (query.text.length > 0) {
-                                query.text = ""
-                            }
+                            query.text = ""
                             query.forceActiveFocus()
                             root.launcherController.showInputMethod()
                         }
@@ -1173,16 +1200,17 @@ Item {
                 TextInput {
                     id: query
                     objectName: "search-query"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 18
-                    anchors.right: trailingAction.left
-                    // An open drawer's eye sits between the text and the icon.
-                    anchors.rightMargin: 10 + 42 * root.drawerProgress
+                    anchors.left: searchGlyph.right
+                    anchors.leftMargin: 14
+                    anchors.right: parent.right
+                    // Clear, and an open drawer's eye, sit at its end.
+                    anchors.rightMargin: 20 + (trailingAction.visible ? 36 : 0) + 42 * root.drawerProgress
                     anchors.verticalCenter: parent.verticalCenter
                     color: root.primaryText
                     selectionColor: tone.selection
                     selectedTextColor: tone.selectedText
-                    font.pixelSize: 18
+                    font.pixelSize: 20
+                    font.weight: Font.Medium
                     clip: true
                     inputMethodHints: Qt.ImhNoPredictiveText
 
@@ -1244,9 +1272,12 @@ Item {
                         anchors.fill: parent
                         verticalAlignment: Text.AlignVCenter
                         visible: query.text.length === 0
-                        text: words.i18n("Just type")
+                        text: root.drawerOpen
+                            ? (root.filesMode ? words.i18n("Find in Files") : words.i18n("Find an app"))
+                            : words.i18n("Just type")
                         color: tone.placeholderText
-                        font.pixelSize: 12
+                        font.pixelSize: 20
+                        font.weight: Font.Medium
                         opacity: root.openingText
                         transform: Translate { y: (1 - root.openingText) * 3 }
 
@@ -1399,25 +1430,54 @@ Item {
                         onActivated: modeRow.show("notes")
                     }
                 }
+
+                // The window's own buttons share the row, at its other end:
+                // Expand while a drawer is open, Pop out where Files has a
+                // window of its own, and Close, last, as a window's is. Notes
+                // keeps its own, in its header.
+                WindowActions {
+                    id: windowActions
+                    prefix: "window"
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    opacity: Math.max(0, 1 - root.modeProgress * 2)
+                    enabled: !root.modeOpen
+                    visible: opacity > 0
+                    expanded: root.launcherController.drawerExpanded
+                    expandShown: root.drawerOpen
+                    popOutShown: root.drawerOpen && root.filesMode && root.filesWindowOffered
+                    popOutName: words.i18n("Open Files in its own window")
+                    onExpand: root.toggleExpanded()
+                    onPopOut: root.popOutFiles()
+                    onDismiss: root.launcherController.close()
+                }
             }
 
             // Before anything is typed, under the field: what was used lately
-            // and is neither pinned, open nor hidden, centred as one group, as
-            // many as fit; a short sheet keeps none.
+            // and is neither pinned, open nor hidden, as many as fit. As a
+            // grid, the setting's default, up to twenty large tiles fill the
+            // room under the field; as a row, up to eight small ones.
             Item {
                 id: firstRow
                 objectName: "first-row"
-                readonly property real gap: 18
-                readonly property real tileWidth: 72
-                readonly property real tileHeight: 64
-                readonly property int most: 6
+                readonly property bool grid: root.recentLayout !== "row"
+                readonly property real gap: grid ? 20 : 18
+                readonly property real tileWidth: grid ? 96 : 72
+                readonly property real tileHeight: grid ? 88 : 64
+                readonly property real rowGap: 8
+                readonly property int most: grid ? 20 : 8
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
-                readonly property real naturalWidth: Math.min(offered, most) * tileWidth
-                readonly property bool roomBelow: parent.height >= 58 + gap + tileHeight
-                readonly property int shownCount: offered > 0 && roomBelow
-                    ? Math.max(0, Math.min(offered, most, Math.floor(width / tileWidth))) : 0
+                readonly property int columns: Math.max(1, Math.floor(width / tileWidth))
+                readonly property int rows: grid
+                    ? Math.max(0, Math.floor((room + rowGap) / (tileHeight + rowGap)))
+                    : (room >= tileHeight ? 1 : 0)
+                // The height free under the field.
+                readonly property real room: parent.height - root.fieldHeight - gap
+                readonly property int shownCount: offered > 0
+                    ? Math.max(0, Math.min(offered, most, columns * rows)) : 0
+                readonly property int shownColumns: Math.min(columns, shownCount)
                 readonly property real cellWidth: tileWidth
-                readonly property real tilesX: (width - shownCount * tileWidth) / 2
+                readonly property real tilesX: (width - shownColumns * tileWidth) / 2
                 readonly property real reach: gap + height
                 readonly property bool fits: shownCount > 0
                 // The row arrives as one group. Typing sends it away, sinking
@@ -1484,10 +1544,11 @@ Item {
                 }
                 readonly property bool resting: searchField.idle
                 onRestingChanged: resting ? arrive(1) : leave()
-                x: (parent.width - width) / 2
+                x: 0
                 y: searchField.y + searchField.height + gap
-                width: searchField.compactWidth
-                height: shownCount > 0 ? tileHeight : 0
+                width: parent.width
+                height: shownCount > 0
+                    ? Math.ceil(shownCount / columns) * (tileHeight + rowGap) - rowGap : 0
                 opacity: fits && !root.applicationLaunchPending
                     ? rest * Math.max(0, 1 - root.drawerProgress * 3)
                         * Math.max(0, 1 - root.modeProgress * 3) : 0
@@ -1500,8 +1561,9 @@ Item {
                     delegate: RecentTile {
                         id: recentTile
                         readonly property real reveal: firstRow.reveal(firstRow.doors)
-                        x: firstRow.tilesX + index * firstRow.cellWidth
-                        y: 0
+                        large: firstRow.grid
+                        x: firstRow.tilesX + (index % firstRow.columns) * firstRow.cellWidth
+                        y: Math.floor(index / firstRow.columns) * (firstRow.tileHeight + firstRow.rowGap)
                         width: firstRow.cellWidth
                         visible: index < firstRow.shownCount
                         opacity: reveal
@@ -1809,16 +1871,10 @@ Item {
                 id: drawerHandle
                 objectName: "drawer-header"
                 readonly property real sectionGap: 16
-                readonly property real openHeight: 44
-                // Search, in the open header, keeps to the middle: centred,
-                // with the eye inside it beside the search icon, clear of the
-                // corner on either side. The row of modes above returns to
-                // search.
+                readonly property real openHeight: root.fieldHeight
+                // Open, the header is search's own row: the field stays where
+                // it is on every screen, with the eye inside it beside Clear.
                 readonly property real controlsOpacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
-                readonly property real fieldSide: width - drawerCorner.x + 12
-                readonly property real fieldWidth: Math.max(160,
-                    Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
-                readonly property real fieldLeft: (width - fieldWidth) / 2
                 readonly property real restingY: parent.height + root.contentInset - 48
                 readonly property real revealDistance: Math.max(1,
                     restingY)
@@ -1854,7 +1910,7 @@ Item {
                             root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
                         }
                     }
-                    x: drawerHandle.fieldLeft + drawerHandle.fieldWidth - 9 - trailingAction.width - width
+                    x: searchField.x + searchField.width - 12 - (trailingAction.visible ? 36 : 0) - width
                     anchors.verticalCenter: parent.verticalCenter
                     width: 42
                     height: 42
@@ -1891,24 +1947,6 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: hiddenButton.toggle()
                     }
-                }
-
-                // Expand and, in Files, Pop out, in the corner every drawer
-                // and mode shares.
-                WindowActions {
-                    id: drawerCorner
-                    prefix: "drawer"
-                    anchors.right: parent.right
-                    anchors.rightMargin: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    opacity: drawerHandle.controlsOpacity
-                    enabled: root.drawerOpen && opacity > 0.9
-                    expanded: root.launcherController.drawerExpanded
-                    popOutShown: root.filesMode && root.filesWindowOffered
-                    popOutName: words.i18n("Open Files in its own window")
-                    onExpand: root.toggleExpanded()
-                    onPopOut: root.popOutFiles()
-                    onDismiss: root.launcherController.close()
                 }
 
                 // The open drawer's header pulled down closes it.

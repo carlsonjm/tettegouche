@@ -9,10 +9,14 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 Search's modes run along its top on every screen, one row above the field: the
 dot for this first screen, then Apps, Files and, where Gooseberry is installed,
 Notes. The grey pill marks the mode shown, and a tap moves straight to another;
-the dot comes back here with what was typed. Before anything is typed, the
-field rests in the middle with what was used lately under it, newest first: at
-most six, as many as the field's width holds, centred as one group. A sheet too
-short for that row keeps the field alone. Its source is KDE's record of use for the current activity, read when
+the dot comes back here with what was typed. The window's own buttons end
+that row: Expand while Apps or Files is open, Pop out in Files, and Close,
+last. The field is the same on every screen, full width under the row, so
+only what is under it changes. Before anything is typed, what was used lately
+is under it, newest first, centred as one group: by default a grid of large
+tiles, at most twenty, as many rows as the room holds; set to a row, one row
+of small tiles, at most eight. A sheet too short for one row keeps the field
+alone. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
 
@@ -23,8 +27,9 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 - Nothing is offered while the screen is shared or recorded, so no file's name
   is on show; the modes stay.
 - Typing hands the room to the results.
-- The widget's setting "Show recent files and apps", off, leaves the modes
-  and the field alone, and nothing is read.
+- The widget's setting "Recent files and apps" is Off, In a row or In a grid,
+  the default. Off leaves the modes and the field alone, and nothing is
+  read.
 
 ### Notes
 

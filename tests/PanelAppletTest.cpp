@@ -365,6 +365,12 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 4);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill"));
         configure(QStringLiteral("showNotesPill"), true);
+        // Recent use in a single row rather than a grid.
+        configure(QStringLiteral("recentLayout"), QStringLiteral("row"));
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 5);
+        QCOMPARE(launches().constLast(), QStringLiteral("--recent-row"));
+        configure(QStringLiteral("recentLayout"), QStringLiteral("grid"));
     }
 
     // A running launcher is known by its name on the bus, whoever started

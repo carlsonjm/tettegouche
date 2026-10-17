@@ -25,6 +25,13 @@ provenance.
   moves straight from one mode to another, and the dot comes back to search
   with what was typed, in place of Back. The field sits under the row, with
   what was used lately under it before anything is typed.
+- Search's field is the same on every screen: full width under the modes,
+  taller, with a search glyph, larger type, and a ring while it holds the
+  keys. Only what is under it changes. Expand, Pop out and Close move to the
+  end of the row of modes.
+- What was used lately shows, by default, as a grid of up to twenty large
+  tiles. The widget's setting "Recent files and apps" chooses Off, In a row
+  (up to eight small tiles, as before) or In a grid.
 - Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
   its place in Spread without waiting, and shows when Kadunce answers or after
   half a second on its own; a place Kadunce makes after that is given back.

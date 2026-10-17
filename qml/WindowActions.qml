@@ -7,8 +7,8 @@ import QtQuick
 import org.kde.ki18n
 import org.kde.kirigami as Kirigami
 
-// The corner Apps, Files, Notes and Ask share at the right of their header:
-// Expand, which grows Search to fill the screen and brings it back, Pop out,
+// The window's buttons, at the right of Search's row of modes (and of Notes'
+// own header): Expand, which grows Search to fill the screen and brings it back, Pop out,
 // which gives what is open a window of its own, and Close, which puts Search
 // away, last as a window's is. All are round, 30 in a 42 touch, as the eye is.
 Row {
@@ -17,6 +17,7 @@ Row {
     // "<prefix>-pop-out", "<prefix>-close".
     property string prefix: ""
     property bool expanded: false
+    property bool expandShown: true
     property bool popOutShown: true
     // What Pop out opens, said to a screen reader.
     property string popOutName: words.i18n("Open in its own window")
@@ -31,6 +32,7 @@ Row {
     }
     Corner {
         objectName: actions.prefix + "-expand"
+        visible: actions.expandShown
         glyph: actions.expanded ? "minimize-2" : "maximize-2"
         name: actions.expanded ? words.i18n("Make smaller") : words.i18n("Expand")
         onActivated: actions.expand()
