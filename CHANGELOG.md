@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
+  its place in Spread without waiting, and shows when Kadunce answers or after
+  half a second on its own; a place Kadunce makes after that is given back.
 - An application among Search's results has a sheet: touch and hold it, or
   right-click it, for Uninstall…. Where Split Rock is installed, its Core
   removes the application, from Apps' sheet too: it finds the package that

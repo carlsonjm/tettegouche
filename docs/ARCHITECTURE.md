@@ -95,9 +95,13 @@ not duplicate that history in Ambient.
 ## Kadunce integration
 
 At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads
-workspace-context schema version 1; no other versions are accepted. Unsupported,
-absent, or malformed endpoints fall back to the standalone launcher; a declined
-guest that names an output floats the launcher on that display. Context
+workspace-context schema version 1; no other versions are accepted. The protocol
+is asked once for each Kadunce on the bus. Neither question waits: the launcher
+shows when Kadunce answers its guest, or on its own after half a second, so a
+busy KWin never holds it still, and a place Kadunce makes after that is given
+back. Unsupported, absent, or malformed endpoints fall back to the standalone
+launcher; a declined guest that names an output floats the launcher on that
+display. Context
 refreshes on Kadunce change signals and before window selection; there is no
 timer or heartbeat.
 
