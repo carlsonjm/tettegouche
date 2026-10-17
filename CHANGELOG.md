@@ -5,6 +5,11 @@ provenance.
 
 ## Unreleased
 
+- Search's modes run along its top on every screen: the dot for Search's first
+  screen, then Apps, Files and Notes, the grey pill on the one shown. A tap
+  moves straight from one mode to another, and the dot comes back to search
+  with what was typed, in place of Back. The field sits under the row, with
+  what was used lately under it before anything is typed.
 - Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
   its place in Spread without waiting, and shows when Kadunce answers or after
   half a second on its own; a place Kadunce makes after that is given back.

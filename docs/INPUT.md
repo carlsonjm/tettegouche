@@ -25,7 +25,9 @@ than repeat it.
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
-| Tab, with nothing typed | Moves between Apps, Files, Notes and what was used lately; Enter or Space opens the one focused. |
+| Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
+| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. |
+| Tab, with nothing typed | Moves along the dot, Apps, Files and Notes, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
@@ -49,7 +51,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
-| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and Back leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -57,9 +59,9 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Show recent files and apps", off | Search opens with its doors, Apps, Files and Notes, alone under the field, and nothing used lately is read. |
+| Setting "Show recent files and apps", off | Search opens with its modes along its top and the field alone, and nothing used lately is read. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
-| Setting "Show the Notes pill", off | The first screen leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
+| Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
@@ -90,10 +92,9 @@ than repeat it.
 | Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; Edit Application…, where KDE's menu editor is installed, which opens the application's entry there to change its name, icon or command for this person; and Uninstall…, which goes to Split Rock's Core where it is installed, as from the search results, else to the software centre where it lists the application. |
 | Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
 | Tap or click the sort button, a pill naming the order at the right of the row above the applications | Offers A to Z, Most used or Newest installed; the choice is kept. |
-| Tap or click New folder, beside the sort button | Asks for applications: a tap or Enter chooses one, or lets it go. Make folder, once two are chosen, gathers them into a new folder, which opens in place with its name ready to change. Cancel, Back or Esc leaves Apps as it was. |
+| Tap or click New folder, beside the sort button | Asks for applications: a tap or Enter chooses one, or lets it go. Make folder, once two are chosen, gathers them into a new folder, which opens in place with its name ready to change. Cancel or Esc leaves Apps as it was. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps, like every drawer and mode, opens at Search's size, a card in Spread, from the pills in Search; the dot's slide, Meta+G and Meta+E open it filling the screen; moving between Apps and Files keeps the size chosen. |
-| Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Closes the sort menu if it is open, otherwise the drawer. |
 | Meta+G | Opens Search on Apps, filling the screen; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
@@ -171,7 +172,6 @@ than repeat it.
 | Tap or click ⏏ beside a plugged-in drive | Makes it safe to pull out: its row says Ejecting…, then Files says it can be unplugged, and a drive powered off leaves the list. While Files copies or moves to or from it, the row says Ejects when done, and it ejects after. |
 | Plug in or pull out a drive while Files is open | It appears under the places, or leaves them. A tab showing a drive that leaves or is ejected goes Home. |
 | Another application opens a folder or asks to show files, as it would a file manager: Plasma's Open with File Manager for a drive, or Show in folder in a browser's downloads | Once Files is the file manager, it opens at the folder, or with the files chosen in theirs, or with a file's Properties when those are asked for. A plugged-in phone opens in Files; Trash and network shares open in Dolphin. |
-| Tap or click Back, at the header's left | Returns to search, with what is typed. |
 | Pinch, Ctrl with + or −, or Ctrl and the scroll wheel | Makes the tiles larger or smaller, in four sizes. Ctrl+0 returns them to the usual size. The size is kept. |
 | Tap or click Pause, Resume or × on a running copy or move | Pauses, resumes or cancels that one alone. Other file actions stay available while it runs. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |

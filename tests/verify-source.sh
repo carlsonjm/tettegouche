@@ -44,11 +44,12 @@ rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
-# An open drawer's header holds Back on the left and no Close drawer pill.
-rg -Fq 'objectName: "drawer-back"' "${project_root}/qml/Launcher.qml"
-rg -Fq 'glyph: "chevron-left"' "${project_root}/qml/Launcher.qml"
+# Search's modes run along its top, the dot returning to search, and an open
+# drawer has no Close drawer pill.
+rg -Fq 'objectName: "mode-row"' "${project_root}/qml/Launcher.qml"
+rg -Fq 'objectName: "home-dot"' "${project_root}/qml/Launcher.qml"
 if rg -Fq 'Close drawer' "${project_root}/qml/Launcher.qml"; then
-    echo "An open drawer closes by Back or its top edge, not a Close drawer pill" >&2
+    echo "An open drawer closes by the dot or its top edge, not a Close drawer pill" >&2
     exit 1
 fi
 rg -q 'Q_PROPERTY\(int sortOrder' \

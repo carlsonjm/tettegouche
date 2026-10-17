@@ -81,6 +81,11 @@ Item {
     readonly property int paperRadius: 8
     readonly property int noteRadius: 12
     readonly property int contentInset: 22
+    // The room the row of modes takes above the rest: its 44 and 8 below.
+    // With the on-screen keys up over a search, the row gives its room to
+    // the results.
+    readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
+    readonly property int modeRowReach: modeRowShown ? 52 : 0
     property bool pendingLaunch: false
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
@@ -167,77 +172,55 @@ Item {
         }
     }
 
-    // A door on Search's first screen, Apps, Files or Notes: the suite's pill.
+    // One of Search's modes along its top, Apps, Files or Notes: its word
+    // alone, and the suite's grey pill behind the one shown.
     component FirstPill: Item {
         id: pill
         property string label
-        property string glyph
-        // How far it has arrived, 0 to 1; it rises a little into place,
-        // growing to its size. With animations set to instant it only fades.
+        // Whether its mode is the one shown.
+        property bool selected: false
+        // How far it has arrived, 0 to 1.
         property real reveal: 1
         signal activated()
-        width: pillContent.implicitWidth + 32
+        width: pillLabel.implicitWidth + 28
         height: 44
         opacity: reveal
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: label
+        Accessible.checkable: true
+        Accessible.checked: selected
         Keys.onReturnPressed: pill.activated()
         Keys.onEnterPressed: pill.activated()
         Keys.onSpacePressed: pill.activated()
         Rectangle {
             id: pillFace
-            anchors.fill: parent
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width
+            height: 36
             radius: height / 2
-            color: pillTap.pressed ? tone.doorPressed : pillHover.hovered ? tone.doorHover : root.controlColor
+            color: pillTap.pressed ? tone.doorPressed
+                : pill.selected ? root.controlColor
+                : pillHover.hovered ? tone.doorHover : "transparent"
             scale: pillTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
-            transform: [
-                Scale {
-                    origin.x: pillFace.width / 2
-                    origin.y: pillFace.height / 2
-                    xScale: root.reducedMotion ? 1 : 0.9 + 0.1 * pill.reveal
-                    yScale: root.reducedMotion ? 1 : 0.9 + 0.1 * pill.reveal
-                },
-                Translate { y: root.reducedMotion ? 0 : (1 - pill.reveal) * 10 }
-            ]
-            LiftShadow { lifted: pillTap.pressed; cornerRadius: pillFace.radius }
-            Row {
-                id: pillContent
+            Text {
+                id: pillLabel
                 anchors.centerIn: parent
-                spacing: 9
-                // Apps: four squares, as a grid of applications.
-                Grid {
-                    visible: pill.glyph === "apps"
-                    anchors.verticalCenter: parent.verticalCenter
-                    columns: 2
-                    spacing: 3
-                    Repeater {
-                        model: 4
-                        Rectangle { width: 6.5; height: 6.5; radius: 1.5; color: root.primaryText }
-                    }
-                }
-                SuiteIcon {
-                    visible: pill.glyph === "files" || pill.glyph === "notes"
-                    anchors.verticalCenter: parent.verticalCenter
-                    glyph: pill.glyph === "notes" ? "notes" : "folder-open"
-                    width: 18
-                    height: 18
-                }
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: pill.label
-                    color: root.primaryText
-                    font.pixelSize: 14
-                    font.weight: Font.Medium
-                }
+                text: pill.label
+                color: pill.selected ? root.primaryText : root.secondaryText
+                font.pixelSize: 14
+                font.weight: Font.DemiBold
+                Behavior on color { ColorAnimation { duration: root.ms(90) } }
             }
         }
         // Keyboard focus alone gets an outline.
         Rectangle {
-            anchors.fill: parent
-            anchors.margins: -3
+            anchors.verticalCenter: parent.verticalCenter
+            width: parent.width + 6
+            height: pillFace.height + 6
+            x: -3
             radius: height / 2
             color: "transparent"
             border.width: 1.5
@@ -1068,6 +1051,7 @@ Item {
             id: content
             anchors.fill: parent
             anchors.margins: root.contentInset
+            anchors.topMargin: root.contentInset + root.modeRowReach
 
             Rectangle {
                 id: searchField
@@ -1281,42 +1265,143 @@ Item {
                 }
             }
 
-            // Before anything is typed: Apps, Files and, where Gooseberry is
-            // installed, Notes, centred under the field; then, on a row of
-            // their own below them, what was used lately and is neither
-            // pinned, open nor hidden, centred as one group. A narrow sheet
-            // keeps the doors and as many of the rest as fit, and a short one
-            // keeps the doors alone.
+            // Search's modes along its top, on every screen, as one row: the
+            // dot for Search's first screen, then Apps, Files and, where
+            // Gooseberry is installed, Notes. The grey pill marks the one
+            // shown, the dot while none is, and a tap moves between them. The
+            // field and whatever the mode shows sit below it.
+            Item {
+                id: modeRow
+                objectName: "mode-row"
+                // The mode shown: "apps", "files", "notes", or "" on the
+                // first screen.
+                readonly property string current: root.notesOpen ? "notes"
+                    : root.drawerOpen ? (root.filesMode ? "files" : "apps") : ""
+                readonly property real pillGap: 4
+                function show(mode) {
+                    if (mode === current) return
+                    if (mode === "") {
+                        root.goBack()
+                        return
+                    }
+                    if (mode === "notes") {
+                        if (root.drawerOpen) root.setDrawerOpen(false)
+                        root.openNotes()
+                        return
+                    }
+                    if (root.modeOpen) root.closeMode()
+                    root.setDrawerOpen(true, mode)
+                }
+                x: -10
+                y: -root.modeRowReach - 6
+                width: parent.width + 10
+                height: 44
+                opacity: root.applicationLaunchPending || !root.modeRowShown ? 0 : root.openingControls
+                visible: opacity > 0
+                enabled: opacity > 0.5 && !root.modeGrowing && !root.choosingFolder
+                transform: Translate { y: (1 - root.openingControls) * 6 }
+                z: 6
+
+                Row {
+                    spacing: modeRow.pillGap
+                    // The dot: Search's first screen, from any mode.
+                    Item {
+                        id: homeDot
+                        objectName: "home-dot"
+                        readonly property bool selected: modeRow.current === ""
+                        width: 44
+                        height: 44
+                        activeFocusOnTab: true
+                        Accessible.role: Accessible.Button
+                        Accessible.name: words.i18n("Search")
+                        Accessible.checkable: true
+                        Accessible.checked: selected
+                        Accessible.onPressAction: modeRow.show("")
+                        Keys.onReturnPressed: modeRow.show("")
+                        Keys.onEnterPressed: modeRow.show("")
+                        Keys.onSpacePressed: modeRow.show("")
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 22
+                            height: 22
+                            radius: width / 2
+                            color: root.primaryText
+                            opacity: homeDot.selected || homeHover.hovered ? 1 : 0.6
+                            scale: homeTap.pressed ? 1.1 : 1
+                            Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
+                            Behavior on opacity { NumberAnimation { duration: root.ms(90) } }
+                        }
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 32
+                            height: 32
+                            radius: width / 2
+                            color: "transparent"
+                            border.width: 1.5
+                            border.color: tone.focusRing
+                            visible: homeDot.activeFocus
+                        }
+                        HoverHandler {
+                            id: homeHover
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                        TapHandler {
+                            id: homeTap
+                            enabled: !root.guestDragged
+                            gesturePolicy: TapHandler.ReleaseWithinBounds
+                            onTapped: modeRow.show("")
+                        }
+                    }
+                    FirstPill {
+                        id: appsPill
+                        objectName: "apps-pill"
+                        label: words.i18n("Apps")
+                        selected: modeRow.current === "apps"
+                        onActivated: modeRow.show("apps")
+                    }
+                    FirstPill {
+                        id: filesPill
+                        objectName: "files-pill"
+                        label: words.i18n("Files")
+                        selected: modeRow.current === "files"
+                        visible: root.fileBrowser !== null
+                        onActivated: modeRow.show("files")
+                    }
+                    FirstPill {
+                        id: notesPill
+                        objectName: "notes-pill"
+                        label: words.i18n("Notes")
+                        selected: modeRow.current === "notes"
+                        visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
+                        onActivated: modeRow.show("notes")
+                    }
+                }
+            }
+
+            // Before anything is typed, under the field: what was used lately
+            // and is neither pinned, open nor hidden, centred as one group, as
+            // many as fit; a short sheet keeps none.
             Item {
                 id: firstRow
                 objectName: "first-row"
                 readonly property real gap: 18
-                readonly property real pillGap: 10
-                readonly property real pillsHeight: 64
                 readonly property real tileWidth: 72
                 readonly property real tileHeight: 64
                 readonly property int most: 6
-                // The room between the doors and what was used lately.
-                readonly property real divide: 12
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
-                readonly property real pillsWidth: appsPill.width
-                    + (filesPill.visible ? pillGap + filesPill.width : 0)
-                    + (notesPill.visible ? pillGap + notesPill.width : 0)
-                readonly property real naturalWidth: Math.max(pillsWidth,
-                    Math.min(offered, most) * tileWidth)
-                readonly property bool roomBelow: parent.height >= 58 + gap + pillsHeight + divide + tileHeight
+                readonly property real naturalWidth: Math.min(offered, most) * tileWidth
+                readonly property bool roomBelow: parent.height >= 58 + gap + tileHeight
                 readonly property int shownCount: offered > 0 && roomBelow
                     ? Math.max(0, Math.min(offered, most, Math.floor(width / tileWidth))) : 0
                 readonly property real cellWidth: tileWidth
                 readonly property real tilesX: (width - shownCount * tileWidth) / 2
                 readonly property real reach: gap + height
-                readonly property bool fits: parent.height >= 58 + gap + pillsHeight
-                // The row arrives a piece at a time: each door in turn, left
-                // to right, then what was used lately as one group. Typing
-                // sends the row away whole, sinking a little, and clearing
-                // the field brings it back the same way it first came.
-                readonly property int doors: 1 + (filesPill.visible ? 1 : 0)
-                    + (notesPill.visible ? 1 : 0)
+                readonly property bool fits: shownCount > 0
+                // The row arrives as one group. Typing sends it away, sinking
+                // a little, and clearing the field brings it back the same way
+                // it first came.
+                readonly property int doors: 0
                 readonly property int step: 260
                 readonly property int stagger: 45
                 readonly property int span: step + doors * stagger
@@ -1380,7 +1465,7 @@ Item {
                 x: (parent.width - width) / 2
                 y: searchField.y + searchField.height + gap
                 width: searchField.compactWidth
-                height: pillsHeight + (shownCount > 0 ? divide + tileHeight : 0)
+                height: shownCount > 0 ? tileHeight : 0
                 opacity: fits && !root.applicationLaunchPending
                     ? rest * Math.max(0, 1 - root.drawerProgress * 3)
                         * Math.max(0, 1 - root.modeProgress * 3) : 0
@@ -1388,44 +1473,13 @@ Item {
                 enabled: resting && opacity > 0.5 && !root.drawerOpen && !root.modeOpen
                 transform: Translate { y: root.reducedMotion ? 0 : (1 - firstRow.rest) * 6 }
 
-                Row {
-                    x: (firstRow.width - firstRow.pillsWidth) / 2
-                    y: (firstRow.pillsHeight - height) / 2
-                    spacing: firstRow.pillGap
-                    FirstPill {
-                        id: appsPill
-                        reveal: firstRow.reveal(0)
-                        objectName: "apps-pill"
-                        label: words.i18n("Apps")
-                        glyph: "apps"
-                        onActivated: root.setDrawerOpen(true, "apps")
-                    }
-                    FirstPill {
-                        id: filesPill
-                        reveal: firstRow.reveal(1)
-                        objectName: "files-pill"
-                        label: words.i18n("Files")
-                        glyph: "files"
-                        visible: root.fileBrowser !== null
-                        onActivated: root.setDrawerOpen(true, "files")
-                    }
-                    FirstPill {
-                        id: notesPill
-                        reveal: firstRow.reveal(1 + (filesPill.visible ? 1 : 0))
-                        objectName: "notes-pill"
-                        label: words.i18n("Notes")
-                        glyph: "notes"
-                        visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
-                        onActivated: root.openNotes()
-                    }
-                }
                 Repeater {
                     model: root.recentUse
                     delegate: RecentTile {
                         id: recentTile
                         readonly property real reveal: firstRow.reveal(firstRow.doors)
                         x: firstRow.tilesX + index * firstRow.cellWidth
-                        y: firstRow.pillsHeight + firstRow.divide
+                        y: 0
                         width: firstRow.cellWidth
                         visible: index < firstRow.shownCount
                         opacity: reveal
@@ -1735,11 +1789,11 @@ Item {
                 readonly property real sectionGap: 16
                 readonly property real openHeight: 44
                 // Search, in the open header, keeps to the middle: centred,
-                // with the eye inside it beside the search icon, as clear of
-                // Back as of the corner.
+                // with the eye inside it beside the search icon, clear of the
+                // corner on either side. The row of modes above returns to
+                // search.
                 readonly property real controlsOpacity: Math.max(0, (root.drawerProgress - 0.72) / 0.28)
-                readonly property real fieldSide: Math.max(backButton.x + backButton.width,
-                    width - drawerCorner.x) + 12
+                readonly property real fieldSide: width - drawerCorner.x + 12
                 readonly property real fieldWidth: Math.max(160,
                     Math.min(width - 2 * fieldSide, Math.max(360, width / 2)))
                 readonly property real fieldLeft: (width - fieldWidth) / 2
@@ -1761,55 +1815,6 @@ Item {
                 transform: Translate { y: (1 - root.openingControls) * 10 }
                 enabled: opacity > 0.5
                 z: 4
-
-                // Back returns to search. The suite's grey pill, 30 high in
-                // its 42 touch, mirrors the sort button across the header.
-                Item {
-                    id: backButton
-                    objectName: "drawer-back"
-                    anchors.left: parent.left
-                    anchors.leftMargin: 14
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: backLabel.x + backLabel.implicitWidth + 14
-                    height: 42
-                    opacity: Math.max(0, (root.drawerProgress - 0.65) / 0.35)
-                    enabled: root.drawerOpen && opacity > 0.9
-                    Accessible.role: Accessible.Button
-                    Accessible.name: backLabel.text
-                    Accessible.onPressAction: root.goBack()
-
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        height: 30
-                        radius: height / 2
-                        color: backTap.pressed ? tone.controlPressed
-                            : backHover.hovered ? tone.controlHover : root.controlColor
-                        Behavior on color { ColorAnimation { duration: root.ms(90) } }
-                        SuiteIcon {
-                            glyph: "chevron-left"
-                            width: 14; height: 14
-                            x: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                        }
-                        Text {
-                            id: backLabel
-                            x: 28
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: words.i18n("Back")
-                            color: root.primaryText
-                            font.pixelSize: 13
-                        }
-                    }
-                    HoverHandler {
-                        id: backHover
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                        cursorShape: Qt.PointingHandCursor
-                    }
-                    // A tap, so a pull that starts on Back still closes the
-                    // drawer by its edge.
-                    TapHandler { id: backTap; onTapped: root.goBack() }
-                }
 
                 // The eye shows what is hidden: hidden applications in Browse
                 // everything, hidden files in Files. Again, it hides them. It

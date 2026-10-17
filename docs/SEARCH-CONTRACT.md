@@ -6,11 +6,13 @@ unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
 
 ## First screen
 
-Before anything is typed, Search offers its doors, Apps and Files, then Notes
-where Gooseberry is installed, centred under the field, and on a row below them
-what was used lately, newest first: at most six, as many as the field's width
-holds, centred as one group. A sheet too short for the second row keeps the
-doors alone. Its source is KDE's record of use for the current activity, read when
+Search's modes run along its top on every screen, one row above the field: the
+dot for this first screen, then Apps, Files and, where Gooseberry is installed,
+Notes. The grey pill marks the mode shown, and a tap moves straight to another;
+the dot comes back here with what was typed. Before anything is typed, the
+field rests in the middle with what was used lately under it, newest first: at
+most six, as many as the field's width holds, centred as one group. A sheet too
+short for that row keeps the field alone. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
 
@@ -19,10 +21,10 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 - A file is offered while it exists on this machine; a folder, a hidden file and
   anything remote are not.
 - Nothing is offered while the screen is shared or recorded, so no file's name
-  is on show; the doors stay.
+  is on show; the modes stay.
 - Typing hands the room to the results.
-- The widget's setting "Show recent files and apps", off, leaves the doors
-  alone, and nothing is read.
+- The widget's setting "Show recent files and apps", off, leaves the modes
+  and the field alone, and nothing is read.
 
 ### Notes
 
@@ -32,7 +34,7 @@ application and Tettegouche never depends on it.
 
 - Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
   is installed with its Capture action, looked for each time Search opens and
-  whenever KDE's application list changes. Without it, the first screen has
+  whenever KDE's application list changes. Without it, the row of modes has
   no Notes.
 - Notes opens in the same window with the drawer's motion: the field becomes
   the note pad, the pills fade, and Back, the note's five colours and the

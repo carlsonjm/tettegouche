@@ -989,7 +989,7 @@ TestCase {
         compare(controller.drawerExpanded, true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const back = findChild(launcher, "drawer-back")
+        const back = findChild(launcher, "home-dot")
         verify(back && back.visible && back.enabled)
         const header = findChild(launcher, "drawer-header")
         const search = findChild(launcher, "search-field")
@@ -1021,27 +1021,37 @@ TestCase {
         tryCompare(launcher,"drawerProgress",0)
         controller.availableArea=original
     }
-    // Before anything is typed: Apps and Files as pills centred under the
-    // field, then what was used lately on its own row below them, as many as
-    // fit and at most six, centred as one group; the field and the rows are
+    // Search's modes sit along its top as one row, the dot first, then Apps
+    // and Files; the dot is marked while the first screen shows. Before
+    // anything is typed, what was used lately sits under the field, as many
+    // as fit and at most six, centred as one group; the field and the row are
     // centred together.
     function test_firstRow() {
         launcher.fileBrowser = filesMock
         fillRecent(8)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        const modes = findChild(launcher, "mode-row")
+        const dot = findChild(launcher, "home-dot")
         const row = findChild(launcher, "first-row")
         const field = findChild(launcher, "search-field")
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
-        verify(row.visible && apps.visible && files.visible)
+        verify(modes.visible && dot.visible && apps.visible && files.visible)
+        verify(dot.selected && !apps.selected && !files.selected)
+        // The modes lead, above the field, in one row from the left.
+        const top = item => item.mapToItem(launcher, 0, 0).y
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        verify(top(dot) + dot.height <= top(field))
+        compare(top(apps), top(dot))
+        compare(top(files), top(dot))
+        verify(left(dot) < left(apps) && left(apps) < left(files))
+        verify(left(dot) < left(field))
+        verify(row.visible)
         tryCompare(field, "width", row.width)
         compare(row.x, field.x)
         compare(row.y - field.y - field.height, 18)
         verify(Math.abs(field.y - (field.parent.height - row.y - row.height)) <= 1)
-        const left = apps.mapToItem(row, 0, 0).x
-        const right = row.width - files.mapToItem(row, files.width, 0).x
-        verify(Math.abs(left - right) <= 1)
         const fit = Math.min(6, Math.floor(row.width / row.tileWidth))
         verify(fit >= 4)
         compare(row.shownCount, fit)
@@ -1051,41 +1061,36 @@ TestCase {
         const last = findChild(launcher, "recent-" + (fit - 1))
         compare(findChild(launcher, "recent-1").x - first.x, row.cellWidth)
         compare(findChild(launcher, "recent-1").y, first.y)
-        verify(first.y >= apps.mapToItem(row, 0, apps.height).y)
         verify(Math.abs(first.x - (row.width - last.x - last.width)) <= 1)
         compare(Math.round(first.y + first.height), Math.round(row.height))
-        // Typing hands the room to the results, and clearing brings it back.
+        // Typing hands the room to the results, and clearing brings it back;
+        // the modes stay.
         const query = findChild(launcher, "search-query")
         query.text = "x"
         tryCompare(row, "opacity", 0)
+        verify(modes.visible && apps.visible)
         query.text = ""
         tryCompare(row, "opacity", 1)
     }
-    // The doors arrive in turn, Apps before Files, and what was used lately
-    // after them; typing sends the row away whole, and clearing the field
-    // brings each back in turn.
+    // What was used lately arrives as one group; typing sends it away, and
+    // clearing the field brings it back.
     function test_firstRowArrivesInTurn() {
         launcher.fileBrowser = filesMock
         fillRecent(3)
         controller.opened()
         const row = findChild(launcher, "first-row")
-        const apps = findChild(launcher, "apps-pill")
-        const files = findChild(launcher, "files-pill")
         const recent = findChild(launcher, "recent-0")
-        tryVerify(function() { return apps.reveal > files.reveal && files.reveal >= recent.reveal }, 1000)
         tryCompare(row, "arrival", 1)
-        compare(apps.reveal, 1)
         compare(recent.reveal, 1)
         const query = findChild(launcher, "search-query")
         query.text = "x"
         tryCompare(row, "rest", 0)
-        compare(apps.reveal, files.reveal)
         query.text = ""
-        tryVerify(function() { return apps.reveal > files.reveal }, 1000)
+        tryVerify(function() { return recent.reveal < 1 }, 1000)
         tryCompare(row, "arrival", 1)
         compare(row.rest, 1)
     }
-    // A narrower sheet keeps the doors and as many of the rest as fit.
+    // A narrower sheet keeps the modes and as many of the rest as fit.
     function test_firstRowNarrow() {
         launcher.fileBrowser = filesMock
         fillRecent(8)
@@ -1098,24 +1103,21 @@ TestCase {
         verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
     }
-    // With nothing used lately the two doors sit centred under the field,
-    // which keeps its usual width.
+    // With nothing used lately the field rests alone in the middle at its
+    // usual width, under the modes.
     function test_firstRowWithNothingUsed() {
         launcher.fileBrowser = filesMock
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
         const field = findChild(launcher, "search-field")
-        const apps = findChild(launcher, "apps-pill")
-        const files = findChild(launcher, "files-pill")
         compare(row.shownCount, 0)
         tryCompare(field, "width", Math.max(360, field.parent.width * 0.72))
-        const left = apps.mapToItem(row, 0, 0).x
-        const right = row.width - files.mapToItem(row, files.width, 0).x
-        verify(Math.abs(left - right) <= 1)
+        tryCompare(field, "y", Math.round((field.parent.height - 58) / 2))
+        verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
     }
-    // With the setting off the launcher has no record at all: the two doors
-    // alone, centred, and Tab goes from one to the other.
+    // With the setting off the launcher has no record at all: the modes
+    // alone, and Tab goes from one to the next.
     function test_firstRowSettingOff() {
         launcher.fileBrowser = filesMock
         launcher.recentUse = null
@@ -1124,13 +1126,57 @@ TestCase {
         const row = findChild(launcher, "first-row")
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
-        verify(row.visible && apps.visible && files.visible)
+        verify(apps.visible && files.visible)
         compare(row.shownCount, 0)
         verify(!findChild(launcher, "recent-0"))
-        const left = apps.mapToItem(row, 0, 0).x
-        const right = row.width - files.mapToItem(row, files.width, 0).x
-        verify(Math.abs(left - right) <= 1)
+        launcher.forceActiveFocus()
+        for (let i = 0; i < 6 && !apps.activeFocus; ++i) keyClick(Qt.Key_Tab)
+        verify(apps.activeFocus)
+        keyClick(Qt.Key_Tab)
+        verify(files.activeFocus)
         launcher.recentUse = recentStub
+    }
+    // A tap on another mode moves straight there, the grey pill with it, and
+    // the dot comes back to the first screen with what was typed.
+    function test_modesSwitch() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.closes = 0
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const dot = findChild(launcher, "home-dot")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        tryCompare(launcher, "drawerProgress", 1)
+        verify(apps.selected && !files.selected && !dot.selected)
+        verify(apps.visible && files.visible && notes.visible)
+        mouseClick(files, files.width / 2, files.height / 2)
+        tryVerify(() => launcher.drawerOpen && launcher.filesMode)
+        verify(files.selected && !apps.selected)
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        verify(!launcher.drawerOpen && notes.selected && !files.selected)
+        verify(notes.visible && apps.visible)
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        tryCompare(launcher, "drawerProgress", 1)
+        tryCompare(launcher, "notesProgress", 0)
+        verify(!launcher.modeOpen && apps.selected)
+        // A tap on the mode shown leaves it as it is.
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        wait(100)
+        verify(launcher.drawerOpen && !launcher.filesMode)
+        const touch = touchEvent(launcher)
+        touch.press(0, dot, dot.width / 2, dot.height / 2).commit()
+        wait(40)
+        touch.release(0, dot, dot.width / 2, dot.height / 2).commit()
+        tryCompare(launcher, "drawerOpen", false)
+        tryCompare(launcher, "drawerProgress", 0)
+        verify(dot.selected)
+        compare(controller.closes, 0)
+        launcher.quickNote = null
     }
     // Apps and Files each open their drawer, by mouse and by touch.
     function test_firstRowDoors() {
@@ -1187,40 +1233,37 @@ TestCase {
         keyClick(Qt.Key_Return)
         compare(recentStub.opened, [1, 2, 0])
     }
-    // Without Gooseberry, or with Notes off, the first screen is Apps and
-    // Files alone, as before.
+    // Without Gooseberry, or with Notes off, the modes are Apps and Files
+    // alone, as before.
     function test_notesAbsent() {
         launcher.fileBrowser = filesMock
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
-        const row = findChild(launcher, "first-row")
-        const apps = findChild(launcher, "apps-pill")
+        const modes = findChild(launcher, "mode-row")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
         verify(!notes.visible)
-        compare(row.pillsWidth, apps.width + row.pillGap + files.width)
         launcher.notesDoor = notesStub
         notesStub.available = false
         verify(!notes.visible)
-        compare(row.pillsWidth, apps.width + row.pillGap + files.width)
+        verify(files.visible)
     }
-    // Where Gooseberry is installed, Notes follows Files: the same pill, the
-    // same height and gap, its own glyph and word, and the rest after it.
+    // Where Gooseberry is installed, Notes follows Files in the row: the same
+    // pill, the same height and gap, and its own word.
     function test_notesOffered() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
         fillRecent(8)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
-        const row = findChild(launcher, "first-row")
+        const modes = findChild(launcher, "mode-row")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
         verify(notes.visible)
         compare(notes.label, "Notes")
         compare(notes.height, files.height)
-        compare(notes.mapToItem(row, 0, 0).x - files.mapToItem(row, files.width, 0).x, row.pillGap)
-        verify(findChild(launcher, "recent-0").y >= notes.mapToItem(row, 0, notes.height).y)
-        compare(row.pillsWidth, findChild(launcher, "apps-pill").width + files.width + notes.width + 2 * row.pillGap)
+        compare(notes.mapToItem(modes, 0, 0).y, files.mapToItem(modes, 0, 0).y)
+        compare(notes.mapToItem(modes, 0, 0).x - files.mapToItem(modes, files.width, 0).x, modes.pillGap)
     }
     // Notes brings the quick-note sheet by a click, a tap or Enter, and Search
     // closes straight away: nothing waits for a window, in Spread or out.
@@ -1441,23 +1484,26 @@ TestCase {
         compare(filesMock.ranges,rangesBefore+1)
         verify(!filesMock.selecting)
         const grid=findChild(launcher,"files-grid")
+        // Empty room beside the tiles, clear of the scroll handle at the
+        // right edge.
+        const emptyX=grid.width-40
         filesMock.selectedPath="/home/test/Notes.txt"
-        mouseClick(grid,grid.width-10,grid.height-10)
+        mouseClick(grid,emptyX,grid.height-10)
         compare(filesMock.selectedPath,"")
         const folderTile=findChild(launcher,"file-entry-Projects")
         filesMock.boxedPaths=[]
-        mousePress(grid,grid.width-10,grid.height-10)
+        mousePress(grid,emptyX,grid.height-10)
         mouseMove(grid,2,2,30)
         mouseRelease(grid,2,2)
         compare(filesMock.boxedPaths.length,2)
         verify(filesMock.boxedPaths.indexOf("/home/test/Projects")>=0)
         filesMock.selectedPath="/home/test/Projects"
-        mousePress(grid,grid.width-10,grid.height-10,Qt.LeftButton,Qt.ControlModifier)
+        mousePress(grid,emptyX,grid.height-10,Qt.LeftButton,Qt.ControlModifier)
         mouseMove(grid,2,2,30)
         mouseRelease(grid,2,2,Qt.LeftButton,Qt.ControlModifier)
         compare(filesMock.boxedPaths.length,1)
         compare(filesMock.boxedPaths[0],"/home/test/Notes.txt")
-        mousePress(grid,grid.width-10,grid.height-10,Qt.LeftButton,Qt.ShiftModifier)
+        mousePress(grid,emptyX,grid.height-10,Qt.LeftButton,Qt.ShiftModifier)
         mouseMove(grid,2,2,30)
         mouseRelease(grid,2,2,Qt.LeftButton,Qt.ShiftModifier)
         compare(filesMock.boxedPaths.length,2)
@@ -2228,7 +2274,11 @@ TestCase {
         tryCompare(menu, "opened", true)
         const sheet = menu.parent
         verify(menu.x >= 0 && menu.x + menu.width <= sheet.width)
-        verify(menu.y > sort.mapToItem(sheet, 0, sort.height).y - 1)
+        // Below the button where the pane has room for it, and always
+        // inside the pane.
+        const sortBottom = sort.mapToItem(sheet, 0, sort.height).y
+        verify(menu.y >= 0 && menu.y + menu.height <= sheet.height + 0.5)
+        if (sortBottom + menu.height <= sheet.height) verify(menu.y > sortBottom - 1)
         verify(!findChild(launcher, "files-show-hidden"))
         menu.close()
         launcher.setDrawerOpen(false)
@@ -2602,9 +2652,9 @@ TestCase {
         controller.drawerRequested("notes")
         compare(controller.closes, 1)
     }
-    // Both drawers share one header: Back on the left returns to search,
-    // search sits in the middle and is typed into as before, and the sort
-    // button stays on the right. No Close drawer pill remains.
+    // Both drawers share one header under the modes: search sits in the
+    // middle and is typed into as before, and the sort button stays on the
+    // right; the dot above returns to search. No Close drawer pill remains.
     function test_drawerHeader_data() {
         return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
     }
@@ -2618,18 +2668,17 @@ TestCase {
         wait(250)
         compare(findChild(launcher, "close-drawer-button"), null)
         const header = findChild(launcher, "drawer-header")
-        const back = findChild(launcher, "drawer-back")
+        const back = findChild(launcher, "home-dot")
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
-        // One row: Back, then search in the middle, then the corner; the
+        // The modes, then one row: search in the middle, then the corner; the
         // order sits below, over the drawer.
         verify(back.visible && back.enabled)
+        verify(back.mapToItem(launcher, 0, back.height).y <= header.mapToItem(launcher, 0, 0).y)
         compare(middle(field).y, middle(header).y)
-        compare(middle(back).y, middle(header).y)
-        verify(right(back) < left(field))
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
         const appsSort = findChild(launcher, "sort-button")
         compare(appsSort.visible, data.mode === "apps")
@@ -2672,7 +2721,7 @@ TestCase {
         if (data.mode === "files") compare(filesMock.filter, "ka")
         else compare(catalog.filterText, "ka")
         compare(results.queryString, "")
-        // Back returns to search with what was typed, by mouse and by touch.
+        // The dot returns to search with what was typed, by mouse and by touch.
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
         compare(results.queryString, "ka")
@@ -2692,7 +2741,7 @@ TestCase {
         // With nothing typed, search rests again above the first row, the two
         // centred together.
         const row = findChild(launcher, "first-row")
-        tryCompare(field, "y", Math.round((field.parent.height - field.height - row.reach) / 2))
+        tryCompare(field, "y", Math.round((field.parent.height - field.height - (row.fits ? row.reach : 0)) / 2))
         tryCompare(field, "height", 58)
         wait(600)
     }
@@ -2726,12 +2775,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
     // A pull down on the drawer's top edge still closes it, whether it starts
-    // on search, beside it or on Back, by touch or with the mouse.
+    // on search or beside it, by touch or with the mouse.
     function test_drawerTopEdgeCloses_data() {
         return [
             { tag: "apps, on search", mode: "apps", on: "search" },
             { tag: "files, on search", mode: "files", on: "search" },
-            { tag: "apps, on Back", mode: "apps", on: "back" },
+            { tag: "apps, beside search", mode: "apps", on: "beside" },
             { tag: "files, beside search", mode: "files", on: "beside" }]
     }
     function test_drawerTopEdgeCloses(data) {
@@ -2743,10 +2792,9 @@ TestCase {
             tryCompare(launcher, "drawerProgress", 1)
             wait(250)
             const field = findChild(launcher, "search-field")
-            const back = findChild(launcher, "drawer-back")
+            const header = findChild(launcher, "drawer-header")
             const start = data.on === "search" ? field.mapToItem(launcher, field.width / 2, field.height / 2)
-                : data.on === "back" ? back.mapToItem(launcher, back.width / 2, back.height / 2)
-                : back.mapToItem(launcher, back.width + 6, back.height / 2)
+                : header.mapToItem(launcher, 30, header.height / 2)
             if (data.on === "beside") verify(start.x < field.mapToItem(launcher, 0, 0).x)
             const steps = [0, 30, 120, 260, 420, 540]
             if (device === "touch") {
@@ -2827,7 +2875,7 @@ TestCase {
         verify(!launcher.modeOpen)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const back = findChild(launcher, "drawer-back")
+        const back = findChild(launcher, "home-dot")
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerProgress", 0)
         verify(!launcher.modeOpen && !launcher.drawerOpen)
