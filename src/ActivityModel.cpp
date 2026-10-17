@@ -48,7 +48,7 @@ std::shared_ptr<ActivityModel> ActivityModel::acquire() {
 ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &downloads, QAbstractItemModel *windows, QObject *parent)
     : QObject(parent), m_media(bus, this), m_jobs(this, readsPlasma()), m_files(downloads, this), m_tette(bus, this),
       m_notices(bus, downloads, this), m_drives(bus, this), m_screen(bus, this), m_waiting(windows, this),
-      m_core(bus, this) {
+      m_core(bus, this), m_noteIsland(bus, this) {
     const auto update = [this] {
         if (m_refreshPending) return;
         m_refreshPending = true;
@@ -63,6 +63,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_screen, &ScreenShareProvider::changed, this, update);
     connect(&m_waiting, &WaitingAppProvider::changed, this, update);
     connect(&m_core, &CoreFactProvider::changed, this, update);
+    connect(&m_noteIsland, &NotesIslandProvider::changed, this, update);
     connect(&m_drives, &DriveActivityProvider::openRequested, this, &ActivityModel::driveOpenRequested);
     connect(&m_jobs, &DesktopJobProvider::finished, this, [this](const QVariantMap &job) {
         m_notices.report(job);
@@ -83,7 +84,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
 }
 void ActivityModel::refresh() {
     reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities(),
-              m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities());
+              m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_noteIsland.activities());
 }
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files,
                               const QVariantList &drives) {
@@ -205,11 +206,13 @@ void ActivityModel::setAside(const QString &id, int generation) {
     const auto source = route.value(QStringLiteral("id")).toString();
     const auto state = route.value(QStringLiteral("state")).toString();
     const auto kind = route.value(QStringLiteral("kind")).toString();
+    // The quick note's island is a door, not activity: it stays.
+    if (kind == QLatin1String("note")) return;
     if (kind == QLatin1String("media")) m_asideMedia.insert(source, state);
     else if (kind == QLatin1String("drive")) {
         m_drives.setAside(source);
         reconcile(m_lastTransfers, m_lastMedia, m_lastFiles,
-                  m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities());
+                  m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_noteIsland.activities());
         return;
     }
     // Core hears it was dismissed, and stays quiet until the fact gets worse.

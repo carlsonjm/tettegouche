@@ -5,6 +5,12 @@ provenance.
 
 ## Unreleased
 
+- The quick note has an island of its own beside the launcher, there while
+  Gooseberry is installed: a dot with a plus that opens Search's Notes on the
+  quick note, and beside it the note pinned in Gooseberry, a bead of its
+  colour and its first words, which opens that note. It stays where the other
+  islands come and go, and the widget's setting "Show the quick note island"
+  turns it off.
 - Notes in Search opens on a board of every note: Find or start a note, a row
   of filters, Everything, Today, On windows, each folder and Tucked away, and
   the notes grouped under them. A note opens as the page, paper of its colour

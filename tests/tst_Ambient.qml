@@ -667,6 +667,83 @@ TestCase {
         compare(shown(surface, "core"), ["icon"]);
     }
 
+    // The quick note's island: a dot with a plus that opens the quick note,
+    // and the pinned note beside it, its colour's bead and first words, which
+    // opens that note. Narrow, the pinned note goes first.
+    function test_the_quick_note_island() {
+        const door = {id: "note", generation: 1, kind: "note", state: "running", capabilities: {}};
+        const pinned = {id: "note", generation: 2, kind: "note", state: "running", capabilities: {},
+            noteId: "n1", title: "Milk, eggs, bread", colourHex: "#F5C542"};
+        const surface = createSurface(460, [door]);
+        settle();
+        const shape = island(surface, "note");
+        verify(shape.visible);
+        compare(shown(surface, "note"), ["dot"]);
+        compare(shape.Accessible.name, "New quick note");
+        const dot = findChild(surface, "ambient-note-dot");
+        verify(dot.visible);
+        verify(shape.height >= 44 && carrier(surface, "note").width >= 44);
+        const drawers = spyOn(surface, "drawerRequested");
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(dot, dot.width / 2, dot.height / 2);
+        compare(drawers.count, 1);
+        compare(drawers.signalArguments[0][0], "note");
+        compare(opens.count, 0);
+
+        surface.activities = [pinned];
+        settle();
+        compare(shown(surface, "note"), ["dot", "pinned"]);
+        const note = findChild(surface, "ambient-note-pinned");
+        verify(note.visible);
+        verify(note.width >= 44 && note.height >= 44);
+        verify(leftOf(surface, note) >= rightOf(surface, dot));
+        verify(Qt.colorEqual(findChild(surface, "ambient-note-bead").color, "#F5C542"));
+        compare(findChild(surface, "ambient-note-title").text, "Milk, eggs, bread");
+        compare(note.Accessible.name, "Pinned note: Milk, eggs, bread");
+        mouseClick(note, note.width / 2, note.height / 2);
+        compare(drawers.count, 2);
+        compare(drawers.signalArguments[1][0], "note:n1");
+        mouseClick(dot, dot.width / 2, dot.height / 2);
+        compare(drawers.count, 3);
+        compare(drawers.signalArguments[2][0], "note");
+
+        // It stays: a drag does not carry it, and nothing sets it aside.
+        const at = slowDrag(surface, "note", -120);
+        compare(carrier(surface, "note").peel, 0);
+        verify(!carrier(surface, "note").peeling);
+        mouseRelease(surface, at.x - 120, at.y);
+        settle();
+        verify(island(surface, "note").visible);
+        surface.setAside("note");
+        compare(invoked.count, 0);
+
+        // It stands first, and beside other islands, narrow, it keeps its dot
+        // and lets the pinned note go.
+        surface.activities = [media, pinned];
+        settle();
+        verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "media")));
+        surface.width = 300;
+        settle();
+        compare(shown(surface, "note"), ["dot"]);
+        verify(shown(surface, "media").length > 1);
+    }
+
+    // The quick note's island on a light style takes the style's ink.
+    function test_the_quick_note_island_on_a_light_style() {
+        const pinned = {id: "note", generation: 2, kind: "note", state: "running", capabilities: {},
+            noteId: "n1", title: "Milk", colourHex: "#F5C542"};
+        const surface = createSurface(460, [pinned]);
+        settle();
+        colors(surface).theme = darkStyle;
+        const dot = findChild(surface, "ambient-note-dot");
+        tryVerify(() => Qt.colorEqual(Qt.rgba(dot.color.r, dot.color.g, dot.color.b, 1), "#F8F8FF"));
+        colors(surface).theme = lightStyle;
+        tryVerify(() => Qt.colorEqual(Qt.rgba(dot.color.r, dot.color.g, dot.color.b, 1), "#102729"));
+        verify(Qt.colorEqual(findChild(surface, "ambient-note-title").color, "#102729"));
+        verify(Qt.colorEqual(findChild(surface, "ambient-note-bead").color, "#F5C542"));
+    }
+
     // An application waiting on the person shows its icon, its name and its
     // dialog's question; a tap anywhere on it brings it forward and opens
     // nothing, and narrow, it keeps its icon longest, then its name.

@@ -73,6 +73,7 @@ than repeat it.
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
+| Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
 | Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
 
 ### Related settings
@@ -200,10 +201,12 @@ than repeat it.
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
 | Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
-| Tap or click another island away from its controls | Opens it in place, larger. |
+| Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Opens Search's Notes on the quick note: a new one, or the one last started. |
+| Tap or click the pinned note on the quick note's island | Opens Search's Notes on that note's page. |
+| Tap or click another island away from its controls | Opens it in place, larger. The quick note's island opens nothing in place. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
 | Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |
-| With an island focused, Delete | Sets it aside. |
+| With an island focused, Delete | Sets it aside. The quick note's island stays, and a drag does not carry it. |
 | Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward; holding a Core fact, opens its card. |
 | With an island or the bubble focused, Enter or Space | Does what a tap on it does. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |

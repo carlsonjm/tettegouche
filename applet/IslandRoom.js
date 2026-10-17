@@ -14,9 +14,10 @@
 // controls in the middle.
 
 // Most urgent first.
-// Core's suggestions are the least urgent: they never take room from what is
-// happening now.
-var URGENCY = { waiting: 6, screen: 5, drive: 4, arrived: 3, transfer: 2, media: 1, core: 0.5 };
+// Core's suggestions are the least urgent of what comes and goes: they never
+// take room from what is happening now. The quick note's island stays, a door
+// rather than activity, and takes its turn after them all.
+var URGENCY = { waiting: 6, screen: 5, drive: 4, arrived: 3, transfer: 2, media: 1, core: 0.5, note: 0.25 };
 
 // Each island's pieces in the order they drop, the last to go first. A piece
 // with `needs` rides with that piece and takes no room of its own.
@@ -44,6 +45,9 @@ var PIECES = {
     ],
     core: [
         { id: "icon" }, { id: "name" }, { id: "detail" },
+    ],
+    note: [
+        { id: "dot" }, { id: "pinned" },
     ],
 };
 

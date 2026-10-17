@@ -2,8 +2,9 @@
 
 Ambient Tette answers what matters now. It presents ongoing media and transfer
 state in its panel strip beside the launcher dot, while Temperance remains
-responsible for notifications and transient events. Its inputs are in
-[INPUT.md](INPUT.md).
+responsible for notifications and transient events. Beside them stands one
+door that is always there, the quick note's island (§ Quick note). Its inputs
+are in [INPUT.md](INPUT.md).
 
 The widget's setting "Show islands beside the launcher", off, leaves the
 launcher's dot alone in the panel: Ambient shows nothing and takes no width.
@@ -29,7 +30,14 @@ Current sources are:
 - windows raising Plasma's attention flag, from Plasma's window list
   (§ Waiting applications);
 - a fact Split Rock's Core asks attention for, such as the drive filling up,
-  from Core's bus interface where Split Rock is installed (§ Core).
+  from Core's bus interface where Split Rock is installed (§ Core);
+- the quick note's island, while Gooseberry is installed, with the note pinned
+  in Gooseberry beside its door (§ Quick note).
+
+The quick note's island is the one island that stays without activity. It is a
+launcher, not an activity: a door to the quick note, and to the pinned note
+when there is one. Its source owner is Gooseberry, and it leaves when
+Gooseberry is removed or the widget's setting turns it off.
 
 Plasma's jobs model and window list come from Plasma's own libraries, which
 change between releases, so a build reads them only on the Plasma it was built
@@ -56,7 +64,8 @@ not own the source operation or retain a completion history.
   only when the source supplies evidence. Unknown progress stays indeterminate.
 - Source loss, quiet filesystem state, cancellation, and disappearance must not
   be presented as successful completion.
-- The person may set an item aside, which never stops or changes its source:
+- The person may set an item aside, which never stops or changes its source,
+  except the quick note's island, which stays:
   media stays away until it starts playing again, a transfer until its source
   ends, its end then filed without its minute, and an end is filed at once.
   While carried or flicked, the island stays within Ambient's own bounds.
@@ -158,6 +167,31 @@ dismissed, and Core stays quiet about it until it gets worse. Core owns the
 fact and its history; Ambient keeps neither. Without Split Rock there is no
 Core island and nothing else changes.
 
+### Quick note
+
+While Gooseberry is installed with its Capture action, the test Search's Notes
+door uses, the quick note's island stands in the band: a dot with a plus,
+Lucide's plus on a faint disc of the style's ink. A tap on the dot, or on the
+island off the pinned note, opens Search's Notes on the quick note, starting
+one or resuming the one last started. Where Gooseberry has a note pinned, the
+note sits beside the dot in the same island: a bead of the note's colour and
+its first words, one line, elided where long. A tap there opens Search's Notes
+on that note's page. The island opens no card of its own.
+
+Ambient reads the pinned note from Gooseberry's quick-note interface on the
+session bus, version 1, only while Gooseberry runs: it asks `Pinned` when
+Gooseberry appears and follows `PinnedChanged` after that, and never starts
+Gooseberry for it. A Gooseberry without `Pinned`, or one speaking another
+version, shows the dot alone; so does Gooseberry not running. Gooseberry owns
+the note and its pinning; Ambient keeps neither.
+
+The island is never set aside: a drag does not carry it and Delete leaves it.
+It stands first in the group, before what comes and goes, and takes its turn
+for room after every other island, so the pinned note is the first piece to go
+and the dot the last. The widget's setting "Show the quick note island", on by
+default, shows it while "Show islands beside the launcher" is on; off, the
+island is gone and nothing else changes. Without Gooseberry there is no island.
+
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
@@ -185,9 +219,9 @@ merely because the applet starts.
 
 Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
-screen (§ Shared screen), applications waiting (§ Waiting applications) and
-Core's facts (§ Core). The islands sit side by side in the order
-they arrived, an end in its transfer's place, the group centred in the width
+screen (§ Shared screen), applications waiting (§ Waiting applications),
+Core's facts (§ Core) and the quick note (§ Quick note). The islands sit side
+by side in the order they arrived, the quick note's first, an end in its transfer's place, the group centred in the width
 the panel hands Ambient, or set against one end of it where the host asks
 (§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
@@ -203,7 +237,8 @@ keeps its first piece; then each takes one more piece per turn in its own
 order, and stops at the first that does not fit. The newest island takes its
 turn first for 2.4 s; after that the more urgent goes first: a waiting
 application, a shared screen, a drive, a transfer's end, a transfer, media,
-then a fact from Core, which never takes room from what is happening now. Names, such as a player or where
+then a fact from Core, which never takes room from what is happening now,
+then the quick note's island. Names, such as a player or where
 a transfer comes from, wait until every island has had the rest, so they are
 the first to go; a song's title and artist are not names. What cannot keep even
 its first piece folds into a round bubble after the islands, which counts what
@@ -219,6 +254,7 @@ together and settle without overshoot.
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
 | Core | icon, what it is and how it stands, detail and what can be done |
+| Quick note | dot with a plus, pinned note (its bead and first words) |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title
@@ -252,7 +288,7 @@ is on an ordinary panel.
 | Setting | Values | Default |
 | --- | --- | --- |
 | `launcherPlacement` | `start`, the dot before the islands; `end`, after them; `none`, no dot, for a widget that shows islands alone | `start` |
-| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media | `all` |
+| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media, the quick note's among them | `all` |
 | `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
 | `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
 | `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
@@ -287,6 +323,7 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 - The island's actions affect only the identified source and disappear when
   unsupported.
 - Closing the open island returns it to the band; it never opens search.
-- Empty Ambient leaves clean panel space.
+- Empty Ambient leaves clean panel space; the quick note's island is a door,
+  not activity, and keeps only its own width.
 - Do not add a daemon, polling loop, persistent history, replacement task
   manager, notification-derived progress, or cross-product activity owner.

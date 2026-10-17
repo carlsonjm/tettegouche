@@ -16,6 +16,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_showNotesPillDefault
     property bool cfg_showAmbient
     property bool cfg_showAmbientDefault
+    property bool cfg_showQuickNote
+    property bool cfg_showQuickNoteDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -55,6 +57,13 @@ KCMUtils.SimpleKCM {
             text: i18n("Show islands beside the launcher")
             checked: cfg_showAmbient
             onToggled: cfg_showAmbient = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show the quick note island")
+            enabled: cfg_showAmbient
+            checked: cfg_showQuickNote
+            onToggled: cfg_showQuickNote = checked
         }
 
         QQC2.CheckBox {

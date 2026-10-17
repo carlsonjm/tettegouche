@@ -25,6 +25,10 @@
       <label>Show Ambient's islands beside the launcher in the panel</label>
       <default>true</default>
     </entry>
+    <entry name="showQuickNote" type="Bool">
+      <label>Show the quick note island beside the launcher, while Gooseberry is installed and the islands are shown</label>
+      <default>true</default>
+    </entry>
     <entry name="launcherPlacement" type="String">
       <label>Where the launcher's dot sits in the widget: start, before the islands; end, after them; or none, for a widget that shows islands alone</label>
       <default>start</default>

@@ -200,7 +200,10 @@ sources [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) lists; that contract owns
 admission, source truth, width and actions. Waiting applications come from
 Plasma's own window list (libtaskmanager), shared in process with Plasma's task
 manager, and Ambient asks it, not Kadunce, to bring one forward; this is
-neither KWin discovery nor a task manager of Tettegouche's own.
+neither KWin discovery nor a task manager of Tettegouche's own. The quick
+note's island is a row of that model too, from `NotesIslandProvider`, which
+reads Gooseberry's pinned note without starting Gooseberry; its taps ask the
+launcher for Search's Notes through the applet's `openDrawer`.
 
 The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and in the Plasma style's own

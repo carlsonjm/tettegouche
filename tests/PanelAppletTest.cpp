@@ -428,8 +428,16 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 1);
         QCOMPARE(launches().constLast(), QStringLiteral("--drawer files"));
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("elsewhere"))));
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note:"))));
         QTest::qWait(50);
         QCOMPARE(launches().size(), before + 1);
+        // The quick note's island: the quick note, or the note pinned there.
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note"))));
+        QTRY_COMPARE(launches().size(), before + 2);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer note"));
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note:n1"))));
+        QTRY_COMPARE(launches().size(), before + 3);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer note:n1"));
 
         // A running launcher is asked for the drawer instead.
         ToggleEndpoint endpoint;
@@ -440,8 +448,10 @@ private Q_SLOTS:
         QTest::qWait(100);
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("apps"))));
         QTRY_COMPARE(endpoint.drawers, QStringList{QStringLiteral("apps")});
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note:n1"))));
+        QTRY_COMPARE(endpoint.drawers, (QStringList{QStringLiteral("apps"), QStringLiteral("note:n1")}));
         QCOMPARE(endpoint.calls, 0);
-        QCOMPARE(launches().size(), before + 1);
+        QCOMPARE(launches().size(), before + 3);
         bus.unregisterObject(QStringLiteral("/Launcher"));
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
         QTest::qWait(100);
