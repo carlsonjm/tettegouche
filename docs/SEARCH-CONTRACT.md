@@ -55,9 +55,10 @@ application and Tettegouche never depends on it.
   keeps its size, and the row of modes stays above it.
 - Enter, or New note at the field's end, starts a new note with the words
   typed; `Down` and `Up` pick a note for Enter to open instead. A tap opens a
-  note. Each goes to Gooseberry's own card (`OpenNote`, `OpenNew`) and Search
-  closes; only a Gooseberry whose card cannot take it has the note open on
-  the page here.
+  note. Each goes to Gooseberry's own card (`OpenOnCard`) and Search closes;
+  the card has ‹ Notes on top, which reopens Notes here (`Back`). A
+  Gooseberry with only `OpenNote` takes a kept note with no way back, and
+  only one whose card cannot take it has the note open on the page here.
 - A note on the page here is paper of its colour filling the room, with dark ink on
   any ground. Its colour is a dot in its corner, opening the five colours
   beside it. One quiet line under it holds the folder's name, the window it
@@ -85,14 +86,17 @@ application and Tettegouche never depends on it.
   with no Back.
 - The board and the note are Gooseberry's over its session-bus interface,
   version 1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search):
-  `Find` lists the notes, every one for no words, `OpenNote` and `OpenNew`
-  hand one to Gooseberry's card, `Edit` opens one on the page here, and
+  `Find` lists the notes, every one for no words, `OpenOnCard` hands one to
+  Gooseberry's card with the way back `Back` answers, `Edit` opens one on the page here, and
   `SetPinned` pins it.
   Typing is sent half a second after it pauses and at least every three
   seconds, and on closing; each change is written by Gooseberry before its
   reply.
-- Expand fills the screen as Apps does and Notes stays in Search; again, or
-  the dot, returns Search to its size.
+- Expand, Pop out and Close are Search's own, at the right of the modes row,
+  as for Apps and Files; Notes adds no band of its own under it. Expand
+  fills the screen as Apps does and Notes stays in Search; again, or the dot,
+  returns Search to its size. Moving to Apps or Files, or to Notes from
+  them, keeps the size chosen.
 - Pop out grows the window as Apps does, and Gooseberry's board, its own
   window open on the note, takes the window's place with no Back. Inside Kadunce's Spread the
   board is awaited as any launch from Search is. Over an Active card Search

@@ -279,9 +279,11 @@ TestCase {
         // Gooseberry, not, so the note opens on the page here.
         property bool cardTakes: false
         property var cards: []
+        // The way back each hand-over asked the card for.
+        property var backs: []
         signal cardAnswered(bool opened)
-        function openOnCard(noteId) { cards = cards.concat(["id:" + noteId]); cardAnswered(cardTakes) }
-        function startOnCard(words) { cards = cards.concat(["text:" + words]); cardAnswered(cardTakes) }
+        function openOnCard(noteId, back) { cards = cards.concat(["id:" + noteId]); backs = backs.concat([back]); cardAnswered(cardTakes) }
+        function startOnCard(words, back) { cards = cards.concat(["text:" + words]); backs = backs.concat([back]); cardAnswered(cardTakes) }
         readonly property var store: [
             { id: "note-1", title: "Plan the kitchen", excerpt: "", colour: "yellow", colourHex: "#F2D98A",
               folder: "Kitchen", folderLabel: "Kitchen", stuck: true, window: "plan.txt", app: "org.kde.kate",
@@ -300,7 +302,7 @@ TestCase {
             offersFolders = true; folderSets = []; stucks = []
             kept = false; offersReminders = true; remindLabel = ""; reminders = []; checklist = false; lines = []; ticks = []
             notes = []; notesWords = ""; finds = []; edits = []; startsWith = []
-            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []
+            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []; backs = []
             folder = "Kitchen"; folderLabel = "Kitchen"
             folders = [{ name: "Kitchen", label: "Kitchen", chosen: true, workspace: true },
                        { name: "", label: "Inbox", chosen: false, workspace: false },
@@ -2487,7 +2489,7 @@ TestCase {
         let close
         if (data.tag === "notes") {
             openNotesMode()
-            close = findChild(launcher, "notes-close")
+            close = findChild(launcher, "window-close")
         } else {
             launcher.fileBrowser = filesMock
             filesMock.placeKind = "folder"
@@ -2511,12 +2513,18 @@ TestCase {
     function test_modeExpand() {
         openNotesMode()
         const sheet = findChild(launcher, "launcher-sheet")
-        const expand = findChild(launcher, "notes-expand")
-        const popOut = findChild(launcher, "notes-pop-out")
-        const close = findChild(launcher, "notes-close")
+        const expand = findChild(launcher, "window-expand")
+        const popOut = findChild(launcher, "window-pop-out")
+        const close = findChild(launcher, "window-close")
         verify(expand.opacity > 0.99 && popOut.visible && close.visible)
         verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
         verify(popOut.mapToItem(sheet, 0, 0).x < close.mapToItem(sheet, 0, 0).x)
+        // They are Search's own buttons on the modes row, not a band of
+        // their own under it.
+        const home = findChild(launcher, "home-dot")
+        const rowMid = home.mapToItem(sheet, 0, home.height / 2).y
+        fuzzyCompare(close.mapToItem(sheet, 0, close.height / 2).y, rowMid, 2)
+        verify(!findChild(launcher, "notes-close"))
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         verify(controller.expansionChosen)
@@ -2534,6 +2542,30 @@ TestCase {
         tryCompare(launcher, "modeProgress", 0)
         compare(controller.drawerExpanded, false)
         tryCompare(sheet, "width", 640)
+    }
+
+    // Moving between Notes and the drawers keeps the size chosen, as moving
+    // between Apps and Files does.
+    function test_modeKeepsExpandedSize() {
+        openNotesMode()
+        const sheet = findChild(launcher, "launcher-sheet")
+        const expand = findChild(launcher, "window-expand")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        tryCompare(sheet, "width", 980)
+        const files = findChild(launcher, "files-pill")
+        mouseClick(files, files.width / 2, files.height / 2)
+        tryCompare(launcher, "drawerProgress", 1)
+        verify(!launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        compare(sheet.width, 980)
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        compare(controller.drawerExpanded, true)
+        compare(sheet.width, 980)
+        launcher.closeNotes()
+        tryCompare(launcher, "modeProgress", 0)
+        compare(controller.drawerExpanded, false)
     }
 
     // Pop out moves Files into a window of its own and Search closes; in
@@ -3054,7 +3086,7 @@ TestCase {
         const find = findChild(launcher, "notes-find")
         verify(find.activeFocus)
         verify(!findChild(launcher, "notes-back").visible)
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         verify(grow.opacity > 0.99)
         verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
         // Today's note first, then the rest; tucked away notes wait under
@@ -3096,6 +3128,7 @@ TestCase {
         const row = findChild(launcher, "notes-row-note-1")
         mouseClick(row, row.width / 2, row.height / 2)
         compare(quickStub.cards, ["id:note-1"])
+        compare(quickStub.backs, ["Notes"])
         compare(quickStub.edits, [])
         compare(pane.view, "board")
         compare(controller.closes, 1)
@@ -3112,6 +3145,7 @@ TestCase {
         verify(newNote.height >= 44)
         mouseClick(newNote, newNote.width / 2, newNote.height / 2)
         compare(quickStub.cards, ["text:fern"])
+        compare(quickStub.backs, ["Notes"])
         compare(quickStub.startsWith, [])
         compare(controller.closes, 1)
     }
@@ -3340,7 +3374,7 @@ TestCase {
     // board, and fades once the board has drawn in the card's place.
     function test_notesGrowOverActive() {
         openNotesMode()
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(launcher.notesGrowing)
         compare(controller.drawerExpanded, true)
@@ -3359,7 +3393,7 @@ TestCase {
         controller.guestMode = true
         controller.handoffs = 0
         openNotesMode()
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.notesLaunches, 1)
@@ -3375,7 +3409,7 @@ TestCase {
     function test_notesGrowRefused() {
         openNotesMode()
         quickStub.boardOpens = false
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(!launcher.notesGrowing)
         compare(controller.drawerExpanded, false)

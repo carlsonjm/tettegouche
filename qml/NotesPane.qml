@@ -94,17 +94,18 @@ Item {
     }
     // A note from the board, or a new one with the words typed, goes to
     // Gooseberry's own card and Search closes; where the card cannot take
-    // it, it opens on the page here.
+    // it, it opens on the page here. From the board, the card leads back to
+    // Notes.
     property var handing: null
     function openNote(noteId, alone) {
         if (!quickNote || noteId === "") return
         handing = { id: noteId, alone: !!alone }
-        quickNote.openOnCard(noteId)
+        quickNote.openOnCard(noteId, alone ? "" : words.i18n("Notes"))
     }
     function startNote(text, alone) {
         if (!quickNote) return
         handing = { text: text, alone: !!alone }
-        quickNote.startOnCard(text)
+        quickNote.startOnCard(text, alone ? "" : words.i18n("Notes"))
     }
     Connections {
         target: pane.quickNote
@@ -223,7 +224,9 @@ Item {
     readonly property bool rowOpen: ["folder", "window", "remind", "pick"].indexOf(choosing) >= 0
     readonly property real lowerHeight: 8 + (rowOpen ? 40 + 8 : 0) + (chips ? 0 : 40 + 8) + 44
     readonly property rect pageEnd: Qt.rect(0, bodyTop, width, Math.max(60, height - bodyTop - lowerHeight))
-    readonly property rect findEnd: Qt.rect(0, bodyTop, width, 56)
+    // The find field stands where Search's field does, so only what is
+    // under it changes.
+    readonly property rect findEnd: Qt.rect(fieldRest.x, fieldRest.y, fieldRest.width, Math.max(56, fieldRest.height))
     // The note is paper of its own colour on any ground, with dark ink.
     readonly property string noteHex: quickNote && quickNote.colourHex !== "" ? quickNote.colourHex : "#F2D98A"
     readonly property color ink: "#1A1A1A"
@@ -1374,22 +1377,6 @@ Item {
             visible: pane.view === "page" && pane.fromBoard
             opacity: pane.pageShown
             onActivated: pane.showBoard()
-        }
-
-        // Expand; Pop out, which opens the notes application's own window;
-        // and Close.
-        WindowActions {
-            id: corner
-            prefix: "notes"
-            anchors.right: parent.right
-            anchors.rightMargin: 14
-            anchors.verticalCenter: parent.verticalCenter
-            opacity: pane.clamp((pane.progress - 0.72) / 0.28)
-            expanded: pane.expanded
-            popOutName: words.i18n("Open in Notes")
-            onExpand: pane.expand()
-            onPopOut: pane.grow()
-            onDismiss: pane.dismiss()
         }
     }
 

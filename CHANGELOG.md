@@ -15,7 +15,10 @@ provenance.
   of filters, Everything, Today, On windows, each folder and Tucked away, and
   the notes grouped under them, with New note at the end of the field for a
   finger. A note tapped there, or started with New note or Enter, opens on
-  Gooseberry's own card and Search closes. With a Gooseberry that cannot take
+  Gooseberry's own card and Search closes; ‹ Notes on top of the card, or
+  `Esc`, brings Notes back. Expand, Pop out and Close stay on the modes row,
+  and moving between Notes, Apps and Files keeps the size chosen. With a
+  Gooseberry that cannot take
   it, the note opens as the page here, paper of its colour filling the room
   with its colour a dot in its corner, and one quiet line under it with its
   folder, its window, Checklist, Remind and More, where Copy all, Tuck away and

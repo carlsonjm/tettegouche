@@ -32,8 +32,9 @@ than repeat it.
 | `Enter` or `Backspace` at a line's start, on a checklist | Makes a new item of what follows the cursor, or joins the line to the one above. |
 | Tap or click Remind, under the page | Offers Gooseberry's times, Pick a time, a day and then an hour, and No reminder when one is set. Remind then names the time. |
 | Tap or click More, under a kept note | Offers Copy all, Pin (Unpin on the pinned note) where Gooseberry offers it, Tuck away and Remove. Pin keeps the note on the panel's quick note island, in place of the one pinned before. Tuck away or Remove returns to the board, or closes Search when the note was opened straight onto its page. |
-| Tap or click Expand, at the header's right, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. The dot returns to Search at its size. |
+| Tap or click Expand, at the right of the modes row, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. The dot returns to Search at its size, and Apps or Files keeps the size chosen, as Notes does from them. |
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
+| Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
 | Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. |

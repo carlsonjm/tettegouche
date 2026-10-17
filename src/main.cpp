@@ -312,6 +312,12 @@ int main(int argc, char **argv)
     // application; asked for only while Notes is offered.
     std::unique_ptr<QuickNote> quickNote;
     if (offerNotes) quickNote = std::make_unique<QuickNote>();
+    // A note handed from Notes to the notes application's card leads back to
+    // Notes from there.
+    if (quickNote) {
+        QObject::connect(quickNote.get(), &QuickNote::backRequested, &controller,
+                         [&controller] { controller.openDrawer(QStringLiteral("notes")); });
+    }
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     const auto openFrom = [&controller](FileBrowser *files) {

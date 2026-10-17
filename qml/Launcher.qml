@@ -346,15 +346,16 @@ Item {
         }
     }
 
-    function setDrawerOpen(open, mode) {
+    function setDrawerOpen(open, mode, keepSize) {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
         // Every drawer opens at Search's own size, a card in Spread; Expand
-        // fills the screen. Moving between drawers keeps the size chosen.
+        // fills the screen. Moving between drawers and Notes keeps the size
+        // chosen.
         const wasOpen = root.drawerOpen
         root.drawerOpen = open
-        if (!open || !wasOpen) root.launcherController.setDrawerExpanded(false)
+        if (!keepSize && (!open || !wasOpen)) root.launcherController.setDrawerExpanded(false)
         if (!open) {
             root.sortMenuOpen = false
             root.renamingFolder = ""
@@ -679,12 +680,13 @@ Item {
         ignoreUnknownSignals: true
         function onAvailableChanged() { root.settleAwaitedMode(false) }
     }
-    function closeMode() {
+    function closeMode(keepSize) {
         if (!root.modeOpen || root.modeGrowing) return
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
-        // Search goes back to the size it had before Expand.
-        if (root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
+        // Search goes back to the size it had before Expand, unless a drawer
+        // takes the mode's place.
+        if (!keepSize && root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
         root.forceActiveFocus()
@@ -1337,13 +1339,17 @@ Item {
                         root.goBack()
                         return
                     }
+                    // From one to another, Search keeps the size chosen.
                     if (mode === "notes") {
-                        if (root.drawerOpen) root.setDrawerOpen(false)
+                        if (root.drawerOpen) root.setDrawerOpen(false, "", true)
                         root.openNotes()
+                        if (!root.modeOpen && root.launcherController.drawerExpanded)
+                            root.launcherController.setDrawerExpanded(false)
                         return
                     }
-                    if (root.modeOpen) root.closeMode()
-                    root.setDrawerOpen(true, mode)
+                    const fromMode = root.modeOpen
+                    if (fromMode) root.closeMode(true)
+                    root.setDrawerOpen(true, mode, fromMode)
                 }
                 x: -10
                 y: -root.modeRowReach - 6
@@ -1432,23 +1438,23 @@ Item {
                 }
 
                 // The window's own buttons share the row, at its other end:
-                // Expand while a drawer is open, Pop out where Files has a
-                // window of its own, and Close, last, as a window's is. Notes
-                // keeps its own, in its header.
+                // Expand while a drawer or Notes is open, Pop out where Files
+                // has a window of its own and in Notes, which opens the notes
+                // application's own window, and Close, last, as a window's is.
                 WindowActions {
                     id: windowActions
                     prefix: "window"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    opacity: Math.max(0, 1 - root.modeProgress * 2)
-                    enabled: !root.modeOpen
+                    opacity: root.notesOpen ? 1 : Math.max(0, 1 - root.modeProgress * 2)
+                    enabled: !root.modeOpen || (root.notesOpen && !root.modeGrowing)
                     visible: opacity > 0
                     expanded: root.launcherController.drawerExpanded
-                    expandShown: root.drawerOpen
-                    popOutShown: root.drawerOpen && root.filesMode && root.filesWindowOffered
-                    popOutName: words.i18n("Open Files in its own window")
+                    expandShown: root.drawerOpen || root.notesOpen
+                    popOutShown: (root.drawerOpen && root.filesMode && root.filesWindowOffered) || root.notesOpen
+                    popOutName: root.notesOpen ? words.i18n("Open in Notes") : words.i18n("Open Files in its own window")
                     onExpand: root.toggleExpanded()
-                    onPopOut: root.popOutFiles()
+                    onPopOut: root.notesOpen ? root.growNotes() : root.popOutFiles()
                     onDismiss: root.launcherController.close()
                 }
             }
