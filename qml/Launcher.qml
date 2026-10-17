@@ -1654,9 +1654,9 @@ Item {
                     prefix: "window"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    opacity: root.notesOpen ? 1 : Math.max(0, 1 - root.modeProgress * 2)
+                    // Every screen has them, so they hold still between
+                    // screens; only the buttons each one offers change.
                     enabled: !root.modeOpen || (root.notesOpen && !root.modeGrowing)
-                    visible: opacity > 0
                     expanded: root.launcherController.drawerExpanded
                     expandShown: root.drawerOpen || root.notesOpen
                     popOutShown: (root.drawerOpen && root.filesMode && root.filesWindowOffered) || root.notesOpen

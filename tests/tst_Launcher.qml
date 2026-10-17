@@ -2616,8 +2616,14 @@ TestCase {
         tryCompare(sheet, "width", 980)
         const files = findChild(launcher, "files-pill")
         mouseClick(files, files.width / 2, files.height / 2)
-        // From Notes the drawer is there at once: no first screen between.
+        // From Notes the drawer is there at once: no first screen between,
+        // and the window's buttons never fade out and back.
         compare(launcher.drawerProgress, 1)
+        const windowRow = findChild(launcher, "window-close").parent
+        compare(windowRow.opacity, 1)
+        wait(60)
+        compare(windowRow.opacity, 1)
+        verify(findChild(launcher, "window-close").visible)
         verify(!launcher.notesOpen)
         compare(controller.drawerExpanded, true)
         compare(sheet.width, 980)
@@ -3206,6 +3212,11 @@ TestCase {
         const newNote = findChild(launcher, "notes-new")
         verify(newNote.visible)
         verify(newNote.height >= 44)
+        // Under the pointer it lights, with a ring round it.
+        const ring = findChild(newNote, "notes-new-ring")
+        compare(ring.opacity, 0)
+        mouseMove(newNote, newNote.width / 2, newNote.height / 2)
+        tryCompare(ring, "opacity", 1)
         mouseClick(newNote, newNote.width / 2, newNote.height / 2)
         compare(quickStub.cards, ["text:fern"])
         compare(quickStub.backs, ["Notes"])

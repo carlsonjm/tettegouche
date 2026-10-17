@@ -662,10 +662,30 @@ Item {
         enabled: pane.view === "board" && !!pane.quickNote && !pane.quickNote.readOnly
         focusPolicy: Qt.NoFocus
         Accessible.name: words.i18n("New note")
+        hoverEnabled: true
         onClicked: pane.startNote(find.text.trim())
-        background: Rectangle {
-            radius: height / 2
-            color: newNote.down ? Qt.darker(pane.Kirigami.Theme.highlightColor, 1.15) : pane.Kirigami.Theme.highlightColor
+        // Under the pointer it lights and a soft ring of the same colour
+        // shows round it, 4 out, as the sheet's rhythm steps.
+        background: Item {
+            Rectangle {
+                objectName: "notes-new-ring"
+                anchors.fill: parent
+                anchors.margins: -4
+                radius: height / 2
+                color: "transparent"
+                border.width: 4
+                border.color: Qt.alpha(pane.Kirigami.Theme.highlightColor, 0.35)
+                opacity: newNote.hovered && !newNote.down ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 90 } }
+            }
+            Rectangle {
+                anchors.fill: parent
+                radius: height / 2
+                color: newNote.down ? Qt.darker(pane.Kirigami.Theme.highlightColor, 1.15)
+                    : newNote.hovered ? Qt.lighter(pane.Kirigami.Theme.highlightColor, 1.15)
+                    : pane.Kirigami.Theme.highlightColor
+                Behavior on color { ColorAnimation { duration: 90 } }
+            }
         }
         contentItem: Item {
             Row {
