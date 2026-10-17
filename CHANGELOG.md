@@ -29,15 +29,18 @@ provenance.
   moves straight from one mode to another, and the dot comes back to search
   with what was typed, in place of Back. The field sits under the row, with
   what was used lately under it before anything is typed.
-- Search's field is the same on every screen: full width under the modes,
-  taller, with a search glyph, larger type, and a ring while it holds the
-  keys. Only what is under it changes. Expand, Pop out and Close move to the
-  end of the row of modes.
-- What was used lately shows, by default, as a grid of up to twenty large
-  tiles. The widget's setting "Recent files and apps" chooses Off, In a row
-  (small tiles, as before) or In a grid, and how many at most, 4 to 20.
-- With nothing under it, Search's field rests in the middle of the first
-  screen, and rises to the top as you type or open a drawer.
+- Search's field is the same on every screen, at the size it first had:
+  centred under the modes, with a search glyph and a ring while it holds the
+  keys. Only what is under it changes. Close ends the row of modes, with
+  Expand and Pop out beside it where Apps or Files offers them. Apps, Files
+  and Notes are pills with their glyphs.
+- What was used lately shows in two labelled sections, Recent apps and Recent
+  files, eight of each, with See all opening Apps or Files. An application
+  shows its icon and whole name; a file shows as a card with its picture, its
+  name, its folder and when it was used.
+- The widget's settings "Recent apps" and "Recent files" turn each section on
+  or off, and what is on sets how tall Search rests: the field alone, one
+  section, or both filling the sheet. Typing grows it to its full height.
 - Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
   its place in Spread without waiting, and shows when Kadunce answers or after
   half a second on its own; a place Kadunce makes after that is given back.

@@ -80,18 +80,38 @@ Item {
     // what floats above and closes; anything pressed is a pill.
     readonly property int paperRadius: 8
     readonly property int noteRadius: 12
-    readonly property int contentInset: 22
-    // The room the row of modes takes above the rest: its 44 and 8 below.
+    readonly property int contentInset: 24
+    // The room the row of modes takes above the rest: its 44 and 16 below.
     // With the on-screen keys up over a search, the row gives its room to
     // the results.
     readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
-    readonly property int modeRowReach: modeRowShown ? 52 : 0
-    // Search's field, the same on every screen.
-    readonly property int fieldHeight: 56
-    // What was used lately, before anything is typed: "grid" or "row".
-    property string recentLayout: "grid"
-    // How many of them at most, as many as fit.
-    property int recentCount: 20
+    readonly property int modeRowReach: modeRowShown ? 60 : 0
+    // Search's field, the same on every screen, at the size it first had.
+    readonly property int fieldHeight: 58
+    // Which sections of what was used lately the first screen shows, each by
+    // its setting: the applications, the files, or both.
+    property bool recentApps: true
+    property bool recentFiles: true
+    // When something was used, as a recent file says it: minutes or hours
+    // ago, yesterday, a day this week, or its date.
+    function usedWhen(when) {
+        if (!when || isNaN(when.getTime())) return ""
+        const minutes = Math.max(0, Math.floor((Date.now() - when.getTime()) / 60000))
+        if (minutes < 1) return words.i18n("just now")
+        if (minutes < 60) return words.i18np("%1 min ago", "%1 min ago", minutes)
+        const midnight = new Date()
+        midnight.setHours(0, 0, 0, 0)
+        if (when >= midnight) return words.i18np("%1 h ago", "%1 h ago", Math.floor(minutes / 60))
+        const day = 24 * 60 * 60 * 1000
+        if (when.getTime() >= midnight.getTime() - day) return words.i18n("yesterday")
+        if (when.getTime() >= midnight.getTime() - 6 * day) return Qt.locale().dayName(when.getDay(), Locale.LongFormat)
+        return when.toLocaleDateString(Qt.locale(), Locale.ShortFormat)
+    }
+    function usedWhere(where, when) {
+        const said = root.usedWhen(when)
+        return where && said ? words.i18nc("a recent file's folder and when it was used", "%1 · %2", where, said)
+            : where || said
+    }
     property bool pendingLaunch: false
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
@@ -178,17 +198,18 @@ Item {
         }
     }
 
-    // One of Search's modes along its top, Apps, Files or Notes: its word
-    // alone, and the suite's grey pill behind the one shown.
+    // One of Search's modes along its top, Apps, Files or Notes: its glyph
+    // and its word on a pill, filled behind the one shown.
     component FirstPill: Item {
         id: pill
         property string label
+        property string glyph
         // Whether its mode is the one shown.
         property bool selected: false
         // How far it has arrived, 0 to 1.
         property real reveal: 1
         signal activated()
-        width: pillLabel.implicitWidth + 28
+        width: pillLabel.implicitWidth + 16 + 8 + 32
         height: 44
         opacity: reveal
         activeFocusOnTab: true
@@ -203,17 +224,26 @@ Item {
             id: pillFace
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
-            height: 36
+            height: 40
             radius: height / 2
             color: pillTap.pressed ? tone.doorPressed
-                : pill.selected ? root.controlColor
+                : pill.selected ? tone.current
                 : pillHover.hovered ? tone.doorHover : "transparent"
             scale: pillTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
+            SuiteIcon {
+                x: 16
+                anchors.verticalCenter: parent.verticalCenter
+                glyph: pill.glyph
+                width: 16
+                height: 16
+                opacity: pill.selected ? 1 : 0.66
+            }
             Text {
                 id: pillLabel
-                anchors.centerIn: parent
+                x: 16 + 16 + 8
+                anchors.verticalCenter: parent.verticalCenter
                 text: pill.label
                 color: pill.selected ? root.primaryText : root.secondaryText
                 font.pixelSize: 14
@@ -246,18 +276,15 @@ Item {
         }
     }
 
-    // Something used lately: an application's icon or a file's picture, and
-    // its name.
-    component RecentTile: Item {
+    // An application used lately: its icon, large, and its whole name on up
+    // to two lines.
+    component RecentApp: Item {
         id: tile
         required property int index
         required property var model
-        objectName: "recent-" + index
-        // Large in the grid, as Apps' tiles are; small along a row.
-        property bool large: false
-        readonly property real glyph: large ? 48 : 34
-        height: large ? 88 : 64
-        activeFocusOnTab: true
+        readonly property bool mine: tile.model.kind === "application"
+        objectName: mine ? "recent-" + index : ""
+        activeFocusOnTab: visible
         Accessible.role: Accessible.Button
         Accessible.name: tile.model.name
         Keys.onReturnPressed: root.runRecent(tile.index, tile.model.name)
@@ -265,49 +292,34 @@ Item {
         Keys.onSpacePressed: root.runRecent(tile.index, tile.model.name)
         Rectangle {
             id: tileFace
-            anchors.horizontalCenter: parent.horizontalCenter
-            width: Math.min(parent.width, tile.large ? 92 : 68)
-            height: parent.height
+            anchors.fill: parent
+            anchors.leftMargin: 2
+            anchors.rightMargin: 2
             radius: root.paperRadius
             color: tileTap.pressed ? tone.tilePressed : tileHover.hovered ? tone.tileHover : "transparent"
-            scale: tileTap.pressed ? 1.07 : 1
+            scale: tileTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: root.ms(90) } }
+            Behavior on color { ColorAnimation { duration: root.ms(120) } }
             LiftShadow { lifted: tileTap.pressed }
-            Item {
-                x: (parent.width - tile.glyph) / 2
-                y: tile.large ? 8 : 6
-                width: tile.glyph
-                height: tile.glyph
-                Kirigami.Icon {
-                    anchors.fill: parent
-                    visible: tile.model.thumbnail.length === 0
-                    source: tile.model.icon
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    visible: tile.model.thumbnail.length > 0
-                    radius: tile.large ? 9 : 6
-                    color: root.controlColor
-                    clip: true
-                    Image {
-                        anchors.fill: parent
-                        source: tile.model.thumbnail
-                        sourceSize: Qt.size(tile.glyph * 2, tile.glyph * 2)
-                        fillMode: Image.PreserveAspectCrop
-                        asynchronous: true
-                    }
-                }
+            Kirigami.Icon {
+                x: (parent.width - 56) / 2
+                y: 12
+                width: 56
+                height: 56
+                source: tile.model.icon
             }
             Text {
-                x: 3
-                y: tile.large ? 63 : 44
-                width: parent.width - 6
+                x: 6
+                y: 12 + 56 + 8
+                width: parent.width - 12
                 horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+                maximumLineCount: 2
                 elide: Text.ElideRight
+                lineHeight: 0.95
                 text: tile.model.name
-                color: tile.large ? root.primaryText : root.secondaryText
-                font.pixelSize: tile.large ? 13 : 11
+                color: root.primaryText
+                font.pixelSize: 13
             }
         }
         Rectangle {
@@ -329,6 +341,169 @@ Item {
             enabled: !root.guestDragged && !root.applicationLaunchPending
             gesturePolicy: TapHandler.ReleaseWithinBounds
             onTapped: root.runRecent(tile.index, tile.model.name)
+        }
+    }
+
+    // A file used lately, as a card of paper: its picture, or its kind's icon
+    // where it has none, its name, and the folder it is in with when.
+    component RecentFile: Item {
+        id: card
+        required property int index
+        required property var model
+        readonly property bool mine: card.model.kind === "file"
+        readonly property bool pictured: (card.model.thumbnail || "").length > 0
+        objectName: mine ? "recent-" + index : ""
+        activeFocusOnTab: visible
+        Accessible.role: Accessible.Button
+        Accessible.name: card.model.name
+        Keys.onReturnPressed: root.runRecent(card.index, card.model.name)
+        Keys.onEnterPressed: root.runRecent(card.index, card.model.name)
+        Keys.onSpacePressed: root.runRecent(card.index, card.model.name)
+        Rectangle {
+            id: cardFace
+            anchors.fill: parent
+            radius: root.paperRadius
+            color: cardTap.pressed ? tone.tilePressed : cardHover.hovered ? tone.tileHover : tone.subtle
+            scale: cardTap.pressed ? 1.03 : 1
+            Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
+            Behavior on color { ColorAnimation { duration: root.ms(120) } }
+            LiftShadow { lifted: cardTap.pressed }
+            Rectangle {
+                id: preview
+                x: 8
+                y: 8
+                width: parent.width - 16
+                height: Math.max(24, parent.height - 8 - 50)
+                radius: 6
+                color: tone.subtle
+                clip: true
+                Image {
+                    anchors.fill: parent
+                    visible: card.pictured
+                    source: card.pictured ? card.model.thumbnail : ""
+                    sourceSize: Qt.size(Math.ceil(preview.width * 2), Math.ceil(preview.height * 2))
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                }
+                Kirigami.Icon {
+                    anchors.centerIn: parent
+                    visible: !card.pictured
+                    width: Math.min(48, preview.height - 16)
+                    height: width
+                    source: card.model.icon
+                }
+            }
+            Text {
+                id: cardName
+                x: 12
+                y: preview.y + preview.height + 8
+                width: parent.width - 24
+                elide: Text.ElideMiddle
+                text: card.model.name
+                color: root.primaryText
+                font.pixelSize: 15
+            }
+            Text {
+                x: 12
+                y: cardName.y + cardName.height + 2
+                width: parent.width - 24
+                elide: Text.ElideRight
+                text: root.usedWhere(card.model.where || "", card.model.when)
+                color: root.secondaryText
+                font.pixelSize: 12
+            }
+        }
+        Rectangle {
+            anchors.fill: cardFace
+            anchors.margins: -2
+            radius: root.paperRadius + 2
+            color: "transparent"
+            border.width: 1.5
+            border.color: tone.focusRing
+            visible: card.activeFocus
+        }
+        HoverHandler {
+            id: cardHover
+            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            id: cardTap
+            enabled: !root.guestDragged && !root.applicationLaunchPending
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: root.runRecent(card.index, card.model.name)
+        }
+    }
+
+    // A section's heading on the first screen, and See all at its end, which
+    // opens the mode that holds everything of its kind.
+    component SectionHead: Item {
+        id: head
+        property string title
+        property string prefix
+        property bool seeAllShown: true
+        signal seeAll()
+        height: 40
+        Text {
+            x: 12
+            anchors.verticalCenter: parent.verticalCenter
+            text: head.title
+            color: root.secondaryText
+            font.pixelSize: 13
+            font.weight: Font.DemiBold
+        }
+        Item {
+            objectName: head.prefix + "-see-all"
+            anchors.right: parent.right
+            width: seeAllRow.implicitWidth + 24
+            height: 40
+            visible: head.seeAllShown
+            activeFocusOnTab: visible
+            Accessible.role: Accessible.Button
+            Accessible.name: words.i18nc("opens everything of a recent section's kind", "See all %1", head.title)
+            Accessible.onPressAction: head.seeAll()
+            Keys.onReturnPressed: head.seeAll()
+            Keys.onEnterPressed: head.seeAll()
+            Keys.onSpacePressed: head.seeAll()
+            Rectangle {
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                height: 32
+                radius: height / 2
+                color: seeAllTap.pressed ? tone.doorPressed : seeAllHover.hovered ? tone.doorHover : "transparent"
+                border.width: parent.activeFocus ? 1.5 : 0
+                border.color: tone.focusRing
+                Behavior on color { ColorAnimation { duration: root.ms(120) } }
+            }
+            Row {
+                id: seeAllRow
+                anchors.centerIn: parent
+                spacing: 4
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: words.i18n("See all")
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                }
+                SuiteIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    glyph: "chevron-right"
+                    width: 14
+                    height: 14
+                    opacity: 0.66
+                }
+            }
+            HoverHandler {
+                id: seeAllHover
+                acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+                cursorShape: Qt.PointingHandCursor
+            }
+            TapHandler {
+                id: seeAllTap
+                enabled: !root.guestDragged
+                gesturePolicy: TapHandler.ReleaseWithinBounds
+                onTapped: head.seeAll()
+            }
         }
     }
 
@@ -995,11 +1170,21 @@ Item {
     Rectangle {
         id: sheet
         objectName: "launcher-sheet"
+        // Resting, the sheet is as tall as what its first screen shows: the
+        // field alone, one section of what was used lately, or both, as far
+        // as the screen allows. Typing, a drawer or a mode gives it at least
+        // its working height, growing down from where it rested.
+        readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
+            2 * root.contentInset + root.modeRowReach + root.fieldHeight
+                + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
+        readonly property real fullHeight: Math.max(restingHeight, Math.min(maxRestHeight,
+            Math.round(root.launcherController.availableArea.height * 0.64)))
+        readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
         readonly property real restHeight: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.height - 20)
-                : Math.min(maxRestHeight, Math.round(root.launcherController.availableArea.height * 0.64))
+                : resting ? restingHeight : fullHeight
         // Floating on a large display, the sheet stays about a card's size
         // rather than growing with the display.
         readonly property real maxRestWidth: 1120
@@ -1019,7 +1204,8 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.round((root.launcherController.availableArea.height - height) / 2))))
+                    : Math.max(0, Math.min(Math.round((root.launcherController.availableArea.height - restingHeight) / 2),
+                        root.launcherController.availableArea.height - height - 10)))))
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
@@ -1031,7 +1217,8 @@ Item {
         Behavior on width { NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
         Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        radius: root.paperRadius
+        // Floating, it is a note that closes; in Spread, a card's paper.
+        radius: root.launcherController.guestMode ? root.paperRadius : root.noteRadius
         color: root.surfaceColor
         border.width: 1
         border.color: root.surfaceOutline
@@ -1098,19 +1285,20 @@ Item {
                 // Lit while it holds the keys or what was typed.
                 readonly property bool lit: query.activeFocus || query.text.length > 0
                 // One field, in one place, on every screen: under the modes,
-                // the full width of the sheet. Only what is under it changes.
-                // With nothing under it, typed or used lately, it rests in
+                // at the size it first had, about three quarters of the sheet
+                // wide and centred. Only what is under it changes. In a room
+                // taller than it needs, with nothing under it, it rests in
                 // the middle, and rises as a drawer or a mode opens.
                 readonly property real restY: idle && !firstRow.fits
                     ? Math.max(0, Math.round((parent.height - height) / 2)) : 0
-                x: 0
+                x: Math.round((parent.width - width) / 2)
                 y: Math.round(restY * (1 - root.drawerProgress) * (1 - root.modeProgress))
                 Behavior on y {
                     enabled: (root.drawerProgress <= 0 || root.drawerProgress >= 1)
                         && (root.modeProgress <= 0 || root.modeProgress >= 1)
                     NumberAnimation { duration: root.ms(260); easing.type: Easing.OutCubic }
                 }
-                width: parent.width
+                width: Math.min(parent.width, Math.max(360, Math.round(parent.width * 0.72)))
                 height: root.fieldHeight
                 radius: height / 2
                 color: root.controlColor
@@ -1163,8 +1351,8 @@ Item {
                     anchors.left: parent.left
                     anchors.leftMargin: 20
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 20
-                    height: 20
+                    width: 18
+                    height: 18
                     opacity: (searchField.lit ? 0.9 : 0.55) * root.openingIcon
                     Behavior on opacity { NumberAnimation { duration: root.ms(150) } }
                 }
@@ -1222,7 +1410,7 @@ Item {
                     color: root.primaryText
                     selectionColor: tone.selection
                     selectedTextColor: tone.selectedText
-                    font.pixelSize: 20
+                    font.pixelSize: 18
                     font.weight: Font.Medium
                     clip: true
                     inputMethodHints: Qt.ImhNoPredictiveText
@@ -1289,7 +1477,7 @@ Item {
                             ? (root.filesMode ? words.i18n("Find in Files") : words.i18n("Find an app"))
                             : words.i18n("Just type")
                         color: tone.placeholderText
-                        font.pixelSize: 20
+                        font.pixelSize: 13
                         font.weight: Font.Medium
                         opacity: root.openingText
                         transform: Translate { y: (1 - root.openingText) * 3 }
@@ -1369,7 +1557,7 @@ Item {
                     }
                 }
                 x: -10
-                y: -root.modeRowReach - 6
+                y: -root.modeRowReach
                 width: parent.width + 10
                 height: 44
                 opacity: root.applicationLaunchPending || !root.modeRowShown ? 0 : root.openingControls
@@ -1433,6 +1621,7 @@ Item {
                         id: appsPill
                         objectName: "apps-pill"
                         label: words.i18n("Apps")
+                        glyph: "layout-grid"
                         selected: modeRow.current === "apps"
                         onActivated: modeRow.show("apps")
                     }
@@ -1440,6 +1629,7 @@ Item {
                         id: filesPill
                         objectName: "files-pill"
                         label: words.i18n("Files")
+                        glyph: "folder"
                         selected: modeRow.current === "files"
                         visible: root.fileBrowser !== null
                         onActivated: modeRow.show("files")
@@ -1448,6 +1638,7 @@ Item {
                         id: notesPill
                         objectName: "notes-pill"
                         label: words.i18n("Notes")
+                        glyph: "sticky-note"
                         selected: modeRow.current === "notes"
                         visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
                         onActivated: modeRow.show("notes")
@@ -1476,34 +1667,48 @@ Item {
                 }
             }
 
-            // Before anything is typed, under the field: what was used lately
-            // and is neither pinned, open nor hidden, as many as fit and at
-            // most as many as the setting chooses, twenty unless fewer. As a
-            // grid, the setting's default, large tiles fill the room under
-            // the field; as a row, small ones along one row.
+            // Before anything is typed, under the field: the applications and
+            // the files used lately, each in a labelled section of its own,
+            // eight of each, and none pinned, open or hidden. Each section has
+            // its setting, and what is on sets how tall Search rests: the
+            // field alone, one section, or both filling the sheet.
             Item {
                 id: firstRow
                 objectName: "first-row"
-                readonly property bool grid: root.recentLayout !== "row"
-                readonly property real gap: grid ? 20 : 18
-                readonly property real tileWidth: grid ? 96 : 72
-                readonly property real tileHeight: grid ? 88 : 64
-                readonly property real rowGap: 8
-                readonly property int most: Math.max(1, Math.min(20, root.recentCount))
+                readonly property bool appsShown: root.recentApps && !!root.recentUse
+                readonly property bool filesShown: root.recentFiles && !!root.recentUse
+                readonly property int sections: (appsShown ? 1 : 0) + (filesShown ? 1 : 0)
+                // The Visual sheet's steps: a section apart by the surface's
+                // 24, cards by the standard 12.
+                readonly property real gap: 24
+                readonly property real headHeight: 40
+                readonly property real appHeight: 116
+                readonly property real cardGap: 12
+                // The files' cards, two rows of them, when the files rest
+                // alone; with the applications above, they share what is left.
+                readonly property real cardHeight: 150
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
-                readonly property int columns: Math.max(1, Math.floor(width / tileWidth))
-                readonly property int rows: grid
-                    ? Math.max(0, Math.floor((room + rowGap) / (tileHeight + rowGap)))
-                    : (room >= tileHeight ? 1 : 0)
-                // The height free under the field.
-                readonly property real room: parent.height - root.fieldHeight - gap
-                readonly property int shownCount: offered > 0
-                    ? Math.max(0, Math.min(offered, most, columns * rows)) : 0
-                readonly property int shownColumns: Math.min(columns, shownCount)
-                readonly property real cellWidth: tileWidth
-                readonly property real tilesX: (width - shownColumns * tileWidth) / 2
+                readonly property int appsOffered: root.recentUse
+                    ? Math.max(0, Math.min(offered, root.recentUse.applicationCount || 0)) : 0
+                readonly property int filesOffered: offered - appsOffered
+                // Eight applications where they fit at 72 each, fewer on a
+                // narrow sheet; four columns of files, at least two.
+                readonly property int appColumns: Math.max(1, Math.min(8, Math.floor(width / 72)))
+                readonly property real appWidth: width / appColumns
+                readonly property int fileColumns: Math.max(2, Math.min(4, Math.floor((width + cardGap) / (136 + cardGap))))
+                readonly property real fileWidth: (width - cardGap * (fileColumns - 1)) / fileColumns
+                readonly property real appsReach: appsShown ? headHeight + appHeight : 0
+                // How tall its sections are at rest, which sizes the sheet.
+                readonly property real naturalHeight: (appsShown ? appsReach : 0)
+                    + (sections === 2 ? gap : 0)
+                    + (filesShown ? headHeight + 2 * cardHeight + cardGap : 0)
+                readonly property real filesY: appsShown ? appsReach + gap : 0
+                readonly property real filesRoom: Math.max(0, height - filesY - headHeight)
+                readonly property int fileRows: filesRoom >= 2 * 96 + cardGap ? 2 : filesRoom >= 96 ? 1 : 0
+                readonly property real fileHeight: fileRows > 0
+                    ? Math.min(176, (filesRoom - cardGap * (fileRows - 1)) / fileRows) : 0
                 readonly property real reach: gap + height
-                readonly property bool fits: shownCount > 0
+                readonly property bool fits: sections > 0
                 // The row arrives as one group. Typing sends it away, sinking
                 // a little, and clearing the field brings it back the same way
                 // it first came.
@@ -1571,8 +1776,7 @@ Item {
                 x: 0
                 y: searchField.y + searchField.height + gap
                 width: parent.width
-                height: shownCount > 0
-                    ? Math.ceil(shownCount / columns) * (tileHeight + rowGap) - rowGap : 0
+                height: Math.max(0, parent.height - y)
                 opacity: fits && !root.applicationLaunchPending
                     ? rest * Math.max(0, 1 - root.drawerProgress * 3)
                         * Math.max(0, 1 - root.modeProgress * 3) : 0
@@ -1580,18 +1784,74 @@ Item {
                 enabled: resting && opacity > 0.5 && !root.drawerOpen && !root.modeOpen
                 transform: Translate { y: root.reducedMotion ? 0 : (1 - firstRow.rest) * 6 }
 
+                SectionHead {
+                    id: appsHead
+                    objectName: "recent-apps"
+                    visible: firstRow.appsShown
+                    width: parent.width
+                    title: words.i18n("Recent apps")
+                    prefix: "recent-apps"
+                    opacity: firstRow.reveal(firstRow.doors)
+                    onSeeAll: modeRow.show("apps")
+                }
+                Text {
+                    objectName: "recent-apps-empty"
+                    x: 12
+                    y: firstRow.headHeight + (firstRow.appHeight - height) / 2
+                    visible: firstRow.appsShown && firstRow.appsOffered === 0
+                    text: words.i18n("The apps you open show up here.")
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                }
                 Repeater {
-                    model: root.recentUse
-                    delegate: RecentTile {
-                        id: recentTile
+                    model: firstRow.appsShown ? root.recentUse : null
+                    delegate: RecentApp {
+                        id: recentApp
                         readonly property real reveal: firstRow.reveal(firstRow.doors)
-                        large: firstRow.grid
-                        x: firstRow.tilesX + (index % firstRow.columns) * firstRow.cellWidth
-                        y: Math.floor(index / firstRow.columns) * (firstRow.tileHeight + firstRow.rowGap)
-                        width: firstRow.cellWidth
-                        visible: index < firstRow.shownCount
+                        x: index * firstRow.appWidth
+                        y: firstRow.headHeight
+                        width: firstRow.appWidth
+                        height: firstRow.appHeight
+                        visible: mine && index < Math.min(firstRow.appColumns, firstRow.appsOffered)
                         opacity: reveal
-                        transform: Translate { y: root.reducedMotion ? 0 : (1 - recentTile.reveal) * 10 }
+                        transform: Translate { y: root.reducedMotion ? 0 : (1 - recentApp.reveal) * 10 }
+                    }
+                }
+                SectionHead {
+                    id: filesHead
+                    objectName: "recent-files"
+                    visible: firstRow.filesShown && firstRow.fileRows > 0
+                    y: firstRow.filesY
+                    width: parent.width
+                    title: words.i18n("Recent files")
+                    prefix: "recent-files"
+                    seeAllShown: root.fileBrowser !== null
+                    opacity: firstRow.reveal(firstRow.doors)
+                    onSeeAll: modeRow.show("files")
+                }
+                Text {
+                    objectName: "recent-files-empty"
+                    x: 12
+                    y: firstRow.filesY + firstRow.headHeight + 12
+                    visible: filesHead.visible && firstRow.filesOffered === 0
+                    text: words.i18n("The files you open show up here.")
+                    color: root.secondaryText
+                    font.pixelSize: 13
+                }
+                Repeater {
+                    model: firstRow.filesShown ? root.recentUse : null
+                    delegate: RecentFile {
+                        id: recentFile
+                        readonly property int place: index - firstRow.appsOffered
+                        readonly property real reveal: firstRow.reveal(firstRow.doors)
+                        x: (place % firstRow.fileColumns) * (firstRow.fileWidth + firstRow.cardGap)
+                        y: firstRow.filesY + firstRow.headHeight
+                            + Math.floor(place / firstRow.fileColumns) * (firstRow.fileHeight + firstRow.cardGap)
+                        width: firstRow.fileWidth
+                        height: firstRow.fileHeight
+                        visible: mine && place >= 0 && place < firstRow.fileColumns * firstRow.fileRows
+                        opacity: reveal
+                        transform: Translate { y: root.reducedMotion ? 0 : (1 - recentFile.reveal) * 10 }
                     }
                 }
             }

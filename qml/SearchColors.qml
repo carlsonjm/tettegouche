@@ -69,6 +69,8 @@ QtObject {
     // See-through washes for rows and tiles.
     readonly property color hover: dark ? "#22ffffff" : wash(0.08)
     readonly property color tileHover: dark ? "#20ffffff" : wash(0.08)
+    // A resting card laid in the sheet, as a recent file is: a step above it.
+    readonly property color subtle: dark ? "#13ffffff" : wash(0.05)
     readonly property color current: dark ? "#3dffffff" : wash(0.16)
     readonly property color focusRing: dark ? "#b0ffffff" : wash(0.69)
     readonly property color track: dark ? "#24ffffff" : wash(0.14)

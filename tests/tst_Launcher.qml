@@ -14,8 +14,10 @@ TestCase {
         launcher.fileBrowser = null
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         recentStub.clear()
-        launcher.recentLayout = "grid"
-        launcher.recentCount = 20
+        recentStub.applicationCount = 0
+        launcher.recentUse = recentStub
+        launcher.recentApps = true
+        launcher.recentFiles = true
         recentStub.opened = []
         launcher.notesDoor = null
         notesStub.available = true
@@ -216,6 +218,8 @@ TestCase {
     ListModel {
         id: recentStub
         property var opened: []
+        // The rows before the files, as the launcher's model counts them.
+        property int applicationCount: 0
         function open(row) { opened = opened.concat([row]); return true }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
@@ -363,10 +367,15 @@ TestCase {
             noteChanged()
         }
     }
+    // Half applications, then the files, as the launcher's model lists them.
     function fillRecent(n) {
         recentStub.clear()
+        const applications = Math.ceil(n / 2)
         for (let i = 0; i < n; ++i)
-            recentStub.append({name: "Used " + i, icon: "application-x-executable", thumbnail: "", kind: i % 2 ? "file" : "application"})
+            recentStub.append({name: "Used " + i, icon: "application-x-executable", thumbnail: "",
+                               kind: i < applications ? "application" : "file",
+                               where: i < applications ? "" : "Documents", when: new Date(Date.now() - i * 60000)})
+        recentStub.applicationCount = applications
     }
     // Stand-ins for a dark and a light colour scheme, so the colours do not
     // depend on the scheme the test happens to run under.
@@ -886,7 +895,7 @@ TestCase {
         verify(sheet)
         controller.guestMode = false
         tryCompare(sheet, "width", 640)
-        compare(sheet.height, Math.round(740 * 0.64))
+        compare(sheet.height, sheet.restingHeight)
         compare(sheet.x, 180)
         controller.guestMode = true
         tryCompare(sheet, "width", controller.guestWidth)
@@ -1069,13 +1078,13 @@ TestCase {
         // the applications.
         compare(search.y,0)
         compare(grid.y-search.y-search.height,16+50)
-        compare(grid.y, 56+16+50)
+        compare(grid.y, 58+16+50)
         const closesBefore = controller.closes
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
         compare(controller.closes, closesBefore)
         tryCompare(sheet, "width", 640)
-        tryCompare(sheet, "height", Math.round(740 * 0.64))
+        tryCompare(sheet, "height", sheet.restingHeight)
         compare(controller.drawerExpanded, false)
     }
     function test_expandedDrawerWithoutLocalDock() {
@@ -1091,12 +1100,13 @@ TestCase {
         tryCompare(launcher,"drawerProgress",0)
         controller.availableArea=original
     }
-    // Before anything is typed, what was used lately fills the room under
-    // search as a grid of large tiles, at most twenty, the rows centred as
-    // one group; search stays at the top, where it is on every screen.
+    // Before anything is typed, the applications and the files used lately
+    // sit under search in two labelled sections, eight of each: the
+    // applications in a row, the files as cards in two rows of four. Search
+    // keeps the size it first had, centred under the modes.
     function test_firstRow() {
         launcher.fileBrowser = filesMock
-        fillRecent(24)
+        fillRecent(20)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const modes = findChild(launcher, "mode-row")
@@ -1106,10 +1116,11 @@ TestCase {
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
         const close = findChild(launcher, "window-close")
+        const sheet = findChild(launcher, "launcher-sheet")
         verify(modes.visible && dot.visible && apps.visible && files.visible)
         verify(dot.selected && !apps.selected && !files.selected)
         // The modes lead, above the field, in one row from the left; the
-        // window's Close ends it, and Expand waits for a drawer.
+        // window's Close ends it alone, and Expand waits for a drawer.
         const top = item => item.mapToItem(launcher, 0, 0).y
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
@@ -1118,32 +1129,41 @@ TestCase {
         compare(top(files), top(dot))
         verify(left(dot) < left(apps) && left(apps) < left(files))
         verify(close.visible && right(files) < left(close))
-        verify(Math.abs(right(close) - right(field)) < 1)
         verify(!findChild(launcher, "window-expand").visible)
+        verify(!findChild(launcher, "window-pop-out").visible)
         compare(field.y, 0)
-        compare(field.height, 56)
-        compare(field.width, field.parent.width)
-        verify(row.visible && row.grid)
-        compare(row.x, field.x)
-        compare(row.width, field.width)
-        compare(row.y - field.y - field.height, 20)
-        verify(row.columns >= 6 && row.rows >= 3)
-        const shown = Math.min(20, row.columns * row.rows)
-        compare(row.shownCount, shown)
-        verify(row.y + row.height <= row.parent.height + 0.5)
-        for (let i = 0; i < 24; ++i)
-            compare(findChild(launcher, "recent-" + i).visible, i < shown)
+        compare(field.height, 58)
+        compare(field.width, Math.max(360, Math.round(field.parent.width * 0.72)))
+        verify(Math.abs(left(field) - left(field.parent) - (right(field.parent) - right(field))) <= 1)
+        // Both on, the sheet has its full height.
+        compare(sheet.height, sheet.fullHeight)
+        verify(row.visible)
+        compare(row.sections, 2)
+        compare(row.y - field.y - field.height, 24)
+        verify(findChild(launcher, "recent-apps").visible && findChild(launcher, "recent-files").visible)
+        verify(findChild(launcher, "recent-apps-see-all").visible && findChild(launcher, "recent-files-see-all").visible)
+        // Eight applications along one row, each its share of the width.
+        compare(row.appColumns, 8)
         const first = findChild(launcher, "recent-0")
-        const endOfRow = findChild(launcher, "recent-" + (row.columns - 1))
-        const below = findChild(launcher, "recent-" + row.columns)
-        verify(first.large)
-        compare(first.height, 88)
-        compare(findChild(launcher, "recent-1").x - first.x, row.cellWidth)
-        compare(findChild(launcher, "recent-1").y, first.y)
-        compare(endOfRow.y, first.y)
-        compare(below.x, first.x)
-        compare(below.y - first.y, row.tileHeight + row.rowGap)
-        verify(Math.abs(first.x - (row.width - endOfRow.x - endOfRow.width)) <= 1)
+        for (let i = 0; i < 10; ++i)
+            compare(findChild(launcher, "recent-" + i).visible, i < 8)
+        compare(first.height, 116)
+        compare(findChild(launcher, "recent-1").x - first.x, row.appWidth)
+        compare(findChild(launcher, "recent-7").y, first.y)
+        // Eight files as cards in two rows of four, under their heading.
+        compare(row.fileColumns, 4)
+        compare(row.fileRows, 2)
+        for (let i = 10; i < 20; ++i)
+            compare(findChild(launcher, "recent-" + i).visible, i < 18)
+        const card = findChild(launcher, "recent-10")
+        const nextCard = findChild(launcher, "recent-11")
+        const below = findChild(launcher, "recent-14")
+        compare(card.x, 0)
+        compare(nextCard.x - card.x - card.width, 12)
+        compare(below.x, card.x)
+        compare(below.y - card.y - card.height, 12)
+        verify(card.y > first.y + first.height)
+        verify(below.y + below.height <= row.height + 0.5)
         // Typing hands the room to the results, and clearing brings it back;
         // the modes and search stay.
         const query = findChild(launcher, "search-query")
@@ -1154,30 +1174,48 @@ TestCase {
         query.text = ""
         tryCompare(row, "opacity", 1)
     }
-    // Set to a row, what was used lately is one row of small tiles, at most
-    // eight, centred.
-    function test_firstRowAsARow() {
+    // What is on sets how tall Search rests: the field alone, one section,
+    // or both. Typing gives the sheet its full height, growing down.
+    function test_firstRowSections() {
         launcher.fileBrowser = filesMock
-        launcher.recentLayout = "row"
-        fillRecent(12)
+        fillRecent(20)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
+        const sheet = findChild(launcher, "launcher-sheet")
         const field = findChild(launcher, "search-field")
-        verify(!row.grid)
-        compare(row.y - field.y - field.height, 18)
-        const fit = Math.min(8, Math.floor(row.width / row.tileWidth))
-        verify(fit >= 4)
-        compare(row.shownCount, fit)
-        compare(row.height, 64)
-        const first = findChild(launcher, "recent-0")
-        const last = findChild(launcher, "recent-" + (fit - 1))
-        verify(!first.large)
-        compare(first.height, 64)
-        compare(last.y, first.y)
-        compare(findChild(launcher, "recent-" + fit).visible, false)
-        verify(Math.abs(first.x - (row.width - last.x - last.width)) <= 1)
-        launcher.recentLayout = "grid"
+        const query = findChild(launcher, "search-query")
+        const area = controller.availableArea
+        const small = 2 * 24 + 60 + 58
+        launcher.recentFiles = false
+        tryCompare(sheet, "height", small + 24 + 40 + 116)
+        verify(findChild(launcher, "recent-0").visible)
+        verify(!findChild(launcher, "recent-files").visible)
+        launcher.recentFiles = true
+        launcher.recentApps = false
+        tryCompare(sheet, "height", Math.min(area.height - 40, small + 24 + 40 + 2 * 150 + 12))
+        verify(!findChild(launcher, "recent-apps").visible)
+        verify(findChild(launcher, "recent-10").visible)
+        compare(findChild(launcher, "recent-10").y, 40)
+        launcher.recentFiles = false
+        tryCompare(sheet, "height", small)
+        compare(row.sections, 0)
+        tryCompare(field, "y", 0)
+        // Centred at rest; typing grows it down from where it rested.
+        const full = sheet.fullHeight
+        compare(sheet.y, area.y + Math.round((area.height - small) / 2))
+        const restTop = sheet.y
+        query.text = "x"
+        tryCompare(sheet, "height", full)
+        compare(sheet.y, Math.min(restTop, area.y + area.height - full - 10))
+        query.text = ""
+        tryCompare(sheet, "height", small)
+        // A drawer gives it its full height too.
+        launcher.setDrawerOpen(true)
+        tryCompare(sheet, "height", full)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        tryCompare(sheet, "height", small)
     }
     // What was used lately arrives as one group; typing sends it away, and
     // clearing the field brings it back.
@@ -1197,62 +1235,42 @@ TestCase {
         tryCompare(row, "arrival", 1)
         compare(row.rest, 1)
     }
-    // A narrower sheet keeps the modes and as many of the rest as fit.
+    // A narrower sheet shows fewer applications and fewer columns of files,
+    // rather than smaller ones.
     function test_firstRowNarrow() {
         launcher.fileBrowser = filesMock
-        fillRecent(24)
+        fillRecent(20)
         controller.availableArea = Qt.rect(0, 0, 640, 740)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
-        verify(row.shownCount >= 1)
-        compare(row.shownCount, Math.min(20, Math.floor(row.width / row.tileWidth) * row.rows))
+        tryCompare(row, "appColumns", Math.floor(row.width / 72))
+        verify(row.appColumns < 8)
+        compare(row.fileColumns, Math.max(2, Math.min(4, Math.floor((row.width + 12) / 148))))
+        compare(findChild(launcher, "recent-" + row.appColumns).visible, false)
+        verify(row.appWidth >= 72)
+        verify(row.fileWidth >= 136)
         verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
     }
-    // With nothing used lately search rests alone in the middle, at its
-    // usual width, under the modes; typing takes it to the top, and a drawer
-    // opens with it there.
+    // With both sections on and nothing used lately, each says so and keeps
+    // its room: Search's size never waits on the record.
     function test_firstRowWithNothingUsed() {
         launcher.fileBrowser = filesMock
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
         const field = findChild(launcher, "search-field")
-        const dot = findChild(launcher, "home-dot")
-        compare(row.shownCount, 0)
-        compare(field.width, field.parent.width)
-        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
-        verify(field.y > 100)
-        verify(dot.mapToItem(launcher, 0, dot.height).y <= field.mapToItem(launcher, 0, 0).y)
-        verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
-        const query = findChild(launcher, "search-query")
-        query.text = "x"
-        tryCompare(field, "y", 0)
-        query.text = ""
-        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
-        launcher.setDrawerOpen(true)
-        tryCompare(launcher, "drawerProgress", 1)
+        const sheet = findChild(launcher, "launcher-sheet")
+        compare(row.offered, 0)
+        compare(sheet.height, sheet.fullHeight)
         compare(field.y, 0)
-        launcher.setDrawerOpen(false)
-        tryCompare(launcher, "drawerProgress", 0)
-        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
-    }
-    // Fewer can be chosen: no more than that show, in either layout.
-    function test_firstRowCount() {
-        launcher.fileBrowser = filesMock
-        fillRecent(24)
-        launcher.recentCount = 8
-        controller.opened()
-        tryCompare(launcher, "openingControls", 1)
-        const row = findChild(launcher, "first-row")
-        compare(row.shownCount, 8)
-        compare(findChild(launcher, "recent-8").visible, false)
-        compare(findChild(launcher, "search-field").y, 0)
-        launcher.recentLayout = "row"
-        compare(row.shownCount, Math.min(8, row.columns))
-        launcher.recentCount = 4
-        compare(row.shownCount, 4)
+        verify(findChild(launcher, "recent-apps-empty").visible)
+        verify(findChild(launcher, "recent-files-empty").visible)
+        fillRecent(4)
+        verify(!findChild(launcher, "recent-apps-empty").visible)
+        verify(!findChild(launcher, "recent-files-empty").visible)
+        compare(sheet.height, sheet.fullHeight)
     }
     // With the setting off the launcher has no record at all: the modes
     // alone, and Tab goes from one to the next.
@@ -1265,11 +1283,13 @@ TestCase {
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
         verify(apps.visible && files.visible)
-        compare(row.shownCount, 0)
+        compare(row.sections, 0)
         verify(!findChild(launcher, "recent-0"))
-        // Search rests in the middle, with nothing under it.
+        // Search rests small, the field under the modes and nothing under it.
         const field = findChild(launcher, "search-field")
-        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
+        const sheet = findChild(launcher, "launcher-sheet")
+        tryCompare(sheet, "height", 2 * 24 + 60 + 58)
+        tryCompare(field, "y", 0)
         launcher.forceActiveFocus()
         for (let i = 0; i < 6 && !apps.activeFocus; ++i) keyClick(Qt.Key_Tab)
         verify(apps.activeFocus)
@@ -1351,6 +1371,7 @@ TestCase {
         controller.closes = 0
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        tryCompare(findChild(launcher, "first-row"), "arrival", 1)
         const second = findChild(launcher, "recent-1")
         mouseClick(second, second.width / 2, second.height / 2)
         compare(recentStub.opened, [1])
@@ -1369,9 +1390,12 @@ TestCase {
         verify(apps.activeFocus)
         keyClick(Qt.Key_Tab)
         verify(findChild(launcher, "files-pill").activeFocus)
-        // Then the window's Close, at the end of their row.
+        // Then the window's Close, at the end of their row, and the
+        // applications' See all before them.
         keyClick(Qt.Key_Tab)
         verify(findChild(launcher, "window-close").activeFocus)
+        keyClick(Qt.Key_Tab)
+        verify(findChild(launcher, "recent-apps-see-all").activeFocus)
         keyClick(Qt.Key_Tab)
         verify(findChild(launcher, "recent-0").activeFocus)
         keyClick(Qt.Key_Return)
@@ -2039,8 +2063,10 @@ TestCase {
         for (let i = 0; i < 12; ++i)
             results.append({display: "Window " + i, decoration: "preferences-system-windows", subtext: "Settings"})
         query.text = "window"
-        tryCompare(sheet, "y", 133)
-        compare(sheet.height, 474)
+        // Both sections on, Search rests as tall as they are, as far as the
+        // screen allows, and keeps that height for the results.
+        tryCompare(sheet, "height", 700)
+        tryCompare(sheet, "y", 20)
         // The tallest keys: the sheet rises to the top and shortens to fit.
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
@@ -2051,13 +2077,13 @@ TestCase {
         verify(bottomOf(list) <= 374.5)
         // The shortest keys: the sheet rises only as far as it must.
         launcher.keysRect = shortKeys
-        tryCompare(sheet, "y", 60)
-        compare(sheet.height, 474)
+        tryCompare(sheet, "height", 524)
+        compare(sheet.y, 10)
         verify(bottomOf(sheet) <= 534.5)
         // The keys go down and the sheet returns.
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
-        tryCompare(sheet, "y", 133)
-        compare(sheet.height, 474)
+        tryCompare(sheet, "height", 700)
+        tryCompare(sheet, "y", 20)
         query.text = ""
         results.clear()
     }
@@ -2083,7 +2109,8 @@ TestCase {
         tryCompare(sheet, "height", 364)
         compare(sheet.y, 10)
         const grid = findChild(launcher, "application-grid")
-        verify(grid.height > 140)
+        // At least a row of applications.
+        verify(grid.height > 112)
         verify(bottomOf(grid) <= 374.5)
         // Search, in the drawer's header, stays in view above the keys.
         tryCompare(launcher, "drawerProgress", 1)
@@ -2494,7 +2521,7 @@ TestCase {
         verify(top(expand) + expand.height <= top(field))
         verify(Math.abs(top(expand) + expand.height / 2 - top(dot) - dot.height / 2) < 1)
         verify(right(expand) <= left(data.mode === "files" ? popOut : close) + 0.5)
-        verify(Math.abs(right(close) - right(field)) < 1)
+        verify(Math.abs(right(close) - right(field.parent)) < 1)
         compare(close.Accessible.name, "Close Search")
         compare(controller.drawerExpanded, false)
         compare(expand.Accessible.name, "Expand")
@@ -2882,7 +2909,7 @@ TestCase {
         verify(back.mapToItem(launcher, 0, back.height).y <= header.mapToItem(launcher, 0, 0).y)
         compare(middle(field).y, middle(header).y)
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
-        compare(field.width, header.width)
+        compare(field.width, Math.max(360, Math.round(header.width * 0.72)))
         const appsSort = findChild(launcher, "sort-button")
         compare(appsSort.visible, data.mode === "apps")
         if (data.mode === "apps") {
@@ -2944,7 +2971,7 @@ TestCase {
         // With nothing typed, search returns to the first screen: at the top
         // over what was used lately, else in the middle.
         tryCompare(field, "y", field.restY)
-        compare(field.height, 56)
+        compare(field.height, 58)
         wait(600)
     }
     // Esc closes the sort menu if it is open, otherwise the drawer, while

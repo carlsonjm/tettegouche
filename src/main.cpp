@@ -144,31 +144,16 @@ bool forwardOrTakeOver(QLockFile &lock, const QString &method, const QVariantLis
     return false;
 }
 
-// How many things used lately Search shows at most: --recent-count=N, from 4
-// to 20; twenty when it is not given.
-int recentCount(const QStringList &arguments)
-{
-    for (const QString &argument : arguments) {
-        if (argument.startsWith(QLatin1String("--recent-count="))) {
-            bool ok = false;
-            const int count = argument.mid(15).toInt(&ok);
-            if (ok) return qBound(4, count, 20);
-        }
-    }
-    return 20;
-}
-
 // The widget's settings among a launcher's arguments, which it compares with
 // the widget's own when it is asked to leave for them.
 QStringList settingsIn(const QStringList &arguments)
 {
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
-                               QStringLiteral("--recent-row"), QStringLiteral("--no-notes"),
-                               QStringLiteral("--no-notes-pill")};
+                               QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
+                               QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
-        if ((settings.contains(argument) || argument.startsWith(QLatin1String("--recent-count=")))
-            && !given.contains(argument))
+        if (settings.contains(argument) && !given.contains(argument))
             given.append(argument);
     }
     return given;
@@ -301,9 +286,15 @@ int main(int argc, char **argv)
     // Where Kadunce does not say what is open, Plasma's window list does.
     OpenWindows openWindows(OpenWindows::plasmaWindowList(view.engine()));
     controller.setOpenWindows(&openWindows);
-    // With the setting off, nothing used lately is read or offered.
-    const bool offerRecent = !application.arguments().contains(QStringLiteral("--no-recent"));
+    // Recent apps and recent files each have a setting; with both off,
+    // nothing used lately is read or offered.
+    const bool recentApps = !application.arguments().contains(QStringLiteral("--no-recent"))
+        && !application.arguments().contains(QStringLiteral("--no-recent-apps"));
+    const bool recentFiles = !application.arguments().contains(QStringLiteral("--no-recent"))
+        && !application.arguments().contains(QStringLiteral("--no-recent-files"));
+    const bool offerRecent = recentApps || recentFiles;
     RecentUse recent;
+    recent.setOffered(recentApps, recentFiles);
     recent.setThumbnails([](const QString &path, const QString &mimeType, qint64 modified) {
         return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
     });
@@ -372,11 +363,9 @@ int main(int argc, char **argv)
         // What is not offered is passed as null; an empty QVariant would
         // reach QML as undefined, which its "!== null" checks let through.
         {QStringLiteral("recentUse"), QVariant::fromValue<QObject *>(offerRecent ? &recent : nullptr)},
-        // Large tiles in a grid, or small ones along a single row.
-        {QStringLiteral("recentLayout"),
-         application.arguments().contains(QStringLiteral("--recent-row")) ? QStringLiteral("row") : QStringLiteral("grid")},
-        // How many at most, as many as fit.
-        {QStringLiteral("recentCount"), recentCount(application.arguments())},
+        // Which sections the first screen shows, and so how tall it rests.
+        {QStringLiteral("recentApps"), recentApps},
+        {QStringLiteral("recentFiles"), recentFiles},
         {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
         // The Notes pill can be left off the first screen on its own.
         {QStringLiteral("notesPillShown"),

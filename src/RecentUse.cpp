@@ -18,6 +18,7 @@
 #include <QDBusMessage>
 #include <QDBusReply>
 #include <QDateTime>
+#include <QDir>
 #include <QFileInfo>
 #include <QMimeDatabase>
 #include <QSet>
@@ -59,6 +60,10 @@ QVariant RecentUse::data(const QModelIndex &index, int role) const
         return item.thumbnail;
     case KindRole:
         return item.kind;
+    case WhereRole:
+        return item.where;
+    case WhenRole:
+        return item.lastUsed ? QDateTime::fromSecsSinceEpoch(item.lastUsed) : QDateTime();
     default:
         return {};
     }
@@ -71,6 +76,8 @@ QHash<int, QByteArray> RecentUse::roleNames() const
         {IconRole, QByteArrayLiteral("icon")},
         {ThumbnailRole, QByteArrayLiteral("thumbnail")},
         {KindRole, QByteArrayLiteral("kind")},
+        {WhereRole, QByteArrayLiteral("where")},
+        {WhenRole, QByteArrayLiteral("when")},
     };
 }
 
@@ -80,6 +87,16 @@ void RecentUse::setWithheld(bool withheld)
         return;
     }
     m_withheld = withheld;
+    rebuild();
+}
+
+void RecentUse::setOffered(bool applications, bool files)
+{
+    if (m_applicationsOffered == applications && m_filesOffered == files) {
+        return;
+    }
+    m_applicationsOffered = applications;
+    m_filesOffered = files;
     rebuild();
 }
 
@@ -96,7 +113,8 @@ void RecentUse::refilter()
 
 void RecentUse::rebuild()
 {
-    QVector<Item> items;
+    QVector<Item> applications;
+    QVector<Item> files;
     if (!m_withheld) {
         QList<Used> record = m_record;
         std::stable_sort(record.begin(), record.end(), [](const Used &left, const Used &right) {
@@ -105,10 +123,15 @@ void RecentUse::rebuild()
         QSet<QString> seen;
         const QMimeDatabase mimes;
         for (const Used &used : std::as_const(record)) {
-            if (items.size() >= Kept) {
+            const bool applicationsFull = !m_applicationsOffered || applications.size() >= ApplicationsKept;
+            const bool filesFull = !m_filesOffered || files.size() >= FilesKept;
+            if (applicationsFull && filesFull) {
                 break;
             }
             if (used.resource.startsWith(ApplicationScheme)) {
+                if (applicationsFull) {
+                    continue;
+                }
                 const auto service = KService::serviceByStorageId(used.resource.mid(ApplicationScheme.size()));
                 if (!service || !service->isApplication() || service->noDisplay()
                     || service->name().trimmed().isEmpty()) {
@@ -122,7 +145,11 @@ void RecentUse::rebuild()
                 if (m_excluded && m_excluded(id, service->name().trimmed())) {
                     continue;
                 }
-                items.append({Application, service->name().trimmed(), service->icon(), {}, id, {}, {}});
+                applications.append({Application, service->name().trimmed(), service->icon(), {}, id, {}, {}, {},
+                                     used.lastUsed});
+                continue;
+            }
+            if (filesFull) {
                 continue;
             }
             const QUrl url = QUrl::fromUserInput(used.resource, QString(), QUrl::AssumeLocalFile);
@@ -143,13 +170,17 @@ void RecentUse::rebuild()
             const QString mimeType = mimes.mimeTypeForFile(info).name();
             const QString thumbnail = m_thumbnails
                 ? m_thumbnails(path, mimeType, info.lastModified().toMSecsSinceEpoch()) : QString();
-            items.append({File, info.fileName(), mimes.mimeTypeForName(mimeType).iconName(), thumbnail, {},
-                          path, mimeType});
+            // Where it is, by its folder's name; a file at home says only when.
+            const QString where = info.absolutePath() == QDir::homePath() ? QString() : info.dir().dirName();
+            files.append({File, info.fileName(), mimes.mimeTypeForName(mimeType).iconName(), thumbnail, {}, path,
+                          mimeType, where, used.lastUsed});
         }
     }
-    const bool countChanges = items.size() != m_items.size();
+    const QVector<Item> items = applications + files;
+    const bool countChanges = items.size() != m_items.size() || applications.size() != m_applicationCount;
     beginResetModel();
     m_items = items;
+    m_applicationCount = applications.size();
     endResetModel();
     if (countChanges) {
         Q_EMIT countChanged();

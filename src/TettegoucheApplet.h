@@ -70,7 +70,6 @@ private:
     // One of the widget's settings as main.xml declares it, read where its
     // settings page and Shuffle Settings both write it.
     bool setting(const QString &key, bool fallback);
-    QString textSetting(const QString &key, const QString &fallback);
     void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
                        const QString &drive = {});
     // What is asked of the launcher: the widget's settings as its arguments,

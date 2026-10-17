@@ -318,27 +318,18 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
     return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
 
-QString TettegoucheApplet::textSetting(const QString &key, const QString &fallback)
-{
-    if (KConfigLoader *scheme = configScheme()) {
-        if (KConfigSkeletonItem *item = static_cast<KCoreConfigSkeleton *>(scheme)->findItem(key)) return item->property().toString();
-    }
-    return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
-}
-
 QStringList TettegoucheApplet::launchFlags()
 {
     QStringList flags = setting(QStringLiteral("useKadunce"), true) ? QStringList{} : QStringList{QStringLiteral("--standalone")};
-    // Search's first screen offers what was used lately unless that is off.
-    if (!setting(QStringLiteral("offerRecent"), true)) flags << QStringLiteral("--no-recent");
-    // As a grid of large tiles, unless a single row is chosen.
-    else if (textSetting(QStringLiteral("recentLayout"), QStringLiteral("grid")) == QLatin1String("row"))
-        flags << QStringLiteral("--recent-row");
-    // At most twenty, unless fewer are chosen.
-    if (setting(QStringLiteral("offerRecent"), true)) {
-        const int count = textSetting(QStringLiteral("recentCount"), QStringLiteral("20")).toInt();
-        if (count > 0 && count < 20) flags << QStringLiteral("--recent-count=%1").arg(count);
-    }
+    // Search's first screen offers recent apps and recent files, each unless
+    // its setting is off; "offerRecent" off, as older settings say, leaves
+    // out both.
+    const bool recent = setting(QStringLiteral("offerRecent"), true);
+    const bool apps = recent && setting(QStringLiteral("recentApps"), true);
+    const bool files = recent && setting(QStringLiteral("recentFiles"), true);
+    if (!apps && !files) flags << QStringLiteral("--no-recent");
+    else if (!apps) flags << QStringLiteral("--no-recent-apps");
+    else if (!files) flags << QStringLiteral("--no-recent-files");
     // It offers Notes, where the notes application is installed, unless that is off.
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.
