@@ -220,7 +220,9 @@ keyboard so Esc closes it, and is destroyed when it closes.
 `TETTE_AMBIENT_FIXTURE=transfer-media`, or `paused` for paused media, replaces
 the live sources with one sample transfer and one media row for tests and
 demonstrations. Normal startup uses live sources only and leaves the island
-absent when no activity qualifies.
+absent when no activity qualifies. `TETTE_AMBIENT_WITHOUT_NOTES`, set, leaves the
+quick note's island out whether or not Gooseberry is installed, so tests of
+the other islands count the same on any machine.
 
 ## Settings
 

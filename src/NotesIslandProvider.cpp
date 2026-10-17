@@ -74,7 +74,10 @@ NotesIslandProvider::NotesIslandProvider(const QDBusConnection &bus, QObject *pa
 void NotesIslandProvider::refresh()
 {
     bool installed = false;
-    if (const auto notes = KService::serviceByStorageId(QString::fromLatin1(NotesDoor::ApplicationId))) {
+    // A test of the other islands leaves out a notes application the
+    // machine running it may have.
+    const bool leftOut = qEnvironmentVariableIsSet("TETTE_AMBIENT_WITHOUT_NOTES");
+    if (const auto notes = leftOut ? KService::Ptr() : KService::serviceByStorageId(QString::fromLatin1(NotesDoor::ApplicationId))) {
         const auto actions = notes->actions();
         installed = std::any_of(actions.cbegin(), actions.cend(), [](const KServiceAction &action) {
             return action.name() == QLatin1String(NotesDoor::ActionName);
