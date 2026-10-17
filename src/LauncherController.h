@@ -9,8 +9,11 @@
 #include "ScreenShareProvider.h"
 #include "WorkspaceContext.h"
 
+#include <QByteArray>
 #include <QDateTime>
+#include <QList>
 #include <QObject>
+#include <QPointer>
 #include <QRect>
 #include <QRectF>
 #include <QSet>
@@ -18,7 +21,9 @@
 #include <QTimer>
 #include <QVariantList>
 
+#include <functional>
 #include <memory>
+#include <vector>
 
 class ApplicationCatalog;
 class FileBrowser;
@@ -97,6 +102,9 @@ public:
     QRect availableArea() const;
 
     Q_INVOKABLE bool resultIsOpen(int row) const;
+    // The desktop file id of the application a result opens, or nothing for
+    // any other result.
+    Q_INVOKABLE QString resultApplicationId(int row) const;
     // A result or an application in Apps whose window is open: 1 when it was
     // brought forward, -1 when it is open but did not come, 0 when it is not
     // open and should start.
@@ -118,7 +126,9 @@ public:
 
     // Files carried past the sheet's edge leave as a drag any application can
     // take, offered only as a copy.
-    Q_INVOKABLE void carryOut(const QStringList &paths, const QRectF &sheet);
+    // From Search's Files, or from the Files in a window of its own given
+    // as from.
+    Q_INVOKABLE void carryOut(const QStringList &paths, const QRectF &sheet, QObject *from = nullptr);
     // An application carried past its tile leaves as its desktop file, which
     // Shuffle's dock pins where it is let go, as it pins one from any other
     // launcher.
@@ -143,12 +153,19 @@ public:
     Q_INVOKABLE void cancelGuestApplicationLaunch();
 
     bool filesWindowOffered() const { return m_fileBrowser != nullptr; }
+    // Whether any Files window is open.
     bool filesWindowOpen() const;
-    // Files in a window of its own, with the same tabs, folder and work as
-    // Files in Search; shown, or brought forward when it already is. It opens
-    // at the size Search has as a card in Spread, or Search's own size
-    // elsewhere, and is an ordinary window after that.
+    // A new Files window, starting with the tabs, folder and view Files in
+    // Search has, and keeping its own after that; as many as are asked for.
+    // It opens at the size Search has as a card in Spread, or Search's own
+    // size elsewhere, and is an ordinary window after that.
+    Q_INVOKABLE bool popOutFilesWindow();
+    // The Files window last used brought forward, minimized or not; a new
+    // one where none is open.
     Q_INVOKABLE bool showFilesWindow();
+    // How a Files window gets a Files of its own; without it, there is one
+    // window, sharing Search's.
+    void setFileBrowserMaker(std::function<std::unique_ptr<FileBrowser>()> make) { m_makeFileBrowser = std::move(make); }
     // Files' window is awaited in Spread as an application started from
     // Search is, and takes Search's card.
     Q_INVOKABLE bool beginGuestFilesLaunch();
@@ -168,6 +185,7 @@ public Q_SLOTS:
     // The dock's band changed, or moved to another display, while Search is
     // shown; hidden, it reads the band again as it opens.
     void dockExtentUpdated();
+    void contextBarUpdated();
     void bridgeLost();
 
     Q_SCRIPTABLE void toggle();
@@ -239,8 +257,24 @@ private:
     // The band Shuffle's dock reserves on Search's display, asked without
     // waiting; until it answers, the band last read stands.
     void readDockBand();
+    void readContextBar();
+    void askContextBar(const QString &outputName, quint64 generation, int timeout);
     void floatOn(const QString &outputName);
-    void tryBeginGuest();
+    // Puts Search's surface on a display. Qt's own idea of the window's
+    // display can drift from the output its surface was placed on, so Search
+    // keeps the display it chose and measures by it.
+    void placeOn(QScreen *screen);
+    QScreen *placedScreen() const;
+    // Asks Kadunce, without waiting on it, whether it takes Search into
+    // Spread. Search shows once it answers, or on its own once GuestWait has
+    // passed; an answer that comes after that is given back.
+    void askGuest();
+    void takeGuest(const QByteArray &answer);
+    void present();
+    // Shown, or on its way to being shown.
+    bool openOrOpening() const;
+    // A step that needs Search shown: run at once where it is, or as it shows.
+    void whenShown(std::function<void()> step);
     void endGuestLease();
     // What is open, read again: from Kadunce where it answers, otherwise from
     // Plasma's window list.
@@ -250,6 +284,7 @@ private:
     void watchScreen(QScreen *screen);
 
     QQuickView *m_view;
+    QPointer<QScreen> m_screen;
     KRunner::RunnerManager *m_runnerManager;
     OmniResults *m_results;
     RelatedInfo m_related;
@@ -276,6 +311,11 @@ private:
     QRect m_guestRect;
     QRect m_compactGuestRect, m_activeGuestRect;
     int m_dockBand = 0;
+    // The Context Bar's height along the top of Search's display.
+    int m_contextBar = 0;
+    quint64 m_barGeneration = 0;
+    // A read that went unanswered is asked once more before it is given up.
+    bool m_barRetried = false;
     quint64 m_dockGeneration = 0;
     bool m_drawerExpanded = false;
     bool m_requestedExpanded = false;
@@ -284,9 +324,35 @@ private:
     quint64 m_presentationGeneration = 0;
     bool m_guestMode = false;
     bool m_guestAllowed = true;
+    // Opened, and waiting on Kadunce's answer before it shows.
+    bool m_opening = false;
+    // A guest asked for and not yet answered.
+    bool m_guestAsking = false;
+    // Kadunce's guest protocol as it last answered, asked once for each
+    // Kadunce; 0 until it answers.
+    int m_guestProtocol = 0;
+    quint64 m_guestGeneration = 0;
+    QTimer m_guestWait;
+    QList<std::function<void()>> m_whenShown;
     quint64 m_contextGeneration = 0;
     QString m_launchToken;
-    std::unique_ptr<QQuickView> m_filesWindow;
+    struct FilesWindow {
+        std::unique_ptr<FileBrowser> browser;
+        // Declared after the Files it shows, so it goes first.
+        std::unique_ptr<QQuickView> view;
+        FileBrowser *files(FileBrowser *shared) const { return browser ? browser.get() : shared; }
+    };
+    FilesWindow *frontFilesWindow() const;
+    // The Files that requests from elsewhere go to: the window last used,
+    // while one is open, or Search's.
+    FileBrowser *filesTarget() const;
+    bool filesWorking() const;
+    void watchFiles(FileBrowser *browser, FilesWindow *window);
+    // Closed windows are kept, hidden, while their Files finishes a copy,
+    // and are used again for the next window.
+    std::vector<std::unique_ptr<FilesWindow>> m_filesWindows;
+    QPointer<QQuickView> m_lastFilesWindow;
+    std::function<std::unique_ptr<FileBrowser>()> m_makeFileBrowser;
     QString m_launcherApplicationId;
     QStringList m_startedWith;
     const QDateTime m_programModified;

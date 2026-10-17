@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include <KConfigGroup>
+#include "shared/PanelRoom.h"
 
+#include <KConfigGroup>
 #include <Plasma/Applet>
 #include <QList>
 #include <QStringList>
@@ -64,7 +65,6 @@ Q_SIGNALS:
     void pearlDoorsChanged();
 
 private:
-    void watchGeometryItem(QQuickItem *item);
     // One of the widget's settings as main.xml declares it, read where its
     // settings page and Shuffle Settings both write it.
     bool setting(const QString &key, bool fallback);
@@ -99,8 +99,7 @@ private:
     QVariantList m_ambientActivities;
     QStringList m_pearlDoors{QStringLiteral("apps"), QStringLiteral("files")};
     void setPearlDoors();
-    QList<QPointer<QQuickItem>> m_watchedGeometryItems;
-    bool m_watchingContainment = false;
+    suite::PanelWatch m_panelWatch;
     std::shared_ptr<ActivityModel> m_activities;
     std::shared_ptr<LauncherKeys> m_keys;
 };

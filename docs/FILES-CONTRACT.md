@@ -146,25 +146,32 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
 
 ## Files' own window
 
-- Pop out moves Files out of Search into an ordinary window in the same
-  process, on the same `FileBrowser`, so tabs, folder, selection, clipboard and
-  running jobs carry over untouched. It opens at the size Search has as a card
-  inside Kadunce's Spread, or at Search's own size elsewhere, and is resized
-  and moved as any window is.
-- The window's application identity is `io.github.carlsonjm.Tettegouche.Files`,
-  Files' own entry, so the dock and Plasma's window list name it Files, and
-  Kadunce takes it as a card rather than as the launcher's surface. Inside
-  Spread it is awaited as a launch from Search is and takes Search's card.
-- While the window is open, every way to Files reaches it instead of Search:
-  Files in Search, `Meta+E`, a folder or file another application asks to
-  show, a drive, and a question a copy asks. Search itself opens as usual.
-  Closing the window returns Files to Search.
+- Pop out opens Files in an ordinary window in the same process, starting with
+  the tabs, folder and view Files in Search has, and Search closes. Each window
+  has a `FileBrowser` of its own after that, so Pop out again opens another
+  window, as many as are asked for. Only Files in Search remembers its tabs
+  for the next start. A window opens at the size Search has as a card inside
+  Kadunce's Spread, or at Search's own size elsewhere, and is resized and
+  moved as any window is.
+- The windows' application identity is `io.github.carlsonjm.Tettegouche.Files`,
+  Files' own entry, so the dock and Plasma's window list name them Files, and
+  Kadunce takes each as a card rather than as the launcher's surface. Inside
+  Spread a window is awaited as a launch from Search is and takes Search's
+  card.
+- Files in Search opens Files in Search, whatever windows are open. While a
+  window is open, `Meta+E`, a folder or file another application asks to show,
+  and a drive reach the window last used instead, brought forward and back
+  from minimized. A question a copy asks comes back to the Files that started
+  the copy.
+- Each window's copies and moves are told to Ambient with Search's. A window
+  closed during a copy is kept, hidden, until the copy finishes, and windows
+  closed are used again for the next Pop out.
 
 ## Lifecycle and activity
 
 - Closing or handing off hides the launcher and releases its Kadunce guest
   immediately. An outstanding job defers process exit until it finishes, as
-  Files' open window does until it closes. A job that meets a name already
+  an open Files window does until it closes. A job that meets a name already
   taken while the launcher is closed reopens it on Files to ask.
 - Reopening cancels deferred quit and restores current operation status. Late
   errors remain available to the reopened process.

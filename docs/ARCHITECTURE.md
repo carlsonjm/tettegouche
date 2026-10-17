@@ -1,6 +1,6 @@
 # Architecture
 
-Tettegouche 0.2.0 has two lifetimes: a persistent Plasma panel applet and an
+Tettegouche 1.1.0 has two lifetimes: a persistent Plasma panel applet and an
 on-demand launcher process. The applet owns the panel's launcher dot and the
 Ambient island. The launcher owns search, Apps, local Files state
 and the temporary layer-shell surface. It stays fully useful without Kadunce,
@@ -36,8 +36,8 @@ process ready, so the next open shows at once; it releases its graphics
 resources, skips workspace updates while hidden, and tells the applet it hid.
 It ends instead when its program was replaced since it started, when
 `tettegoucherc` `[Launcher] StayReady=false`, or when an applet whose settings
-changed asks it to leave for them. Files' own window keeps it until the window closes. That window is an ordinary one beside
-the layer-shell surface, sharing its QML engine and `FileBrowser`
+changed asks it to leave for them. An open Files window keeps it until the window closes. Each is an ordinary window beside
+the layer-shell surface, sharing its QML engine, with a `FileBrowser` of its own
 ([FILES-CONTRACT.md](FILES-CONTRACT.md) § Files' own window).
 
 The on-screen keys lie over the launcher and reserve no space. The launcher
@@ -92,12 +92,21 @@ Source applications and KDE services own activity truth and supported actions.
 Temperance owns notifications and transient event presentation; Tettegouche does
 not duplicate that history in Ambient.
 
+`src/shared` holds the code Tettegouche and Temperance both run: whether Shuffle
+is installed, Configure opening Shuffle Settings, and the room a widget has along
+its panel. It changes here. Temperance builds from a byte-for-byte copy that its
+`tools/shared.sh` records and checks, so one change reaches both widgets.
+
 ## Kadunce integration
 
 At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads
-workspace-context schema version 1; no other versions are accepted. Unsupported,
-absent, or malformed endpoints fall back to the standalone launcher; a declined
-guest that names an output floats the launcher on that display. Context
+workspace-context schema version 1; no other versions are accepted. The protocol
+is asked once for each Kadunce on the bus. Neither question waits: the launcher
+shows when Kadunce answers its guest, or on its own after half a second, so a
+busy KWin never holds it still, and a place Kadunce makes after that is given
+back. Unsupported, absent, or malformed endpoints fall back to the standalone
+launcher; a declined guest that names an output floats the launcher on that
+display. Context
 refreshes on Kadunce change signals and before window selection; there is no
 timer or heartbeat.
 
@@ -240,7 +249,11 @@ counts follow the language.
 - The Tette Dot is protected identity: a Ghost White (`#F8F8FF`) dot, 20 px,
   lit from above and a shade deeper toward its lower edge, centred in a 44 px
   touch square at the panel's start, with a thin ring round it while the
-  launcher is open. No icon family replaces or redraws it.
+  launcher is open. No icon family replaces or redraws it. A host may set
+  `pearlLook` to draw Lucide's search mark in its place, a stroke in the same
+  Ghost White at the same size and place; the touch square, ring and press are
+  the dot's either way ([AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) § Host
+  settings).
 - Search follows the window's colour scheme, and Ambient the Plasma style's
   colours. On a dark one they keep the suite's dark values; on a light one
   their ground and text are the theme's, and every wash, control and line is

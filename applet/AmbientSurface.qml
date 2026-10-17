@@ -37,6 +37,15 @@ Item {
     property bool opened: false
     // A player picked inside the open island, kept while it lasts.
     property string chosenPlayer: ""
+    // Where the group gathers in the width: centred, or against the start or
+    // the end, nearest whatever the host sets beside it.
+    property string align: "center"
+    // Each island a faint pill, or its words and glyphs on the panel alone.
+    // Where the panel is black the islands take its black either way.
+    property bool outlined: true
+    // The room between islands a host sets, held to 4 to 32 px; 0 leaves
+    // each look its own.
+    property int spacing: 0
 
     // Plasma's animation speed, read through Kirigami's durations: 1 at the
     // default, smaller when faster, 0 for instant. The band's travel, pieces
@@ -62,11 +71,30 @@ Item {
     // allows, 44 px across.
     readonly property real pillHeight: Math.max(24, Math.min(44, height - 8))
     readonly property real reach: Math.max(pillHeight, Math.min(44, height))
-    readonly property real gap: 8
-    readonly property real inset: 6
-    // Art, a ring or a mark sits as far from the island's edge as its top.
-    readonly property real lead: pillHeight - 2 * inset
+    // Outlined, a pill's edge parts one island from the next. Without one,
+    // only room does: three of Kirigami's large steps, the suite's 24 px
+    // between sections, more than any room inside an island. The group keeps
+    // the same room from whatever the host sets at the end it is gathered
+    // against, such as the dock. A host's spacing replaces both.
+    readonly property real gap: spacing !== 0 ? Math.max(4, Math.min(32, spacing))
+        : outlined ? 8 : 3 * Kirigami.Units.largeSpacing
+    readonly property real inset: outlined ? 6 : 0
+    readonly property real margin: outlined || align === "center" ? 0 : gap
+    // Art, a ring or a mark sits as far from the pill's edge as its top.
+    readonly property real lead: pillHeight - 12
     readonly property real artSize: Math.round(pillHeight * 0.68)
+    // A picture: album art, or the icon of a waiting application or a drive.
+    // In a pill it keeps to the pill. Without one it takes an application's
+    // place in Shuffle's dock: the dock's icon square is five sevenths of the
+    // band, and an application's artwork fills 42 of its 48. Art is a square
+    // with softened corners, 0.15 of its side, so a cover reads as a cover
+    // beside the icons' own shapes. Its words follow one large step away, the suite's room from an
+    // icon to its label; a column of words brings 6 px of its own.
+    readonly property int appSquare: Math.max(24, Math.round(height * 5 / 7))
+    readonly property int pictureSize: outlined ? artSize
+        : Math.min(pillHeight, Math.round(appSquare * 42 / 48))
+    readonly property real pictureCorner: outlined ? (artSize > 26 ? 8 : 6) : Math.round(pictureSize * 0.15)
+    readonly property real pictureLead: outlined ? lead : pictureSize + Kirigami.Units.largeSpacing - 6
     // Tall enough for a second line of words.
     readonly property bool tall: pillHeight >= 40
     readonly property int labelSize: tall ? 13 : 12
@@ -96,17 +124,20 @@ Item {
     property string room: ""
 
     readonly property bool alone: bandKinds.length === 1 && bandKinds[0] === "media"
-    readonly property var plan: IslandRoom.layout(bandKinds, room, width, measure, available, gap, pillHeight)
+    readonly property var plan: IslandRoom.layout(bandKinds, room, Math.max(0, width - margin), measure, available, gap, pillHeight)
     readonly property var folded: plan.folded
     readonly property string bubbleKind: folded.length > 0 ? folded[0] : ""
     readonly property int bubbleCount: folded.reduce((count, kind) => count
         + (kind === "transfer" ? running.length : kind === "arrived" ? endings.length
             : kind === "drive" ? drives.length : kind === "screen" ? screens.length
-            : kind === "waiting" ? waitings.length : 1), 0)
+            : kind === "waiting" ? waitings.length : kind === "core" ? cores.length : 1), 0)
     // The least the band needs: each island's first piece.
-    readonly property int minimumUsefulWidth: IslandRoom.minimumWidth(bandKinds, measure, available, gap)
+    readonly property int minimumUsefulWidth: {
+        const least = IslandRoom.minimumWidth(bandKinds, measure, available, gap);
+        return least > 0 ? least + margin : 0;
+    }
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
-        || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling
+        || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -166,7 +197,7 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland, coreIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -313,6 +344,17 @@ Item {
     readonly property string waitingQuestion: waitingShown && waitingShown.question ? waitingShown.question : ""
     readonly property string waitingIcon: waitingShown && waitingShown.icon ? waitingShown.icon : "application-x-executable"
 
+    // A fact from Split Rock's Core that wants attention, such as the drive
+    // filling up: its icon, what it is and how it stands, and what can be
+    // done. The newest shows; a tap opens the card that does it.
+    readonly property var cores: activities.filter(activity => activity.kind === "core")
+    readonly property var coreShown: cores.length > 0 ? cores[cores.length - 1] : null
+    readonly property string coreName: coreShown
+        ? (coreShown.line ? words.i18n("%1 · %2", coreShown.title, coreShown.line) : coreShown.title || "") : ""
+    readonly property string coreDetail: coreShown
+        ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
+    readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -358,6 +400,10 @@ Item {
         return column(name ? textWidth(strongMetrics, waitingName) : 0,
             question ? textWidth(smallMetrics, waitingQuestion) : 0, 180);
     }
+    function coreWords(name, detail) {
+        return column(name ? textWidth(strongMetrics, coreName) : 0,
+            detail ? textWidth(smallMetrics, coreDetail) : 0, 180);
+    }
     // Who receives the screen, on one line.
     function screenWords(who) {
         return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
@@ -369,7 +415,7 @@ Item {
     // time and player on the other, the sides alike so the controls stay put.
     // With nothing yet on one side, it keeps no empty half.
     function mediaStart(items) {
-        return (items.indexOf("art") >= 0 ? lead : 0) + mediaWords(items.indexOf("title") >= 0);
+        return (items.indexOf("art") >= 0 ? pictureLead : 0) + mediaWords(items.indexOf("title") >= 0);
     }
     function mediaEnd(items) {
         return mediaClock(items.indexOf("time") >= 0, items.indexOf("duration") >= 0)
@@ -397,13 +443,15 @@ Item {
             return 2 * inset + (has("mark") ? lead : 0) + (has("show") ? reach : 0)
                 + endingWordsWidth(has("name"), has("words"));
         if (kind === "drive")
-            return 2 * inset + (has("icon") ? lead : 0) + (has("open") ? openWidth() : 0)
+            return 2 * inset + (has("icon") ? pictureLead : 0) + (has("open") ? openWidth() : 0)
                 + driveWords(has("name"), has("size"));
         if (kind === "screen")
             return 2 * inset + (has("dot") ? dotWidth : 0) + screenWords(has("who"))
                 + (has("stop") ? pillWidth(stopLabel) : 0);
         if (kind === "waiting")
-            return 2 * inset + (has("icon") ? lead : 0) + waitingWords(has("name"), has("question"));
+            return 2 * inset + (has("icon") ? pictureLead : 0) + waitingWords(has("name"), has("question"));
+        if (kind === "core")
+            return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
         return 0;
     }
 
@@ -433,6 +481,8 @@ Item {
         case "screen.stop": return capability(screenShown, "stop");
         case "waiting.icon": case "waiting.name": return waitingShown !== null;
         case "waiting.question": return tall && waitingQuestion !== "";
+        case "core.icon": case "core.name": return coreShown !== null;
+        case "core.detail": return tall && coreDetail !== "";
         }
         return false;
     }
@@ -444,7 +494,8 @@ Item {
     function islandOf(kind) {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
             : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
-            : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland : null;
+            : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland
+            : kind === "core" ? coreIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -463,7 +514,8 @@ Item {
         const space = gap * Math.min(before, bubble.presence);
         if (kind === "fold") at = total + space;
         total += space + bubble.slotWidth;
-        return Math.round((width - total) / 2) + at;
+        const start = align === "start" ? margin : align === "end" ? width - margin - total : (width - total) / 2;
+        return Math.round(start) + at;
     }
 
     // The open island shows music, or every transfer, the ended ones included.
@@ -473,10 +525,11 @@ Item {
     // A drive's island is one tap: Files opens the drive, mounting it first.
     // A shared screen's island only tells, and stops: a tap opens nothing.
     // A waiting application's island brings the application forward, and its
-    // dialog with it.
+    // dialog with it. Core's island opens the card that does what it suggests.
     function open(kind) {
         if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
+        else if (kind === "core") invoke(coreShown, "open");
         else if (kind !== "screen") openRequested(openKind(kind));
     }
     // Where the open island grows from.
@@ -494,13 +547,16 @@ Item {
             ? words.i18n("%1 is waiting: %2, show it", waitingName, waitingQuestion)
             : words.i18n("%1 is waiting, show it", waitingName);
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
+        if (kind === "core") return coreShown && coreShown.actionText
+            ? words.i18n("%1, %2", coreName, coreShown.actionText) : coreName;
         return words.i18n("%1, open", endingName);
     }
     // What an island shows goes aside: the player it shows, or all it holds.
     function setAside(kind) {
         if (kind === "media") invoke(player, "setAside");
         else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives
-                : kind === "screen" ? screens : kind === "waiting" ? waitings : endings)
+                : kind === "screen" ? screens : kind === "waiting" ? waitings
+                : kind === "core" ? cores : endings)
             invoke(activity, "setAside");
     }
 
@@ -657,8 +713,8 @@ Item {
             onWidthChanged: if (!island.peeling) island.restWidth = width
             height: surface.pillHeight
             radius: height / 2
-            color: surface.opaque ? tone.surface : tone.wash(0.07)
-            border.width: 1
+            color: surface.opaque ? tone.surface : surface.outlined ? tone.wash(0.07) : "transparent"
+            border.width: surface.outlined ? 1 : 0
             border.color: tone.wash(0.10)
             opacity: Math.min(1, Math.max(0, island.pop) * 2) * island.fade
                 * (1 - Math.max(0, Math.min(1, (Math.abs(island.peel) - island.peelAll) / 80)))
@@ -900,13 +956,17 @@ Item {
         Piece {
             island: mediaIsland
             name: "art"
-            size: surface.lead
+            size: surface.pictureLead
+            // Centred in a pill; on the panel alone, at the island's edge
+            // with its words a step away.
             Art {
-                anchors.centerIn: parent
-                width: surface.artSize
-                height: surface.artSize
+                objectName: "ambient-media-art"
+                x: surface.outlined ? (parent.width - width) / 2 : 0
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.pictureSize
+                height: surface.pictureSize
                 activity: surface.player
-                corner: surface.artSize > 26 ? 8 : 6
+                corner: surface.pictureCorner
             }
         }
         Piece {
@@ -1155,12 +1215,16 @@ Item {
         Piece {
             island: driveIsland
             name: "icon"
-            size: surface.lead
+            size: surface.pictureLead
+            // On the panel alone, the drive's picture as large as a
+            // waiting application's.
             Kirigami.Icon {
                 objectName: "ambient-drive-icon"
-                anchors.centerIn: parent
-                width: surface.artSize > 26 ? 24 : 18
+                x: surface.outlined ? (parent.width - width) / 2 : (surface.pictureSize - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.outlined ? (surface.artSize > 26 ? 24 : 18) : surface.appSquare
                 height: width
+                roundToIconSize: surface.outlined
                 source: surface.driveShown && surface.driveShown.icon ? surface.driveShown.icon : "drive-removable-media"
             }
         }
@@ -1307,12 +1371,16 @@ Item {
         Piece {
             island: waitingIsland
             name: "icon"
-            size: surface.lead
+            size: surface.pictureLead
+            // On the panel alone, drawn as the dock draws an application:
+            // the whole icon square, its artwork filling a picture's place.
             Kirigami.Icon {
                 objectName: "ambient-waiting-icon"
-                anchors.centerIn: parent
-                width: surface.artSize > 26 ? 24 : 18
+                x: surface.outlined ? (parent.width - width) / 2 : (surface.pictureSize - width) / 2
+                anchors.verticalCenter: parent.verticalCenter
+                width: surface.outlined ? (surface.artSize > 26 ? 24 : 18) : surface.appSquare
                 height: width
+                roundToIconSize: surface.outlined
                 source: surface.waitingIcon
             }
         }
@@ -1342,6 +1410,51 @@ Item {
         }
     }
 
+    // A fact from Split Rock's Core: its icon, what it is and how it stands,
+    // and below, the detail and what can be done. The whole island is one
+    // tap, which opens the card that does it.
+    BandIsland {
+        id: coreIsland
+        kind: "core"
+        opens: surface.capability(surface.coreShown, "open")
+        Piece {
+            island: coreIsland
+            name: "icon"
+            size: surface.lead
+            Kirigami.Icon {
+                objectName: "ambient-core-icon"
+                anchors.centerIn: parent
+                width: surface.artSize > 26 ? 24 : 18
+                height: width
+                source: surface.coreIcon
+            }
+        }
+        Piece {
+            id: coreWordsPiece
+            island: coreIsland
+            shows: coreIsland.has("name") || coreIsland.has("detail")
+            size: surface.coreWords(coreIsland.has("name"), coreIsland.has("detail"))
+            Column {
+                x: 6
+                width: coreWordsPiece.inner
+                anchors.verticalCenter: parent.verticalCenter
+                Label {
+                    objectName: "ambient-core-name"
+                    width: parent.width
+                    visible: coreIsland.has("name")
+                    text: surface.coreName
+                    font.weight: Font.DemiBold
+                }
+                Detail {
+                    objectName: "ambient-core-detail"
+                    width: parent.width
+                    visible: coreIsland.has("detail")
+                    text: surface.coreDetail
+                }
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1355,8 +1468,10 @@ Item {
         width: surface.pillHeight
         height: surface.pillHeight
         radius: width / 2
-        color: surface.opaque ? tone.surface : tone.wash(0.07)
-        border.width: 1
+        // The fold keeps a faint ground without an outline, so its count
+        // still reads as one thing.
+        color: surface.opaque ? tone.surface : tone.wash(surface.outlined ? 0.07 : 0.12)
+        border.width: surface.outlined ? 1 : 0
         border.color: tone.wash(0.10)
         opacity: Math.min(1, Math.max(0, bubbleComes.pop) * 2)
         visible: opacity > 0 && !surface.opened
@@ -1406,6 +1521,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "waiting"
             source: surface.waitingIcon
+        }
+        Kirigami.Icon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 24 : 18
+            height: width
+            visible: surface.bubbleKind === "core"
+            source: surface.coreIcon
         }
         Rectangle {
             objectName: "ambient-bubble-count"

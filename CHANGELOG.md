@@ -5,6 +5,31 @@ provenance.
 
 ## Unreleased
 
+- Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
+  its place in Spread without waiting, and shows when Kadunce answers or after
+  half a second on its own; a place Kadunce makes after that is given back.
+- An application among Search's results has a sheet: touch and hold it, or
+  right-click it, for Uninstall…. Where Split Rock is installed, its Core
+  removes the application, from Apps' sheet too: it finds the package that
+  owns it and waits for a yes. Without Split Rock, the software centre opens
+  on it as before.
+- A host can draw the launcher's dot as a magnifying glass with
+  `pearlLook`; it changes as the setting does, and everything the dot does
+  stays the same. Unset, the dot is the pearl.
+- A host can set the room between islands, from 4 to 32 px, with
+  `islandSpacing`; it changes as the setting does. Unset, the islands keep
+  their spacing.
+- On Shuffle's band, where the islands draw no outline, album art and the
+  icons of a waiting application or a drive take the size of an application's
+  icon in the dock, art as a square with softened corners, and islands stand
+  clearly apart from each other and from the dock. Outlined islands are
+  unchanged.
+- Where Split Rock is installed, its Core can bring a fact to Ambient when it
+  needs attention, such as "Storage · 91% full": a tap opens the card that
+  acts on it, and setting it aside quiets it until it gets worse. Search finds
+  the same facts by their words, as "storage" or "disk", and opens Split
+  Rock's upkeep cards on their own: "update", "health", "what changed",
+  "install pdf editor". Without Split Rock nothing changes.
 - Restarting or removing the panel no longer ends Search: a copy running in
   Files, and Files' own window, carry on. A request made while Search is still
   starting, such as a second Meta+E or Show in Files, is answered once it is

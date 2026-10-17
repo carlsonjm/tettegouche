@@ -94,10 +94,23 @@ public:
     // Loads the software catalog once, in the background; softwareReady says
     // when it has. Until then canUninstall answers false.
     Q_INVOKABLE void prepareSoftware();
-    // Whether the software centre can show the application to be uninstalled:
+    // Whether the application can be uninstalled from its sheet: by Split
+    // Rock's Core where it removes apps, which finds the package that owns
+    // the application and asks for a yes; else by the software centre, where
     // one handles software links and its catalog lists the application.
     Q_INVOKABLE [[nodiscard]] bool canUninstall(int row) const;
     Q_INVOKABLE bool uninstall(int row);
+    // The same, for an application by its desktop file id, as Search finds
+    // it, hidden or not.
+    Q_INVOKABLE [[nodiscard]] bool canUninstallApplication(const QString &applicationId) const;
+    Q_INVOKABLE bool uninstallApplication(const QString &applicationId);
+    // What removes an application, by its desktop file id and name, and
+    // whether it is there now.
+    void setRemover(std::function<bool()> available, std::function<void(const QString &, const QString &)> remove)
+    {
+        m_canRemove = std::move(available);
+        m_remove = std::move(remove);
+    }
     // Whether KDE's menu editor is installed to open the application's menu
     // entry in.
     Q_INVOKABLE [[nodiscard]] bool canEdit(int row) const;
@@ -260,4 +273,6 @@ private:
     bool m_showHidden = false;
     std::unique_ptr<AppStream::Pool> m_software;
     bool m_softwareReady = false;
+    std::function<bool()> m_canRemove;
+    std::function<void(const QString &, const QString &)> m_remove;
 };

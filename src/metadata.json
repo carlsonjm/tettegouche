@@ -12,7 +12,7 @@
         "Icon": "co.goodinput.tettegouche-logo",
         "License": "GPL-2.0+",
         "Name": "Tettegouche",
-        "Version": "0.2.0"
+        "Version": "1.1.0"
     },
     "KPackageStructure": "Plasma/Applet",
     "X-Plasma-API-Minimum-Version": "6.0",

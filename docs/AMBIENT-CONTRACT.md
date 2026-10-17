@@ -27,7 +27,9 @@ Current sources are:
 - drives plugged in that nothing has mounted, from Solid (§ Drives);
 - a screen shared or recorded through Plasma's portal (§ Shared screen);
 - windows raising Plasma's attention flag, from Plasma's window list
-  (§ Waiting applications).
+  (§ Waiting applications);
+- a fact Split Rock's Core asks attention for, such as the drive filling up,
+  from Core's bus interface where Split Rock is installed (§ Core).
 
 Plasma's jobs model and window list come from Plasma's own libraries, which
 change between releases, so a build reads them only on the Plasma it was built
@@ -139,6 +141,23 @@ application and its dialog forward. It lasts while the flag does and leaves no
 line and no history. With several waiting, the island shows the newest. A
 window moving or restacking is not read.
 
+### Core
+
+Split Rock's Core watches the computer and decides, by its own fixed limits,
+when a fact deserves the island: a drive that has crossed a mark or is filling
+fast, never a fact merely restated. Ambient shows a fact only while Core says
+it wants the island, and asks Core nothing on a timer: it reads Core's facts
+when Core appears, the first question starting Core where Split Rock is
+installed, and follows `FactChanged` after that. A Core that speaks another
+version of its interface is left alone. The island shows the fact's icon, what
+it is and how it stands ("Storage · 91% full") and, below, its detail and what
+can be done ("45 GB free · Free up space"). A tap on the island, or on the
+bubble holding it, asks Core to open the card that acts on it; Core opens it
+and takes the fact off the island. Setting it aside tells Core it was
+dismissed, and Core stays quiet about it until it gets worse. Core owns the
+fact and its history; Ambient keeps neither. Without Split Rock there is no
+Core island and nothing else changes.
+
 ### Tette operations
 
 `FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
@@ -166,9 +185,11 @@ merely because the applet starts.
 
 Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
-screen (§ Shared screen) and applications waiting (§ Waiting applications). The islands sit side by side in the order
+screen (§ Shared screen), applications waiting (§ Waiting applications) and
+Core's facts (§ Core). The islands sit side by side in the order
 they arrived, an end in its transfer's place, the group centred in the width
-the panel hands Ambient. They are clear, so the panel shows through them. While
+the panel hands Ambient, or set against one end of it where the host asks
+(§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
 black, they take the Plasma style's ground, on a dark style the suite's black,
 `#141414`, the band's own, and melt into it. Their words and glyphs are the
@@ -181,7 +202,8 @@ The islands share the width by turns (`applet/IslandRoom.js`). Every island
 keeps its first piece; then each takes one more piece per turn in its own
 order, and stops at the first that does not fit. The newest island takes its
 turn first for 2.4 s; after that the more urgent goes first: a waiting
-application, a shared screen, a drive, a transfer's end, a transfer, then media. Names, such as a player or where
+application, a shared screen, a drive, a transfer's end, a transfer, media,
+then a fact from Core, which never takes room from what is happening now. Names, such as a player or where
 a transfer comes from, wait until every island has had the rest, so they are
 the first to go; a song's title and artist are not names. What cannot keep even
 its first piece folds into a round bubble after the islands, which counts what
@@ -196,6 +218,7 @@ together and settle without overshoot.
 | Drive | icon, size, Open, name |
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
+| Core | icon, what it is and how it stands, detail and what can be done |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title
@@ -218,6 +241,44 @@ ignoring spacers; with no widget there, it keeps only the island's core.
 Shuffle's band instead hands Ambient the whole of its side of the dock, so the
 islands never plan for room they will not get. It never pushes a centred dock off
 the display's centre. On a vertical panel only the launcher dot shows.
+
+### Host settings
+
+Six settings let a host lay the widget out around something of its own, such
+as a centred dock with a widget on each side. They are written by the host,
+not offered in the widget's settings, and their defaults are the widget as it
+is on an ordinary panel.
+
+| Setting | Values | Default |
+| --- | --- | --- |
+| `launcherPlacement` | `start`, the dot before the islands; `end`, after them; `none`, no dot, for a widget that shows islands alone | `start` |
+| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media | `all` |
+| `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
+| `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
+| `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
+| `pearlLook` | `pearl`, the Tette Dot; `magnifier`, a magnifying-glass mark in the dot's Ghost White, at its size and place, with nothing drawn behind or round it | `pearl` |
+
+With the dot at the end, the slide that brings the doors runs left from it,
+and the doors line up leftward from the dot. A widget with no dot has
+no shortcut, takes no keyboard focus and opens nothing when Plasma's launcher
+key is pressed; its islands open as any island does. While the panel prefers
+an opaque background, an island takes the style's ground whatever
+`islandOutline` says. A host that places two widgets, one showing media and one
+the others, shows every island exactly once.
+
+Without an outline, only room parts one island from the next: they stand
+24 px apart, three of Kirigami's large spacing, and the group keeps the same
+24 px from the end of its width it is set against, where the host places
+something of its own, such as the dock; centred, it keeps none.
+`islandSpacing`, where a host writes it, takes the place of both. Each island's
+pieces then start and end at its own edges. Album art, a waiting application's
+icon and a drive's take an application's place in Shuffle's dock, whose icon
+square is five sevenths of the band's height: art as large as an
+application's artwork in that square, 42 of its 48, which is 40 px in a 64 px
+band, a square with softened corners, 0.15 of its side; an icon
+drawn at the whole square, as the dock draws one. The words beside them begin
+8 px away. Outlined, art keeps to its pill, 68% of the island's height with
+8 px corners, and the icons are 24 px, each a little less on a short panel.
 
 ## Interaction and safety
 

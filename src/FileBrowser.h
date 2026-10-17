@@ -129,6 +129,17 @@ public:
     ~FileBrowser() override { *m_alive=false; save(); }
     void setThumbnailSource(ThumbnailSource source) { m_thumbnailSource=std::move(source); rebuild(); }
     void setDetailReader(DetailReader reader) { m_detailReader=std::move(reader); }
+    // A Files window of its own keeps its tabs to itself: only the Files in
+    // Search remembers them for the next start.
+    void setRemembered(bool remembered) { m_remembered=remembered; }
+    // Takes another Files' tabs, folder and view, as a window opened from it
+    // starts where it was.
+    void adopt(const FileBrowser &other) {
+        m_tabs=other.m_tabs; m_current=other.m_current; m_sort=other.m_sort;
+        m_hidden=other.m_hidden; m_filter=other.m_filter; m_tileSize=other.m_tileSize;
+        Q_EMIT tileSizeChanged();
+        refresh();
+    }
     // The drives beside the places; set by the launcher, which owns them.
     void setDevices(FileDevices *devices) {
         m_devices=devices;
@@ -1190,7 +1201,7 @@ private:
     quint64 m_listingGeneration=0;
     QList<Tab> m_tabs;
     int m_current=0, m_sort=0;
-    bool m_hidden=false, m_busy=false, m_opening=false;
+    bool m_hidden=false, m_busy=false, m_opening=false, m_remembered=true;
     bool m_selecting=false, m_restoring=false, m_searching=false, m_askRecentAgain=false;
     ThumbnailSource m_thumbnailSource;
     DetailReader m_detailReader;
@@ -1371,6 +1382,7 @@ private:
         });
     }
     void save() {
+        if(!m_remembered)return;
         // A search is not run again at startup; its tab comes back on its folder.
         QStringList paths;
         for(const auto &t:m_tabs) { const auto &p=t.history[t.index]; paths.append(kindOf(p)==Kind::Search ? searchFolderOf(p) : p); }

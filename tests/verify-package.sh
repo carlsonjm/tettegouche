@@ -64,7 +64,7 @@ rg -q '^Icon=co.goodinput.tettegouche-apps$' "${project_root}/io.github.carlsonj
 ! rg -q '^NoDisplay=true$' "${project_root}/io.github.carlsonjm.Tettegouche.Apps.desktop"
 rg -q 'K_PLUGIN_CLASS_WITH_JSON' \
     "${project_root}/src/TettegoucheApplet.cpp"
-rg -q 'No background service' "${project_root}/README.md"
+rg -qi 'no background service' "${project_root}/README.md"
 rg -q 'KF6::KIOGui' "${project_root}/CMakeLists.txt"
 rg -q 'KF6::Service' "${project_root}/CMakeLists.txt"
 

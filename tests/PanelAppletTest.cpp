@@ -155,6 +155,44 @@ private Q_SLOTS:
                  "The rendered control must contain a visible white dimple.");
     }
 
+    // The pearl unless a host asks for the magnifier, which takes the dot's
+    // size and place and leaves its button, ring and press as they are.
+    void pearlLookFollowsSettings()
+    {
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        m_face->setSize(QSizeF(44, 42));
+        QTest::qWait(20);
+        auto *button = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-button"));
+        auto *dot = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-dimple"));
+        auto *mark = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-magnifier"));
+        auto *ring = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-launcher-active-ring"));
+        QVERIFY(button);
+        QVERIFY(dot);
+        QVERIFY(mark);
+        QVERIFY(ring);
+        QVERIFY(dot->isVisible());
+        QVERIFY(!mark->isVisible());
+
+        configure(QStringLiteral("pearlLook"), QStringLiteral("magnifier"));
+        QTRY_VERIFY(mark->isVisible());
+        QVERIFY(!dot->isVisible());
+        QCOMPARE(mark->size(), dot->size());
+        QCOMPARE(mark->mapToItem(button, QPointF(mark->width() / 2, mark->height() / 2)),
+                 dot->mapToItem(button, QPointF(dot->width() / 2, dot->height() / 2)));
+        // A ring and a handle, and no tile or backing behind them.
+        QCOMPARE(mark->childItems().size(), 2);
+        QVERIFY(ring->parentItem() == button);
+        // The press is the dot's, whichever mark it shows.
+        const int before = launches().size();
+        const QPoint center = mark->mapToScene(QPointF(mark->width() / 2, mark->height() / 2)).toPoint();
+        QTest::mouseClick(m_window, Qt::LeftButton, Qt::NoModifier, center);
+        QTRY_COMPARE(launches().size(), before + 1);
+
+        configure(QStringLiteral("pearlLook"), QStringLiteral("pearl"));
+        QTRY_VERIFY(dot->isVisible());
+        QVERIFY(!mark->isVisible());
+    }
+
     void mouseAndTouchLaunch()
     {
         m_panel->setFormFactor(Plasma::Types::Horizontal);
@@ -281,6 +319,23 @@ private Q_SLOTS:
         QCOMPARE(ambient->x(), 44.0);
         QCOMPARE(ambient->width(), 256.0);
         m_face->setSize(QSizeF(44, 42));
+    }
+
+    // A host's spacing reaches the islands as it is written, held to 4 to
+    // 32 px; unset, the outlined islands keep 8.
+    void islandSpacingFollowsSettings()
+    {
+        auto *ambient = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-ambient-surface"));
+        QVERIFY(ambient);
+        QCOMPARE(ambient->property("gap").toReal(), 8.0);
+        configure(QStringLiteral("islandSpacing"), 12);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 12.0);
+        configure(QStringLiteral("islandSpacing"), 2);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 4.0);
+        configure(QStringLiteral("islandSpacing"), 40);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 32.0);
+        configure(QStringLiteral("islandSpacing"), 0);
+        QTRY_COMPARE(ambient->property("gap").toReal(), 8.0);
     }
 
     void configuredActivation()
@@ -676,7 +731,7 @@ private Q_SLOTS:
 private:
     // As Plasma's settings page and scripting both do: through the
     // configuration main.xml declares.
-    void configure(const QString &key, bool value)
+    void configure(const QString &key, const QVariant &value)
     {
         auto *item = static_cast<KCoreConfigSkeleton *>(m_applet->configScheme())->findItem(key);
         QVERIFY(item);

@@ -29,6 +29,7 @@
 
 #include <QCoreApplication>
 #include <QDBusConnection>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
@@ -53,9 +54,14 @@
 #include <QUuid>
 
 #include <algorithm>
+#include <utility>
 
 namespace
 {
+// How long Search waits on Kadunce's answer to its guest before it shows on
+// its own. Kadunce answers from KWin, which a busy moment can hold up.
+constexpr int GuestWait = 500;
+
 QDBusMessage bottomSurfaceMethod(const QString &method)
 {
     return QDBusMessage::createMethodCall(
@@ -72,6 +78,7 @@ LauncherController::LauncherController(QQuickView *view,
                                        QObject *parent)
     : QObject(parent)
     , m_view(view)
+    , m_screen(view->screen())
     , m_runnerManager(runnerManager)
     , m_results(results)
     , m_catalog(catalog)
@@ -83,6 +90,11 @@ LauncherController::LauncherController(QQuickView *view,
     m_lateQuit.setSingleShot(true);
     m_lateQuit.setInterval(1000);
     connect(&m_lateQuit, &QTimer::timeout, qApp, &QCoreApplication::quit);
+    m_guestWait.setSingleShot(true);
+    m_guestWait.setInterval(GuestWait);
+    connect(&m_guestWait, &QTimer::timeout, this, [this] {
+        if (m_opening) present();
+    });
     auto bus = QDBusConnection::sessionBus();
     Kadunce::follow(QStringLiteral("workspaceContextChanged"), this, SLOT(workspaceUpdated()));
     Kadunce::follow(QStringLiteral("bridgeUnavailable"), this, SLOT(bridgeLost()));
@@ -92,6 +104,9 @@ LauncherController::LauncherController(QQuickView *view,
     bus.connect(QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("/BottomSurface"),
                 QStringLiteral("co.goodinput.BottomSurface"), QStringLiteral("dockExtentChanged"),
                 this, SLOT(dockExtentUpdated()));
+    bus.connect(QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("/ContextBar"),
+                QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("clockExtentChanged"),
+                this, SLOT(contextBarUpdated()));
     auto *owner = new QDBusServiceWatcher(Kadunce::service(), bus,
         QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(owner, &QDBusServiceWatcher::serviceOwnerChanged, this,
@@ -108,14 +123,14 @@ LauncherController::~LauncherController() = default;
 void LauncherController::watchScreen(QScreen *screen)
 {
     const auto boundsChanged = [this, screen] {
-        if (screen != m_view->screen()) return;
+        if (screen != placedScreen()) return;
         const bool expanded = m_requestedExpanded;
         const bool chosen = m_expansionChosen;
         endGuestLease();
         m_requestedExpanded = expanded;
         m_expansionChosen = chosen;
         m_drawerExpanded = expanded && (chosen || tabletSurface());
-        m_view->resize(screen->geometry().size());
+        m_view->setGeometry(screen->geometry());
         readDockBand();
         Q_EMIT guestChanged();
     };
@@ -172,7 +187,8 @@ QVariantList LauncherController::relatedItems(int row)
 
 bool LauncherController::tabletSurface() const
 {
-    return m_view->screen() && m_view->screen()->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
+    const QScreen *screen = placedScreen();
+    return screen && screen->name().startsWith(QStringLiteral("eDP"), Qt::CaseInsensitive);
 }
 
 void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
@@ -229,9 +245,9 @@ void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
 
 QRect LauncherController::availableArea() const
 {
-    const auto *screen = m_view->screen();
+    const auto *screen = placedScreen();
     return screen ? workArea(screen->availableGeometry().translated(-screen->geometry().topLeft()),
-                             screen->geometry().size(), m_dockBand)
+                             screen->geometry().size(), m_dockBand, m_contextBar)
                   : QRect(0, 0, m_view->width(), m_view->height());
 }
 
@@ -242,6 +258,14 @@ bool LauncherController::resultIsOpen(int row) const
     return index.isValid() && m_context.applicationIsOpen(
         runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
         m_results->data(index, Qt::DisplayRole).toString());
+}
+
+QString LauncherController::resultApplicationId(int row) const
+{
+    const QModelIndex index = m_results->index(row, 0);
+    if (!index.isValid() || searchTier(m_results->getQueryMatch(index)) != 0) return {};
+    const QString id = QFileInfo(runnerApplicationId(m_results->getQueryMatch(index))).fileName();
+    return id.endsWith(QStringLiteral(".desktop")) && !id.startsWith(QStringLiteral("kcm_")) ? id : QString();
 }
 
 int LauncherController::activateIfOpen(int row)
@@ -307,6 +331,11 @@ void LauncherController::askPinned()
     });
 }
 
+void LauncherController::contextBarUpdated()
+{
+    readContextBar();
+}
+
 void LauncherController::dockExtentUpdated()
 {
     if (!m_view->isVisible()) return;
@@ -326,16 +355,21 @@ void LauncherController::bridgeLost()
     m_guestMode = false;
     m_guestRect = {};
     m_view->setMask(QRegion());
+    // A Kadunce gone answers nothing, and the next may speak another protocol.
+    ++m_guestGeneration;
+    m_guestAsking = false;
+    m_guestProtocol = 0;
     Q_EMIT contextChanged();
     Q_EMIT guestChanged();
     Q_EMIT guestBridgeLost();
+    if (m_opening) present();
     // Kadunce gone, what is open comes from Plasma's window list.
     if (m_view->isVisible() || filesWindowOpen()) refreshContext();
 }
 
 void LauncherController::toggle()
 {
-    if (m_view->isVisible()) close();
+    if (openOrOpening()) close();
     else open();
 }
 
@@ -343,7 +377,7 @@ void LauncherController::showDrive(const QString &id)
 {
     if (!m_fileBrowser) { open(); return; }
     showFiles();
-    m_fileBrowser->openDrive(id);
+    whenShown([this, id] { filesTarget()->openDrive(id); });
 }
 
 void LauncherController::showFile(const QString &file)
@@ -352,12 +386,14 @@ void LauncherController::showFile(const QString &file)
     if (!m_fileBrowser || !info.isAbsolute() || !info.isFile() || info.isSymLink()) { open(); return; }
     if (filesWindowOpen()) {
         showFilesWindow();
-        m_fileBrowser->reveal({info.absoluteFilePath()});
+        filesTarget()->reveal({info.absoluteFilePath()});
         return;
     }
     open();
-    m_fileBrowser->reveal({info.absoluteFilePath()});
-    Q_EMIT filesRequested();
+    whenShown([this, path = info.absoluteFilePath()] {
+        m_fileBrowser->reveal({path});
+        Q_EMIT filesRequested();
+    });
 }
 
 void LauncherController::showFolder(const QString &location)
@@ -381,12 +417,15 @@ void LauncherController::showFolders(const QStringList &locations)
     if (!elsewhere.isEmpty()) handOn(elsewhere);
     if (!m_fileBrowser || (folders.isEmpty() && !recent && phones.isEmpty())) return;
     showFiles();
-    if (recent) m_fileBrowser->navigate(FileBrowser::recentLocation());
-    for (int i = 0; i < folders.size(); ++i) {
-        if (i == 0 && !recent) m_fileBrowser->navigate(folders[i]);
-        else m_fileBrowser->openTab(folders[i]);
-    }
-    if (folders.isEmpty() && !recent) m_fileBrowser->openDrive(phones.first());
+    whenShown([this, folders, phones, recent] {
+        FileBrowser *files = filesTarget();
+        if (recent) files->navigate(FileBrowser::recentLocation());
+        for (int i = 0; i < folders.size(); ++i) {
+            if (i == 0 && !recent) files->navigate(folders[i]);
+            else files->openTab(folders[i]);
+        }
+        if (folders.isEmpty() && !recent) files->openDrive(phones.first());
+    });
 }
 
 void LauncherController::revealItems(const QStringList &locations)
@@ -402,24 +441,26 @@ void LauncherController::showItemProperties(const QStringList &locations)
 void LauncherController::openDrawer(const QString &drawer)
 {
     if (drawer == QLatin1String("files") && filesWindowOpen()) {
-        if (m_view->isVisible()) close();
+        if (openOrOpening()) close();
         showFilesWindow();
         return;
     }
-    if (!m_view->isVisible()) open();
+    if (!openOrOpening()) open();
     if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
         || drawer == QLatin1String("notes"))
-        Q_EMIT drawerRequested(drawer);
+        whenShown([this, drawer] { Q_EMIT drawerRequested(drawer); });
 }
 
 void LauncherController::open()
 {
     m_quitAfterFiles = false;
     m_lateQuit.stop();
+    if (m_opening) return;
+    m_opening = true;
     m_launchToken.clear();
     endGuestLease();
-    tryBeginGuest();
-    readDockBand();
+    m_guestRect = {};
+    m_view->setMask(QRegion());
     refreshContext();
     m_runnerManager->setupMatchSession();
     m_results->setQueryString(QString());
@@ -429,9 +470,31 @@ void LauncherController::open()
     }
     askPinned();
     if (m_notes) m_notes->refresh();
+    askGuest();
+}
+
+void LauncherController::present()
+{
+    m_opening = false;
+    m_guestWait.stop();
+    readDockBand();
+    Q_EMIT guestChanged();
     m_view->show();
     m_view->requestActivate();
     Q_EMIT opened();
+    const auto steps = std::exchange(m_whenShown, {});
+    for (const auto &step : steps) step();
+}
+
+bool LauncherController::openOrOpening() const
+{
+    return m_opening || m_view->isVisible();
+}
+
+void LauncherController::whenShown(std::function<void()> step)
+{
+    if (m_opening) m_whenShown.append(std::move(step));
+    else step();
 }
 
 bool LauncherController::leaveFor(const QStringList &settings)
@@ -441,8 +504,8 @@ bool LauncherController::leaveFor(const QStringList &settings)
     mine.sort();
     theirs.sort();
     // Shown, or holding Files' window, a copy or a carry, it stays as it is.
-    if (mine == theirs || m_view->isVisible() || filesWindowOpen() || m_carrying
-        || (m_fileBrowser && m_fileBrowser->working()))
+    if (mine == theirs || openOrOpening() || filesWindowOpen() || m_carrying
+        || filesWorking())
         return false;
     // After this answer has gone.
     QTimer::singleShot(0, qApp, &QCoreApplication::quit);
@@ -451,6 +514,9 @@ bool LauncherController::leaveFor(const QStringList &settings)
 
 void LauncherController::close()
 {
+    m_opening = false;
+    m_guestWait.stop();
+    m_whenShown.clear();
     endGuestLease();
     m_results->clear();
     m_runnerManager->matchSessionComplete();
@@ -458,10 +524,11 @@ void LauncherController::close()
     finishOrDeferQuit();
 }
 
-void LauncherController::carryOut(const QStringList &paths, const QRectF &sheet)
+void LauncherController::carryOut(const QStringList &paths, const QRectF &sheet, QObject *from)
 {
-    if (m_carrying || !m_fileBrowser) return;
-    QMimeData *mime = m_fileBrowser->carriedFiles(paths);
+    FileBrowser *files = from ? qobject_cast<FileBrowser *>(from) : m_fileBrowser;
+    if (m_carrying || !files) return;
+    QMimeData *mime = files->carriedFiles(paths);
     if (!mime) return;
     // KDE's document portal lets a sandboxed application read them too.
     KUrlMimeData::exportUrlsToPortal(mime);
@@ -529,7 +596,7 @@ void LauncherController::finishLaunch()
     endGuestLease();
     m_view->hide();
     QTimer::singleShot(750, this, [this]() {
-        if (m_view->isVisible()) return;
+        if (openOrOpening()) return;
         m_runnerManager->matchSessionComplete();
         finishOrDeferQuit();
     });
@@ -537,7 +604,7 @@ void LauncherController::finishLaunch()
 
 void LauncherController::leaveIfUnused()
 {
-    if (!m_view->isVisible()) finishOrDeferQuit(false);
+    if (!openOrOpening()) finishOrDeferQuit(false);
 }
 
 void LauncherController::updateGuestDrag(double horizontalDelta)
@@ -608,52 +675,101 @@ void LauncherController::cancelGuestApplicationLaunch()
 
 bool LauncherController::filesWindowOpen() const
 {
-    return m_filesWindow && m_filesWindow->isVisible();
+    return frontFilesWindow() != nullptr;
+}
+
+LauncherController::FilesWindow *LauncherController::frontFilesWindow() const
+{
+    FilesWindow *open = nullptr;
+    for (const auto &window : m_filesWindows) {
+        if (!window->view->isVisible()) continue;
+        if (window->view.get() == m_lastFilesWindow) return window.get();
+        open = window.get();
+    }
+    return open;
+}
+
+FileBrowser *LauncherController::filesTarget() const
+{
+    const FilesWindow *window = frontFilesWindow();
+    return window ? window->files(m_fileBrowser) : m_fileBrowser;
 }
 
 bool LauncherController::showFilesWindow()
 {
+    if (!filesWindowOpen()) return popOutFilesWindow();
+    m_lateQuit.stop();
+    raiseFilesWindow();
+    return true;
+}
+
+bool LauncherController::popOutFilesWindow()
+{
     if (!m_fileBrowser) return false;
     m_lateQuit.stop();
-    if (!m_filesWindow) {
-        m_filesWindow = std::make_unique<QQuickView>(m_view->engine(), nullptr);
-        m_filesWindow->setTitle(i18n("Files"));
-        m_filesWindow->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
-        m_filesWindow->setResizeMode(QQuickView::SizeRootObjectToView);
-        m_filesWindow->setMinimumSize(QSize(420, 320));
-        m_filesWindow->setInitialProperties({
-            {QStringLiteral("fileBrowser"), QVariant::fromValue<QObject *>(m_fileBrowser)},
-            {QStringLiteral("launcherController"), QVariant::fromValue<QObject *>(this)},
-        });
-        m_filesWindow->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
-        if (m_filesWindow->status() == QQuickView::Error) {
-            m_filesWindow.reset();
-            return false;
-        }
-        connect(m_filesWindow.get(), &QWindow::visibleChanged, this, [this](bool visible) {
-            if (!visible) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
-            Q_EMIT filesWindowChanged();
-            // Closed with Search gone too, the launcher's work is done.
-            if (!visible && !m_view->isVisible()) finishOrDeferQuit();
-        });
-    }
-    if (!m_filesWindow->isVisible()) {
-        const QRect area = availableArea();
-        const QSize size = m_guestMode && m_compactGuestRect.isValid()
-            ? m_compactGuestRect.size()
-            : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
-        m_filesWindow->resize(size.expandedTo(m_filesWindow->minimumSize()));
-        m_filesWindow->setScreen(m_view->screen());
-        // A window takes the application's identity as it is shown, and
-        // Files keeps it while its window is open.
-        m_launcherApplicationId = QGuiApplication::desktopFileName();
-        QGuiApplication::setDesktopFileName(QString::fromLatin1(FilesApplicationId));
-        m_filesWindow->show();
-        m_filesWindow->requestActivate();
-        Q_EMIT filesWindowChanged();
+    // Without a Files of its own to give each window, the one window shares
+    // Search's and is brought forward again.
+    if (!m_makeFileBrowser && filesWindowOpen()) {
+        raiseFilesWindow();
         return true;
     }
-    raiseFilesWindow();
+    FilesWindow *window = nullptr;
+    for (const auto &kept : m_filesWindows) {
+        if (!kept->view->isVisible() && !(kept->browser && kept->browser->working())) {
+            window = kept.get();
+            break;
+        }
+    }
+    if (!window) {
+        auto made = std::make_unique<FilesWindow>();
+        if (m_makeFileBrowser) {
+            made->browser = m_makeFileBrowser();
+            if (!made->browser) return false;
+            made->browser->setRemembered(false);
+        }
+        FileBrowser *files = made->files(m_fileBrowser);
+        made->view = std::make_unique<QQuickView>(m_view->engine(), nullptr);
+        QQuickView *view = made->view.get();
+        view->setTitle(i18n("Files"));
+        view->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
+        view->setResizeMode(QQuickView::SizeRootObjectToView);
+        view->setMinimumSize(QSize(420, 320));
+        view->setInitialProperties({
+            {QStringLiteral("fileBrowser"), QVariant::fromValue<QObject *>(files)},
+            {QStringLiteral("launcherController"), QVariant::fromValue<QObject *>(this)},
+        });
+        view->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
+        if (view->status() == QQuickView::Error) return false;
+        connect(view, &QWindow::visibleChanged, this, [this](bool visible) {
+            if (!visible && !filesWindowOpen()) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
+            Q_EMIT filesWindowChanged();
+            // The last closed with Search gone too, the launcher's work is done.
+            if (!visible && !m_view->isVisible()) finishOrDeferQuit();
+        });
+        connect(view, &QWindow::activeChanged, this, [this, view] {
+            if (view->isActive()) m_lastFilesWindow = view;
+        });
+        if (made->browser) watchFiles(made->browser.get(), made.get());
+        window = made.get();
+        m_filesWindows.push_back(std::move(made));
+    }
+    // It starts where Search's Files is.
+    if (window->browser) window->browser->adopt(*m_fileBrowser);
+    QQuickView *view = window->view.get();
+    const QRect area = availableArea();
+    const QSize size = m_guestMode && m_compactGuestRect.isValid()
+        ? m_compactGuestRect.size()
+        : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
+    view->resize(size.expandedTo(view->minimumSize()));
+    view->setScreen(placedScreen());
+    // A window takes the application's identity as it is shown, and Files
+    // keeps it while a window of its own is open.
+    if (!filesWindowOpen()) m_launcherApplicationId = QGuiApplication::desktopFileName();
+    QGuiApplication::setDesktopFileName(QString::fromLatin1(FilesApplicationId));
+    m_lastFilesWindow = view;
+    view->show();
+    view->requestActivate();
+    Q_EMIT filesWindowChanged();
     return true;
 }
 
@@ -742,14 +858,36 @@ void LauncherController::completeGuestNavigation(int slot)
 void LauncherController::setFileBrowser(FileBrowser *browser)
 {
     m_fileBrowser = browser;
+    watchFiles(browser, nullptr);
+}
+
+void LauncherController::watchFiles(FileBrowser *browser, FilesWindow *window)
+{
     connect(browser, &FileBrowser::operationChanged, this, [this] {
-        if (m_quitAfterFiles && !m_fileBrowser->working()) finishOrDeferQuit();
+        if (m_quitAfterFiles && !filesWorking()) finishOrDeferQuit();
     });
     // A copy that meets a name already taken waits for an answer; the
-    // launcher comes back to Files to ask it rather than wait unseen.
-    connect(browser, &FileBrowser::questionChanged, this, [this] {
-        if (!m_view->isVisible() && !m_fileBrowser->question().isEmpty()) showFiles();
+    // launcher comes back to the Files that started it to ask it rather
+    // than wait unseen.
+    connect(browser, &FileBrowser::questionChanged, this, [this, browser, window] {
+        if (browser->question().isEmpty()) return;
+        if (!window) {
+            if (m_view->isVisible()) return;
+            open();
+            whenShown([this] { Q_EMIT filesRequested(); });
+            return;
+        }
+        if (!window->view->isVisible()) window->view->show();
+        m_lastFilesWindow = window->view.get();
+        raiseFilesWindow();
     });
+}
+
+bool LauncherController::filesWorking() const
+{
+    if (m_fileBrowser && m_fileBrowser->working()) return true;
+    return std::any_of(m_filesWindows.cbegin(), m_filesWindows.cend(),
+                       [](const auto &window) { return window->browser && window->browser->working(); });
 }
 
 void LauncherController::setRecentUse(RecentUse *recent)
@@ -791,15 +929,20 @@ void LauncherController::showFiles()
         showFilesWindow();
         return;
     }
-    if (!m_view->isVisible()) open();
-    Q_EMIT filesRequested();
+    if (!openOrOpening()) open();
+    whenShown([this] { Q_EMIT filesRequested(); });
 }
 
 void LauncherController::raiseFilesWindow()
 {
+    FilesWindow *window = frontFilesWindow();
+    if (!window) return;
+    // Through the window list, which also brings a minimized window back;
+    // the window itself, where that list cannot.
     if (bringForward(QString::fromLatin1(FilesApplicationId), QString()) == 1) return;
-    m_filesWindow->raise();
-    m_filesWindow->requestActivate();
+    window->view->showNormal();
+    window->view->raise();
+    window->view->requestActivate();
 }
 
 void LauncherController::reveal(const QStringList &locations, bool properties)
@@ -814,7 +957,7 @@ void LauncherController::reveal(const QStringList &locations, bool properties)
     if (!elsewhere.isEmpty()) handOn(elsewhere);
     if (paths.isEmpty() || !m_fileBrowser) return;
     showFiles();
-    m_fileBrowser->reveal(paths, properties);
+    whenShown([this, paths, properties] { filesTarget()->reveal(paths, properties); });
 }
 
 void LauncherController::handOn(const QList<QUrl> &urls)
@@ -823,7 +966,9 @@ void LauncherController::handOn(const QList<QUrl> &urls)
     if (!dolphin) {
         if (!m_fileBrowser) return;
         showFiles();
-        m_fileBrowser->setStatus(i18n("Files cannot open %1, and Dolphin is not installed.", urls.first().toDisplayString()));
+        whenShown([this, place = urls.first().toDisplayString()] {
+            filesTarget()->setStatus(i18n("Files cannot open %1, and Dolphin is not installed.", place));
+        });
         return;
     }
     auto *job = new KIO::ApplicationLauncherJob(dolphin);
@@ -837,7 +982,7 @@ void LauncherController::finishOrDeferQuit(bool keepReady)
     m_quitAfterFiles = true;
     // Files' own window keeps the launcher, and with it Files, running.
     if (filesWindowOpen()) return;
-    if (m_carrying || (m_fileBrowser && m_fileBrowser->working())) return;
+    if (m_carrying || filesWorking()) return;
     // Closed, the launcher stays ready, hidden, so the next open shows at
     // once; it gives back what it drew with. One whose program was
     // replaced since it started leaves, so an update takes effect.
@@ -859,9 +1004,55 @@ bool LauncherController::stayReady() const
     return program.exists() && program.lastModified() == m_programModified;
 }
 
+// The Context Bar along the top of Search's display, which a full Search
+// stops below as it stops above the dock. Each display has its own bar, so a
+// display that has none takes none. Read with the dock's band, whenever that
+// is read.
+void LauncherController::readContextBar()
+{
+    const auto *screen = placedScreen();
+    const quint64 generation = ++m_barGeneration;
+    m_barRetried = false;
+    if (!screen) {
+        m_contextBar = 0;
+        return;
+    }
+    askContextBar(screen->name(), generation, 250);
+}
+
+// The bar's shell can be slow to answer, most of all just after sign-in. An
+// unanswered read keeps the height already known and asks once more, longer,
+// rather than letting a full Search run over the bar. Only an answer, or no
+// bar on the bus at all, sets it to none.
+void LauncherController::askContextBar(const QString &outputName, quint64 generation, int timeout)
+{
+    QDBusMessage request = QDBusMessage::createMethodCall(
+        QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("/ContextBar"),
+        QStringLiteral("co.goodinput.ContextBar"), QStringLiteral("clockExtent"));
+    request << outputName;
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, timeout), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, generation, outputName] {
+        watcher->deleteLater();
+        const QDBusPendingReply<QString> reply = *watcher;
+        if (generation != m_barGeneration) return;
+        if (reply.isError() && reply.error().type() != QDBusError::ServiceUnknown) {
+            if (!m_barRetried) {
+                m_barRetried = true;
+                askContextBar(outputName, generation, 1500);
+            }
+            return;
+        }
+        const int bar = reply.isError() ? 0 : contextBarHeight(reply.value().toUtf8());
+        if (bar == m_contextBar) return;
+        m_contextBar = bar;
+        Q_EMIT guestChanged();
+    });
+}
+
 void LauncherController::readDockBand()
 {
-    const auto *screen = m_view->screen();
+    readContextBar();
+    const auto *screen = placedScreen();
     if (!screen) {
         m_dockBand = 0;
         return;
@@ -907,54 +1098,98 @@ void LauncherController::floatOn(const QString &outputName)
 {
     if (outputName.isEmpty()) return;
     for (QScreen *screen : QGuiApplication::screens()) {
-        if (screen->name() != outputName || screen == m_view->screen()) continue;
-        m_view->setScreen(screen);
-        if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(screen);
-        m_view->resize(screen->geometry().size());
+        if (screen->name() != outputName) continue;
+        placeOn(screen);
         return;
     }
 }
 
-void LauncherController::tryBeginGuest()
+void LauncherController::placeOn(QScreen *screen)
+{
+    m_screen = screen;
+    m_view->setScreen(screen);
+    if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(screen);
+    // The whole display, where it sits: a window left at the origin is taken
+    // by Qt for whichever display is there.
+    m_view->setGeometry(screen->geometry());
+}
+
+QScreen *LauncherController::placedScreen() const
+{
+    return m_screen ? m_screen.data() : m_view->screen();
+}
+
+void LauncherController::askGuest()
 {
     m_guestMode = false;
-    m_guestRect = {};
-    m_view->setMask(QRegion());
-
     if (!m_guestAllowed) {
-        Q_EMIT guestChanged();
+        present();
         return;
     }
-
+    m_guestWait.start();
+    // An answer still on its way, asked by an open closed before it came,
+    // answers this open too: a second ask would cross with it.
+    if (m_guestAsking) return;
+    m_guestAsking = true;
+    const quint64 generation = m_guestGeneration;
+    const auto answered = [this, generation](QDBusPendingCallWatcher *watcher) {
+        watcher->deleteLater();
+        return generation == m_guestGeneration;
+    };
+    // Kadunce knows the launcher by its own connection's name. Its answer is
+    // heard however late it comes, so a place it made is always given back.
+    const auto begin = [this, answered] {
+        auto *watcher = new QDBusPendingCallWatcher(Kadunce::ask(QStringLiteral("beginLauncherGuest"),
+            {QDBusConnection::sessionBus().baseService()}), this);
+        connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, answered] {
+            if (!answered(watcher)) return;
+            m_guestAsking = false;
+            const QDBusPendingReply<QString> reply = *watcher;
+            takeGuest(reply.isError() ? QByteArray() : reply.value().toUtf8());
+        });
+    };
     // Only launcher-guest protocol 3 is spoken.
-    const QDBusReply<int> protocol = Kadunce::call(QStringLiteral("launcherGuestProtocolVersion"), {}, 350);
-    if (!protocol.isValid() || protocol.value() != 3) {
-        Q_EMIT guestChanged();
+    if (m_guestProtocol == 3) {
+        begin();
         return;
     }
+    auto *watcher = new QDBusPendingCallWatcher(
+        Kadunce::ask(QStringLiteral("launcherGuestProtocolVersion"), {}, 350), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, answered, begin] {
+        if (!answered(watcher)) return;
+        const QDBusPendingReply<int> reply = *watcher;
+        if (!reply.isError()) m_guestProtocol = reply.value();
+        if (m_guestProtocol == 3 && m_opening) {
+            begin();
+            return;
+        }
+        m_guestAsking = false;
+        takeGuest({});
+    });
+}
 
-    // Kadunce knows the launcher by its own connection's name.
-    const QDBusReply<QString> reply = Kadunce::call(QStringLiteral("beginLauncherGuest"),
-        {QDBusConnection::sessionBus().baseService()}, 700);
-    if (!reply.isValid()) {
-        Q_EMIT guestChanged();
-        return;
-    }
-
+void LauncherController::takeGuest(const QByteArray &answer)
+{
     QJsonParseError error;
-    const QJsonDocument document = QJsonDocument::fromJson(
-        reply.value().toUtf8(), &error);
+    const QJsonDocument document = QJsonDocument::fromJson(answer, &error);
     const QJsonObject root = document.object();
     const QJsonObject card = root.value(QStringLiteral("card")).toObject();
-    if (error.error != QJsonParseError::NoError
-        || root.value(QStringLiteral("protocol")).toInt() != 3
-        || !root.value(QStringLiteral("accepted")).toBool()
-        || card.isEmpty()) {
+    const bool accepted = error.error == QJsonParseError::NoError
+        && root.value(QStringLiteral("protocol")).toInt() == 3
+        && root.value(QStringLiteral("accepted")).toBool();
+    if (!m_opening) {
+        // Closed, or shown on its own, before Kadunce answered: the place it
+        // made in Spread is given back.
+        if (accepted) Kadunce::tell(QStringLiteral("endLauncherGuest"));
+        return;
+    }
+    if (!accepted || card.isEmpty()) {
+        if (accepted) Kadunce::tell(QStringLiteral("endLauncherGuest"));
         // Declined, Kadunce may name the display the person is working
         // on; the launcher floats there.
-        if (error.error == QJsonParseError::NoError)
+        else if (error.error == QJsonParseError::NoError)
             floatOn(root.value(QStringLiteral("output")).toString());
-        Q_EMIT guestChanged();
+        present();
         return;
     }
     m_guestMode = true;
@@ -970,13 +1205,11 @@ void LauncherController::tryBeginGuest()
     }
     if (!guestScreen) {
         endGuestLease();
-        Q_EMIT guestChanged();
+        present();
         return;
     }
 
-    m_view->setScreen(guestScreen);
-    if (auto *surface = LayerShellQt::Window::get(m_view)) surface->setScreen(guestScreen);
-    m_view->resize(guestScreen->geometry().size());
+    placeOn(guestScreen);
     const QRect globalCard(
         card.value(QStringLiteral("x")).toInt(),
         card.value(QStringLiteral("y")).toInt(),
@@ -994,14 +1227,14 @@ void LauncherController::tryBeginGuest()
         && QRect(QPoint(), guestScreen->geometry().size()).contains(m_activeGuestRect);
     if (!m_guestRect.isValid()) {
         endGuestLease();
-        Q_EMIT guestChanged();
+        present();
         return;
     }
     constexpr int InputSafety = 16;
     m_view->setMask(QRegion(m_guestRect.adjusted(
         -InputSafety, -InputSafety, InputSafety, InputSafety)));
     m_guestMode = true;
-    Q_EMIT guestChanged();
+    present();
 }
 
 void LauncherController::endGuestLease()

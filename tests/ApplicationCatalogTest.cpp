@@ -161,6 +161,34 @@ private Q_SLOTS:
         QVERIFY(!catalog.uninstall(rowOf(catalog, QStringLiteral("alpha.desktop"))));
     }
 
+    // Where Core removes apps, any application goes to it by its desktop
+    // file id and name, hidden ones too, and the software catalog is not
+    // waited for; without Core, nothing goes to it.
+    void uninstallsThroughCore()
+    {
+        ApplicationCatalog catalog;
+        bool coreThere = false;
+        QStringList asked;
+        catalog.setRemover([&coreThere] { return coreThere; },
+                           [&asked](const QString &id, const QString &name) { asked << id + QLatin1Char('|') + name; });
+        const int alpha = rowOf(catalog, QStringLiteral("alpha.desktop"));
+        QVERIFY(!catalog.canUninstall(alpha));
+        coreThere = true;
+        QVERIFY(catalog.canUninstall(alpha));
+        QVERIFY(catalog.canUninstallApplication(QStringLiteral("alpha.desktop")));
+        QVERIFY(!catalog.canUninstallApplication(QStringLiteral("nowhere.desktop")));
+        QVERIFY(catalog.uninstall(alpha));
+        QVERIFY(!catalog.uninstallApplication(QStringLiteral("nowhere.desktop")));
+        catalog.setHidden(alpha, true);
+        QVERIFY(catalog.uninstallApplication(QStringLiteral("alpha.desktop")));
+        QCOMPARE(asked.size(), 2);
+        QVERIFY(asked.first().startsWith(QStringLiteral("alpha.desktop|")));
+        QCOMPARE(asked.first(), asked.last());
+        catalog.setShowHidden(true);
+        catalog.setHidden(rowOf(catalog, QStringLiteral("alpha.desktop")), false);
+        QCOMPARE(catalog.hiddenCount(), 0);
+    }
+
     // With KDE's menu editor installed, an application can be edited there.
     void offersTheMenuEditor()
     {

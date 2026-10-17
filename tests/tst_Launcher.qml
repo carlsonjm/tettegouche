@@ -43,7 +43,7 @@ TestCase {
         property bool filesWindowOpen: false
         property bool filesWindowShows: true
         property int filesWindows: 0
-        function showFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
+        function popOutFilesWindow() { filesWindows++; if (filesWindowShows) filesWindowOpen = true; return filesWindowShows }
         property int filesLaunches: 0
         function beginGuestFilesLaunch() { filesLaunches++; return guestMode }
         property rect availableArea: Qt.rect(0, 0, 1000, 740)
@@ -108,6 +108,7 @@ TestCase {
         property int handoffs: 0
         function completeGuestHandoff() { handoffs++ }
         function searchWeb(text) { webSearches++; return true }
+        function resultApplicationId(row) { return row >= 0 && row < results.count ? (results.get(row).applicationId || "") : "" }
     }
     ListModel {
         id: results
@@ -148,6 +149,10 @@ TestCase {
         function prepareSoftware() { softwareAsked = true }
         function canUninstall(row) { return softwareReady && row === 1 }
         function uninstall(row) { uninstalled = row; return true }
+        property var removable: []
+        property string uninstalledApplication: ""
+        function canUninstallApplication(id) { return removable.indexOf(id) >= 0 }
+        function uninstallApplication(id) { uninstalledApplication = id; return true }
         property int edited: -1
         function canEdit(row) { return row === 1 }
         function edit(row) { edited = row; return true }
@@ -864,6 +869,52 @@ TestCase {
         query.text = ""
         launcher.submit()
         compare(controller.webSearches, 1)
+    }
+    // A found application's sheet uninstalls it; other results have none.
+    function test_resultSheetUninstalls() {
+        controller.opened()
+        const query = findChild(launcher, "search-query")
+        query.text = "vlc"
+        results.launches = 0
+        results.append({display: "VLC media player", decoration: "vlc", subtext: "Application", applicationId: "vlc.desktop"})
+        results.append({display: "vlc-notes.txt", decoration: "text-plain", subtext: "Document"})
+        catalog.removable = ["vlc.desktop"]
+        tryVerify(function() { return findChild(launcher, "result-1") !== null })
+        const sheet = findChild(launcher, "result-sheet")
+        const app = findChild(launcher, "result-0")
+        const file = findChild(launcher, "result-1")
+        verify(!sheet.opened)
+        mouseClick(file, file.width / 2, 31, Qt.RightButton)
+        wait(100)
+        verify(!sheet.opened)
+        mouseClick(app, app.width / 2, 31, Qt.RightButton)
+        tryCompare(sheet, "opened", true)
+        verify(catalog.softwareAsked)
+        compare(results.launches, 0)
+        const uninstall = findChild(launcher, "result-sheet-uninstall")
+        const closes = controller.closes
+        mouseClick(uninstall, uninstall.width / 2, uninstall.height / 2)
+        compare(catalog.uninstalledApplication, "vlc.desktop")
+        compare(controller.closes, closes + 1)
+        tryCompare(sheet, "opened", false)
+        // A hold opens it too, and opens nothing else.
+        const touch = touchEvent(launcher)
+        touch.press(0, app, app.width / 2, 31).commit()
+        wait(700)
+        touch.release(0, app, app.width / 2, 31).commit()
+        tryCompare(sheet, "opened", true)
+        compare(results.launches, 0)
+        sheet.close()
+        tryCompare(sheet, "opened", false)
+        // An application nothing can uninstall has no sheet.
+        catalog.removable = []
+        mouseClick(app, app.width / 2, 31, Qt.RightButton)
+        wait(100)
+        verify(!sheet.opened)
+        catalog.uninstalledApplication = ""
+        catalog.softwareAsked = false
+        results.clear()
+        query.text = ""
     }
     function test_bluetoothChildrenCollapse() {
         controller.opened()
@@ -2349,11 +2400,23 @@ TestCase {
         verify(controller.filesWindowOpen)
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        // With a Files window open, the Files pill opens Files here, and
+        // Search stays.
         const files = findChild(launcher, "files-pill")
         mouseClick(files, files.width / 2, files.height / 2)
+        compare(controller.filesWindows, 1)
+        compare(controller.closes, 1)
+        tryVerify(() => launcher.drawerOpen && launcher.filesMode)
+        // Pop out again opens another window.
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        popOut = findChild(launcher, "drawer-pop-out")
+        verify(popOut.visible)
+        mouseClick(popOut, popOut.width / 2, popOut.height / 2)
         compare(controller.filesWindows, 2)
         compare(controller.closes, 2)
-        verify(!launcher.drawerOpen)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
         controller.filesWindowOpen = false
 
         controller.guestMode = true

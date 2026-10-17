@@ -32,7 +32,8 @@ than repeat it.
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows on the way. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. |
-| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. |
+| Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its Helpers, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
+| Touch and hold an application among the results, or right-click it | Opens its sheet with Uninstall…, where it can be uninstalled: Split Rock's Core, where it is installed, opens Remove an app straight to the yes for the package that owns it, and nothing is removed until that yes; without Core, the software centre opens on it where it lists it. Other results have no sheet. |
 | Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …" | Searches the web in the browser. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
@@ -48,7 +49,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
-| Press the dot and slide right, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen above the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and Back leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and Back leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -86,7 +87,7 @@ than repeat it.
 | Touch and hold a folder's tile, or right-click it | Opens its sheet: Rename, which readies the name under its tile to change, where Enter or a tap elsewhere keeps the new name and Esc the old one; and Remove folder, which puts its applications back in Apps. |
 | Drag an application onto another, or onto a folder's tile or an application in an open folder | Makes a folder of the two, named for what they share where they share a kind, which starts open; or puts it in the folder. |
 | Drag a folder's tile out of Apps, or touch and hold it, then move | Carries its applications out of Search. Let go on Shuffle's dock and they are pinned there as one folder of the same name; anywhere else takes them as applications. |
-| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; Edit Application…, where KDE's menu editor is installed, which opens the application's entry there to change its name, icon or command for this person; and Uninstall…, where the software centre lists it, which opens it there. |
+| Touch and hold an application, or right-click it | Opens its sheet: the application's own actions, such as a new window, each starting afresh; Pin to dock, or Unpin from dock, where Shuffle's dock is there; Put in each folder it is not in, and Take out of folder when it is in one, which takes the folder away once one application is left; Hide, which takes it out of Apps and what was used lately while Search still finds it; Edit Application…, where KDE's menu editor is installed, which opens the application's entry there to change its name, icon or command for this person; and Uninstall…, which goes to Split Rock's Core where it is installed, as from the search results, else to the software centre where it lists the application. |
 | Drag an application out of Apps, or touch and hold it, then move | Carries the application out of Search. Let go on Shuffle's dock and it is pinned there; anywhere else that takes an application treats it as its own launcher would. |
 | Tap or click the sort button, a pill naming the order at the right of the row above the applications | Offers A to Z, Most used or Newest installed; the choice is kept. |
 | Tap or click New folder, beside the sort button | Asks for applications: a tap or Enter chooses one, or lets it go. Make folder, once two are chosen, gathers them into a new folder, which opens in place with its name ready to change. Cancel, Back or Esc leaves Apps as it was. |
@@ -125,8 +126,8 @@ than repeat it.
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
-| Tap or click Pop out, beside Expand | Files moves into a window of its own, with its tabs, folder and selection as they were, and Search closes. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
-| With Files in its own window: Files in Search, `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window forward and shows what was asked there; Search does not open Files. Closing the window returns Files to Search. |
+| Tap or click Pop out, beside Expand | Files opens in a window of its own, with its tabs and folder as they were, and Search closes. Each Pop out opens another window. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
+| With a Files window open: `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window last used forward, back from minimized, and shows what was asked there. Files in Search still opens Files in Search. |
 | In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
@@ -187,12 +188,13 @@ than repeat it.
 | Tap or click the folder on an arrival's island | Opens Files at the file, selected. |
 | Tap or click a drive's island, or its Open | Files opens the drive, mounting it first. |
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
+| Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click another island away from its controls | Opens it in place, larger. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
-| Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now. |
+| Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |
 | With an island focused, Delete | Sets it aside. |
-| Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward. |
+| Tap or click the bubble after the islands | Opens the island on what the bubble holds; holding a waiting application, brings it forward; holding a Core fact, opens its card. |
 | With an island or the bubble focused, Enter or Space | Does what a tap on it does. |
 | In the open island, drag or tap along the track | Moves the media to that point, when the player allows it. |
 | In the open island, with the track focused, Left or Right | Moves the media five seconds back or ahead, when the player allows it. |
