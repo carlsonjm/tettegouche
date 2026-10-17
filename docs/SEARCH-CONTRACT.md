@@ -6,11 +6,34 @@ tested against unrelated examples, before it lands. Its inputs are in [INPUT.md]
 
 ## First screen
 
-Before anything is typed, Search offers its doors, Apps and Files, then Notes
-where Gooseberry is installed, centred under the field, and on a row below them
-what was used lately, newest first: at most six, as many as the field's width
-holds, centred as one group. A sheet too short for the second row keeps the
-doors alone. Its source is KDE's record of use for the current activity, read when
+Search's modes run along its top on every screen, one row above the field: the
+dot for this first screen, then Apps, Files and, where Gooseberry is installed,
+Notes. The grey pill marks the mode shown, and a tap moves straight to another;
+the dot comes back here with what was typed. The window's own buttons end
+that row: Expand while Apps or Files is open, Pop out in Files, and Close,
+last; at rest, Close alone. The field is the same on every screen: a pill
+44 tall on the row's own edges, the dot's pill starting where it starts and
+Close ending where it ends, 16 below the row, with 24 between everything and
+the sheet's edge, so only what is under it changes. Before anything is typed,
+what was used lately is under it in two labelled sections, each newest first:
+Recent apps, a row of eight icons with their whole names, and Recent files,
+eight cards in two rows of four, each with its picture or its kind's icon,
+its name, its folder and when it was used. See all at a section's end opens
+Apps or Files. A narrow sheet shows fewer applications and fewer columns of
+files rather than smaller ones. Sizes and spacing follow Kadunce's
+`docs/ITASCA-VISUAL-LANGUAGE.md`.
+
+How tall Search rests depends on which sections are on: with neither, the
+sheet holds the modes and the field alone, and is only as wide as the field
+needs; with one, it is as tall as that
+section; with both, it is its full height. Floating, Search is one size
+on every display, 840 wide and at most as tall as both sections, so a large
+desktop screen shows it no bigger than the tablet does; only a smaller screen
+trims it. It is centred on the screen at
+rest, and typing, a drawer or a mode grows it to its full height downward
+from there, moving up only as far as the screen's edge needs. Inside Spread,
+Kadunce sets its size; with neither section on, the field rests in the middle
+of it. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
 
@@ -19,10 +42,13 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 - A file is offered while it exists on this machine; a folder, a hidden file and
   anything remote are not.
 - Nothing is offered while the screen is shared or recorded, so no file's name
-  is on show; the doors stay.
+  is on show; the modes stay.
 - Typing hands the room to the results.
-- The widget's setting "Show recent files and apps", off, leaves the doors
-  alone, and nothing is read.
+- The widget's settings "Recent apps" and "Recent files" each turn their
+  section on, both by default. With both off nothing is read; an older
+  setting "offerRecent" off counts as both off.
+- A section that is on with nothing to show says so in a line, and keeps its
+  room, so Search's size does not depend on what the record holds.
 
 ### Notes
 
@@ -32,12 +58,11 @@ application, and Tettegouche works without it.
 
 - Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
   is installed with its Capture action, looked for each time Search opens and
-  whenever KDE's application list changes. Without it, the first screen has
+  whenever KDE's application list changes. Without it, the row of modes has
   no Notes.
 - Notes opens in the same window with the drawer's motion: the field becomes
   the note pad, the pills fade, and Back, the note's five colours and the
-  corner, Expand, Pop out and Close, come into the header where Apps has Back and
-  its corner. The window keeps its size. Folder, Stuck to, Saved as you go, Tuck away and Done sit
+  corner, Expand, Pop out and Close, come into a header of its own. The window keeps its size. Folder, Stuck to, Saved as you go, Tuck away and Done sit
   under the pad. Back or `Esc` returns to Search and the note stays open, so
   Notes resumes it; Done and Tuck away finish it and Search closes.
 - Folder and Stuck to are Gooseberry's own card's two chips, each showing

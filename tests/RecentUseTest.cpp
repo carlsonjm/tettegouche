@@ -14,6 +14,7 @@
 #include <KSycoca>
 
 #include <QCoreApplication>
+#include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QSignalSpy>
@@ -81,7 +82,7 @@ private Q_SLOTS:
         QDir().mkpath(home(QStringLiteral("Projects")));
     }
 
-    // Newest first, applications and files together. Left out: a folder, a
+    // The applications, then the files, each newest first. Left out: a folder, a
     // file that is gone or hidden, anything not on this machine, an
     // application that is hidden from menus, unknown or Tettegouche itself,
     // and a second use of the same thing.
@@ -110,14 +111,19 @@ private Q_SLOTS:
         });
         QSignalSpy counted(&recent, &RecentUse::countChanged);
         recent.refresh();
-        QCOMPARE(names(recent), (QStringList{QStringLiteral("Alpha"), QStringLiteral("photo.png"),
-                                             QStringLiteral("Beta"), QStringLiteral("notes.txt")}));
+        QCOMPARE(names(recent), (QStringList{QStringLiteral("Alpha"), QStringLiteral("Beta"),
+                                             QStringLiteral("photo.png"), QStringLiteral("notes.txt")}));
         QCOMPARE(counted.count(), 1);
+        QCOMPARE(recent.applicationCount(), 2);
         QCOMPARE(role(recent, 0, RecentUse::KindRole), QStringLiteral("application"));
         QCOMPARE(role(recent, 0, RecentUse::IconRole), QStringLiteral("alpha-icon"));
-        QCOMPARE(role(recent, 1, RecentUse::KindRole), QStringLiteral("file"));
-        QCOMPARE(role(recent, 1, RecentUse::ThumbnailRole),
+        QVERIFY(role(recent, 0, RecentUse::WhereRole).isEmpty());
+        QCOMPARE(role(recent, 2, RecentUse::KindRole), QStringLiteral("file"));
+        QCOMPARE(role(recent, 2, RecentUse::ThumbnailRole),
                  QStringLiteral("thumb:") + home(QStringLiteral("Pictures/photo.png")));
+        // A file says the folder it is in, and when it was used.
+        QCOMPARE(role(recent, 2, RecentUse::WhereRole), QStringLiteral("Pictures"));
+        QCOMPARE(recent.data(recent.index(2), RecentUse::WhenRole).toDateTime(), QDateTime::fromSecsSinceEpoch(140));
         QCOMPARE(role(recent, 3, RecentUse::IconRole), QStringLiteral("text-plain"));
         QVERIFY(role(recent, 3, RecentUse::ThumbnailRole).isEmpty());
         // What a row opens: an application its own, a file its usual one.
@@ -156,23 +162,44 @@ private Q_SLOTS:
         QCOMPARE(recent.count(), 2);
     }
 
-    // More than a row ever shows is never kept.
+    // More than the first screen ever shows is never kept: eight files.
     void keepsAFew()
     {
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 24; ++i) {
             write(home(QStringLiteral("Documents/file-%1.txt").arg(i)), "x");
         }
         RecentUse recent;
         recent.setReader([] {
             QList<RecentUse::Used> record;
-            for (int i = 0; i < 12; ++i) {
+            for (int i = 0; i < 24; ++i) {
                 record.append({home(QStringLiteral("Documents/file-%1.txt").arg(i)), uint(100 + i)});
             }
+            record.append({QStringLiteral("applications:alpha.desktop"), 10});
             return record;
         });
         recent.refresh();
-        QCOMPARE(recent.count(), RecentUse::Kept);
-        QCOMPARE(names(recent).first(), QStringLiteral("file-11.txt"));
+        QCOMPARE(recent.count(), RecentUse::FilesKept + 1);
+        QCOMPARE(recent.applicationCount(), 1);
+        QCOMPARE(names(recent).at(1), QStringLiteral("file-23.txt"));
+    }
+
+    // A section a setting leaves out is never filled.
+    void offersOnlyWhatIsOn()
+    {
+        RecentUse recent;
+        recent.setReader([] {
+            return QList<RecentUse::Used>{
+                {QStringLiteral("applications:alpha.desktop"), 30},
+                {home(QStringLiteral("Documents/notes.txt")), 20},
+            };
+        });
+        recent.setOffered(false, true);
+        recent.refresh();
+        QCOMPARE(names(recent), QStringList{QStringLiteral("notes.txt")});
+        QCOMPARE(recent.applicationCount(), 0);
+        recent.setOffered(true, false);
+        QCOMPARE(names(recent), QStringList{QStringLiteral("Alpha")});
+        QCOMPARE(recent.applicationCount(), 1);
     }
 
     // A file gone since Search opened opens nothing.
@@ -199,7 +226,7 @@ int readRecord()
     writeApplications();
     RecentUse recent;
     recent.refresh();
-    const QStringList expected{QStringLiteral("last.txt"), QStringLiteral("Alpha"), QStringLiteral("first.txt")};
+    const QStringList expected{QStringLiteral("Alpha"), QStringLiteral("last.txt"), QStringLiteral("first.txt")};
     if (names(recent) != expected) {
         fprintf(stderr, "read %s, expected %s\n", qPrintable(names(recent).join(u", ")), qPrintable(expected.join(u", ")));
         return 1;

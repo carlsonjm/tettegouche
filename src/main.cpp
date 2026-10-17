@@ -149,10 +149,12 @@ bool forwardOrTakeOver(QLockFile &lock, const QString &method, const QVariantLis
 QStringList settingsIn(const QStringList &arguments)
 {
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
+                               QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
                                QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
-        if (settings.contains(argument) && !given.contains(argument)) given.append(argument);
+        if (settings.contains(argument) && !given.contains(argument))
+            given.append(argument);
     }
     return given;
 }
@@ -284,9 +286,15 @@ int main(int argc, char **argv)
     // Where Kadunce does not say what is open, Plasma's window list does.
     OpenWindows openWindows(OpenWindows::plasmaWindowList(view.engine()));
     controller.setOpenWindows(&openWindows);
-    // With the setting off, nothing used lately is read or offered.
-    const bool offerRecent = !application.arguments().contains(QStringLiteral("--no-recent"));
+    // Recent apps and recent files each have a setting; with both off,
+    // nothing used lately is read or offered.
+    const bool recentApps = !application.arguments().contains(QStringLiteral("--no-recent"))
+        && !application.arguments().contains(QStringLiteral("--no-recent-apps"));
+    const bool recentFiles = !application.arguments().contains(QStringLiteral("--no-recent"))
+        && !application.arguments().contains(QStringLiteral("--no-recent-files"));
+    const bool offerRecent = recentApps || recentFiles;
     RecentUse recent;
+    recent.setOffered(recentApps, recentFiles);
     recent.setThumbnails([](const QString &path, const QString &mimeType, qint64 modified) {
         return FileThumbnails::covers(mimeType) ? FileThumbnails::source(path, mimeType, modified) : QString();
     });
@@ -349,6 +357,9 @@ int main(int argc, char **argv)
         // What is not offered is passed as null; an empty QVariant would
         // reach QML as undefined, which its "!== null" checks let through.
         {QStringLiteral("recentUse"), QVariant::fromValue<QObject *>(offerRecent ? &recent : nullptr)},
+        // Which sections the first screen shows, and so how tall it rests.
+        {QStringLiteral("recentApps"), recentApps},
+        {QStringLiteral("recentFiles"), recentFiles},
         {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
         // The Notes pill can be left off the first screen on its own.
         {QStringLiteral("notesPillShown"),

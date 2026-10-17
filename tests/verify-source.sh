@@ -34,21 +34,22 @@ rg -q 'surface: dark \? "#141414"' "${project_root}/qml/SearchColors.qml"
 rg -q 'outline: dark \? "#5a5a5a"' "${project_root}/qml/SearchColors.qml"
 rg -q 'control: dark \? "#242424"' "${project_root}/qml/SearchColors.qml"
 rg -q 'paperRadius: 8' "${project_root}/qml/Launcher.qml"
-rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
+rg -q 'contentInset: 24' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
-rg -Fq 'text: words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
+rg -Fq 'words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/LauncherController.h"
 rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
-# An open drawer's header holds Back on the left and no Close drawer pill.
-rg -Fq 'objectName: "drawer-back"' "${project_root}/qml/Launcher.qml"
-rg -Fq 'glyph: "chevron-left"' "${project_root}/qml/Launcher.qml"
+# Search's modes run along its top, the dot returning to search, and an open
+# drawer has no Close drawer pill.
+rg -Fq 'objectName: "mode-row"' "${project_root}/qml/Launcher.qml"
+rg -Fq 'objectName: "home-dot"' "${project_root}/qml/Launcher.qml"
 if rg -Fq 'Close drawer' "${project_root}/qml/Launcher.qml"; then
-    echo "An open drawer closes by Back or its top edge, not a Close drawer pill" >&2
+    echo "An open drawer closes by the dot or its top edge, not a Close drawer pill" >&2
     exit 1
 fi
 rg -q 'Q_PROPERTY\(int sortOrder' \
@@ -75,6 +76,14 @@ rg -q 'cfg_showAmbient' \
     "${project_root}/applet/ConfigGeneral.qml"
 rg -q 'cfg_offerRecent' \
     "${project_root}/applet/ConfigGeneral.qml"
+rg -q 'cfg_recentApps' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q 'cfg_recentFiles' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q '\-\-no-recent-apps' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
+rg -q '\-\-no-recent-files' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
 rg -q '\-\-no-recent' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q 'cfg_offerNotes' \

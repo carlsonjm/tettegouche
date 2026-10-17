@@ -5,6 +5,25 @@ provenance.
 
 ## Unreleased
 
+- Search's modes run along its top on every screen: the dot for Search's first
+  screen, then Apps, Files and Notes, the grey pill on the one shown. A tap
+  moves straight from one mode to another, and the dot comes back to search
+  with what was typed, in place of Back. The field sits under the row, with
+  what was used lately under it before anything is typed.
+- Search's field is the same on every screen: a 44 tall pill on the same
+  edges as the row of modes above it, with a search glyph and a ring while it
+  holds the keys. Only what is under it changes. Close ends the row of modes,
+  with Expand and Pop out beside it where Apps or Files offers them. Apps,
+  Files and Notes are word pills, and the dot sits in a pill of its own.
+- What was used lately shows in two labelled sections, Recent apps and Recent
+  files, eight of each, with See all opening Apps or Files. An application
+  shows its icon and whole name; a file shows as a card with its picture, its
+  name, its folder and when it was used.
+- The widget's settings "Recent apps" and "Recent files" turn each section on
+  or off, and what is on sets how tall Search rests: the field alone, one
+  section, or both filling the sheet. Typing grows it to its full height.
+- Search is one size on every display, 840 wide, rather than growing with a
+  large screen; with neither section on it is only as wide as its field.
 - Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
   its place in Spread without waiting, and shows when Kadunce answers or after
   half a second on its own; a place Kadunce makes after that is given back.

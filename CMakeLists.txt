@@ -150,6 +150,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/skip-forward.svg
         assets/icons/lucide/download.svg
         assets/icons/lucide/x.svg
+        assets/icons/lucide/search.svg
         assets/icons/lucide/plus.svg
         assets/icons/lucide/arrow-left.svg
         assets/icons/lucide/arrow-right.svg
@@ -161,6 +162,9 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/lucide/sticky-note.svg
+        assets/icons/lucide/layout-grid.svg
+        assets/icons/lucide/folder.svg
+        assets/icons/lucide/chevron-right.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core
@@ -219,6 +223,7 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/skip-forward.svg
         assets/icons/lucide/download.svg
         assets/icons/lucide/x.svg
+        assets/icons/lucide/search.svg
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/suite/notes.svg
@@ -383,6 +388,6 @@ if(BUILD_TESTING)
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)
         set_tests_properties(launcher-controls-test PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
-            TIMEOUT 120)
+            TIMEOUT 180)
     endif()
 endif()

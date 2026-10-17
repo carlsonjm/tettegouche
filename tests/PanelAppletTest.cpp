@@ -365,6 +365,23 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 4);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill"));
         configure(QStringLiteral("showNotesPill"), true);
+        // Recent apps off alone, then recent files off alone.
+        configure(QStringLiteral("recentApps"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 5);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-apps"));
+        configure(QStringLiteral("recentApps"), true);
+        configure(QStringLiteral("recentFiles"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 6);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-files"));
+        // Both off is recent use off.
+        configure(QStringLiteral("recentApps"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 7);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent"));
+        configure(QStringLiteral("recentApps"), true);
+        configure(QStringLiteral("recentFiles"), true);
     }
 
     // A running launcher is known by its name on the bus, whoever started

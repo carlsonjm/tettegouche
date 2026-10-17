@@ -14,6 +14,7 @@
 #include <QDBusConnectionInterface>
 #include <QDBusMetaType>
 #include <QDBusVirtualObject>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QSignalSpy>
 #include <QProcess>
@@ -666,6 +667,11 @@ private Q_SLOTS:
         QVERIFY(fakes.registerObject(QStringLiteral("/org/freedesktop/Notifications"),&notifications,
                                      QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllSignals));
         QVERIFY(fakes.registerService(QStringLiteral("org.freedesktop.Notifications")));
+        // A failure here must not leave the name taken from the tests after.
+        const auto release=qScopeGuard([&] {
+            fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
+            fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
+        });
         const DriveActivityProvider::Drive stick{QStringLiteral("/org/freedesktop/UDisks2/block_devices/sdz1"),
             QStringLiteral("STICK"),QStringLiteral("drive-removable-media-usb-pendrive"),qint64(32000000000)};
         const auto id=QStringLiteral("drive:")+stick.udi;
@@ -738,8 +744,6 @@ private Q_SLOTS:
             QVERIFY(model.activities().isEmpty());
             QTRY_COMPARE(notifications.notices.size(),3);
         }
-        fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
-        fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
     }
 
     // In the panel, the notification server runs in the same process as
