@@ -4,6 +4,7 @@
 #include "ActivityModel.h"
 #include "LauncherKeys.h"
 #include "NotesDoor.h"
+#include "NotesIslandProvider.h"
 #include "ProductName.h"
 #include "shared/SuiteSettings.h"
 
@@ -271,8 +272,14 @@ void TettegoucheApplet::launch(bool useKadunce)
 
 void TettegoucheApplet::openDrawer(const QString &drawer)
 {
+    // "note" is the quick note, and "note:" with a note's id that note, each
+    // on the notes application's own card; on its page in Search's Notes
+    // where the application cannot take it.
+    const bool note = drawer == QLatin1String("note")
+        || (drawer.startsWith(QLatin1String("note:")) && drawer.size() > 5);
     if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")
-        && drawer != QLatin1String("notes")) return;
+        && drawer != QLatin1String("notes") && !note) return;
+    if (note && NotesIslandProvider::openOnCard(drawer.mid(5), this)) return;
     startLauncher(setting(QStringLiteral("useKadunce"), true), {}, drawer);
 }
 

@@ -516,15 +516,16 @@ Item {
         }
     }
 
-    function setDrawerOpen(open, mode) {
+    function setDrawerOpen(open, mode, keepSize) {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
         root.guestDrag = 0
         // Every drawer opens at Search's own size, a card in Spread; Expand
-        // fills the screen. Moving between drawers keeps the size chosen.
+        // fills the screen. Moving between drawers and Notes keeps the size
+        // chosen.
         const wasOpen = root.drawerOpen
         root.drawerOpen = open
-        if (!open || !wasOpen) root.launcherController.setDrawerExpanded(false)
+        if (!keepSize && (!open || !wasOpen)) root.launcherController.setDrawerExpanded(false)
         if (!open) {
             root.sortMenuOpen = false
             root.renamingFolder = ""
@@ -771,23 +772,33 @@ Item {
     }
 
     // A mode opens in Search's window with the drawer's motion and the
-    // window keeps its size: Notes turns the field into the note pad.
-    function openMode(name) {
+    // window keeps its size: Notes turns the field into the board's find
+    // field, or into the page of the note Start begins or resumes.
+    function openMode(name, view) {
         const client = name === "notes" ? root.quickNote : null
         if (!client || !client.available || root.modeGrowing) return false
-        client.start()
+        if (view === "page") client.start()
         root.modeShown = name
         root.modeOpen = true
         root.sortMenuOpen = false
         modeSettle.to = 1
         modeSettle.restart()
-        notesPane.focusPad()
+        root.showNotesView(view)
         return true
     }
-    // An older notes application without the interface gets its own card,
-    // and Search closes.
-    function openNotes() {
-        if (root.openMode("notes")) return true
+    // The board; "page", the quick note Start resumes; "new", a new quick
+    // note; "note:" and an id, that note. The last two open alone, as the
+    // panel's dot and pinned note ask, with no Back to the board.
+    function showNotesView(view) {
+        if (view === "new") notesPane.startNote("", true)
+        else if (view && view.startsWith("note:")) notesPane.openNote(view.slice(5), true)
+        else notesPane.enter(view === "page" ? "page" : "board")
+    }
+    // Notes opens on the board, or on the view showNotesView names. An older
+    // notes application without the interface gets its own card, and Search
+    // closes.
+    function openNotes(view) {
+        if (root.openMode("notes", view)) return true
         if (!root.notesDoor || !root.notesDoor.open()) return false
         root.launcherController.finishLaunch()
         return true
@@ -797,11 +808,13 @@ Item {
     // just opened, before Notes has answered whether it is there; the mode
     // then waits for the answer, and falls back to its own sheet if
     // Gooseberry's interface never answers.
-    function openModeDirectly(name) {
+    function openModeDirectly(name, view) {
         modeWait.stop()
         root.modeAwaited = ""
         if (root.modeOpen && root.modeShown === name) {
-            root.launcherController.close()
+            // A note asked for while Notes is open is shown there.
+            if (view) root.showNotesView(view)
+            else root.launcherController.close()
             return
         }
         if (root.drawerOpen) root.setDrawerOpen(false)
@@ -809,9 +822,10 @@ Item {
         if (name !== "notes" || !root.notesDoor) return
         const client = root.quickNote
         if (client && client.available) {
-            root.openNotes()
+            root.openNotes(view)
             return
         }
+        root.modeAwaitedView = view || ""
         root.modeAwaited = name
         modeWait.restart()
     }
@@ -822,9 +836,10 @@ Item {
         if (!late && !(client && client.available)) return
         modeWait.stop()
         root.modeAwaited = ""
-        root.openNotes()
+        root.openNotes(root.modeAwaitedView)
     }
     property string modeAwaited: ""
+    property string modeAwaitedView: ""
     Timer {
         id: modeWait
         interval: 1500
@@ -835,12 +850,13 @@ Item {
         ignoreUnknownSignals: true
         function onAvailableChanged() { root.settleAwaitedMode(false) }
     }
-    function closeMode() {
+    function closeMode(keepSize) {
         if (!root.modeOpen || root.modeGrowing) return
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
-        // Search goes back to the size it had before Expand.
-        if (root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
+        // Search goes back to the size it had before Expand, unless a drawer
+        // takes the mode's place.
+        if (!keepSize && root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
         root.forceActiveFocus()
@@ -1062,6 +1078,14 @@ Item {
         // Another drawer or mode already open gives way, so the slide moves
         // straight from one to the next and Back leads to search.
         function onDrawerRequested(mode) {
+            // The panel's dot asks for "note", a new quick note, and its
+            // pinned note for "note:" and the note's id. Each opens at
+            // Search's size.
+            if (mode === "note" || mode.startsWith("note:")) {
+                if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
+                root.openModeDirectly("notes", mode === "note" ? "new" : mode)
+                return
+            }
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
             if (mode === "notes") {
                 const shown = root.modeOpen && root.modeShown === mode
@@ -1514,13 +1538,23 @@ Item {
                         root.goBack()
                         return
                     }
+                    // From one to another, Search keeps the size chosen.
                     if (mode === "notes") {
-                        if (root.drawerOpen) root.setDrawerOpen(false)
+                        if (root.drawerOpen) root.setDrawerOpen(false, "", true)
                         root.openNotes()
+                        if (!root.modeOpen && root.launcherController.drawerExpanded)
+                            root.launcherController.setDrawerExpanded(false)
                         return
                     }
-                    if (root.modeOpen) root.closeMode()
-                    root.setDrawerOpen(true, mode)
+                    const fromMode = root.modeOpen
+                    if (fromMode) root.closeMode(true)
+                    root.setDrawerOpen(true, mode, fromMode)
+                    // From Notes the drawer is there at once, over Notes as
+                    // it fades, so the first screen never shows between them.
+                    if (fromMode) {
+                        drawerSettle.stop()
+                        root.drawerProgress = 1
+                    }
                 }
                 // The dot's pill starts on the field's left edge.
                 x: -2
@@ -1622,23 +1656,23 @@ Item {
                 }
 
                 // The window's own buttons share the row, at its other end:
-                // Expand while a drawer is open, Pop out where Files has a
-                // window of its own, and Close, last, as a window's is. Notes
-                // keeps its own, in its header.
+                // Expand while a drawer or Notes is open, Pop out where Files
+                // has a window of its own and in Notes, which opens the notes
+                // application's own window, and Close, last, as a window's is.
                 WindowActions {
                     id: windowActions
                     prefix: "window"
                     anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
-                    opacity: Math.max(0, 1 - root.modeProgress * 2)
-                    enabled: !root.modeOpen
-                    visible: opacity > 0
+                    // Every screen has them, so they hold still between
+                    // screens; only the buttons each one offers change.
+                    enabled: !root.modeOpen || (root.notesOpen && !root.modeGrowing)
                     expanded: root.launcherController.drawerExpanded
-                    expandShown: root.drawerOpen
-                    popOutShown: root.drawerOpen && root.filesMode && root.filesWindowOffered
-                    popOutName: words.i18n("Open Files in its own window")
+                    expandShown: root.drawerOpen || root.notesOpen
+                    popOutShown: (root.drawerOpen && root.filesMode && root.filesWindowOffered) || root.notesOpen
+                    popOutName: root.notesOpen ? words.i18n("Open in Notes") : words.i18n("Open Files in its own window")
                     onExpand: root.toggleExpanded()
-                    onPopOut: root.popOutFiles()
+                    onPopOut: root.notesOpen ? root.growNotes() : root.popOutFiles()
                     onDismiss: root.launcherController.close()
                 }
             }
@@ -2262,7 +2296,6 @@ Item {
                 surfaceOutline: root.surfaceOutline
                 controlColor: root.controlColor
                 primaryText: root.primaryText
-                onBack: root.closeNotes()
                 onExpand: root.toggleExpanded()
                 onDismiss: root.launcherController.close()
                 onGrow: root.growNotes()

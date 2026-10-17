@@ -65,6 +65,9 @@ Item {
 
     signal invokeRequested(string activityId, int generation, string action, var value)
     signal openRequested(string kind)
+    // The quick note's island asks Search's Notes for a page: "note", the
+    // quick note's, or "note:" and a note's id, that note's.
+    signal drawerRequested(string drawer)
 
     // A 44 px island in Shuffle's 64 px band; a shorter panel gets a shorter
     // one. Each control reaches the island's full height and, where the panel
@@ -138,6 +141,7 @@ Item {
     }
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
         || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
+        || noteIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -164,6 +168,12 @@ Item {
             statesNext[key] = activity.state;
             const band = bandKind(activity);
             if (band in bandNext) continue;
+            // The quick note's island stands first, before what comes and
+            // goes, and never takes the room as the newest.
+            if (band === "note") {
+                bandNext[band] = 0;
+                continue;
+            }
             if (band in bandArrivals) {
                 bandNext[band] = bandArrivals[band];
                 continue;
@@ -197,7 +207,8 @@ Item {
         }
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
-        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland, coreIsland])
+        for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland, coreIsland,
+                noteIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -355,6 +366,16 @@ Item {
         ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
     readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
 
+    // The quick note's island, there while Gooseberry is installed: a dot
+    // with a plus that starts a quick note or resumes it, and beside it the
+    // note pinned in Gooseberry, a bead of its colour and its first words.
+    readonly property var notes: activities.filter(activity => activity.kind === "note")
+    readonly property var noteShown: notes.length > 0 ? notes[0] : null
+    readonly property var pinnedNote: noteShown && noteShown.noteId ? noteShown : null
+    readonly property string pinnedTitle: pinnedNote ? pinnedNote.title || words.i18n("Pinned note") : ""
+    readonly property color pinnedColour: pinnedNote && pinnedNote.colourHex ? pinnedNote.colourHex : tone.wash(0.5)
+    readonly property real beadSize: 10
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -404,6 +425,11 @@ Item {
         return column(name ? textWidth(strongMetrics, coreName) : 0,
             detail ? textWidth(smallMetrics, coreDetail) : 0, 180);
     }
+    // The pinned note: its bead, then its first words, one line within a
+    // finger's reach.
+    function pinnedWidth() {
+        return Math.max(reach, 6 + beadSize + 6 + Math.min(150, textWidth(plainMetrics, pinnedTitle)) + 6);
+    }
     // Who receives the screen, on one line.
     function screenWords(who) {
         return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
@@ -452,6 +478,8 @@ Item {
             return 2 * inset + (has("icon") ? pictureLead : 0) + waitingWords(has("name"), has("question"));
         if (kind === "core")
             return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
+        if (kind === "note")
+            return 2 * inset + (has("dot") ? reach : 0) + (has("pinned") ? pinnedWidth() : 0);
         return 0;
     }
 
@@ -483,6 +511,8 @@ Item {
         case "waiting.question": return tall && waitingQuestion !== "";
         case "core.icon": case "core.name": return coreShown !== null;
         case "core.detail": return tall && coreDetail !== "";
+        case "note.dot": return noteShown !== null;
+        case "note.pinned": return pinnedNote !== null;
         }
         return false;
     }
@@ -495,7 +525,7 @@ Item {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
             : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
             : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland
-            : kind === "core" ? coreIsland : null;
+            : kind === "core" ? coreIsland : kind === "note" ? noteIsland : null;
     }
     // Islands sit in the order they arrived, the fold last, the whole group
     // centred; each takes its share as it comes and goes, so its neighbours
@@ -526,11 +556,17 @@ Item {
     // A shared screen's island only tells, and stops: a tap opens nothing.
     // A waiting application's island brings the application forward, and its
     // dialog with it. Core's island opens the card that does what it suggests.
+    // The quick note's island opens Search's Notes on the quick note.
     function open(kind) {
-        if (kind === "drive") invoke(driveShown, "open");
+        if (kind === "note") drawerRequested("note");
+        else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
         else if (kind === "core") invoke(coreShown, "open");
         else if (kind !== "screen") openRequested(openKind(kind));
+    }
+    // The pinned note, on its own page in Search's Notes.
+    function openPinned() {
+        if (pinnedNote) drawerRequested("note:" + pinnedNote.noteId);
     }
     // Where the open island grows from.
     function islandFor(kind) {
@@ -547,12 +583,15 @@ Item {
             ? words.i18n("%1 is waiting: %2, show it", waitingName, waitingQuestion)
             : words.i18n("%1 is waiting, show it", waitingName);
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
+        if (kind === "note") return words.i18n("New quick note");
         if (kind === "core") return coreShown && coreShown.actionText
             ? words.i18n("%1, %2", coreName, coreShown.actionText) : coreName;
         return words.i18n("%1, open", endingName);
     }
     // What an island shows goes aside: the player it shows, or all it holds.
+    // The quick note's island stays.
     function setAside(kind) {
+        if (kind === "note") return;
         if (kind === "media") invoke(player, "setAside");
         else for (const activity of kind === "transfer" ? running : kind === "drive" ? drives
                 : kind === "screen" ? screens : kind === "waiting" ? waitings
@@ -637,6 +676,9 @@ Item {
         required property string kind
         // A tap opens it; one that only tells takes no tap.
         property bool opens: true
+        // A steady island stays where it is: a drag does not carry it, and
+        // it is never set aside.
+        property bool steady: false
         default property alias pieces: row.data
         readonly property var planned: surface.plan.shown[kind] || []
         readonly property bool present: surface.plan.shown[kind] !== undefined
@@ -728,7 +770,7 @@ Item {
             Keys.onReturnPressed: surface.open(island.kind)
             Keys.onEnterPressed: surface.open(island.kind)
             Keys.onSpacePressed: surface.open(island.kind)
-            Keys.onDeletePressed: surface.setAside(island.kind)
+            Keys.onDeletePressed: if (!island.steady) surface.setAside(island.kind)
             Behavior on color { ColorAnimation { duration: surface.ms(200) } }
 
             // A tap away from the controls opens the island.
@@ -743,7 +785,7 @@ Item {
                 id: carry
                 target: null
                 yAxis.enabled: false
-                enabled: !surface.opened && !peelAway.running
+                enabled: !island.steady && !surface.opened && !peelAway.running
                 onActiveChanged: {
                     if (active) {
                         peelBack.stop();
@@ -1455,6 +1497,88 @@ Item {
         }
     }
 
+    // The quick note's island: the dot with a plus, and the pinned note
+    // beside it. A tap on the dot, or anywhere off the pinned note, opens the
+    // quick note; a tap on the pinned note opens that note. It stays: a drag
+    // does not carry it away.
+    BandIsland {
+        id: noteIsland
+        kind: "note"
+        steady: true
+        Piece {
+            island: noteIsland
+            name: "dot"
+            size: surface.reach
+            Rectangle {
+                objectName: "ambient-note-dot"
+                anchors.centerIn: parent
+                width: Math.max(16, surface.artSize - 4)
+                height: width
+                radius: width / 2
+                color: tone.wash(0.16)
+                Behavior on color { ColorAnimation { duration: surface.ms(200) } }
+                SuiteIcon {
+                    anchors.centerIn: parent
+                    width: Math.round(parent.width * 0.6)
+                    height: width
+                    glyph: "plus"
+                }
+            }
+        }
+        Piece {
+            id: pinnedPiece
+            island: noteIsland
+            name: "pinned"
+            size: surface.pinnedWidth()
+            Item {
+                id: pinnedButton
+                objectName: "ambient-note-pinned"
+                anchors.fill: parent
+                activeFocusOnTab: pinnedPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Pinned note: %1", surface.pinnedTitle)
+                Accessible.onPressAction: surface.openPinned()
+                Keys.onReturnPressed: surface.openPinned()
+                Keys.onEnterPressed: surface.openPinned()
+                Keys.onSpacePressed: surface.openPinned()
+                Rectangle {
+                    objectName: "ambient-note-bead"
+                    x: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: surface.beadSize
+                    height: width
+                    radius: width / 2
+                    color: surface.pinnedColour
+                    scale: pinnedArea.pressed ? 1.2 : 1
+                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
+                }
+                Label {
+                    objectName: "ambient-note-title"
+                    x: 6 + surface.beadSize + 6
+                    width: Math.max(0, parent.width - x - 6)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: surface.pinnedTitle
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: pinnedButton.activeFocus
+                }
+                MouseArea {
+                    id: pinnedArea
+                    anchors.fill: parent
+                    onClicked: surface.openPinned()
+                }
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1528,6 +1652,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "core"
             source: surface.coreIcon
+        }
+        SuiteIcon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 20 : 16
+            height: width
+            visible: surface.bubbleKind === "note"
+            glyph: "plus"
         }
         Rectangle {
             objectName: "ambient-bubble-count"

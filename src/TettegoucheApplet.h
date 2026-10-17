@@ -40,7 +40,9 @@ public:
     void setAmbientActivities(const QVariantList &activities);
     Q_INVOKABLE void launch(bool useKadunce);
     // "apps" or "files": opens the launcher on that drawer, as Meta+G and Meta+E do;
-    // "notes" opens it on Notes, as the dot's slide does.
+    // "notes" opens it on Notes, as the dot's slide does; "note" on the quick
+    // note's page, and "note:" with a note's id on that note's page, as the
+    // quick note's island does.
     Q_INVOKABLE void openDrawer(const QString &drawer);
     QStringList pearlDoors() const { return m_pearlDoors; }
     // Looks again for Notes, as a press on the dot does.

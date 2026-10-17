@@ -263,12 +263,51 @@ TestCase {
         property int tucks: 0
         property var boards: []
         property bool boardOpens: true
+        property bool offersReminders: true
+        property string remindLabel: ""
+        property var remindChoices: [{ kind: "later", label: "Later today", time: "2026-10-17T18:00:00+00:00" },
+                                     { kind: "pick", label: "Pick a time", time: "" }]
+        property var reminders: []
+        property bool checklist: false
+        property var lines: []
+        property var ticks: []
+        // Every note, as Find gives them, and the words last asked for.
+        property var notes: []
+        property string notesWords: ""
+        property var finds: []
+        property var edits: []
+        property var startsWith: []
+        property bool offersPin: true
+        property bool pinned: false
+        property var pins: []
+        // Gooseberry's own card: taking a note handed to it, or, as an older
+        // Gooseberry, not, so the note opens on the page here.
+        property bool cardTakes: false
+        property var cards: []
+        // The way back each hand-over asked the card for.
+        property var backs: []
+        signal cardAnswered(bool opened)
+        function openOnCard(noteId, back) { cards = cards.concat(["id:" + noteId]); backs = backs.concat([back]); cardAnswered(cardTakes) }
+        function startOnCard(words, back) { cards = cards.concat(["text:" + words]); backs = backs.concat([back]); cardAnswered(cardTakes) }
+        readonly property var store: [
+            { id: "note-1", title: "Plan the kitchen", excerpt: "", colour: "yellow", colourHex: "#F2D98A",
+              folder: "Kitchen", folderLabel: "Kitchen", stuck: true, window: "plan.txt", app: "org.kde.kate",
+              tucked: false, changed: new Date().toISOString(), remind: "", done: false },
+            { id: "note-2", title: "Receipts for the taxes", excerpt: "", colour: "teal", colourHex: "#9ED6CB",
+              folder: "Taxes", folderLabel: "Taxes", stuck: false, window: "", app: "",
+              tucked: false, changed: "2026-01-02T10:00:00+00:00", remind: "", done: false },
+            { id: "note-3", title: "Old list", excerpt: "", colour: "stone", colourHex: "#D9D4CC",
+              folder: "", folderLabel: "Inbox", stuck: false, window: "", app: "",
+              tucked: true, changed: "2025-12-01T10:00:00+00:00", remind: "", done: false }]
         signal noteChanged()
         signal boardShown(string requestToken)
         function reset() {
             available = true; open = false; text = ""; colour = "yellow"; starts = 0; texts = []
             flushes = 0; belongs = ""; dones = 0; tucks = 0; boards = []; boardOpens = true
             offersFolders = true; folderSets = []; stucks = []
+            kept = false; offersReminders = true; remindLabel = ""; reminders = []; checklist = false; lines = []; ticks = []
+            notes = []; notesWords = ""; finds = []; edits = []; startsWith = []
+            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []; backs = []
             folder = "Kitchen"; folderLabel = "Kitchen"
             folders = [{ name: "Kitchen", label: "Kitchen", chosen: true, workspace: true },
                        { name: "", label: "Inbox", chosen: false, workspace: false },
@@ -299,8 +338,34 @@ TestCase {
         }
         function done() { dones++; open = false }
         function tuckAway() { tucks++; open = false }
+        function setPinned(on) { pins = pins.concat([on]); pinned = on; noteChanged() }
         function remove() {}
         function openBoard(token) { if (!boardOpens) return false; boards = boards.concat([token]); return true }
+        function setReminder(when) { reminders = reminders.concat([when]); remindLabel = when === "" ? "" : "6:00 PM"; noteChanged() }
+        function setChecklist(on) {
+            checklist = on
+            lines = on ? [{ text: "oats", item: true, checked: false }, { text: "milk", item: true, checked: false }] : []
+            text = on ? "- [ ] oats\n- [ ] milk" : "oats\nmilk"
+            noteChanged()
+        }
+        function setLineChecked(line, checked) { ticks = ticks.concat([[line, checked]]) }
+        function findNotes(words) {
+            finds = finds.concat([words])
+            const needle = words.toLowerCase()
+            notes = store.filter(note => needle === "" || note.title.toLowerCase().indexOf(needle) >= 0)
+            notesWords = words
+        }
+        function edit(id) {
+            edits = edits.concat([id])
+            const note = store.filter(n => n.id === id)[0]
+            noteId = id; open = true; text = note.title; kept = true
+            noteChanged()
+        }
+        function startWith(words) {
+            startsWith = startsWith.concat([words])
+            noteId = "note-new"; open = true; text = words
+            noteChanged()
+        }
     }
     // Half applications, then the files, as the launcher's model lists them.
     function fillRecent(n) {
@@ -2493,7 +2558,7 @@ TestCase {
         let close
         if (data.tag === "notes") {
             openNotesMode()
-            close = findChild(launcher, "notes-close")
+            close = findChild(launcher, "window-close")
         } else {
             launcher.fileBrowser = filesMock
             filesMock.placeKind = "folder"
@@ -2517,12 +2582,18 @@ TestCase {
     function test_modeExpand() {
         openNotesMode()
         const sheet = findChild(launcher, "launcher-sheet")
-        const expand = findChild(launcher, "notes-expand")
-        const popOut = findChild(launcher, "notes-pop-out")
-        const close = findChild(launcher, "notes-close")
+        const expand = findChild(launcher, "window-expand")
+        const popOut = findChild(launcher, "window-pop-out")
+        const close = findChild(launcher, "window-close")
         verify(expand.opacity > 0.99 && popOut.visible && close.visible)
         verify(expand.mapToItem(sheet, 0, 0).x < popOut.mapToItem(sheet, 0, 0).x)
         verify(popOut.mapToItem(sheet, 0, 0).x < close.mapToItem(sheet, 0, 0).x)
+        // They are Search's own buttons on the modes row, not a band of
+        // their own under it.
+        const home = findChild(launcher, "home-dot")
+        const rowMid = home.mapToItem(sheet, 0, home.height / 2).y
+        fuzzyCompare(close.mapToItem(sheet, 0, close.height / 2).y, rowMid, 2)
+        verify(!findChild(launcher, "notes-close"))
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, true)
         verify(controller.expansionChosen)
@@ -2535,11 +2606,42 @@ TestCase {
         tryCompare(sheet, "width", 840)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         tryCompare(sheet, "width", 980)
-        const back = findChild(launcher, "notes-back")
+        const back = findChild(launcher, "home-dot")
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "modeProgress", 0)
         compare(controller.drawerExpanded, false)
         tryCompare(sheet, "width", 840)
+    }
+
+    // Moving between Notes and the drawers keeps the size chosen, as moving
+    // between Apps and Files does.
+    function test_modeKeepsExpandedSize() {
+        openNotesMode()
+        const sheet = findChild(launcher, "launcher-sheet")
+        const expand = findChild(launcher, "window-expand")
+        mouseClick(expand, expand.width / 2, expand.height / 2)
+        tryCompare(sheet, "width", 980)
+        const files = findChild(launcher, "files-pill")
+        mouseClick(files, files.width / 2, files.height / 2)
+        // From Notes the drawer is there at once: no first screen between,
+        // and the window's buttons never fade out and back.
+        compare(launcher.drawerProgress, 1)
+        const windowRow = findChild(launcher, "window-close").parent
+        compare(windowRow.opacity, 1)
+        wait(60)
+        compare(windowRow.opacity, 1)
+        verify(findChild(launcher, "window-close").visible)
+        verify(!launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        compare(sheet.width, 980)
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        compare(controller.drawerExpanded, true)
+        compare(sheet.width, 980)
+        launcher.closeNotes()
+        tryCompare(launcher, "modeProgress", 0)
+        compare(controller.drawerExpanded, false)
     }
 
     // Pop out moves Files into a window of its own and Search closes; in
@@ -2763,10 +2865,34 @@ TestCase {
         verify(!launcher.drawerOpen)
         verify(launcher.notesOpen)
         compare(controller.drawerExpanded, true)
-        compare(quickStub.starts, 1)
+        compare(quickStub.starts, 0)
+        compare(findChild(launcher, "notes-pane").view, "board")
         tryCompare(launcher, "notesProgress", 1)
         controller.drawerRequested("notes")
         compare(controller.closes, 1)
+    }
+    // The panel's quick note island: its dot asks for a new quick note, and
+    // its pinned note for that note, each alone at Search's size with no
+    // Back to the board.
+    function test_islandRequests() {
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        tryCompare(launcher, "openingControls", 1)
+        controller.closes = 0
+        controller.drawerRequested("note")
+        verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, false)
+        compare(quickStub.startsWith, [""])
+        const pane = findChild(launcher, "notes-pane")
+        compare(pane.view, "page")
+        verify(!pane.fromBoard)
+        tryCompare(pane, "pageShown", 1)
+        verify(!findChild(launcher, "notes-back").visible)
+        controller.drawerRequested("note:note-2")
+        compare(quickStub.edits, ["note-2"])
+        compare(pane.view, "page")
+        verify(!pane.fromBoard)
+        compare(controller.closes, 0)
     }
     // Both drawers share one header under the modes: search sits in the
     // middle and is typed into as before, and the sort button stays on the
@@ -3006,10 +3132,10 @@ TestCase {
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
     }
-    // Notes opens in Search's own window with the drawer's motion: the field
-    // becomes the note pad, the pills fade, Back and the note's controls come
-    // in, and the window keeps its size. Nothing is handed to Gooseberry's
-    // own card and Search stays open.
+    // Notes opens in Search's own window with the drawer's motion, on the
+    // board: the field becomes Find or start a note, with every note under
+    // it, and the window keeps its size. Nothing is handed to Gooseberry's
+    // own card, no note is started, and Search stays open.
     function test_notesModeOpensInSearch() {
         const sheet = findChild(launcher, "launcher-sheet")
         launcher.fileBrowser = filesMock
@@ -3024,28 +3150,44 @@ TestCase {
         const notes = findChild(launcher, "notes-pill")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         verify(launcher.notesOpen)
-        compare(quickStub.starts, 1)
+        compare(quickStub.starts, 0)
+        compare(quickStub.finds, [""])
         compare(notesStub.opened, 0)
         compare(controller.closes, 0)
         compare(controller.drawerExpanded, false)
-        const pad = findChild(launcher, "notes-pad")
         tryCompare(launcher, "notesProgress", 1)
         compare(sheet.width, rest.width)
         compare(sheet.height, rest.height)
         verify(field.opacity < 0.01)
-        verify(findChild(launcher, "first-row").opacity < 0.01)
-        const back = findChild(launcher, "notes-back")
-        const grow = findChild(launcher, "notes-pop-out")
-        verify(back.opacity > 0.99 && grow.opacity > 0.99)
+        const find = findChild(launcher, "notes-find")
+        verify(find.activeFocus)
+        verify(!findChild(launcher, "notes-back").visible)
+        const grow = findChild(launcher, "window-pop-out")
+        verify(grow.opacity > 0.99)
         verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
-        verify(back.mapToItem(sheet, 0, 0).x < sheet.width / 2)
-        const padAt = pad.mapToItem(sheet, 0, 0)
-        verify(padAt.y > back.mapToItem(sheet, 0, back.height).y - 4)
-        // The pad takes the width search had.
-        verify(pad.width >= field.width - 10)
+        // Today's note first, then the rest; tucked away notes wait under
+        // their own filter.
+        const pane = findChild(launcher, "notes-pane")
+        compare(pane.rows[0].kind, "heading")
+        compare(pane.rows[1].note.id, "note-1")
+        verify(!pane.rows.some(row => row.kind === "note" && row.note.id === "note-3"))
+        const row = findChild(launcher, "notes-row-note-1")
+        verify(row.visible)
+        // A note opens on the page, with Back to the board.
+        mouseClick(row, row.width / 2, row.height / 2)
+        compare(quickStub.edits, ["note-1"])
+        compare(pane.view, "page")
+        const pad = findChild(launcher, "notes-pad")
+        compare(pad.text, "Plan the kitchen")
         verify(pad.activeFocus)
-        // Back returns to Search, and the note stays open to resume.
+        const back = findChild(launcher, "notes-back")
+        verify(back.visible)
         mouseClick(back, back.width / 2, back.height / 2)
+        compare(pane.view, "board")
+        verify(find.activeFocus)
+        // The dot returns to Search, and nothing was finished.
+        const dot = findChild(launcher, "home-dot")
+        mouseClick(dot, dot.width / 2, dot.height / 2)
         tryCompare(launcher, "notesProgress", 0)
         verify(!launcher.notesOpen)
         tryCompare(field, "opacity", 1)
@@ -3053,7 +3195,85 @@ TestCase {
         compare(controller.closes, 0)
         compare(field.mapToItem(sheet, 0, 0).y, fieldAt.y)
     }
-    // Esc steps back from the note to Search, then closes Search.
+    // A note tapped on the board, or a new one from New note or Enter with
+    // the words typed, goes to Gooseberry's own card, and Search closes.
+    function test_notesOnCard() {
+        openNotesMode()
+        quickStub.cardTakes = true
+        const pane = findChild(launcher, "notes-pane")
+        const row = findChild(launcher, "notes-row-note-1")
+        mouseClick(row, row.width / 2, row.height / 2)
+        compare(quickStub.cards, ["id:note-1"])
+        compare(quickStub.backs, ["Notes"])
+        compare(quickStub.edits, [])
+        compare(pane.view, "board")
+        compare(controller.closes, 1)
+    }
+    function test_notesNewOnCard() {
+        openNotesMode()
+        quickStub.cardTakes = true
+        keyClick(Qt.Key_F)
+        keyClick(Qt.Key_E)
+        keyClick(Qt.Key_R)
+        keyClick(Qt.Key_N)
+        const newNote = findChild(launcher, "notes-new")
+        verify(newNote.visible)
+        verify(newNote.height >= 44)
+        // Under the pointer it lights, with a ring round it.
+        const ring = findChild(newNote, "notes-new-ring")
+        compare(ring.opacity, 0)
+        mouseMove(newNote, newNote.width / 2, newNote.height / 2)
+        tryCompare(ring, "opacity", 1)
+        mouseClick(newNote, newNote.width / 2, newNote.height / 2)
+        compare(quickStub.cards, ["text:fern"])
+        compare(quickStub.backs, ["Notes"])
+        compare(quickStub.startsWith, [])
+        compare(controller.closes, 1)
+    }
+    // A Gooseberry whose card cannot take a note opens it on the page here.
+    function test_notesNewHereWithoutCard() {
+        openNotesMode()
+        const pane = findChild(launcher, "notes-pane")
+        keyClick(Qt.Key_Return)
+        compare(quickStub.cards, ["text:"])
+        compare(quickStub.startsWith, [""])
+        compare(pane.view, "page")
+        compare(controller.closes, 0)
+    }
+    // Words find notes; the filters narrow them; Tucked away shows only
+    // what is tucked away.
+    function test_notesBoardFinds() {
+        openNotesMode()
+        const pane = findChild(launcher, "notes-pane")
+        keyClick(Qt.Key_T)
+        keyClick(Qt.Key_A)
+        keyClick(Qt.Key_X)
+        compare(findChild(launcher, "search-query").text, "")
+        tryCompare(quickStub, "notesWords", "tax")
+        compare(pane.rows.filter(row => row.kind === "note").length, 1)
+        verify(pane.rows.some(row => row.kind === "folder" && row.folder.name === "Taxes"))
+        findChild(launcher, "notes-find").text = ""
+        tryCompare(quickStub, "notesWords", "")
+        const tucked = findChild(launcher, "notes-filter-tucked")
+        mouseClick(tucked, tucked.width / 2, tucked.height / 2)
+        compare(pane.rows.length, 1)
+        compare(pane.rows[0].note.id, "note-3")
+        const kitchen = findChild(launcher, "notes-filter-folder:Kitchen")
+        mouseClick(kitchen, kitchen.width / 2, kitchen.height / 2)
+        compare(pane.rows.filter(row => row.kind === "note").map(row => row.note.id), ["note-1"])
+        // Down picks the first note and Enter opens it.
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Return)
+        compare(quickStub.edits, ["note-1"])
+        compare(pane.view, "page")
+        // Esc returns from the page to the board, then to Search.
+        keyClick(Qt.Key_Escape)
+        compare(pane.view, "board")
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "notesProgress", 0)
+        compare(controller.closes, 0)
+    }
+    // Esc from the board steps back to Search, then closes Search.
     function test_notesModeEscape() {
         openNotesMode()
         keyClick(Qt.Key_Escape)
@@ -3062,39 +3282,108 @@ TestCase {
         keyClick(Qt.Key_Escape)
         compare(controller.closes, 1)
     }
-    // Typing goes to the note, not to search; colours are the note's; Done finishes it and Search closes.
+    // A note, opened from the board, on its page.
+    function openNotePage() {
+        openNotesMode()
+        const row = findChild(launcher, "notes-row-note-1")
+        mouseClick(row, row.width / 2, row.height / 2)
+        tryCompare(findChild(launcher, "notes-pane"), "pageShown", 1)
+    }
+    // Words typed with Enter start a new note with them; typing goes to the
+    // note, not to search; the colour is the dot in the page's corner.
     function test_notesModeWrites() {
         openNotesMode()
-        const pad = findChild(launcher, "notes-pad")
-        verify(pad.activeFocus)
         keyClick(Qt.Key_H)
         keyClick(Qt.Key_I)
+        keyClick(Qt.Key_Return)
+        compare(quickStub.startsWith, ["hi"])
+        tryCompare(findChild(launcher, "notes-pane"), "pageShown", 1)
+        const pad = findChild(launcher, "notes-pad")
+        compare(pad.text, "hi")
+        verify(pad.activeFocus)
+        keyClick(Qt.Key_A)
         compare(findChild(launcher, "search-query").text, "")
-        compare(quickStub.texts[quickStub.texts.length - 1], "hi")
-        const swatches = findChild(launcher, "notes-colours")
-        const teal = swatches.children[2]
+        compare(quickStub.texts[quickStub.texts.length - 1], "hia")
+        const dot = findChild(launcher, "notes-colour")
+        mouseClick(dot, dot.width / 2, dot.height / 2)
+        const teal = findChild(launcher, "notes-colour-teal")
+        verify(teal.visible)
         mouseClick(teal, teal.width / 2, teal.height / 2)
         compare(quickStub.colour, "teal")
-        const done = findChild(launcher, "notes-done")
-        mouseClick(done, done.width / 2, done.height / 2)
-        compare(quickStub.dones, 1)
-        compare(controller.closes, 1)
+        verify(!findChild(launcher, "notes-colours").visible)
+        compare(controller.closes, 0)
     }
-    // A chip's row of choices takes its place under the chip at the next
-    // layout; a tap before then would be let go where the row no longer is.
+    // Checklist turns the note into boxes, each ticked where it stands;
+    // Remind offers Gooseberry's times and says the one set.
+    function test_notesChecklistAndRemind() {
+        openNotePage()
+        const checklist = findChild(launcher, "notes-checklist-toggle")
+        mouseClick(checklist, checklist.width / 2, checklist.height / 2)
+        verify(quickStub.checklist)
+        verify(findChild(launcher, "notes-checklist").visible)
+        verify(!findChild(launcher, "notes-pad").visible)
+        const box = findChild(launcher, "notes-box-1")
+        mouseClick(box, box.width / 2, box.height / 2)
+        compare(quickStub.ticks, [[1, true]])
+        const remind = findChild(launcher, "notes-remind")
+        tapChip(remind)
+        const later = findChild(launcher, "notes-remind-later")
+        verify(later.visible)
+        mouseClick(later, later.width / 2, later.height / 2)
+        compare(quickStub.reminders, ["2026-10-17T18:00:00+00:00"])
+        compare(remind.text, "6:00 PM")
+        verify(remind.showText)
+        tapChip(remind)
+        const none = findChild(launcher, "notes-no-reminder")
+        mouseClick(none, none.width / 2, none.height / 2)
+        compare(quickStub.reminders, ["2026-10-17T18:00:00+00:00", ""])
+        verify(!remind.showText)
+    }
+    // More, on a kept note: Copy all, Tuck away and Remove. Tuck away from
+    // the board returns to it.
+    function test_notesMore() {
+        openNotePage()
+        const more = findChild(launcher, "notes-more")
+        verify(more.visible)
+        mouseClick(more, more.width / 2, more.height / 2)
+        const menu = findChild(launcher, "notes-more-menu")
+        verify(menu.visible)
+        // Pin keeps the note in sight on the panel; on the pinned note it
+        // is Unpin.
+        const pin = findChild(launcher, "notes-pin")
+        verify(pin.visible)
+        compare(pin.label, "Pin")
+        waitForItemPolished(pin.parent)
+        waitForRendering(launcher)
+        mouseClick(pin, pin.width / 2, pin.height / 2)
+        compare(quickStub.pins, [true])
+        verify(!menu.visible)
+        mouseClick(more, more.width / 2, more.height / 2)
+        compare(pin.label, "Unpin")
+        const tuck = findChild(launcher, "notes-tuck-away")
+        mouseClick(tuck, tuck.width / 2, tuck.height / 2)
+        compare(quickStub.tucks, 1)
+        compare(findChild(launcher, "notes-pane").view, "board")
+        verify(!menu.visible)
+        compare(controller.closes, 0)
+    }
+    // A choice's row takes or leaves its place under the page at the next
+    // layout; a tap before then would be let go where the line no longer is.
     function tapChip(chip) {
+        const lower = findChild(launcher, "notes-lower")
+        waitForItemPolished(lower)
         mouseClick(chip, chip.width / 2, chip.height / 2)
-        waitForItemPolished(findChild(launcher, "notes-chips"))
+        waitForItemPolished(lower)
         waitForRendering(launcher)
     }
-    // Folder and Stuck to take Belongs to's place, as on Gooseberry's own
-    // card, each chip saying what is chosen and opening its choices under it.
+    // Folder and Stuck to, quiet under the page, each saying what is chosen
+    // and opening its choices above it.
     function test_notesFolderChip() {
-        openNotesMode()
+        openNotePage()
         verify(!findChild(launcher, "notes-belongs").visible)
         const chip = findChild(launcher, "notes-folder")
         verify(chip.visible)
-        compare(chip.label, "Folder · Kitchen ▾")
+        compare(chip.text, "Kitchen")
         const choices = findChild(launcher, "notes-folder-choices")
         verify(!choices.visible)
         tapChip(chip)
@@ -3106,7 +3395,7 @@ TestCase {
         verify(findChild(launcher, "notes-folder-Taxes").x > inbox.x)
         mouseClick(inbox, inbox.width / 2, inbox.height / 2)
         compare(quickStub.folderSets, [""])
-        compare(chip.label, "Folder · Inbox ▾")
+        compare(chip.text, "Inbox")
         verify(!choices.visible)
         verify(findChild(launcher, "notes-pad").activeFocus)
         // A new folder, by name.
@@ -3117,14 +3406,14 @@ TestCase {
         field.text = "  Garden "
         keyClick(Qt.Key_Return)
         compare(quickStub.folderSets, ["", "Garden"])
-        compare(chip.label, "Folder · Garden ▾")
+        compare(chip.text, "Garden")
         verify(!choices.visible)
         compare(controller.closes, 0)
     }
     function test_notesStuckChip() {
-        openNotesMode()
+        openNotePage()
         const chip = findChild(launcher, "notes-stuck")
-        compare(chip.label, "Stuck to · Kate · plan.txt ▾")
+        compare(chip.text, "Kate · plan.txt")
         const choices = findChild(launcher, "notes-window-choices")
         tapChip(chip)
         verify(choices.visible)
@@ -3134,27 +3423,28 @@ TestCase {
         compare(mail.label, "KMail · Inbox")
         mouseClick(mail, mail.width / 2, mail.height / 2)
         compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"]])
-        compare(chip.label, "Stuck to · KMail · Inbox ▾")
+        compare(chip.text, "KMail · Inbox")
         verify(!choices.visible)
         tapChip(chip)
         const loose = findChild(launcher, "notes-dont-stick")
         verify(!loose.chosen)
         mouseClick(loose, loose.width / 2, loose.height / 2)
         compare(quickStub.stucks, [["Inbox", "org.kde.kmail2"], ["", ""]])
-        compare(chip.label, "Not stuck to a window ▾")
+        compare(chip.text, "Not stuck")
         // Esc closes open choices first, and leaves the note open.
         tapChip(chip)
         verify(choices.visible)
         keyClick(Qt.Key_Escape)
         verify(!choices.visible)
+        compare(findChild(launcher, "notes-pane").view, "page")
         compare(launcher.notesProgress, 1)
         compare(controller.closes, 0)
     }
     // An older Gooseberry offers no folders: Belongs to stays as it was.
     function test_notesOlderGooseberryBelongsTo() {
         quickStub.offersFolders = false
-        openNotesMode()
-        verify(!findChild(launcher, "notes-chips").visible)
+        openNotePage()
+        verify(!findChild(launcher, "notes-folder").visible)
         verify(findChild(launcher, "notes-belongs").visible)
         const belongs = findChild(launcher, "notes-belongs-0")
         mouseClick(belongs, belongs.width / 2, belongs.height / 2)
@@ -3165,7 +3455,7 @@ TestCase {
     // board, and fades once the board has drawn in the card's place.
     function test_notesGrowOverActive() {
         openNotesMode()
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(launcher.notesGrowing)
         compare(controller.drawerExpanded, true)
@@ -3184,7 +3474,7 @@ TestCase {
         controller.guestMode = true
         controller.handoffs = 0
         openNotesMode()
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         compare(controller.drawerExpanded, true)
         compare(controller.notesLaunches, 1)
@@ -3200,7 +3490,7 @@ TestCase {
     function test_notesGrowRefused() {
         openNotesMode()
         quickStub.boardOpens = false
-        const grow = findChild(launcher, "notes-pop-out")
+        const grow = findChild(launcher, "window-pop-out")
         mouseClick(grow, grow.width / 2, grow.height / 2)
         verify(!launcher.notesGrowing)
         compare(controller.drawerExpanded, false)

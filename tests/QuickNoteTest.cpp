@@ -116,6 +116,42 @@ private Q_SLOTS:
         note.done();
     }
 
+    // The board: every note for no words, those with the words otherwise,
+    // and one of them opened to write on.
+    void findsAndEditsNotes()
+    {
+        QuickNote note;
+        QTRY_VERIFY_WITH_TIMEOUT(note.available(), 10000);
+        note.startWith(QStringLiteral("Hang the mirror"));
+        QTRY_COMPARE_WITH_TIMEOUT(note.text(), QStringLiteral("Hang the mirror"), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(note.kept(), 5000);
+        const QString first = note.noteId();
+        note.startWith(QStringLiteral("Return the drill"));
+        QTRY_COMPARE_WITH_TIMEOUT(note.text(), QStringLiteral("Return the drill"), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(note.noteId() != first && note.kept(), 5000);
+
+        note.findNotes(QString());
+        QTRY_VERIFY_WITH_TIMEOUT(note.notes().size() >= 2, 5000);
+        QVERIFY(note.notes().first().toMap().contains(QStringLiteral("colourHex")));
+        note.findNotes(QStringLiteral("mirror"));
+        QTRY_COMPARE_WITH_TIMEOUT(note.notesWords(), QStringLiteral("mirror"), 5000);
+        QCOMPARE(note.notes().size(), 1);
+        QCOMPARE(note.notes().first().toMap().value(QStringLiteral("id")).toString(), first);
+
+        note.edit(first);
+        QTRY_COMPARE_WITH_TIMEOUT(note.noteId(), first, 5000);
+        QCOMPARE(note.text(), QStringLiteral("Hang the mirror"));
+        if (note.offersReminders()) {
+            note.setChecklist(true);
+            QTRY_VERIFY_WITH_TIMEOUT(note.checklist(), 3000);
+            QCOMPARE(note.lines().size(), 1);
+            note.setLineChecked(0, true);
+            QTRY_VERIFY_WITH_TIMEOUT(note.lines().first().toMap().value(QStringLiteral("checked")).toBool(), 3000);
+        }
+        note.done();
+        QTRY_VERIFY_WITH_TIMEOUT(!note.isOpen(), 3000);
+    }
+
 private:
     QTemporaryDir m_home{QDir::tempPath() + QStringLiteral("/tettegouche-notes-XXXXXX")};
     QProcess m_notes;

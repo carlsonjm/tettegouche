@@ -41,6 +41,13 @@ target_include_directories(tettegouche-core PUBLIC src)
 set_target_properties(tettegouche-core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(tettegouche-core PUBLIC Qt6::DBus Qt6::Core)
 
+# The quick note's island: a door to a quick note while Gooseberry is
+# installed, and the note pinned there.
+add_library(tettegouche-notes-island STATIC src/NotesIslandProvider.cpp src/NotesIslandProvider.h)
+target_include_directories(tettegouche-notes-island PUBLIC src)
+set_target_properties(tettegouche-notes-island PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(tettegouche-notes-island PUBLIC Qt6::DBus Qt6::Core KF6::KIOGui KF6::Service)
+
 add_library(tettegouche-activities STATIC
     src/MprisActivityProvider.cpp src/MprisActivityProvider.h
     src/DesktopJobProvider.cpp src/DesktopJobProvider.h
@@ -52,7 +59,7 @@ add_library(tettegouche-activities STATIC
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h src/PlasmaMatch.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare tettegouche-core Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
+target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare tettegouche-core tettegouche-notes-island Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
 target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
 # The Plasma whose window list and job list this build reads; on another,
@@ -156,6 +163,12 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/arrow-right.svg
         assets/icons/lucide/refresh-cw.svg
         assets/icons/lucide/check.svg
+        assets/icons/lucide/bell.svg
+        assets/icons/lucide/ellipsis.svg
+        assets/icons/lucide/folder.svg
+        assets/icons/lucide/list-checks.svg
+        assets/icons/lucide/search.svg
+        assets/icons/lucide/triangle-alert.svg
         assets/icons/lucide/circle.svg
         assets/icons/lucide/eject.svg
         assets/icons/lucide/eye.svg
@@ -226,6 +239,7 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/search.svg
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
+        assets/icons/lucide/plus.svg
         assets/icons/suite/notes.svg
 )
 target_link_libraries(co.goodinput.tettegouche PRIVATE
@@ -314,6 +328,13 @@ if(BUILD_TESTING)
     add_test(NAME core-fact-provider-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:core-fact-provider-test>)
     set_tests_properties(core-fact-provider-test PROPERTIES TIMEOUT 60)
+    # The quick note's island, over a stand-in for Gooseberry on a private bus
+    # and its entry in a temporary home.
+    qt_add_executable(notes-island-provider-test tests/NotesIslandProviderTest.cpp)
+    target_link_libraries(notes-island-provider-test PRIVATE tettegouche-notes-island Qt6::Test)
+    add_test(NAME notes-island-provider-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:notes-island-provider-test>)
+    set_tests_properties(notes-island-provider-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
     target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
     add_test(NAME related-info-test COMMAND related-info-test)

@@ -24,5 +24,8 @@ export QT_STYLE_OVERRIDE=Fusion
 export QT_QUICK_BACKEND=software
 export QT_PLUGIN_PATH="$2"
 export TETTE_TEST_PLUGIN_ROOT="$2"
+# The machine's own Gooseberry would add the quick note's island to every
+# count; NotesIslandProviderTest covers it apart.
+export TETTE_AMBIENT_WITHOUT_NOTES=1
 
 dbus-run-session --config-file="$(dirname "$0")/panel-test-bus.conf" -- "$1" "${@:3}"

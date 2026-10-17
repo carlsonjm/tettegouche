@@ -507,6 +507,19 @@ private Q_SLOTS:
                 {QStringLiteral("error"),0},{QStringLiteral("destinationUrl"),QUrl::fromLocalFile(photo.fileName()).toString()}});
             QTRY_COMPARE(notifications.notices.size(),2);
             QVERIFY(model.m_notices.activities().isEmpty());
+            // The quick note's island is a door, not activity: it stays.
+            const QVariantMap door{{QStringLiteral("id"),QStringLiteral("note")},{QStringLiteral("generation"),1},
+                {QStringLiteral("kind"),QStringLiteral("note")},{QStringLiteral("state"),QStringLiteral("running")}};
+            const auto noteRow=[&model] {
+                for (const auto &row : model.activities()) if (row.toMap().value(QStringLiteral("kind"))==QStringLiteral("note")) return row.toMap();
+                return QVariantMap{};
+            };
+            model.reconcile({},{},{},{door});
+            QVERIFY(!noteRow().isEmpty());
+            setAside(noteRow());
+            QVERIFY(!noteRow().isEmpty());
+            model.reconcile({},{},{},{door});
+            QVERIFY(!noteRow().isEmpty());
         }
         fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
         fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));

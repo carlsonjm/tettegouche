@@ -7,6 +7,7 @@
 
 #include <QDBusArgument>
 #include <QDBusConnection>
+#include <QDBusError>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
@@ -56,6 +57,8 @@ QuickNote::QuickNote(QObject *parent)
                 QStringLiteral("Changed"), this, SLOT(changedElsewhere(QVariantMap)));
     bus.connect(QString::fromLatin1(Service), QString::fromLatin1(Path), QString::fromLatin1(Interface),
                 QStringLiteral("BoardShown"), this, SLOT(shown(QString)));
+    bus.connect(QString::fromLatin1(Service), QString::fromLatin1(Path), QString::fromLatin1(Interface),
+                QStringLiteral("Back"), this, SIGNAL(backRequested()));
     refresh();
 }
 
@@ -145,6 +148,25 @@ void QuickNote::setStuck(const QString &window, const QString &app)
     call(QStringLiteral("SetStuck"), {window, app});
 }
 
+void QuickNote::setReminder(const QString &when)
+{
+    flush();
+    call(QStringLiteral("SetReminder"), {when});
+}
+
+void QuickNote::setChecklist(bool on)
+{
+    flush();
+    call(QStringLiteral("SetChecklist"), {on});
+}
+
+void QuickNote::setLineChecked(int line, bool checked)
+{
+    if (line < 0) return;
+    flush();
+    call(QStringLiteral("SetLineChecked"), {uint(line), checked});
+}
+
 void QuickNote::done()
 {
     flush();
@@ -155,6 +177,12 @@ void QuickNote::tuckAway()
 {
     flush();
     call(QStringLiteral("TuckAway"));
+}
+
+void QuickNote::setPinned(bool on)
+{
+    flush();
+    call(QStringLiteral("SetPinned"), {on});
 }
 
 void QuickNote::remove()
@@ -171,6 +199,74 @@ bool QuickNote::openBoard(const QString &requestToken)
     request.setArguments({noteId(), requestToken});
     QDBusConnection::sessionBus().asyncCall(request, 5000);
     return true;
+}
+
+void QuickNote::findNotes(const QString &words)
+{
+    const quint64 serial = ++m_findSerial;
+    QDBusMessage request = method(QStringLiteral("Find"));
+    request.setArguments({words, uint(0)});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, serial, words] {
+        const QDBusMessage reply = watcher->reply();
+        watcher->deleteLater();
+        if (serial != m_findSerial) return;
+        m_notes = reply.type() == QDBusMessage::ReplyMessage ? plain(reply.arguments().value(0)).toList()
+                                                             : QVariantList();
+        m_notesWords = words;
+        Q_EMIT notesChanged();
+    });
+}
+
+void QuickNote::edit(const QString &noteId)
+{
+    flush();
+    call(QStringLiteral("Edit"), {noteId});
+}
+
+void QuickNote::startWith(const QString &text)
+{
+    flush();
+    call(QStringLiteral("Done"));
+    call(QStringLiteral("Start"));
+    if (!text.isEmpty()) call(QStringLiteral("SetText"), {text});
+}
+
+void QuickNote::openOnCard(const QString &noteId, const QString &back)
+{
+    askCard({{QStringLiteral("id"), noteId}, {QStringLiteral("back"), back}});
+}
+
+void QuickNote::startOnCard(const QString &text, const QString &back)
+{
+    askCard({{QStringLiteral("text"), text}, {QStringLiteral("back"), back}});
+}
+
+void QuickNote::askCard(const QVariantMap &request)
+{
+    flush();
+    QDBusMessage message = method(QStringLiteral("OpenOnCard"));
+    message.setArguments({request});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, request] {
+        const QDBusPendingReply<bool> opened = *watcher;
+        watcher->deleteLater();
+        const QString noteId = request.value(QStringLiteral("id")).toString();
+        if (opened.isError() && opened.error().type() == QDBusError::UnknownMethod && !noteId.isEmpty()) {
+            // A Gooseberry of Milestone 4 opens a kept note on its card, with
+            // no way back.
+            QDBusMessage older = method(QStringLiteral("OpenNote"));
+            older.setArguments({noteId});
+            auto *again = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(older, 5000), this);
+            connect(again, &QDBusPendingCallWatcher::finished, this, [this, again] {
+                const QDBusPendingReply<bool> reply = *again;
+                again->deleteLater();
+                Q_EMIT cardAnswered(!reply.isError() && reply.value());
+            });
+            return;
+        }
+        Q_EMIT cardAnswered(!opened.isError() && opened.value());
+    });
 }
 
 void QuickNote::call(const QString &name, const QVariantList &arguments)

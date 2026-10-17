@@ -8,6 +8,7 @@
 #include "IncomingFileProvider.h"
 #include "TetteTransferProvider.h"
 #include "CoreFactProvider.h"
+#include "NotesIslandProvider.h"
 #include <memory>
 #include <QSet>
 #include <QTimer>
@@ -34,6 +35,7 @@ public:
     // The person set this row aside: media until it starts playing again,
     // anything else until its source ends. An end or a drive waiting out its
     // minute is filed now, and a transfer set aside is filed as soon as it ends.
+    // The quick note's island is never set aside.
     void setAside(const QString &id, int generation);
 Q_SIGNALS:
     void changed();
@@ -55,6 +57,7 @@ private:
     ScreenShareProvider m_screen;
     WaitingAppProvider m_waiting;
     CoreFactProvider m_core;
+    NotesIslandProvider m_noteIsland;
     QVariantList m_rows;
     QMap<QString, QVariantMap> m_routes;
     QMap<QString, QString> m_presentations;

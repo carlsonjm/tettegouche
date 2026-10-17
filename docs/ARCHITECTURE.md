@@ -169,9 +169,9 @@ from KDE's application list like any other. Existing-window matching runs before
 
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list
 each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
-the session bus, and `NotesPane` draws the note in Search's window; with an
-older Gooseberry, `NotesDoor` runs the Capture action through
-`KIO::ApplicationLauncherJob` instead
+the session bus, and `NotesPane` draws the board of notes and the note's page
+in Search's window; with an older Gooseberry, `NotesDoor` runs the Capture
+action through `KIO::ApplicationLauncherJob` instead
 ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes). Notes uses the launcher's
 mode state, its drawer easing and its hand-off to the application's own window.
 
@@ -202,6 +202,9 @@ admission, source truth, width and actions. Waiting applications come from
 Plasma's own window list (libtaskmanager), shared in process with Plasma's task
 manager, and Ambient asks it, not Kadunce, to bring one forward. Reading that
 list is not KWin discovery, and Tettegouche keeps no task manager of its own.
+The quick note's island is a row of that model too, from `NotesIslandProvider`,
+which reads Gooseberry's pinned note without starting Gooseberry; its taps ask
+the launcher for Search's Notes through the applet's `openDrawer`.
 
 The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and in the Plasma style's own
@@ -218,7 +221,10 @@ keyboard so Esc closes it, and is destroyed when it closes.
 `TETTE_AMBIENT_FIXTURE=transfer-media`, or `paused` for paused media, replaces
 the live sources with one sample transfer and one media row for tests and
 demonstrations. Otherwise Ambient uses live sources only, and shows no island
-when no activity qualifies.
+when no activity qualifies. `TETTE_AMBIENT_WITHOUT_NOTES`, set, leaves the
+quick note's island out whether or not Gooseberry is installed, and sends the
+island's taps to Search's Notes as where Gooseberry is not, so tests of the
+other islands and of the panel count the same on any machine.
 
 ## Settings
 

@@ -36,6 +36,8 @@ PlasmoidItem {
     // kind but media.
     readonly property string ambientShows: Plasmoid.configuration.ambientShows || "all"
     function shows(activity) {
+        // The quick note's island, unless the widget's setting turns it off.
+        if (activity.kind === "note" && Plasmoid.configuration.showQuickNote === false) return false;
         if (ambientShows === "media") return activity.kind === "media";
         if (ambientShows === "others") return activity.kind !== "media";
         return true;
@@ -141,6 +143,7 @@ PlasmoidItem {
         onInvokeRequested: (activityId, generation, action, value) =>
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
+        onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
         onKindsChanged: if (root.island && kinds.length === 0) root.island.dismiss()
     }
 

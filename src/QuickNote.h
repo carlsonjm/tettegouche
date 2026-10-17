@@ -40,8 +40,21 @@ class QuickNote : public QObject
     Q_PROPERTY(QVariantList windows READ windows NOTIFY noteChanged)
     Q_PROPERTY(QString noteId READ noteId NOTIFY noteChanged)
     Q_PROPERTY(bool kept READ kept NOTIFY noteChanged)
+    // Notes 1.1 offers the pin: one note kept in sight on the panel.
+    Q_PROPERTY(bool offersPin READ offersPin NOTIFY noteChanged)
+    Q_PROPERTY(bool pinned READ pinned NOTIFY noteChanged)
     Q_PROPERTY(bool readOnly READ readOnly NOTIFY noteChanged)
     Q_PROPERTY(QString problem READ problem NOTIFY noteChanged)
+    // The reminder and the checklist, from an application that offers them.
+    Q_PROPERTY(bool offersReminders READ offersReminders NOTIFY noteChanged)
+    Q_PROPERTY(QString remindLabel READ remindLabel NOTIFY noteChanged)
+    Q_PROPERTY(QVariantList remindChoices READ remindChoices NOTIFY noteChanged)
+    Q_PROPERTY(bool checklist READ checklist NOTIFY noteChanged)
+    Q_PROPERTY(QVariantList lines READ lines NOTIFY noteChanged)
+    // Every note the application keeps, or those with the words last asked
+    // for, newest change first; see findNotes.
+    Q_PROPERTY(QVariantList notes READ notes NOTIFY notesChanged)
+    Q_PROPERTY(QString notesWords READ notesWords NOTIFY notesChanged)
 
 public:
     static constexpr const char *Service = "io.github.carlsonjm.gooseberry";
@@ -73,8 +86,17 @@ public:
     QVariantList windows() const { return m_state.value(QStringLiteral("windows")).toList(); }
     QString noteId() const { return m_state.value(QStringLiteral("id")).toString(); }
     bool kept() const { return m_state.value(QStringLiteral("kept")).toBool(); }
+    bool offersPin() const { return m_state.contains(QStringLiteral("pinned")); }
+    bool pinned() const { return m_state.value(QStringLiteral("pinned")).toBool(); }
     bool readOnly() const { return m_state.value(QStringLiteral("readOnly")).toBool(); }
     QString problem() const { return m_state.value(QStringLiteral("problem")).toString(); }
+    bool offersReminders() const { return m_state.contains(QStringLiteral("remindChoices")); }
+    QString remindLabel() const { return m_state.value(QStringLiteral("remindLabel")).toString(); }
+    QVariantList remindChoices() const { return m_state.value(QStringLiteral("remindChoices")).toList(); }
+    bool checklist() const { return m_state.value(QStringLiteral("checklist")).toBool(); }
+    QVariantList lines() const { return m_state.value(QStringLiteral("lines")).toList(); }
+    QVariantList notes() const { return m_notes; }
+    QString notesWords() const { return m_notesWords; }
 
     // Asks the application which version it speaks, starting it if needed.
     Q_INVOKABLE void refresh();
@@ -90,17 +112,40 @@ public:
     Q_INVOKABLE void setFolder(const QString &name);
     // Sticks the note to that window, as windows gives it; empty unsticks it.
     Q_INVOKABLE void setStuck(const QString &window, const QString &app);
+    // A time in ISO 8601, "opens", or empty to take the reminder away.
+    Q_INVOKABLE void setReminder(const QString &when);
+    Q_INVOKABLE void setChecklist(bool on);
+    Q_INVOKABLE void setLineChecked(int line, bool checked);
     Q_INVOKABLE void done();
     Q_INVOKABLE void tuckAway();
+    Q_INVOKABLE void setPinned(bool on);
     Q_INVOKABLE void remove();
     // The board, as the application's own window, on this note. The token
     // comes back in boardShown once the window has drawn.
     Q_INVOKABLE bool openBoard(const QString &requestToken);
+    // Asks for the notes with these words, or every note for none; the
+    // answer arrives in notes, and an answer to older words is dropped.
+    Q_INVOKABLE void findNotes(const QString &words);
+    // Makes that note the open one, to write on as on a started note.
+    Q_INVOKABLE void edit(const QString &noteId);
+    // Finishes the open note and starts a new one with this text.
+    Q_INVOKABLE void startWith(const QString &text);
+    // Hands that note, or a new one with this text, to the application's own
+    // card, with a bar on top bearing back that leads back here
+    // (backRequested); cardAnswered says whether the card took it. An
+    // application without the card's methods, or a note gone, answers false;
+    // one that has only OpenNote takes a kept note without the way back.
+    Q_INVOKABLE void openOnCard(const QString &noteId, const QString &back = {});
+    Q_INVOKABLE void startOnCard(const QString &text, const QString &back = {});
 
 Q_SIGNALS:
     void availableChanged();
     void noteChanged();
     void boardShown(const QString &requestToken);
+    void notesChanged();
+    void cardAnswered(bool opened);
+    // The card's way back was taken.
+    void backRequested();
 
 private Q_SLOTS:
     void changedElsewhere(const QVariantMap &state);
@@ -109,6 +154,7 @@ private Q_SLOTS:
 private:
     void call(const QString &method, const QVariantList &arguments = {});
     void take(const QDBusPendingCall &call);
+    void askCard(const QVariantMap &request);
     void setState(const QVariantMap &state);
 
     bool m_available = false;
@@ -117,4 +163,7 @@ private:
     bool m_hasPending = false;
     QTimer m_pause;
     QElapsedTimer m_waiting;
+    QVariantList m_notes;
+    QString m_notesWords;
+    quint64 m_findSerial = 0;
 };
