@@ -11,14 +11,24 @@ dot for this first screen, then Apps, Files and, where Gooseberry is installed,
 Notes. The grey pill marks the mode shown, and a tap moves straight to another;
 the dot comes back here with what was typed. The window's own buttons end
 that row: Expand while Apps or Files is open, Pop out in Files, and Close,
-last. The field is the same on every screen, full width under the row, so
-only what is under it changes. Before anything is typed, what was used lately
-is under it, newest first, centred as one group: by default a grid of large
-tiles, as many rows as the room holds; set to a row, one row of small tiles.
-At most twenty show, or fewer where the setting chooses. With nothing under
-it, the field rests in the middle, and rises to the top as something is
-typed or a drawer opens. A sheet too short for one row keeps the field
-alone. Its source is KDE's record of use for the current activity, read when
+last; at rest, Close alone. The field is the same on every screen, at the size
+it first had: 58 tall and about three quarters of the sheet wide, centred
+under the row, so only what is under it changes. Before anything is typed,
+what was used lately is under it in two labelled sections, each newest first:
+Recent apps, a row of eight icons with their whole names, and Recent files,
+eight cards in two rows of four, each with its picture or its kind's icon,
+its name, its folder and when it was used. See all at a section's end opens
+Apps or Files. A narrow sheet shows fewer applications and fewer columns of
+files rather than smaller ones. Sizes and spacing follow Kadunce's
+`docs/ITASCA-VISUAL-LANGUAGE.md`.
+
+How tall Search rests depends on which sections are on: with neither, the
+sheet holds the modes and the field alone; with one, it is as tall as that
+section; with both, it is its full height. It is centred on the screen at
+rest, and typing, a drawer or a mode grows it to its full height downward
+from there, moving up only as far as the screen's edge needs. Inside Spread,
+Kadunce sets its size; with neither section on, the field rests in the middle
+of it. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
 
@@ -29,9 +39,11 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 - Nothing is offered while the screen is shared or recorded, so no file's name
   is on show; the modes stay.
 - Typing hands the room to the results.
-- The widget's setting "Recent files and apps" is Off, In a row or In a grid,
-  the default, with how many at most: 4 to 20, twenty by default. Off leaves
-  the modes and the field alone, in the middle, and nothing is read.
+- The widget's settings "Recent apps" and "Recent files" each turn their
+  section on, both by default. With both off nothing is read; an older
+  setting "offerRecent" off counts as both off.
+- A section that is on with nothing to show says so in a line, and keeps its
+  room, so Search's size does not depend on what the record holds.
 
 ### Notes
 

@@ -34,7 +34,7 @@ rg -q 'surface: dark \? "#141414"' "${project_root}/qml/SearchColors.qml"
 rg -q 'outline: dark \? "#5a5a5a"' "${project_root}/qml/SearchColors.qml"
 rg -q 'control: dark \? "#242424"' "${project_root}/qml/SearchColors.qml"
 rg -q 'paperRadius: 8' "${project_root}/qml/Launcher.qml"
-rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
+rg -q 'contentInset: 24' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
@@ -76,13 +76,13 @@ rg -q 'cfg_showAmbient' \
     "${project_root}/applet/ConfigGeneral.qml"
 rg -q 'cfg_offerRecent' \
     "${project_root}/applet/ConfigGeneral.qml"
-rg -q 'cfg_recentLayout' \
+rg -q 'cfg_recentApps' \
     "${project_root}/applet/ConfigGeneral.qml"
-rg -q '\-\-recent-row' "${project_root}/src/main.cpp" \
+rg -q 'cfg_recentFiles' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q '\-\-no-recent-apps' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
-rg -q 'cfg_recentCount' \
-    "${project_root}/applet/ConfigGeneral.qml"
-rg -q '\-\-recent-count=' "${project_root}/src/main.cpp" \
+rg -q '\-\-no-recent-files' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q '\-\-no-recent' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"

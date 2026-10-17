@@ -162,6 +162,9 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/lucide/sticky-note.svg
+        assets/icons/lucide/layout-grid.svg
+        assets/icons/lucide/folder.svg
+        assets/icons/lucide/chevron-right.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core

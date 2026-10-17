@@ -10,10 +10,10 @@ KCMUtils.SimpleKCM {
     property bool cfg_useKadunceDefault
     property bool cfg_offerRecent
     property bool cfg_offerRecentDefault
-    property string cfg_recentLayout
-    property string cfg_recentLayoutDefault
-    property int cfg_recentCount
-    property int cfg_recentCountDefault
+    property bool cfg_recentApps
+    property bool cfg_recentAppsDefault
+    property bool cfg_recentFiles
+    property bool cfg_recentFilesDefault
     property bool cfg_offerNotes
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
@@ -34,40 +34,27 @@ KCMUtils.SimpleKCM {
             onToggled: cfg_useKadunce = checked
         }
 
-        // What was used lately: not at all, one row, or a grid of larger
-        // tiles.
-        QQC2.ButtonGroup { id: recentChoice }
-
-        QQC2.RadioButton {
-            Kirigami.FormData.label: i18n("Recent files and apps:")
-            text: i18n("Off")
-            QQC2.ButtonGroup.group: recentChoice
-            checked: !cfg_offerRecent
-            onToggled: if (checked) cfg_offerRecent = false
+        // What was used lately: apps, files, both or neither. What is on
+        // decides how tall Search rests.
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Search shows:")
+            text: i18n("Recent apps")
+            checked: cfg_offerRecent && cfg_recentApps
+            // Older settings turned both off at once; turning one back on
+            // brings only that one.
+            onToggled: {
+                if (checked && !cfg_offerRecent) { cfg_recentFiles = false; cfg_offerRecent = true }
+                cfg_recentApps = checked
+            }
         }
 
-        QQC2.RadioButton {
-            text: i18n("In a row")
-            QQC2.ButtonGroup.group: recentChoice
-            checked: cfg_offerRecent && cfg_recentLayout === "row"
-            onToggled: if (checked) { cfg_offerRecent = true; cfg_recentLayout = "row" }
-        }
-
-        QQC2.RadioButton {
-            text: i18n("In a grid")
-            QQC2.ButtonGroup.group: recentChoice
-            checked: cfg_offerRecent && cfg_recentLayout !== "row"
-            onToggled: if (checked) { cfg_offerRecent = true; cfg_recentLayout = "grid" }
-        }
-
-        QQC2.SpinBox {
-            Kirigami.FormData.label: i18n("At most:")
-            enabled: cfg_offerRecent
-            from: 4
-            to: 20
-            stepSize: 4
-            value: cfg_recentCount
-            onValueModified: cfg_recentCount = value
+        QQC2.CheckBox {
+            text: i18n("Recent files")
+            checked: cfg_offerRecent && cfg_recentFiles
+            onToggled: {
+                if (checked && !cfg_offerRecent) { cfg_recentApps = false; cfg_offerRecent = true }
+                cfg_recentFiles = checked
+            }
         }
 
         QQC2.CheckBox {

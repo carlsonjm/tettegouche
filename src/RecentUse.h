@@ -15,8 +15,8 @@
 
 #include <functional>
 
-// What was used lately, for Search's first screen: applications and files,
-// newest first, from KDE's record of use. An application the dock holds, one
+// What was used lately, for Search's first screen: applications, then files,
+// each newest first, from KDE's record of use. An application the dock holds, one
 // already open, or one hidden from Apps is left out, and so is a file that is
 // gone, a folder, or anything not on this machine: what is left is what would
 // otherwise be reached the long way. The record is read when Search opens and
@@ -25,6 +25,8 @@ class RecentUse final : public QAbstractListModel
 {
     Q_OBJECT
     Q_PROPERTY(int count READ count NOTIFY countChanged)
+    // The rows before the files: the applications.
+    Q_PROPERTY(int applicationCount READ applicationCount NOTIFY countChanged)
 
 public:
     // One use, as KDE's record keeps it: an "applications:" address or a file.
@@ -37,6 +39,10 @@ public:
         IconRole,
         ThumbnailRole,
         KindRole,
+        // The folder a file is in, by name; empty for an application.
+        WhereRole,
+        // When it was last used.
+        WhenRole,
     };
     Q_ENUM(Role)
 
@@ -44,8 +50,9 @@ public:
     using Excluded = std::function<bool(const QString &applicationId, const QString &name)>;
     using Thumbnails = std::function<QString(const QString &path, const QString &mimeType, qint64 modified)>;
 
-    // The most kept: as many as the grid ever shows.
-    static constexpr int Kept = 20;
+    // The most kept of each: as many as the first screen ever shows.
+    static constexpr int ApplicationsKept = 8;
+    static constexpr int FilesKept = 8;
 
     explicit RecentUse(QObject *parent = nullptr);
 
@@ -53,6 +60,7 @@ public:
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
     int count() const { return m_items.size(); }
+    int applicationCount() const { return m_applicationCount; }
 
     void setReader(Reader reader) { m_reader = std::move(reader); }
     void setExcluded(Excluded excluded) { m_excluded = std::move(excluded); }
@@ -60,6 +68,8 @@ public:
     // While the screen is shared, nothing is offered, so no file's name is on
     // show to whoever is watching.
     void setWithheld(bool withheld);
+    // Which kinds are offered at all, both unless a setting leaves one out.
+    void setOffered(bool applications, bool files);
 
     // Reads the record again.
     void refresh();
@@ -89,6 +99,8 @@ private:
         QString applicationId;
         QString path;
         QString mimeType;
+        QString where;
+        uint lastUsed = 0;
     };
     void rebuild();
 
@@ -97,5 +109,8 @@ private:
     Thumbnails m_thumbnails;
     QList<Used> m_record;
     QVector<Item> m_items;
+    int m_applicationCount = 0;
     bool m_withheld = false;
+    bool m_applicationsOffered = true;
+    bool m_filesOffered = true;
 };
