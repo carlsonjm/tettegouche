@@ -92,9 +92,40 @@ Item {
         view = "board"
         focusFind()
     }
+    // A note from the board, or a new one with the words typed, goes to
+    // Gooseberry's own card and Search closes; where the card cannot take
+    // it, it opens on the page here.
+    property var handing: null
+    function openNote(noteId, alone) {
+        if (!quickNote || noteId === "") return
+        handing = { id: noteId, alone: !!alone }
+        quickNote.openOnCard(noteId)
+    }
+    function startNote(text, alone) {
+        if (!quickNote) return
+        handing = { text: text, alone: !!alone }
+        quickNote.startOnCard(text)
+    }
+    Connections {
+        target: pane.quickNote
+        ignoreUnknownSignals: true
+        function onCardAnswered(opened) {
+            const handed = pane.handing
+            if (!handed) return
+            pane.handing = null
+            if (opened) {
+                find.text = ""
+                pane.finished()
+            } else if (handed.id !== undefined) {
+                pane.openHere(handed.id, handed.alone)
+            } else {
+                pane.startHere(handed.text, handed.alone)
+            }
+        }
+    }
     // A note from the board, made the open one. Alone, as the panel's pinned
     // note opens it, the page has no Back and leaving it closes Search.
-    function openNote(noteId, alone) {
+    function openHere(noteId, alone) {
         if (!quickNote || noteId === "") return
         closeOpen()
         loading = "id:" + noteId
@@ -105,7 +136,7 @@ Item {
     }
     // A new note, with the words typed into the find field, or alone, empty,
     // as the panel's dot starts one.
-    function startNote(text, alone) {
+    function startHere(text, alone) {
         if (!quickNote) return
         closeOpen()
         loading = "text:" + text
@@ -414,14 +445,30 @@ Item {
             }
             Text {
                 id: findHint
-                anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.right: newNote.left
+                anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
-                text: pane.pickable(pane.picked) ? words.i18n("Enter opens") : words.i18n("Enter starts a note")
+                text: pane.pickable(pane.picked) ? words.i18n("Enter opens") : ""
                 color: tone.edgeText
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
                 opacity: pane.clamp((pane.progress - 0.72) / 0.28)
+            }
+            // A note is started with a finger here, with any words typed, as
+            // Enter starts one.
+            TrayButton {
+                id: newNote
+                objectName: "notes-new"
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                anchors.verticalCenter: parent.verticalCenter
+                glyph: "plus"
+                text: words.i18n("New note")
+                showText: true
+                visible: opacity > 0
+                opacity: findHint.opacity
+                enabled: pane.view === "board" && !!pane.quickNote && !pane.quickNote.readOnly
+                onActivated: pane.startNote(find.text.trim())
             }
             Timer {
                 id: findPause

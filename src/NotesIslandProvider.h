@@ -42,6 +42,12 @@ public:
     // Looks again for the application, as when KDE's application list changes.
     void refresh();
 
+    // The island's taps, on the application's own card: an empty id is a new
+    // quick note, through its Capture action, and an id that note, asked of
+    // the application, or a new one where it is not there. False, doing
+    // nothing, where the application is not installed with its Capture action.
+    static bool openOnCard(const QString &noteId, QObject *parent);
+
 Q_SIGNALS:
     void changed();
 

@@ -6,6 +6,7 @@
 #include "NotesIslandProvider.h"
 #include "NotesDoor.h"
 
+#include <KIO/ApplicationLauncherJob>
 #include <KService>
 #include <KSycoca>
 
@@ -96,6 +97,50 @@ void NotesIslandProvider::ownerChanged(const QString &name, const QString &, con
     m_speaks = false;
     setPinned({});
     if (!owner.isEmpty()) ask();
+}
+
+namespace
+{
+// The application's Capture action, where it is installed and not left out
+// for a test of the other islands.
+KServiceAction captureAction()
+{
+    if (qEnvironmentVariableIsSet("TETTE_AMBIENT_WITHOUT_NOTES")) return {};
+    if (const auto notes = KService::serviceByStorageId(QString::fromLatin1(NotesDoor::ApplicationId))) {
+        const auto actions = notes->actions();
+        for (const KServiceAction &action : actions) {
+            if (action.name() == QLatin1String(NotesDoor::ActionName)) return action;
+        }
+    }
+    return {};
+}
+
+void runCapture(const KServiceAction &capture, QObject *parent)
+{
+    auto *job = new KIO::ApplicationLauncherJob(capture, parent);
+    job->start();
+}
+} // namespace
+
+bool NotesIslandProvider::openOnCard(const QString &noteId, QObject *parent)
+{
+    const KServiceAction capture = captureAction();
+    if (capture.name().isEmpty()) return false;
+    if (noteId.isEmpty()) {
+        runCapture(capture, parent);
+        return true;
+    }
+    // The pinned note shows only while the application runs, so it answers;
+    // a note gone since, or an answer that never comes, starts a new one.
+    auto request = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("OpenNote"));
+    request.setArguments({noteId});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 5000), parent);
+    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, parent, [watcher, capture, parent] {
+        const QDBusPendingReply<bool> opened = *watcher;
+        watcher->deleteLater();
+        if (opened.isError() || !opened.value()) runCapture(capture, parent);
+    });
+    return true;
 }
 
 // The version first: an application that speaks another one is left alone.

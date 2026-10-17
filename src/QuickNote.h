@@ -130,12 +130,18 @@ public:
     Q_INVOKABLE void edit(const QString &noteId);
     // Finishes the open note and starts a new one with this text.
     Q_INVOKABLE void startWith(const QString &text);
+    // Hands that note, or a new one with this text, to the application's own
+    // card; cardAnswered says whether the card took it. An application
+    // without the card's methods, or a note gone, answers false.
+    Q_INVOKABLE void openOnCard(const QString &noteId);
+    Q_INVOKABLE void startOnCard(const QString &text);
 
 Q_SIGNALS:
     void availableChanged();
     void noteChanged();
     void boardShown(const QString &requestToken);
     void notesChanged();
+    void cardAnswered(bool opened);
 
 private Q_SLOTS:
     void changedElsewhere(const QVariantMap &state);
@@ -144,6 +150,7 @@ private Q_SLOTS:
 private:
     void call(const QString &method, const QVariantList &arguments = {});
     void take(const QDBusPendingCall &call);
+    void askCard(const QString &method, const QString &argument);
     void setState(const QVariantMap &state);
 
     bool m_available = false;

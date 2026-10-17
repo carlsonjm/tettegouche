@@ -221,8 +221,9 @@ keyboard so Esc closes it, and is destroyed when it closes.
 the live sources with one sample transfer and one media row for tests and
 demonstrations. Normal startup uses live sources only and leaves the island
 absent when no activity qualifies. `TETTE_AMBIENT_WITHOUT_NOTES`, set, leaves the
-quick note's island out whether or not Gooseberry is installed, so tests of
-the other islands count the same on any machine.
+quick note's island out whether or not Gooseberry is installed, and sends the
+island's taps to Search's Notes as where Gooseberry is not, so tests of the
+other islands and of the panel count the same on any machine.
 
 ## Settings
 

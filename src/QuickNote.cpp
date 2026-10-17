@@ -229,6 +229,29 @@ void QuickNote::startWith(const QString &text)
     if (!text.isEmpty()) call(QStringLiteral("SetText"), {text});
 }
 
+void QuickNote::openOnCard(const QString &noteId)
+{
+    askCard(QStringLiteral("OpenNote"), noteId);
+}
+
+void QuickNote::startOnCard(const QString &text)
+{
+    askCard(QStringLiteral("OpenNew"), text);
+}
+
+void QuickNote::askCard(const QString &name, const QString &argument)
+{
+    flush();
+    QDBusMessage request = method(name);
+    request.setArguments({argument});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        const QDBusPendingReply<bool> opened = *watcher;
+        watcher->deleteLater();
+        Q_EMIT cardAnswered(!opened.isError() && opened.value());
+    });
+}
+
 void QuickNote::call(const QString &name, const QVariantList &arguments)
 {
     QDBusMessage request = method(name);

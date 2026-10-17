@@ -46,7 +46,7 @@ target_link_libraries(tettegouche-core PUBLIC Qt6::DBus Qt6::Core)
 add_library(tettegouche-notes-island STATIC src/NotesIslandProvider.cpp src/NotesIslandProvider.h)
 target_include_directories(tettegouche-notes-island PUBLIC src)
 set_target_properties(tettegouche-notes-island PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-notes-island PUBLIC Qt6::DBus Qt6::Core KF6::Service)
+target_link_libraries(tettegouche-notes-island PUBLIC Qt6::DBus Qt6::Core KF6::KIOGui KF6::Service)
 
 add_library(tettegouche-activities STATIC
     src/MprisActivityProvider.cpp src/MprisActivityProvider.h

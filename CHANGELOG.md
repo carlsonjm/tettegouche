@@ -6,18 +6,20 @@ provenance.
 ## Unreleased
 
 - The quick note has an island of its own beside the launcher, there while
-  Gooseberry is installed: a dot with a plus that opens Search's Notes on the
-  quick note, and beside it the note pinned in Gooseberry, a bead of its
-  colour and its first words, which opens that note. It stays where the other
+  Gooseberry is installed: a dot with a plus that starts a quick note on
+  Gooseberry's own card, and beside it the note pinned in Gooseberry, a bead
+  of its colour and its first words, which opens that note on the card. It stays where the other
   islands come and go, and the widget's setting "Show the quick note island"
   turns it off.
 - Notes in Search opens on a board of every note: Find or start a note, a row
   of filters, Everything, Today, On windows, each folder and Tucked away, and
-  the notes grouped under them. A note opens as the page, paper of its colour
-  filling the room with its colour a dot in its corner, and one quiet line
-  under it with its folder, its window, Checklist, Remind and More, where Copy
-  all, Tuck away and Remove wait. Done is gone: Back returns to the board, and
-  the note is kept as you go.
+  the notes grouped under them, with New note at the end of the field for a
+  finger. A note tapped there, or started with New note or Enter, opens on
+  Gooseberry's own card and Search closes. With a Gooseberry that cannot take
+  it, the note opens as the page here, paper of its colour filling the room
+  with its colour a dot in its corner, and one quiet line under it with its
+  folder, its window, Checklist, Remind and More, where Copy all, Tuck away and
+  Remove wait; Back returns to the board, and the note is kept as you go.
 - Search's modes run along its top on every screen: the dot for Search's first
   screen, then Apps, Files and Notes, the grey pill on the one shown. A tap
   moves straight from one mode to another, and the dot comes back to search

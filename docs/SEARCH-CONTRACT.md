@@ -48,10 +48,12 @@ application and Tettegouche never depends on it.
   notes with them and underline where they are found; a folder whose name
   holds them is listed after the notes and opens its filter. The window
   keeps its size, and the row of modes stays above it.
-- Enter starts a new note with the words typed, finishing the one open
-  before; `Down` and `Up` pick a note for Enter to open instead. A tap opens
-  a note.
-- A note is the page: paper of its colour filling the room, with dark ink on
+- Enter, or New note at the field's end, starts a new note with the words
+  typed; `Down` and `Up` pick a note for Enter to open instead. A tap opens a
+  note. Each goes to Gooseberry's own card (`OpenNote`, `OpenNew`) and Search
+  closes; only a Gooseberry whose card cannot take it has the note open on
+  the page here.
+- A note on the page here is paper of its colour filling the room, with dark ink on
   any ground. Its colour is a dot in its corner, opening the five colours
   beside it. One quiet line under it holds the folder's name, the window it
   is stuck to or Not stuck, a mark that it is kept, or what is wrong, and
@@ -72,12 +74,14 @@ application and Tettegouche never depends on it.
   where Gooseberry offers it (Unpin on the pinned note), Tuck away and
   Remove; Tuck away and Remove return to the board, or close Search when
   the note was opened straight onto its page.
-- The panel's quick note island opens Notes at Search's size: its dot on a
-  new quick note, and its pinned note on that note, each straight onto the
-  page with no Back. While Notes is open, either is shown there.
+- The panel's quick note island opens Gooseberry's own card: its dot on a
+  new quick note, and its pinned note on that note. Only where Gooseberry
+  cannot take it does it open Notes at Search's size, straight onto the page
+  with no Back.
 - The board and the note are Gooseberry's over its session-bus interface,
   version 1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search):
-  `Find` lists the notes, every one for no words, `Edit` opens one, and
+  `Find` lists the notes, every one for no words, `OpenNote` and `OpenNew`
+  hand one to Gooseberry's card, `Edit` opens one on the page here, and
   `SetPinned` pins it.
   Typing is sent half a second after it pauses and at least every three
   seconds, and on closing; each change is written by Gooseberry before its

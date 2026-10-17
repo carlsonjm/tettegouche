@@ -20,8 +20,8 @@ than repeat it.
 | Type, on the notes board | Finds the notes with those words; a folder they name is listed under the notes. |
 | Tap or click a filter, on the notes board | Everything, the current day's filter, On windows, a folder or Tucked away narrows the notes to it. |
 | `Down` or `Up`, on the notes board | Picks a note; Enter opens it. |
-| `Enter`, on the notes board, with no note picked | Starts a new note with the words typed. |
-| Tap or click a note, on the notes board | Opens it on the page, with the cursor at its end. |
+| `Enter`, on the notes board, with no note picked, or tap or click New note at the field's end | Starts a new note with the words typed on Gooseberry's own card, and Search closes. |
+| Tap or click a note, on the notes board | Opens it on Gooseberry's own card, and Search closes. With a Gooseberry whose card cannot take it, it opens on the page here, with the cursor at its end. |
 | Type, on a note's page | Writes the note; Gooseberry keeps it as you go. |
 | Tap or click Back, or `Esc`, on a page opened from the board | Returns to the board. |
 | `Esc`, on the notes board | Returns to Search. |
@@ -201,8 +201,8 @@ than repeat it.
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
 | Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
-| Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Opens Search's Notes on the quick note: a new one, or the one last started. |
-| Tap or click the pinned note on the quick note's island | Opens Search's Notes on that note's page. |
+| Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Starts a quick note on Gooseberry's own card. |
+| Tap or click the pinned note on the quick note's island | Opens that note on Gooseberry's own card. |
 | Tap or click another island away from its controls | Opens it in place, larger. The quick note's island opens nothing in place. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
 | Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |

@@ -172,11 +172,13 @@ Core island and nothing else changes.
 While Gooseberry is installed with its Capture action, the test Search's Notes
 door uses, the quick note's island stands in the band: a dot with a plus,
 Lucide's plus on a faint disc of the style's ink. A tap on the dot, or on the
-island off the pinned note, opens Search's Notes on the quick note, starting
-one or resuming the one last started. Where Gooseberry has a note pinned, the
-note sits beside the dot in the same island: a bead of the note's colour and
-its first words, one line, elided where long. A tap there opens Search's Notes
-on that note's page. The island opens no card of its own.
+island off the pinned note, starts a quick note on Gooseberry's own card,
+through its Capture action. Where Gooseberry has a note pinned, the note sits
+beside the dot in the same island: a bead of the note's colour and its first
+words, one line, elided where long. A tap there opens that note on Gooseberry's
+card (`OpenNote`), or starts a new one where the note has gone. The island
+opens no card of its own; Search's Notes takes the tap only where Gooseberry
+cannot.
 
 Ambient reads the pinned note from Gooseberry's quick-note interface on the
 session bus, version 1, only while Gooseberry runs: it asks `Pinned` when

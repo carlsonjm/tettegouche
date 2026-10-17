@@ -274,6 +274,13 @@ TestCase {
         property bool offersPin: true
         property bool pinned: false
         property var pins: []
+        // Gooseberry's own card: taking a note handed to it, or, as an older
+        // Gooseberry, not, so the note opens on the page here.
+        property bool cardTakes: false
+        property var cards: []
+        signal cardAnswered(bool opened)
+        function openOnCard(noteId) { cards = cards.concat(["id:" + noteId]); cardAnswered(cardTakes) }
+        function startOnCard(words) { cards = cards.concat(["text:" + words]); cardAnswered(cardTakes) }
         readonly property var store: [
             { id: "note-1", title: "Plan the kitchen", excerpt: "", colour: "yellow", colourHex: "#F2D98A",
               folder: "Kitchen", folderLabel: "Kitchen", stuck: true, window: "plan.txt", app: "org.kde.kate",
@@ -292,7 +299,7 @@ TestCase {
             offersFolders = true; folderSets = []; stucks = []
             kept = false; offersReminders = true; remindLabel = ""; reminders = []; checklist = false; lines = []; ticks = []
             notes = []; notesWords = ""; finds = []; edits = []; startsWith = []
-            offersPin = true; pinned = false; pins = []
+            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []
             folder = "Kitchen"; folderLabel = "Kitchen"
             folders = [{ name: "Kitchen", label: "Kitchen", chosen: true, workspace: true },
                        { name: "", label: "Inbox", chosen: false, workspace: false },
@@ -3037,6 +3044,44 @@ TestCase {
         compare(quickStub.dones, 0)
         compare(controller.closes, 0)
         compare(field.mapToItem(sheet, 0, 0).y, fieldAt.y)
+    }
+    // A note tapped on the board, or a new one from New note or Enter with
+    // the words typed, goes to Gooseberry's own card, and Search closes.
+    function test_notesOnCard() {
+        openNotesMode()
+        quickStub.cardTakes = true
+        const pane = findChild(launcher, "notes-pane")
+        const row = findChild(launcher, "notes-row-note-1")
+        mouseClick(row, row.width / 2, row.height / 2)
+        compare(quickStub.cards, ["id:note-1"])
+        compare(quickStub.edits, [])
+        compare(pane.view, "board")
+        compare(controller.closes, 1)
+    }
+    function test_notesNewOnCard() {
+        openNotesMode()
+        quickStub.cardTakes = true
+        keyClick(Qt.Key_F)
+        keyClick(Qt.Key_E)
+        keyClick(Qt.Key_R)
+        keyClick(Qt.Key_N)
+        const newNote = findChild(launcher, "notes-new")
+        verify(newNote.visible)
+        verify(newNote.height >= 44)
+        mouseClick(newNote, newNote.width / 2, newNote.height / 2)
+        compare(quickStub.cards, ["text:fern"])
+        compare(quickStub.startsWith, [])
+        compare(controller.closes, 1)
+    }
+    // A Gooseberry whose card cannot take a note opens it on the page here.
+    function test_notesNewHereWithoutCard() {
+        openNotesMode()
+        const pane = findChild(launcher, "notes-pane")
+        keyClick(Qt.Key_Return)
+        compare(quickStub.cards, ["text:"])
+        compare(quickStub.startsWith, [""])
+        compare(pane.view, "page")
+        compare(controller.closes, 0)
     }
     // Words find notes; the filters narrow them; Tucked away shows only
     // what is tucked away.
