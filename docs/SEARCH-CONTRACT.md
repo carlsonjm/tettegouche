@@ -1,8 +1,8 @@
 # Search contract
 
-Search reveals recognizable destinations rather than rewarding incidental
-strings. Screenshot-specific changes must become general rules tested against
-unrelated examples before adoption. Its inputs are in [INPUT.md](INPUT.md).
+Search shows destinations a person recognizes, not whatever happens to contain
+the typed letters. A fix prompted by one screenshot becomes a general rule,
+tested against unrelated examples, before it lands. Its inputs are in [INPUT.md](INPUT.md).
 
 ## First screen
 
@@ -28,7 +28,7 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 
 Notes is one of Search's modes. Gooseberry keeps the note; Search draws it in
 its own window and loads none of Gooseberry's code. Gooseberry is a separate
-application and Tettegouche never depends on it.
+application, and Tettegouche works without it.
 
 - Notes is offered while the application `io.github.carlsonjm.Gooseberry.desktop`
   is installed with its Capture action, looked for each time Search opens and
@@ -90,9 +90,10 @@ application and Tettegouche never depends on it.
    alias prefixes express stronger intent without per-query exceptions.
 6. Matching ignores punctuation and case and uses word boundaries rather than
    arbitrary scattered letters.
-7. No browsing or settings change occurs merely because the user types. Web
-   fallback appears only after explicit submission of an empty eligible result.
-8. Ranking has no usage-learning requirement; history cannot overpower relevance.
+7. Typing alone never opens the browser or changes a setting. The web fallback
+   appears only when the person submits a search with no eligible result.
+8. Ranking does not need to learn from use, and history never outranks
+   relevance.
 
 ## Providers and execution
 
@@ -107,8 +108,8 @@ nothing. A fact or Helper found this way ranks above every file and folder,
 below only an application named exactly what was typed: "update" means the
 Helper, not a folder called update. Enter on one asks Core to open the card on its own; Install an app
 gets what was typed, so "install pdf editor" opens it searching. A card changes
-nothing until the person's yes on it. Shell, session/kill actions, browser history, and online runners
-are excluded.
+nothing until the person's yes on it. Shell commands, session and kill actions, browser history and online runners
+are left out.
 
 Application results may activate an exact existing Kadunce window. Files and
 settings execute their provider or verified module action. Web dispatch sends an
@@ -119,15 +120,15 @@ Firefox-family handlers are verified.
 ## Destination identity
 
 - Equivalent normalized local paths collapse across file providers. Same-named
-  files at different paths remain distinct; no symlink traversal or title-only
-  merging is performed.
+  files at different paths stay distinct. Symlinks are not followed, and a
+  title alone never merges two results.
 - Desktop application identities collapse across app rows. A `kcm_*.desktop`
   shortcut may collapse with the same KDE module; the canonical module wins so
   related children remain attached.
-- Context children belong to the parent destination and are not extra ranked
-  results. Selecting one opens the parent settings page after revalidating that
+- Context children sit under their parent destination and are not ranked as
+  results of their own. Selecting one opens the parent settings page after revalidating that
   the child is still present.
-- Independent tools with similar names remain separate destinations.
+- Independent tools with similar names stay separate destinations.
 
 ## Stable interaction
 
@@ -148,5 +149,5 @@ does nothing. A new query or scope releases the lock.
 | `sound.png` | Explicit file beats unrelated settings |
 | unmatched text | No invented destination; explicit browser fallback |
 
-Provider retrieval remains a hard boundary: policy cannot rank a candidate that
-KDE never returns.
+Ranking works only on what KDE's providers return: it cannot rank a candidate
+KDE never returned.

@@ -73,8 +73,9 @@ them and closed the search. The keys now stack above the launcher, and a whole
 search can be typed on them. Opening activates the launcher, which keeps a
 full-screen window from covering it. Notification banners draw over it.
 
-Tettegouche adds no daemon, polling loop, persistent activity history,
-compositor ownership, replacement task manager or cross-product state owner.
+Tettegouche adds no daemon or polling loop and keeps no activity history. It
+does not take over the compositor or the task manager, or hold state for other
+products.
 
 ## Ownership boundaries
 
@@ -138,7 +139,7 @@ brings it back, and moving between Apps and Files keeps the size chosen.
 ## Search and catalogue
 
 The compact search model combines an allowlisted set of KRunner providers and a
-Tettegouche-owned confidence policy. Its behavior is owned by
+Tettegouche's own confidence policy, described in
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
 Apps reads visible applications from `KApplicationTrader`, again whenever
@@ -190,8 +191,8 @@ navigation, selection, clipboard, Properties and KIO jobs, and answers what
 KIO asks during a copy through `FileQuestions`; `FilesPane.qml` renders that
 state. `FileDevices` lists drives from Solid, mounting and ejecting them, and phones, by cable through kio-fuse and through KDE Connect. The launcher gives it thumbnails through `FileThumbnails`,
 an image provider over KDE's previews, and a file's own details through
-`FileDetails`, over KDE's metadata readers. Their behavior and
-safety boundary is owned by [FILES-CONTRACT.md](FILES-CONTRACT.md).
+`FileDetails`, over KDE's metadata readers. [FILES-CONTRACT.md](FILES-CONTRACT.md)
+describes their behavior and safety rules.
 
 ## Ambient activity
 
@@ -199,8 +200,8 @@ The applet constructs one shared activity model per Plasma process from the
 sources [AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) lists; that contract owns
 admission, source truth, width and actions. Waiting applications come from
 Plasma's own window list (libtaskmanager), shared in process with Plasma's task
-manager, and Ambient asks it, not Kadunce, to bring one forward; this is
-neither KWin discovery nor a task manager of Tettegouche's own.
+manager, and Ambient asks it, not Kadunce, to bring one forward. Reading that
+list is not KWin discovery, and Tettegouche keeps no task manager of its own.
 
 The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and in the Plasma style's own
@@ -216,8 +217,8 @@ keyboard so Esc closes it, and is destroyed when it closes.
 
 `TETTE_AMBIENT_FIXTURE=transfer-media`, or `paused` for paused media, replaces
 the live sources with one sample transfer and one media row for tests and
-demonstrations. Normal startup uses live sources only and leaves the island
-absent when no activity qualifies.
+demonstrations. Otherwise Ambient uses live sources only, and shows no island
+when no activity qualifies.
 
 ## Settings
 
@@ -231,8 +232,8 @@ against the Plasma it builds with.
 
 ## Related settings
 
-Related-setting children are read-only context under a settings result, owned by
-[RELATED-SETTINGS.md](RELATED-SETTINGS.md).
+Related-setting children are read-only details under a settings result,
+described in [RELATED-SETTINGS.md](RELATED-SETTINGS.md).
 
 ## Words
 
@@ -288,8 +289,8 @@ Kadunce's absence), search policy, workspace schema, Files operations, related
 providers, activity providers, and icon rendering. QML and private-bus tests
 cover launcher controls, Ambient composition, panel geometry/input, and package
 integration. A words test draws Files with test catalogs that mark every
-phrase, and fails on any word not asked of a catalog. Disposable fixtures must
-not write or delete real user files.
+phrase, and fails on any word not asked of a catalog. Tests use throwaway
+fixtures and never write or delete real user files.
 
 ## Known issues
 

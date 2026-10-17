@@ -18,9 +18,8 @@
 
 <p align="center">
 Tettegouche is a touch-oriented Search and file launcher for KDE Plasma. One dot
-in the panel finds, launches, browses and acts, without sorting through separate
-menus, and small islands beside it show what is happening now. Everything it
-searches is on this computer, and nothing you type leaves it.
+in the panel opens search, applications and files in one place, and small
+islands beside it show what is happening now. Search stays on this computer.
 </p>
 
 <p align="center"><img src="assets/readme/showcase.webp" alt="Tettegouche's Search open over the desktop, with the media island in the panel below it" width="100%"></p>
@@ -37,7 +36,7 @@ searches is on this computer, and nothing you type leaves it.
 <tr>
 <td width="33%" valign="top"><b>Live activity</b><br>Islands in the panel for music, transfers, new downloads, drives, a shared screen and an application waiting on you.</td>
 <td width="33%" valign="top"><b>Any input</b><br>Works with touch, a pointer or a keyboard, and follows your light or dark colour scheme.</td>
-<td width="33%" valign="top"><b>Works on its own</b><br>Needs nothing else from the suite. Kadunce, Gooseberry or Split Rock add to it where they are installed.</td>
+<td width="33%" valign="top"><b>Works on its own</b><br>Works fully without the Shuffle dock or any other part of the suite. Kadunce, Gooseberry or Split Rock add to it where they are installed.</td>
 </tr>
 </table>
 
@@ -69,13 +68,12 @@ Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
 and Files, Notes where Gooseberry is installed, and below them what you used
 lately: files, and applications that are not already open or pinned in the
 dock. To go straight to Apps, Files or Notes, press the dot and slide toward
-the islands. Tettegouche adds no background service; after you close Search
-it stays ready, so the next open shows at once.
+the islands. Search stays ready after you close it, so it opens at once next
+time, and Tettegouche adds no background service to do it.
 
-**Private by design.** Search looks only on this computer. Files come from
-KDE's own built-in file index, the one Dolphin uses, so Tettegouche keeps no
-index of its own and sends nothing you type anywhere. The one exception is when
-you choose **Search the web**, which hands your words to your browser.
+Search stays on this computer. Files come from Baloo, KDE's built-in file
+index that Dolphin also uses, so Tettegouche keeps no index of its own. Only
+**Search the web** hands your words to your browser.
 
 <details>
 <summary>What Search finds</summary>
@@ -89,10 +87,9 @@ you choose **Search the web**, which hands your words to your browser.
 - Split Rock's upkeep cards and facts, such as "update" or "storage", where
   Split Rock is installed
 
-Local results appear first. If nothing local matches, submitting the query can
-open it in your web browser. Tettegouche does not learn from or rank results by
-your usage history. Touch and hold an application, or right-click it, to
-uninstall it.
+Local results come first. If nothing local matches, submitting the search can
+open it in your web browser. Results are not ranked by what you used before.
+Touch and hold an application, or right-click it, to uninstall it.
 
 </details>
 
@@ -101,7 +98,7 @@ uninstall it.
 
 **Apps** shows installed applications when you would rather look than search.
 A to Z is one run by name. Most used and Newest installed are divided into
-sections by when each was last used or arrived. Your choice is kept.
+sections by when each was last used or arrived. Apps remembers your choice.
 
 Drag one application onto another to make a folder: a single tile at its
 name's place A to Z, or at the head of its section. It opens and closes in
@@ -121,15 +118,15 @@ It can pop out into a window of its own.
 
 You can open, copy, move, rename, and delete files; create folders; drag files
 between folders and to or from other applications; open drives and phones, and
-eject drives; and recover the last item Tettegouche sent to Trash. File work
-continues safely if you close Search, or the panel restarts, while an operation
-is running. Tettegouche currently focuses on local files.
+eject drives; and recover the last item Tettegouche sent to Trash. A running
+file operation carries on safely if you close Search or the panel restarts.
+Files works with local files for now.
 
 </details>
 
 ## Live activity
 
-The islands beside the dot show useful activity while it is happening:
+The islands beside the dot show what is happening now:
 
 - Music and other media sessions
 - Plasma file and desktop jobs
@@ -144,9 +141,9 @@ The islands beside the dot show useful activity while it is happening:
 <details>
 <summary>How the islands behave</summary>
 
-Available controls come from the application or service responsible for the
-activity. Tettegouche removes an item when its source disappears and does not
-claim that an unknown operation completed successfully.
+Each island's controls come from the application or service behind it. When
+that source goes away, Tettegouche removes the item without guessing whether it
+succeeded.
 
 Each kind of activity is its own island, side by side and centred in the room
 the panel gives them, clear so the panel shows through. When they share the
@@ -164,9 +161,8 @@ Search can include useful information from supported Bluetooth, sound, network,
 display, power, printer, storage, KDE Connect, default-application, and Night
 Light settings.
 
-These results open the appropriate KDE settings page. Tettegouche does not
-silently pair devices, connect networks, mount storage, change displays, or
-alter power settings.
+These results open the matching KDE settings page, where you make any change
+yourself.
 
 </details>
 
@@ -179,8 +175,9 @@ opens its existing Card, or through Plasma's own window list where Kadunce is
 not running. Expanded Apps and Files views can also use the space Kadunce
 provides.
 
-If Kadunce is missing or incompatible, Tettegouche returns to its normal
-standalone window.
+Without Kadunce, or with a version it cannot use, Tettegouche opens in its own
+window. It also works fully without the Shuffle dock; Pin to dock appears only
+where the dock is installed.
 
 </details>
 
@@ -207,9 +204,8 @@ add it to the panel.
 Build again after each Plasma update: until then, Ambient leaves out waiting
 applications and Plasma's own transfers.
 
-Bluetooth hardware and Kadunce are optional. Some related-setting results use
-optional local system tools; those results are simply omitted when a tool is
-not available.
+Bluetooth hardware and Kadunce are optional. Some related-setting results come
+from optional system tools and appear only when the tool is installed.
 
 </details>
 
@@ -221,7 +217,7 @@ not available.
 ```
 
 Uninstalling removes Tettegouche's program, its main launcher entry and the
-panel widget without deleting this source folder.
+panel widget, and leaves this source folder in place.
 
 </details>
 
