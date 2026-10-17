@@ -894,9 +894,10 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         verify(sheet)
         controller.guestMode = false
-        tryCompare(sheet, "width", 640)
+        // One size on every display: 840 wide, centred.
+        tryCompare(sheet, "width", 840)
         compare(sheet.height, sheet.restingHeight)
-        compare(sheet.x, 180)
+        compare(sheet.x, 80)
         controller.guestMode = true
         tryCompare(sheet, "width", controller.guestWidth)
         compare(sheet.height, controller.guestHeight)
@@ -1078,12 +1079,12 @@ TestCase {
         // the applications.
         compare(search.y,0)
         compare(grid.y-search.y-search.height,16+50)
-        compare(grid.y, 58+16+50)
+        compare(grid.y, 44+16+50)
         const closesBefore = controller.closes
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
         compare(controller.closes, closesBefore)
-        tryCompare(sheet, "width", 640)
+        tryCompare(sheet, "width", 840)
         tryCompare(sheet, "height", sheet.restingHeight)
         compare(controller.drawerExpanded, false)
     }
@@ -1132,9 +1133,12 @@ TestCase {
         verify(!findChild(launcher, "window-expand").visible)
         verify(!findChild(launcher, "window-pop-out").visible)
         compare(field.y, 0)
-        compare(field.height, 58)
-        compare(field.width, Math.max(360, Math.round(field.parent.width * 0.72)))
-        verify(Math.abs(left(field) - left(field.parent) - (right(field.parent) - right(field))) <= 1)
+        compare(field.height, 44)
+        // The field holds the row's edges: the dot's pill starts on its left
+        // edge, and it runs to the right edge as Close does.
+        compare(field.width, field.parent.width)
+        compare(Math.round(left(dot) + (dot.width - 40) / 2), Math.round(left(field)))
+        verify(right(close) <= right(field) + 1)
         // Both on, the sheet has its full height.
         compare(sheet.height, sheet.fullHeight)
         verify(row.visible)
@@ -1186,7 +1190,7 @@ TestCase {
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
         const area = controller.availableArea
-        const small = 2 * 24 + 60 + 58
+        const small = 2 * 24 + 56 + 44
         launcher.recentFiles = false
         tryCompare(sheet, "height", small + 24 + 40 + 116)
         verify(findChild(launcher, "recent-0").visible)
@@ -1288,8 +1292,11 @@ TestCase {
         // Search rests small, the field under the modes and nothing under it.
         const field = findChild(launcher, "search-field")
         const sheet = findChild(launcher, "launcher-sheet")
-        tryCompare(sheet, "height", 2 * 24 + 60 + 58)
+        tryCompare(sheet, "height", 2 * 24 + 56 + 44)
         tryCompare(field, "y", 0)
+        // and only as wide as the field and 24 on each side.
+        tryCompare(sheet, "width", Math.min(640, controller.availableArea.width - 40))
+        compare(field.width, sheet.width - 2 * 24)
         launcher.forceActiveFocus()
         for (let i = 0; i < 6 && !apps.activeFocus; ++i) keyClick(Qt.Key_Tab)
         verify(apps.activeFocus)
@@ -2596,14 +2603,14 @@ TestCase {
         compare(controller.closes, 0)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, false)
-        tryCompare(sheet, "width", 640)
+        tryCompare(sheet, "width", 840)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         tryCompare(sheet, "width", 980)
         const back = findChild(launcher, "home-dot")
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "modeProgress", 0)
         compare(controller.drawerExpanded, false)
-        tryCompare(sheet, "width", 640)
+        tryCompare(sheet, "width", 840)
     }
 
     // Moving between Notes and the drawers keeps the size chosen, as moving
@@ -2915,7 +2922,7 @@ TestCase {
         verify(back.mapToItem(launcher, 0, back.height).y <= header.mapToItem(launcher, 0, 0).y)
         compare(middle(field).y, middle(header).y)
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
-        compare(field.width, Math.max(360, Math.round(header.width * 0.72)))
+        compare(field.width, header.width)
         const appsSort = findChild(launcher, "sort-button")
         compare(appsSort.visible, data.mode === "apps")
         if (data.mode === "apps") {
@@ -2977,7 +2984,7 @@ TestCase {
         // With nothing typed, search returns to the first screen: at the top
         // over what was used lately, else in the middle.
         tryCompare(field, "y", field.restY)
-        compare(field.height, 58)
+        compare(field.height, 44)
         wait(600)
     }
     // Esc closes the sort menu if it is open, otherwise the drawer, while

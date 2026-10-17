@@ -11,9 +11,10 @@ dot for this first screen, then Apps, Files and, where Gooseberry is installed,
 Notes. The grey pill marks the mode shown, and a tap moves straight to another;
 the dot comes back here with what was typed. The window's own buttons end
 that row: Expand while Apps or Files is open, Pop out in Files, and Close,
-last; at rest, Close alone. The field is the same on every screen, at the size
-it first had: 58 tall and about three quarters of the sheet wide, centred
-under the row, so only what is under it changes. Before anything is typed,
+last; at rest, Close alone. The field is the same on every screen: a pill
+44 tall on the row's own edges, the dot's pill starting where it starts and
+Close ending where it ends, 16 below the row, with 24 between everything and
+the sheet's edge, so only what is under it changes. Before anything is typed,
 what was used lately is under it in two labelled sections, each newest first:
 Recent apps, a row of eight icons with their whole names, and Recent files,
 eight cards in two rows of four, each with its picture or its kind's icon,
@@ -23,8 +24,12 @@ files rather than smaller ones. Sizes and spacing follow Kadunce's
 `docs/ITASCA-VISUAL-LANGUAGE.md`.
 
 How tall Search rests depends on which sections are on: with neither, the
-sheet holds the modes and the field alone; with one, it is as tall as that
-section; with both, it is its full height. It is centred on the screen at
+sheet holds the modes and the field alone, and is only as wide as the field
+needs; with one, it is as tall as that
+section; with both, it is its full height. Floating, Search is one size
+on every display, 840 wide and at most as tall as both sections, so a large
+desktop screen shows it no bigger than the tablet does; only a smaller screen
+trims it. It is centred on the screen at
 rest, and typing, a drawer or a mode grows it to its full height downward
 from there, moving up only as far as the screen's edge needs. Inside Spread,
 Kadunce sets its size; with neither section on, the field rests in the middle
