@@ -375,6 +375,16 @@ Item {
     readonly property string pinnedTitle: pinnedNote ? pinnedNote.title || words.i18n("Pinned note") : ""
     readonly property color pinnedColour: pinnedNote && pinnedNote.colourHex ? pinnedNote.colourHex : tone.wash(0.5)
     readonly property real beadSize: 10
+    // The notes stuck to the window in use, while it has any: Gooseberry's
+    // dot in the top note's colour with their count, ringed while they are
+    // up over the window. A tap brings them up, or puts them away.
+    readonly property int windowNotes: noteShown && noteShown.windowCount ? noteShown.windowCount : 0
+    readonly property color windowNotesColour: windowNotes > 0 && noteShown.windowColourHex
+        ? noteShown.windowColourHex : "#F2D98A"
+    readonly property bool windowNotesUp: windowNotes > 0 && noteShown.windowShown === true
+    function toggleWindowNotes() {
+        if (windowNotes > 0) invoke(noteShown, "windowNotes");
+    }
 
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
@@ -479,7 +489,8 @@ Item {
         if (kind === "core")
             return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
         if (kind === "note")
-            return 2 * inset + (has("dot") ? reach : 0) + (has("pinned") ? pinnedWidth() : 0);
+            return 2 * inset + (has("dot") ? reach : 0) + (has("window") ? reach : 0)
+                + (has("pinned") ? pinnedWidth() : 0);
         return 0;
     }
 
@@ -513,6 +524,7 @@ Item {
         case "core.detail": return tall && coreDetail !== "";
         case "note.dot": return noteShown !== null;
         case "note.pinned": return pinnedNote !== null;
+        case "note.window": return windowNotes > 0;
         }
         return false;
     }
@@ -1574,6 +1586,85 @@ Item {
                     id: pinnedArea
                     anchors.fill: parent
                     onClicked: surface.openPinned()
+                }
+            }
+        }
+        Piece {
+            id: windowPiece
+            island: noteIsland
+            name: "window"
+            size: surface.reach
+            Item {
+                id: windowButton
+                objectName: "ambient-note-window"
+                anchors.fill: parent
+                activeFocusOnTab: windowPiece.showing
+                readonly property bool light: 0.2126 * surface.windowNotesColour.r
+                    + 0.7152 * surface.windowNotesColour.g + 0.0722 * surface.windowNotesColour.b > 0.55
+                Accessible.role: Accessible.Button
+                Accessible.name: surface.windowNotesUp
+                    ? words.i18np("Put away the note", "Put away the %1 notes", surface.windowNotes)
+                    : words.i18np("Show the note", "Show the %1 notes", surface.windowNotes)
+                Accessible.onPressAction: surface.toggleWindowNotes()
+                Keys.onReturnPressed: surface.toggleWindowNotes()
+                Keys.onEnterPressed: surface.toggleWindowNotes()
+                Keys.onSpacePressed: surface.toggleWindowNotes()
+                // The notes' own shadow, as on the window.
+                Rectangle {
+                    anchors.centerIn: parent
+                    anchors.verticalCenterOffset: 2
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: "#33000000"
+                }
+                Rectangle {
+                    objectName: "ambient-note-window-dot"
+                    anchors.centerIn: parent
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: surface.windowNotesColour
+                    border.width: 1
+                    border.color: Qt.rgba(0, 0, 0, 0.27)
+                    scale: windowArea.pressed ? 1.2 : 1
+                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
+                    Text {
+                        anchors.centerIn: parent
+                        visible: surface.windowNotes > 1
+                        text: surface.windowNotes > 9 ? words.i18nc("more than nine notes", "9+") : surface.windowNotes
+                        color: windowButton.light ? "#1A1A1A" : "#FFFFFF"
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                    }
+                }
+                // Up over the window: ringed, as a pressed toggle.
+                Rectangle {
+                    objectName: "ambient-note-window-ring"
+                    anchors.centerIn: parent
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: "transparent"
+                    border.width: 1.5
+                    border.color: tone.text
+                    opacity: surface.windowNotesUp ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: surface.ms(120) } }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: windowButton.activeFocus
+                }
+                MouseArea {
+                    id: windowArea
+                    anchors.fill: parent
+                    onClicked: surface.toggleWindowNotes()
                 }
             }
         }

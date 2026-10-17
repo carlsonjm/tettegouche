@@ -45,6 +45,11 @@ PlasmoidItem {
     // With Ambient off the widget is the launcher's dot alone.
     readonly property bool showAmbient: Plasmoid.configuration.showAmbient !== false
     readonly property int ambientCoreWidth: showAmbient ? ambient.minimumUsefulWidth : 0
+    // While this widget shows the quick note's island, folded notes are left
+    // to it rather than to a dot over their window.
+    readonly property bool showsNoteIsland: showAmbient && !vertical && ambientShows !== "media"
+        && Plasmoid.configuration.showQuickNote !== false
+    onShowsNoteIslandChanged: Plasmoid.showNoteIsland(showsNoteIsland)
     property int responsiveMeasuredWidth: endpointWidth
     // Plasma's own word for a panel drawn black, which Shuffle's band gives
     // while a card is up; the island turns black with it.
@@ -110,7 +115,10 @@ PlasmoidItem {
         if (!showAmbient && island) island.dismiss();
         Qt.callLater(refreshResponsiveWidth);
     }
-    Component.onCompleted: Qt.callLater(refreshResponsiveWidth)
+    Component.onCompleted: {
+        Qt.callLater(refreshResponsiveWidth);
+        Plasmoid.showNoteIsland(showsNoteIsland);
+    }
 
     Connections {
         target: Plasmoid

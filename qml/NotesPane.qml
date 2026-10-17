@@ -226,7 +226,9 @@ Item {
     readonly property rect pageEnd: Qt.rect(0, bodyTop, width, Math.max(60, height - bodyTop - lowerHeight))
     // The find field stands where Search's field does, so only what is
     // under it changes.
-    readonly property rect findEnd: Qt.rect(fieldRest.x, fieldRest.y, fieldRest.width, Math.max(56, fieldRest.height))
+    // Search's own field, as it stands under the modes once a mode is open:
+    // the same 44 tall pill on the same edges, still while Notes comes.
+    readonly property rect findEnd: Qt.rect(fieldRest.x, 0, fieldRest.width, fieldRest.height)
     // The note is paper of its own colour on any ground, with dark ink.
     readonly property string noteHex: quickNote && quickNote.colourHex !== "" ? quickNote.colourHex : "#F2D98A"
     readonly property color ink: "#1A1A1A"
@@ -407,20 +409,54 @@ Item {
         opacity: 1 - pane.pageShown
         enabled: pane.view === "board"
 
-        // The find field: from the search field's place to its own.
+        // The find field is Search's field, drawn as Search draws it, in
+        // the place it has under the modes; it does not move as Notes comes.
         Rectangle {
             id: findFrame
             objectName: "notes-find-frame"
-            x: pane.lerp(pane.fieldRest.x, pane.findEnd.x, pane.progress)
-            y: pane.lerp(pane.fieldRest.y, pane.findEnd.y, pane.progress)
-            width: pane.lerp(pane.fieldRest.width, pane.findEnd.width, pane.progress)
-            height: pane.lerp(pane.fieldRest.height, pane.findEnd.height, pane.progress)
+            readonly property bool lit: find.activeFocus || find.text.length > 0
+            x: pane.findEnd.x
+            y: pane.findEnd.y
+            width: pane.findEnd.width
+            height: pane.findEnd.height
             radius: height / 2
             color: pane.controlColor
+            // A hairline of light along its edge, and a ring while it holds
+            // the keys, as on Search's field.
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: "transparent"
+                border.width: 1
+                border.color: tone.dark ? "#14ffffff" : "#0d000000"
+                opacity: findFrame.lit ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+            }
+            Rectangle {
+                objectName: "notes-find-ring"
+                anchors.fill: parent
+                anchors.margins: -3
+                radius: height / 2
+                color: "transparent"
+                border.width: 3
+                border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.16)
+                opacity: findFrame.lit ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 150 } }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.55)
+                }
+            }
             SuiteIcon {
                 id: findGlyph
                 glyph: "search"
-                x: 20
+                x: 16
+                width: 18
+                height: 18
                 anchors.verticalCenter: parent.verticalCenter
             }
             QQC2.TextField {
@@ -433,7 +469,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 background: null
                 color: pane.primaryText
-                font.pixelSize: 20
+                font.pixelSize: 16
                 font.weight: Font.Medium
                 placeholderText: words.i18n("Find or start a note")
                 placeholderTextColor: tone.placeholderText
@@ -449,7 +485,7 @@ Item {
             Text {
                 id: findHint
                 anchors.right: parent.right
-                anchors.rightMargin: 20
+                anchors.rightMargin: 16
                 anchors.verticalCenter: parent.verticalCenter
                 text: pane.pickable(pane.picked) ? words.i18n("Enter opens") : ""
                 color: tone.edgeText

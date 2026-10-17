@@ -189,12 +189,27 @@ Gooseberry for it. A Gooseberry without `Pinned`, or one speaking another
 version, shows the dot alone; so does Gooseberry not running. Gooseberry owns
 the note and its pinning; Ambient keeps neither.
 
+The window in use's notes stand last in the same island while it has any that
+are not tucked away: Gooseberry's dot, an 18 px disc of the top note's colour
+with a 1 px soft edge and the notes' shadow, the count in 11 px demibold where
+there are several ("9+" past nine), in a 44 px target. It is ringed while the
+notes are up over the window. A tap brings them up there, open, when they are
+away or folded (`Show`), and puts them away when they are up (`Toggle`). The
+window in use is the one Plasma's window list marks active, and the one before
+stays while none is, as while the panel or the notes hold the keys. Ambient
+reads the windows from Gooseberry's stuck-notes interface, version 1
+(Gooseberry's `docs/DESKTOP.md` § Stuck notes on the bus), as it reads the
+pinned note. While a widget shows the island it tells Gooseberry so
+(`DrawFolded`), and folded notes leave no dot over their window; the island
+brings them back.
+
 The island is never set aside: a drag does not carry it and Delete leaves it.
 It stands first in the group, before what comes and goes, and takes its turn
-for room after every other island, so the pinned note is the first piece to go
-and the dot the last. The widget's setting "Show the quick note island", on by
+for room after every other island, so the pinned note is the first piece to go,
+then the window's notes, and the dot the last. The widget's setting "Show the quick note island", on by
 default, shows it while "Show islands beside the launcher" is on; off, the
-island is gone and nothing else changes. Without Gooseberry there is no island.
+island is gone, and folded notes show their dot over the window again. Without
+Gooseberry there is no island.
 
 ### Tette operations
 

@@ -24,11 +24,21 @@ namespace
 QString service() { return QString::fromLatin1(NotesIslandProvider::Service); }
 QString path() { return QString::fromLatin1(NotesIslandProvider::Path); }
 QString iface() { return QString::fromLatin1(NotesIslandProvider::Interface); }
+QString stuckPath() { return QString::fromLatin1(NotesIslandProvider::StuckPath); }
+QString stuckIface() { return QString::fromLatin1(NotesIslandProvider::StuckInterface); }
 
 // Asked only of an application already running: the island never starts it.
 QDBusMessage method(const QString &name)
 {
     auto message = QDBusMessage::createMethodCall(service(), path(), iface(), name);
+    message.setAutoStartService(false);
+    return message;
+}
+
+QDBusMessage stuckMethod(const QString &name, const QVariantList &arguments = {})
+{
+    auto message = QDBusMessage::createMethodCall(service(), stuckPath(), stuckIface(), name);
+    message.setArguments(arguments);
     message.setAutoStartService(false);
     return message;
 }
@@ -69,7 +79,10 @@ NotesIslandProvider::NotesIslandProvider(const QDBusConnection &bus, QObject *pa
     connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &NotesIslandProvider::ownerChanged);
     m_bus.connect(service(), path(), iface(), QStringLiteral("PinnedChanged"), this,
                   SLOT(pinnedChanged(QVariantMap,QDBusMessage)));
+    m_bus.connect(service(), stuckPath(), stuckIface(), QStringLiteral("WindowsChanged"), this,
+                  SLOT(stuckChanged(QDBusMessage)));
     ask();
+    askStuck();
 }
 
 void NotesIslandProvider::refresh()
@@ -95,8 +108,109 @@ void NotesIslandProvider::ownerChanged(const QString &name, const QString &, con
     ++m_generation;
     m_owner = owner;
     m_speaks = false;
+    m_stuckSpeaks = false;
+    m_toldShown = -1;
     setPinned({});
-    if (!owner.isEmpty()) ask();
+    setStuck({});
+    if (!owner.isEmpty()) {
+        ask();
+        askStuck();
+    }
+}
+
+// The version first, then every window's notes, and the island told.
+void NotesIslandProvider::askStuck()
+{
+    if (!m_bus.isConnected()) return;
+    const int generation = m_generation;
+    auto *version = new QDBusPendingCallWatcher(m_bus.asyncCall(stuckMethod(QStringLiteral("ProtocolVersion")), 5000), this);
+    connect(version, &QDBusPendingCallWatcher::finished, this, [this, version, generation] {
+        const QDBusPendingReply<uint> number = *version;
+        version->deleteLater();
+        if (number.isError() || number.value() != Version || generation != m_generation) return;
+        m_stuckSpeaks = true;
+        tellShown(true);
+        auto *windows = new QDBusPendingCallWatcher(m_bus.asyncCall(stuckMethod(QStringLiteral("Windows")), 5000), this);
+        connect(windows, &QDBusPendingCallWatcher::finished, this, [this, windows, generation] {
+            const QDBusMessage reply = windows->reply();
+            windows->deleteLater();
+            if (generation != m_generation || reply.type() != QDBusMessage::ReplyMessage) return;
+            setStuck(plain(reply.arguments().value(0)).toList());
+        });
+    });
+}
+
+void NotesIslandProvider::stuckChanged(const QDBusMessage &message)
+{
+    if (!m_stuckSpeaks || (!m_owner.isEmpty() && message.service() != m_owner)) return;
+    setStuck(plain(message.arguments().value(0)).toList());
+}
+
+void NotesIslandProvider::setStuck(const QVariantList &windows)
+{
+    const QVariantMap before = activeEntry();
+    m_stuck = windows;
+    if (activeEntry() != before && m_installed) Q_EMIT changed();
+}
+
+void NotesIslandProvider::setActiveWindowIds(const QStringList &given)
+{
+    // Plasma's window list and the compositor may write a UUID's letters in
+    // either case.
+    QStringList ids;
+    for (const QString &id : given) ids.append(id.toLower());
+    if (ids == m_activeIds) return;
+    const QVariantMap before = activeEntry();
+    m_activeIds = ids;
+    if (activeEntry() != before && m_installed) Q_EMIT changed();
+}
+
+QVariantMap NotesIslandProvider::activeEntry() const
+{
+    if (m_activeIds.isEmpty()) return {};
+    for (const QVariant &value : m_stuck) {
+        const QVariantMap entry = value.toMap();
+        const QVariantList ids = entry.value(QStringLiteral("windowIds")).toList();
+        for (const QVariant &id : ids) {
+            if (m_activeIds.contains(id.toString().toLower()) && entry.value(QStringLiteral("count")).toInt() > 0)
+                return entry;
+        }
+    }
+    return {};
+}
+
+void NotesIslandProvider::setShownBy(const void *panel, bool shown)
+{
+    if (shown) m_shownBy.insert(panel);
+    else m_shownBy.remove(panel);
+    tellShown(false);
+}
+
+// Folded notes are left to the island while a panel shows it; the
+// application forgets it once the panel leaves the bus.
+void NotesIslandProvider::tellShown(bool always)
+{
+    const int shown = m_shownBy.isEmpty() ? 0 : 1;
+    if (!m_stuckSpeaks || (!always && shown == m_toldShown)) return;
+    m_toldShown = shown;
+    m_bus.send(stuckMethod(QStringLiteral("DrawFolded"), {bool(shown)}));
+}
+
+void NotesIslandProvider::toggleWindowNotes()
+{
+    const QVariantMap entry = activeEntry();
+    if (entry.isEmpty() || !m_stuckSpeaks) return;
+    // The window is named by the id it is in use by, as the application
+    // finds it; its title and application are left empty.
+    QString id;
+    for (const QVariant &value : entry.value(QStringLiteral("windowIds")).toList()) {
+        if (m_activeIds.contains(value.toString().toLower())) {
+            id = value.toString();
+            break;
+        }
+    }
+    const bool up = entry.value(QStringLiteral("shown")).toBool() && !entry.value(QStringLiteral("folded")).toBool();
+    m_bus.send(stuckMethod(up ? QStringLiteral("Toggle") : QStringLiteral("Show"), {id, QString(), QString()}));
 }
 
 namespace
@@ -199,6 +313,15 @@ QVariantList NotesIslandProvider::activities() const
         row.insert(QStringLiteral("noteId"), m_pinned.value(QStringLiteral("id")));
         row.insert(QStringLiteral("title"), m_pinned.value(QStringLiteral("title")));
         row.insert(QStringLiteral("colourHex"), m_pinned.value(QStringLiteral("colourHex")));
+    }
+    // The window in use's notes, while it has any that are not tucked away.
+    const QVariantMap entry = activeEntry();
+    if (!entry.isEmpty()) {
+        row.insert(QStringLiteral("windowCount"), entry.value(QStringLiteral("count")).toInt());
+        row.insert(QStringLiteral("windowColourHex"), entry.value(QStringLiteral("colourHex")).toString());
+        row.insert(QStringLiteral("windowShown"), entry.value(QStringLiteral("shown")).toBool()
+                                                      && !entry.value(QStringLiteral("folded")).toBool());
+        row.insert(QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("windowNotes"), true}});
     }
     return {row};
 }
