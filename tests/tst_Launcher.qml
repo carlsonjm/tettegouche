@@ -1135,7 +1135,7 @@ TestCase {
         launcher.recentFiles = false
         tryCompare(sheet, "height", small)
         compare(row.sections, 0)
-        compare(field.y, 0)
+        tryCompare(field, "y", 0)
         // Centred at rest; typing grows it down from where it rested.
         const full = sheet.fullHeight
         compare(sheet.y, area.y + Math.round((area.height - small) / 2))
@@ -1306,6 +1306,7 @@ TestCase {
         controller.closes = 0
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
+        tryCompare(findChild(launcher, "first-row"), "arrival", 1)
         const second = findChild(launcher, "recent-1")
         mouseClick(second, second.width / 2, second.height / 2)
         compare(recentStub.opened, [1])
@@ -2000,7 +2001,7 @@ TestCase {
         // Both sections on, Search rests as tall as they are, as far as the
         // screen allows, and keeps that height for the results.
         tryCompare(sheet, "height", 700)
-        compare(sheet.y, 20)
+        tryCompare(sheet, "y", 20)
         // The tallest keys: the sheet rises to the top and shortens to fit.
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
@@ -2017,7 +2018,7 @@ TestCase {
         // The keys go down and the sheet returns.
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         tryCompare(sheet, "height", 700)
-        compare(sheet.y, 20)
+        tryCompare(sheet, "y", 20)
         query.text = ""
         results.clear()
     }
