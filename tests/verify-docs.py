@@ -18,7 +18,7 @@ REQUIRED = [
     "docs/README.md",
     "docs/ARCHITECTURE.md",
     "docs/INPUT.md",
-    "docs/ROADMAP.md",
+    "docs/LIMITATIONS.md",
 ]
 INPUT_HEADER = "| Input | What happens |"
 errors: list[str] = []

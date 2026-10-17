@@ -9,7 +9,7 @@
 | [`TRADEMARKS.md`](../TRADEMARKS.md) | Names and marks outside the code licence |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Processes, ownership, integration, look and known issues, as they are now |
 | [`INPUT.md`](INPUT.md) | Every touch, mouse and keyboard input |
-| [`ROADMAP.md`](ROADMAP.md) | What is planned, and what is not |
+| [`LIMITATIONS.md`](LIMITATIONS.md) | What Tettegouche does not do yet, and what it will not do |
 | [`SEARCH-CONTRACT.md`](SEARCH-CONTRACT.md) | Search eligibility, ranking, identity and execution |
 | [`FILES-CONTRACT.md`](FILES-CONTRACT.md) | Files behavior, lifecycle and mutation safety |
 | [`AMBIENT-CONTRACT.md`](AMBIENT-CONTRACT.md) | Activity admission, source truth, width and actions |
