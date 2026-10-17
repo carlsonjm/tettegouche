@@ -19,7 +19,8 @@
 <p align="center">
 Tettegouche is a touch-oriented Search and file launcher for KDE Plasma. One dot
 in the panel finds, launches, browses and acts, without sorting through separate
-menus, and small islands beside it show what is happening now.
+menus, and small islands beside it show what is happening now. Everything it
+searches is on this computer, and nothing you type leaves it.
 </p>
 
 <p align="center"><img src="assets/readme/showcase.webp" alt="Tettegouche's Search open over the desktop, with the media island in the panel below it" width="100%"></p>
@@ -29,7 +30,7 @@ menus, and small islands beside it show what is happening now.
 
 <table>
 <tr>
-<td width="33%" valign="top"><b>Search</b><br>Applications, files, notes, KDE settings, sums and unit conversions, all local, as you type.</td>
+<td width="33%" valign="top"><b>Private search</b><br>Applications, files, notes, settings, sums and conversions as you type. It all stays on this computer.</td>
 <td width="33%" valign="top"><b>Apps</b><br>Every application A to Z, by most used or by newest installed, with folders you make by dragging one onto another.</td>
 <td width="33%" valign="top"><b>Files</b><br>A file browser with tabs, Places, drives and phones, that keeps copying safely after you close it.</td>
 </tr>
@@ -71,11 +72,16 @@ dock. To go straight to Apps, Files or Notes, press the dot and slide toward
 the islands. Tettegouche adds no background service; after you close Search
 it stays ready, so the next open shows at once.
 
+**Private by design.** Search looks only on this computer. Files come from
+KDE's own built-in file index, the one Dolphin uses, so Tettegouche keeps no
+index of its own and sends nothing you type anywhere. The one exception is when
+you choose **Search the web**, which hands your words to your browser.
+
 <details>
 <summary>What Search finds</summary>
 
 - Installed applications
-- Indexed files and recent documents
+- Files from KDE's file index, and recent documents
 - Notes, while Gooseberry is running
 - KDE settings
 - Calculator results
