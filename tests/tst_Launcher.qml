@@ -2589,7 +2589,8 @@ TestCase {
         tryCompare(sheet, "width", 980)
         const files = findChild(launcher, "files-pill")
         mouseClick(files, files.width / 2, files.height / 2)
-        tryCompare(launcher, "drawerProgress", 1)
+        // From Notes the drawer is there at once: no first screen between.
+        compare(launcher.drawerProgress, 1)
         verify(!launcher.notesOpen)
         compare(controller.drawerExpanded, true)
         compare(sheet.width, 980)

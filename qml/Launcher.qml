@@ -1361,6 +1361,12 @@ Item {
                     const fromMode = root.modeOpen
                     if (fromMode) root.closeMode(true)
                     root.setDrawerOpen(true, mode, fromMode)
+                    // From Notes the drawer is there at once, over Notes as
+                    // it fades, so the first screen never shows between them.
+                    if (fromMode) {
+                        drawerSettle.stop()
+                        root.drawerProgress = 1
+                    }
                 }
                 x: -10
                 y: -root.modeRowReach - 6
