@@ -226,6 +226,16 @@ int main(int argc, char **argv)
 {
     QTemporaryDir home;
     if (!home.isValid()) return 1;
+    // Nothing of a running desktop reaches the test, so it counts the same
+    // when run on one: its session, its menus and settings, and the switch
+    // that leaves the island out for tests of the other islands.
+    for (const char *name : {"DISPLAY", "WAYLAND_DISPLAY", "WAYLAND_SOCKET", "XAUTHORITY", "SESSION_MANAGER",
+                             "XDG_SESSION_TYPE", "XDG_SESSION_ID", "XDG_CURRENT_DESKTOP", "XDG_SESSION_DESKTOP",
+                             "XDG_MENU_PREFIX", "DESKTOP_SESSION", "KDE_FULL_SESSION", "KDE_SESSION_VERSION",
+                             "KDE_SESSION_UID", "TETTE_AMBIENT_WITHOUT_NOTES"})
+        qunsetenv(name);
+    qputenv("XDG_CONFIG_DIRS", (home.path() + QStringLiteral("/system-config")).toUtf8());
+    qputenv("XDG_STATE_HOME", (home.path() + QStringLiteral("/state")).toUtf8());
     qputenv("HOME", home.path().toUtf8());
     qputenv("XDG_CONFIG_HOME", (home.path() + QStringLiteral("/config")).toUtf8());
     qputenv("XDG_DATA_HOME", (home.path() + QStringLiteral("/data")).toUtf8());
