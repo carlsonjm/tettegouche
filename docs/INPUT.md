@@ -20,7 +20,7 @@ than repeat it.
 | Type, on the notes board | Finds the notes with those words; a folder they name is listed under the notes. |
 | Tap or click a filter, on the notes board | Everything, the current day's filter, On windows, a folder or Tucked away narrows the notes to it. |
 | `Down` or `Up`, on the notes board | Picks a note; Enter opens it. |
-| `Enter`, on the notes board, with no note picked, or tap or click New note at the field's end | Starts a new note with the words typed on Gooseberry's own card, and Search closes. |
+| `Enter`, on the notes board, with no note picked, or tap or click New note in the board's corner | Starts a new note with the words typed on Gooseberry's own card, and Search closes. |
 | Tap or click a note, on the notes board | Opens it on Gooseberry's own card, and Search closes. With a Gooseberry whose card cannot take it, it opens on the page here, with the cursor at its end. |
 | Type, on a note's page | Writes the note; Gooseberry keeps it as you go. |
 | Tap or click Back, or `Esc`, on a page opened from the board | Returns to the board. |

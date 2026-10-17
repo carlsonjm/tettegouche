@@ -448,30 +448,14 @@ Item {
             }
             Text {
                 id: findHint
-                anchors.right: newNote.left
-                anchors.rightMargin: 12
+                anchors.right: parent.right
+                anchors.rightMargin: 20
                 anchors.verticalCenter: parent.verticalCenter
                 text: pane.pickable(pane.picked) ? words.i18n("Enter opens") : ""
                 color: tone.edgeText
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
                 opacity: pane.clamp((pane.progress - 0.72) / 0.28)
-            }
-            // A note is started with a finger here, with any words typed, as
-            // Enter starts one.
-            TrayButton {
-                id: newNote
-                objectName: "notes-new"
-                anchors.right: parent.right
-                anchors.rightMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                glyph: "plus"
-                text: words.i18n("New note")
-                showText: true
-                visible: opacity > 0
-                opacity: findHint.opacity
-                enabled: pane.view === "board" && !!pane.quickNote && !pane.quickNote.readOnly
-                onActivated: pane.startNote(find.text.trim())
             }
             Timer {
                 id: findPause
@@ -486,9 +470,9 @@ Item {
             id: filters
             objectName: "notes-filters"
             x: 0
-            y: pane.findEnd.y + pane.findEnd.height + 10
+            y: pane.findEnd.y + pane.findEnd.height + 12
             width: pane.width
-            height: 36
+            height: 44
             contentWidth: filterRow.width
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -517,8 +501,13 @@ Item {
             id: list
             objectName: "notes-list"
             x: 0
-            y: filters.y + filters.height + 6
+            y: filters.y + filters.height + 16
             width: pane.width
+            // Wide, a row shows more: the note's words under its title, and
+            // where it is and when at its end.
+            readonly property bool wide: width >= 640
+            // Clear of the floating New note.
+            footer: Item { width: 1; height: 80 }
             height: Math.max(0, pane.height - y)
             clip: true
             boundsBehavior: Flickable.StopAtBounds
@@ -534,14 +523,14 @@ Item {
                 objectName: isNote ? "notes-row-" + modelData.note.id
                     : heading ? "notes-heading-" + index : "notes-folder-row-" + (modelData.folder.name || "inbox")
                 width: ListView.view.width
-                height: heading ? 36 : 56
+                height: heading ? 36 : list.wide && isNote ? 72 : 56
                 Accessible.role: heading ? Accessible.Heading : Accessible.Button
                 Accessible.name: heading ? modelData.label : isNote ? modelData.note.title : modelData.folder.label
                 Accessible.onPressAction: pane.activate(row.modelData)
 
                 Text {
                     visible: row.heading
-                    x: 14
+                    x: 12
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 4
                     text: row.heading ? row.modelData.label : ""
@@ -558,16 +547,16 @@ Item {
                 }
                 Rectangle {
                     visible: row.isNote
-                    x: 14
+                    x: list.wide ? 12 : 14
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 12; height: 12; radius: 6
+                    width: list.wide ? 28 : 24; height: width; radius: 6
                     color: row.isNote ? (row.modelData.note.colourHex || "#D9D4CC") : "transparent"
                 }
                 Rectangle {
                     visible: row.modelData.kind === "folder"
-                    x: 6
+                    x: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 28; height: 28; radius: 7
+                    width: 28; height: 28; radius: 6
                     color: pane.controlColor
                     SuiteIcon {
                         anchors.centerIn: parent
@@ -577,8 +566,9 @@ Item {
                 }
                 Column {
                     visible: !row.heading
-                    x: 40
-                    width: parent.width - x - 14
+                    x: 52
+                    width: parent.width - x - (rowEnd.visible ? rowEnd.width + 24 : 12)
+                    spacing: 2
                     anchors.verticalCenter: parent.verticalCenter
                     Text {
                         width: parent.width
@@ -590,14 +580,43 @@ Item {
                         color: pane.primaryText
                         opacity: row.isNote && row.modelData.note.done ? 0.6 : 1
                         font.pixelSize: 16
-                        font.weight: Font.Bold
+                        font.weight: Font.Medium
                     }
                     Text {
                         visible: row.isNote
                         width: parent.width
                         elide: Text.ElideRight
-                        text: row.isNote ? (row.modelData.note.excerpt ? row.modelData.note.excerpt + " · " : "")
-                            + pane.detail(row.modelData.note) : ""
+                        text: !row.isNote ? ""
+                            : list.wide ? (row.modelData.note.excerpt || "")
+                            : (row.modelData.note.excerpt ? row.modelData.note.excerpt + " · " : "")
+                                + pane.detail(row.modelData.note)
+                        color: list.wide ? tone.secondaryText : tone.edgeText
+                        font.pixelSize: list.wide ? 13 : 12
+                    }
+                }
+                Column {
+                    id: rowEnd
+                    objectName: "notes-row-end"
+                    visible: row.isNote && list.wide
+                    anchors.right: parent.right
+                    anchors.rightMargin: 12
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 220
+                    spacing: 2
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignRight
+                        elide: Text.ElideLeft
+                        text: row.isNote ? [row.modelData.note.folderLabel || words.i18n("Inbox"),
+                            row.modelData.note.stuck ? words.i18n("Stuck to %1", row.modelData.note.window || "") : ""]
+                            .filter(part => part.length > 0).join(" · ") : ""
+                        color: tone.edgeText
+                        font.pixelSize: 12
+                    }
+                    Text {
+                        width: parent.width
+                        horizontalAlignment: Text.AlignRight
+                        text: row.isNote ? pane.when(row.modelData.note) : ""
                         color: tone.edgeText
                         font.pixelSize: 12
                     }
@@ -624,6 +643,49 @@ Item {
                     : words.i18n("No notes yet. Type to start one.")
                 color: tone.edgeText
                 font.pixelSize: 14
+            }
+        }
+    }
+
+    // New note floats in the board's corner, in the highlight colour, and
+    // starts a note with any words typed, as Enter does.
+    QQC2.AbstractButton {
+        id: newNote
+        objectName: "notes-new"
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        anchors.margins: 24
+        implicitHeight: 56
+        implicitWidth: newNoteRow.implicitWidth + 48
+        visible: opacity > 0
+        opacity: pane.clamp((pane.progress - 0.72) / 0.28) * (1 - pane.pageShown)
+        enabled: pane.view === "board" && !!pane.quickNote && !pane.quickNote.readOnly
+        focusPolicy: Qt.NoFocus
+        Accessible.name: words.i18n("New note")
+        onClicked: pane.startNote(find.text.trim())
+        background: Rectangle {
+            radius: height / 2
+            color: newNote.down ? Qt.darker(pane.Kirigami.Theme.highlightColor, 1.15) : pane.Kirigami.Theme.highlightColor
+        }
+        contentItem: Item {
+            Row {
+                id: newNoteRow
+                anchors.centerIn: parent
+                spacing: 8
+                // A plus in the highlight's own text colour.
+                Item {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 20; height: 20
+                    Rectangle { anchors.centerIn: parent; width: 14; height: 2; radius: 1; color: pane.Kirigami.Theme.highlightedTextColor }
+                    Rectangle { anchors.centerIn: parent; width: 2; height: 14; radius: 1; color: pane.Kirigami.Theme.highlightedTextColor }
+                }
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: words.i18n("New note")
+                    color: pane.Kirigami.Theme.highlightedTextColor
+                    font.pixelSize: 15
+                    font.weight: Font.Bold
+                }
             }
         }
     }
@@ -1388,9 +1450,9 @@ Item {
         property bool quiet: false
         readonly property bool chosen: pane.filter === key
         objectName: "notes-filter-" + key
-        height: 36
+        height: 44
         width: filterText.implicitWidth + 28
-        radius: 18
+        radius: 22
         color: chosen ? tone.chosen : filterHover.hovered ? tone.hover : "transparent"
         activeFocusOnTab: true
         Accessible.role: Accessible.RadioButton

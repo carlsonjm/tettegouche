@@ -13,8 +13,9 @@ provenance.
   turns it off.
 - Notes in Search opens on a board of every note: Find or start a note, a row
   of filters, Everything, Today, On windows, each folder and Tucked away, and
-  the notes grouped under them, with New note at the end of the field for a
-  finger. A note tapped there, or started with New note or Enter, opens on
+  the notes grouped under them, wide rows showing a note's words and where
+  and when it is, and New note floating in the corner in the highlight
+  colour. A note tapped there, or started with New note or Enter, opens on
   Gooseberry's own card and Search closes; ‹ Notes on top of the card, or
   `Esc`, brings Notes back. Expand, Pop out and Close stay on the modes row,
   and moving between Notes, Apps and Files keeps the size chosen. With a

@@ -55,7 +55,8 @@ application and Tettegouche never depends on it.
   notes with them and underline where they are found; a folder whose name
   holds them is listed after the notes and opens its filter. The window
   keeps its size, and the row of modes stays above it.
-- Enter, or New note at the field's end, starts a new note with the words
+- Enter, or New note floating in the board's corner in the highlight colour,
+  starts a new note with the words
   typed; `Down` and `Up` pick a note for Enter to open instead. A tap opens a
   note. Each goes to Gooseberry's own card (`OpenOnCard`) and Search closes;
   the card has ‹ Notes on top, which reopens Notes here (`Back`). A
