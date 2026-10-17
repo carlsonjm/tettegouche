@@ -729,6 +729,47 @@ TestCase {
         verify(shown(surface, "media").length > 1);
     }
 
+    // The window in use's notes join the island as Gooseberry's dot, with
+    // their count, after the pinned note; ringed while they are up, and a
+    // tap asks for them either way. Narrow, the pinned note goes first.
+    function test_the_window_notes_on_the_quick_note_island() {
+        const pinned = {id: "note", generation: 2, kind: "note", state: "running", capabilities: {},
+            noteId: "n1", title: "Milk", colourHex: "#F5C542"};
+        const away = {id: "note", generation: 3, kind: "note", state: "running",
+            capabilities: {windowNotes: true}, noteId: "n1", title: "Milk", colourHex: "#F5C542",
+            windowCount: 2, windowColourHex: "#7FB8F0", windowShown: false};
+        const surface = createSurface(460, [pinned]);
+        settle();
+        compare(shown(surface, "note"), ["dot", "pinned"]);
+        verify(!findChild(surface, "ambient-note-window").visible);
+
+        surface.activities = [away];
+        settle();
+        compare(shown(surface, "note"), ["dot", "window", "pinned"]);
+        const button = findChild(surface, "ambient-note-window");
+        verify(button.visible);
+        verify(button.width >= 44 && button.height >= 44);
+        verify(leftOf(surface, button) >= rightOf(surface, findChild(surface, "ambient-note-pinned")));
+        const dot = findChild(surface, "ambient-note-window-dot");
+        compare(dot.width, 18);
+        verify(Qt.colorEqual(dot.color, "#7FB8F0"));
+        compare(findChild(surface, "ambient-note-window-ring").opacity, 0);
+        compare(button.Accessible.name, "Show the 2 notes");
+        const invoked = spyOn(surface, "invokeRequested");
+        mouseClick(button, button.width / 2, button.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][2], "windowNotes");
+
+        surface.activities = [Object.assign({}, away, {windowShown: true})];
+        settle();
+        tryCompare(findChild(surface, "ambient-note-window-ring"), "opacity", 1);
+        compare(findChild(surface, "ambient-note-window").Accessible.name, "Put away the 2 notes");
+
+        surface.width = 130;
+        settle();
+        compare(shown(surface, "note"), ["dot", "window"]);
+    }
+
     // The quick note's island on a light style takes the style's ink.
     function test_the_quick_note_island_on_a_light_style() {
         const pinned = {id: "note", generation: 2, kind: "note", state: "running", capabilities: {},
