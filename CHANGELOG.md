@@ -5,6 +5,13 @@ provenance.
 
 ## Unreleased
 
+- Notes in Search opens on a board of every note: Find or start a note, a row
+  of filters, Everything, Today, On windows, each folder and Tucked away, and
+  the notes grouped under them. A note opens as the page, paper of its colour
+  filling the room with its colour a dot in its corner, and one quiet line
+  under it with its folder, its window, Checklist, Remind and More, where Copy
+  all, Tuck away and Remove wait. Done is gone: Back returns to the board, and
+  the note is kept as you go.
 - Search's modes run along its top on every screen: the dot for Search's first
   screen, then Apps, Files and Notes, the grey pill on the one shown. A tap
   moves straight from one mode to another, and the dot comes back to search

@@ -36,25 +36,54 @@ application and Tettegouche never depends on it.
   is installed with its Capture action, looked for each time Search opens and
   whenever KDE's application list changes. Without it, the row of modes has
   no Notes.
-- Notes opens in the same window with the drawer's motion: the field becomes
-  the note pad, the pills fade, and Back, the note's five colours and the
-  corner, Expand, Pop out and Close, come into the header where Apps has Back and
-  its corner. The window keeps its size. Folder, Stuck to, Saved as you go, Tuck away and Done sit
-  under the pad. Back or `Esc` returns to Search and the note stays open, so
-  Notes resumes it; Done and Tuck away finish it and Search closes.
-- Folder and Stuck to are Gooseberry's own card's two chips, each showing
-  what is chosen and opening its choices in a row under it. Folder offers
-  Gooseberry's folders in its order, the workspace's own marked, and a field
-  for a new one; Stuck to offers the windows Gooseberry gives, in its order,
-  and Don't stick to a window. A choice closes the row and returns to the pad,
-  and `Esc` closes an open row before it leaves the note. A Gooseberry that
-  offers no folders gets its Belongs to row instead, as it offers it.
-- The note is Gooseberry's quick note over its session-bus interface, version
-  1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search). Typing is sent
-  half a second after it pauses and at least every three seconds, and on
-  closing; each change is written by Gooseberry before its reply.
-- Expand fills the screen as Apps does and the note stays in Search; again,
-  or Back, returns Search to its size.
+- Notes opens in the same window with the drawer's motion on its board, a
+  search over every note: the field becomes Find or start a note, with a row
+  of filters under it, Everything, the current day's, On windows, each folder in the
+  order its newest note came, and Tucked away, quieter, last. The notes are
+  listed under them, each with a dot of its colour, its first words and a
+  quiet line with a reminder's time on the current day, its folder, and the window it is
+  stuck to or when it last changed. Everything and a folder group them under
+  the current day, for a note changed or due that day, On windows, and Notes; tucked away
+  notes are only under their own filter. Words typed ask Gooseberry for the
+  notes with them and underline where they are found; a folder whose name
+  holds them is listed after the notes and opens its filter. The window
+  keeps its size, and the row of modes stays above it.
+- Enter starts a new note with the words typed, finishing the one open
+  before; `Down` and `Up` pick a note for Enter to open instead. A tap opens
+  a note.
+- A note is the page: paper of its colour filling the room, with dark ink on
+  any ground. Its colour is a dot in its corner, opening the five colours
+  beside it. One quiet line under it holds the folder's name, the window it
+  is stuck to or Not stuck, a mark that it is kept, or what is wrong, and
+  Checklist, Remind and More. Back and `Esc` return to the board, and the
+  note stays open, so Start resumes it.
+- The folder's name and the window's open their choices in a row above the
+  line. Folder offers Gooseberry's folders in its order, the workspace's own
+  marked, and a field for a new one; Stuck to offers the windows Gooseberry
+  gives, in its order, and Don't stick to a window. A choice closes the row
+  and returns to the page, and `Esc` closes an open row before it leaves the
+  page. A Gooseberry that offers no folders gets its Belongs to row instead,
+  as it offers it.
+- Checklist turns the note into Gooseberry's checklist, a box on each line
+  that ticks in place, and back. Remind offers Gooseberry's times in its
+  order, Pick a time, a day of the coming week then an hour, and No reminder
+  when one is set; Remind then names the time. Both are there only where
+  Gooseberry offers them. More, on a kept note, offers Copy all, Pin
+  where Gooseberry offers it (Unpin on the pinned note), Tuck away and
+  Remove; Tuck away and Remove return to the board, or close Search when
+  the note was opened straight onto its page.
+- The panel's quick note island opens Notes at Search's size: its dot on a
+  new quick note, and its pinned note on that note, each straight onto the
+  page with no Back. While Notes is open, either is shown there.
+- The board and the note are Gooseberry's over its session-bus interface,
+  version 1 (Gooseberry's `docs/DESKTOP.md` § The quick note in Search):
+  `Find` lists the notes, every one for no words, `Edit` opens one, and
+  `SetPinned` pins it.
+  Typing is sent half a second after it pauses and at least every three
+  seconds, and on closing; each change is written by Gooseberry before its
+  reply.
+- Expand fills the screen as Apps does and Notes stays in Search; again, or
+  the dot, returns Search to its size.
 - Pop out grows the window as Apps does, and Gooseberry's board, its own
   window open on the note, takes the window's place with no Back. Inside Kadunce's Spread the
   board is awaited as any launch from Search is. Over an Active card Search

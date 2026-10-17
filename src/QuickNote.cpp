@@ -145,6 +145,25 @@ void QuickNote::setStuck(const QString &window, const QString &app)
     call(QStringLiteral("SetStuck"), {window, app});
 }
 
+void QuickNote::setReminder(const QString &when)
+{
+    flush();
+    call(QStringLiteral("SetReminder"), {when});
+}
+
+void QuickNote::setChecklist(bool on)
+{
+    flush();
+    call(QStringLiteral("SetChecklist"), {on});
+}
+
+void QuickNote::setLineChecked(int line, bool checked)
+{
+    if (line < 0) return;
+    flush();
+    call(QStringLiteral("SetLineChecked"), {uint(line), checked});
+}
+
 void QuickNote::done()
 {
     flush();
@@ -155,6 +174,12 @@ void QuickNote::tuckAway()
 {
     flush();
     call(QStringLiteral("TuckAway"));
+}
+
+void QuickNote::setPinned(bool on)
+{
+    flush();
+    call(QStringLiteral("SetPinned"), {on});
 }
 
 void QuickNote::remove()
@@ -171,6 +196,37 @@ bool QuickNote::openBoard(const QString &requestToken)
     request.setArguments({noteId(), requestToken});
     QDBusConnection::sessionBus().asyncCall(request, 5000);
     return true;
+}
+
+void QuickNote::findNotes(const QString &words)
+{
+    const quint64 serial = ++m_findSerial;
+    QDBusMessage request = method(QStringLiteral("Find"));
+    request.setArguments({words, uint(0)});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(request, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, serial, words] {
+        const QDBusMessage reply = watcher->reply();
+        watcher->deleteLater();
+        if (serial != m_findSerial) return;
+        m_notes = reply.type() == QDBusMessage::ReplyMessage ? plain(reply.arguments().value(0)).toList()
+                                                             : QVariantList();
+        m_notesWords = words;
+        Q_EMIT notesChanged();
+    });
+}
+
+void QuickNote::edit(const QString &noteId)
+{
+    flush();
+    call(QStringLiteral("Edit"), {noteId});
+}
+
+void QuickNote::startWith(const QString &text)
+{
+    flush();
+    call(QStringLiteral("Done"));
+    call(QStringLiteral("Start"));
+    if (!text.isEmpty()) call(QStringLiteral("SetText"), {text});
 }
 
 void QuickNote::call(const QString &name, const QVariantList &arguments)

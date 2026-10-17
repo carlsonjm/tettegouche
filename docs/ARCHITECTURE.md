@@ -168,9 +168,9 @@ from KDE's application list like any other. Existing-window matching runs before
 
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list
 each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
-the session bus, and `NotesPane` draws the note in Search's window; with an
-older Gooseberry, `NotesDoor` runs the Capture action through
-`KIO::ApplicationLauncherJob` instead
+the session bus, and `NotesPane` draws the board of notes and the note's page
+in Search's window; with an older Gooseberry, `NotesDoor` runs the Capture
+action through `KIO::ApplicationLauncherJob` instead
 ([SEARCH-CONTRACT.md](SEARCH-CONTRACT.md) § Notes). Notes uses the launcher's
 mode state, its drawer easing and its hand-off to the application's own window.
 

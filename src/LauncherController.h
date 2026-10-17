@@ -208,7 +208,9 @@ public Q_SLOTS:
     // Meta+G opens Apps and Meta+E Files, and the dot's slide any of Apps,
     // Files or Notes ("notes"); the one already open closes
     // the launcher instead. With Files in its own window, Files brings that
-    // window forward.
+    // window forward. The panel's quick note island asks for "note", a new
+    // quick note, and "note:" with an id for its pinned note; each opens in
+    // Notes at Search's size.
     Q_SCRIPTABLE void openDrawer(const QString &drawer);
     Q_SCRIPTABLE void open();
     // The widget's settings changed: a launcher started with others leaves

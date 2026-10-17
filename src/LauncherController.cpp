@@ -446,8 +446,11 @@ void LauncherController::openDrawer(const QString &drawer)
         return;
     }
     if (!openOrOpening()) open();
+    // "note" is a new quick note, and "note:" with a note's id that note.
+    const bool note = drawer == QLatin1String("note")
+        || (drawer.startsWith(QLatin1String("note:")) && drawer.size() > 5);
     if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
-        || drawer == QLatin1String("notes"))
+        || drawer == QLatin1String("notes") || note)
         whenShown([this, drawer] { Q_EMIT drawerRequested(drawer); });
 }
 

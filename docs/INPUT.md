@@ -16,14 +16,24 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click Apps or Files, under the search field | Opens that drawer. |
-| Tap or click Notes, after Files | The field becomes the note pad in the same window, with the cursor in it. Notes is there only while Gooseberry is installed. |
-| Type, in Notes | Writes the note; Gooseberry keeps it as you go. |
-| Tap or click Back, or `Esc`, in Notes | Returns to Search; Notes resumes the same note. |
-| Tap or click a colour, in Notes | Sets the note's colour. |
-| Tap or click Folder or Stuck to, in Notes | Opens its choices under it: the folders and a field for a new one, or the windows and Don't stick to a window. A choice, or Enter in the field, sets it and returns to the pad; `Esc` closes the choices. With an older Gooseberry, Belongs to is there instead, and a place under it sets what the note belongs to. |
-| Tap or click Expand, at the header's right, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. Back returns to Search at its size. |
+| Tap or click Notes, after Files | Opens the notes board in the same window, with the cursor in Find or start a note. Notes is there only while Gooseberry is installed. |
+| Type, on the notes board | Finds the notes with those words; a folder they name is listed under the notes. |
+| Tap or click a filter, on the notes board | Everything, the current day's filter, On windows, a folder or Tucked away narrows the notes to it. |
+| `Down` or `Up`, on the notes board | Picks a note; Enter opens it. |
+| `Enter`, on the notes board, with no note picked | Starts a new note with the words typed. |
+| Tap or click a note, on the notes board | Opens it on the page, with the cursor at its end. |
+| Type, on a note's page | Writes the note; Gooseberry keeps it as you go. |
+| Tap or click Back, or `Esc`, on a page opened from the board | Returns to the board. |
+| `Esc`, on the notes board | Returns to Search. |
+| Tap or click the colour dot, in the page's corner | Opens the five colours beside it; one sets the note's colour. |
+| Tap or click the folder's name, or the window's, under the page | Opens its choices above it: the folders and a field for a new one, or the windows and Don't stick to a window. A choice, or Enter in the field, sets it and returns to the page; `Esc` closes the choices. With an older Gooseberry, Belongs to is there instead, and a place in it sets what the note belongs to. |
+| Tap or click Checklist, under the page | Turns the note into a checklist, a box on each line, or back into text. |
+| Tap or click a box, on a checklist | Ticks or unticks that item. |
+| `Enter` or `Backspace` at a line's start, on a checklist | Makes a new item of what follows the cursor, or joins the line to the one above. |
+| Tap or click Remind, under the page | Offers Gooseberry's times, Pick a time, a day and then an hour, and No reminder when one is set. Remind then names the time. |
+| Tap or click More, under a kept note | Offers Copy all, Pin (Unpin on the pinned note) where Gooseberry offers it, Tuck away and Remove. Pin keeps the note on the panel's quick note island, in place of the one pinned before. Tuck away or Remove returns to the board, or closes Search when the note was opened straight onto its page. |
+| Tap or click Expand, at the header's right, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. The dot returns to Search at its size. |
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
-| Tap or click Done or Tuck away, in Notes | Finishes the note, or tucks it away, and Search closes. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
 | Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. |
