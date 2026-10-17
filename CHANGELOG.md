@@ -16,7 +16,9 @@ provenance.
   end of the row of modes.
 - What was used lately shows, by default, as a grid of up to twenty large
   tiles. The widget's setting "Recent files and apps" chooses Off, In a row
-  (up to eight small tiles, as before) or In a grid.
+  (small tiles, as before) or In a grid, and how many at most, 4 to 20.
+- With nothing under it, Search's field rests in the middle of the first
+  screen, and rises to the top as you type or open a drawer.
 - Search no longer stalls as it opens while KWin is busy. It asks Kadunce for
   its place in Spread without waiting, and shows when Kadunce answers or after
   half a second on its own; a place Kadunce makes after that is given back.

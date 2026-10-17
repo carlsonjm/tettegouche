@@ -15,6 +15,7 @@ TestCase {
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         recentStub.clear()
         launcher.recentLayout = "grid"
+        launcher.recentCount = 20
         recentStub.opened = []
         launcher.notesDoor = null
         notesStub.available = true
@@ -1144,18 +1145,49 @@ TestCase {
         verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
         controller.availableArea = Qt.rect(0, 0, 1000, 740)
     }
-    // With nothing used lately search rests alone at the top, at its usual
-    // width, under the modes.
+    // With nothing used lately search rests alone in the middle, at its
+    // usual width, under the modes; typing takes it to the top, and a drawer
+    // opens with it there.
     function test_firstRowWithNothingUsed() {
         launcher.fileBrowser = filesMock
         controller.opened()
         tryCompare(launcher, "openingControls", 1)
         const row = findChild(launcher, "first-row")
         const field = findChild(launcher, "search-field")
+        const dot = findChild(launcher, "home-dot")
         compare(row.shownCount, 0)
         compare(field.width, field.parent.width)
-        compare(field.y, 0)
+        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
+        verify(field.y > 100)
+        verify(dot.mapToItem(launcher, 0, dot.height).y <= field.mapToItem(launcher, 0, 0).y)
         verify(findChild(launcher, "apps-pill").visible && findChild(launcher, "files-pill").visible)
+        const query = findChild(launcher, "search-query")
+        query.text = "x"
+        tryCompare(field, "y", 0)
+        query.text = ""
+        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        compare(field.y, 0)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
+    }
+    // Fewer can be chosen: no more than that show, in either layout.
+    function test_firstRowCount() {
+        launcher.fileBrowser = filesMock
+        fillRecent(24)
+        launcher.recentCount = 8
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const row = findChild(launcher, "first-row")
+        compare(row.shownCount, 8)
+        compare(findChild(launcher, "recent-8").visible, false)
+        compare(findChild(launcher, "search-field").y, 0)
+        launcher.recentLayout = "row"
+        compare(row.shownCount, Math.min(8, row.columns))
+        launcher.recentCount = 4
+        compare(row.shownCount, 4)
     }
     // With the setting off the launcher has no record at all: the modes
     // alone, and Tab goes from one to the next.
@@ -1170,6 +1202,9 @@ TestCase {
         verify(apps.visible && files.visible)
         compare(row.shownCount, 0)
         verify(!findChild(launcher, "recent-0"))
+        // Search rests in the middle, with nothing under it.
+        const field = findChild(launcher, "search-field")
+        tryCompare(field, "y", Math.round((field.parent.height - 56) / 2))
         launcher.forceActiveFocus()
         for (let i = 0; i < 6 && !apps.activeFocus; ++i) keyClick(Qt.Key_Tab)
         verify(apps.activeFocus)
@@ -2786,9 +2821,9 @@ TestCase {
         tryCompare(launcher, "drawerOpen", false)
         compare(controller.closes, 0)
         tryCompare(launcher, "drawerProgress", 0)
-        // With nothing typed, search stays where it was, above the first
-        // screen.
-        compare(field.y, 0)
+        // With nothing typed, search returns to the first screen: at the top
+        // over what was used lately, else in the middle.
+        tryCompare(field, "y", field.restY)
         compare(field.height, 56)
         wait(600)
     }

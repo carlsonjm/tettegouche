@@ -144,6 +144,20 @@ bool forwardOrTakeOver(QLockFile &lock, const QString &method, const QVariantLis
     return false;
 }
 
+// How many things used lately Search shows at most: --recent-count=N, from 4
+// to 20; twenty when it is not given.
+int recentCount(const QStringList &arguments)
+{
+    for (const QString &argument : arguments) {
+        if (argument.startsWith(QLatin1String("--recent-count="))) {
+            bool ok = false;
+            const int count = argument.mid(15).toInt(&ok);
+            if (ok) return qBound(4, count, 20);
+        }
+    }
+    return 20;
+}
+
 // The widget's settings among a launcher's arguments, which it compares with
 // the widget's own when it is asked to leave for them.
 QStringList settingsIn(const QStringList &arguments)
@@ -153,7 +167,9 @@ QStringList settingsIn(const QStringList &arguments)
                                QStringLiteral("--no-notes-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
-        if (settings.contains(argument) && !given.contains(argument)) given.append(argument);
+        if ((settings.contains(argument) || argument.startsWith(QLatin1String("--recent-count=")))
+            && !given.contains(argument))
+            given.append(argument);
     }
     return given;
 }
@@ -353,6 +369,8 @@ int main(int argc, char **argv)
         // Large tiles in a grid, or small ones along a single row.
         {QStringLiteral("recentLayout"),
          application.arguments().contains(QStringLiteral("--recent-row")) ? QStringLiteral("row") : QStringLiteral("grid")},
+        // How many at most, as many as fit.
+        {QStringLiteral("recentCount"), recentCount(application.arguments())},
         {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
         // The Notes pill can be left off the first screen on its own.
         {QStringLiteral("notesPillShown"),

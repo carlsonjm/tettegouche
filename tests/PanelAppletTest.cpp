@@ -371,6 +371,12 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 5);
         QCOMPARE(launches().constLast(), QStringLiteral("--recent-row"));
         configure(QStringLiteral("recentLayout"), QStringLiteral("grid"));
+        // Fewer than twenty.
+        configure(QStringLiteral("recentCount"), 12);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 6);
+        QCOMPARE(launches().constLast(), QStringLiteral("--recent-count=12"));
+        configure(QStringLiteral("recentCount"), 20);
     }
 
     // A running launcher is known by its name on the bus, whoever started

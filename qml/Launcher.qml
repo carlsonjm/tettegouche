@@ -90,6 +90,8 @@ Item {
     readonly property int fieldHeight: 56
     // What was used lately, before anything is typed: "grid" or "row".
     property string recentLayout: "grid"
+    // How many of them at most, as many as fit.
+    property int recentCount: 20
     property bool pendingLaunch: false
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
@@ -1073,8 +1075,17 @@ Item {
                 readonly property bool lit: query.activeFocus || query.text.length > 0
                 // One field, in one place, on every screen: under the modes,
                 // the full width of the sheet. Only what is under it changes.
+                // With nothing under it, typed or used lately, it rests in
+                // the middle, and rises as a drawer or a mode opens.
+                readonly property real restY: idle && !firstRow.fits
+                    ? Math.max(0, Math.round((parent.height - height) / 2)) : 0
                 x: 0
-                y: 0
+                y: Math.round(restY * (1 - root.drawerProgress) * (1 - root.modeProgress))
+                Behavior on y {
+                    enabled: (root.drawerProgress <= 0 || root.drawerProgress >= 1)
+                        && (root.modeProgress <= 0 || root.modeProgress >= 1)
+                    NumberAnimation { duration: root.ms(260); easing.type: Easing.OutCubic }
+                }
                 width: parent.width
                 height: root.fieldHeight
                 radius: height / 2
@@ -1432,9 +1443,10 @@ Item {
             }
 
             // Before anything is typed, under the field: what was used lately
-            // and is neither pinned, open nor hidden, as many as fit. As a
-            // grid, the setting's default, up to twenty large tiles fill the
-            // room under the field; as a row, up to eight small ones.
+            // and is neither pinned, open nor hidden, as many as fit and at
+            // most as many as the setting chooses, twenty unless fewer. As a
+            // grid, the setting's default, large tiles fill the room under
+            // the field; as a row, small ones along one row.
             Item {
                 id: firstRow
                 objectName: "first-row"
@@ -1443,7 +1455,7 @@ Item {
                 readonly property real tileWidth: grid ? 96 : 72
                 readonly property real tileHeight: grid ? 88 : 64
                 readonly property real rowGap: 8
-                readonly property int most: grid ? 20 : 8
+                readonly property int most: Math.max(1, Math.min(20, root.recentCount))
                 readonly property int offered: root.recentUse ? root.recentUse.count : 0
                 readonly property int columns: Math.max(1, Math.floor(width / tileWidth))
                 readonly property int rows: grid

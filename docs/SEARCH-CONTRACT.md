@@ -14,8 +14,10 @@ that row: Expand while Apps or Files is open, Pop out in Files, and Close,
 last. The field is the same on every screen, full width under the row, so
 only what is under it changes. Before anything is typed, what was used lately
 is under it, newest first, centred as one group: by default a grid of large
-tiles, at most twenty, as many rows as the room holds; set to a row, one row
-of small tiles, at most eight. A sheet too short for one row keeps the field
+tiles, as many rows as the room holds; set to a row, one row of small tiles.
+At most twenty show, or fewer where the setting chooses. With nothing under
+it, the field rests in the middle, and rises to the top as something is
+typed or a drawer opens. A sheet too short for one row keeps the field
 alone. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
 each file it opens, and Plasma's privacy setting decides what is kept.
@@ -28,8 +30,8 @@ each file it opens, and Plasma's privacy setting decides what is kept.
   is on show; the modes stay.
 - Typing hands the room to the results.
 - The widget's setting "Recent files and apps" is Off, In a row or In a grid,
-  the default. Off leaves the modes and the field alone, and nothing is
-  read.
+  the default, with how many at most: 4 to 20, twenty by default. Off leaves
+  the modes and the field alone, in the middle, and nothing is read.
 
 ### Notes
 
