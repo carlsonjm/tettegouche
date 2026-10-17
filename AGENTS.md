@@ -4,10 +4,10 @@
 
 1. Read `AGENTS.md`.
 2. Read `docs/ARCHITECTURE.md`.
-3. Read `docs/ROADMAP.md`. Suite order, cross-repository dependencies, open
-   product decisions and this component's task detail belong to the suite
-   record, kept privately with the Shuffle repository. Say so when it is not
-   at hand.
+3. Read `docs/LIMITATIONS.md`. The plan, suite order, cross-repository
+   dependencies, open product decisions and this component's task detail belong
+   to the suite record, kept privately with the Shuffle repository. Say so when
+   it is not at hand.
 4. Open only the other documents the work touches; `docs/README.md` routes to
    them.
 
@@ -23,7 +23,7 @@ from Git history.
   start repeats rows of the map; `tests/verify-public.py` checks both.
 - This repository is public. Its documents, code comments and commit messages
   describe the product: Tettegouche does things, you act, shipped behavior is in
-  the present tense, and planned behavior lives only in `docs/ROADMAP.md`. They
+  the present tense, and planned behavior is kept privately, never here. They
   carry no names, approvals or approval dates, and no chat or handover
   narration. `tests/verify-public.py` checks what a check can, in files and in
   commits not yet pushed; who decided what belongs in the private suite record.
