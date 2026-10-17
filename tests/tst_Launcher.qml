@@ -947,6 +947,9 @@ TestCase {
         compare(findChild(launcher, "child-options"), null)
         launcher.moveResultSelection(-1)
         compare(launcher.selectedChildKey, "")
+        // The modes take room above, so a short sheet may scroll to show
+        // the whole of the result.
+        list.positionViewAtIndex(0, ListView.End)
         const child = findChild(launcher, "child-0-1")
         mouseClick(child, child.width / 2, child.height / 2)
         compare(results.launches, 2)

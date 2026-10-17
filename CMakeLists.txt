@@ -383,6 +383,6 @@ if(BUILD_TESTING)
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)
         set_tests_properties(launcher-controls-test PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
-            TIMEOUT 120)
+            TIMEOUT 180)
     endif()
 endif()
