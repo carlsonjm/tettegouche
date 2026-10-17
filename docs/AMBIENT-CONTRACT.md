@@ -1,9 +1,8 @@
 # Ambient activity contract
 
-Ambient Tette answers what matters now. It presents ongoing media and transfer
-state in its panel strip beside the launcher dot, while Temperance remains
-responsible for notifications and transient events. Its inputs are in
-[INPUT.md](INPUT.md).
+Ambient Tette shows what is happening now, such as media and transfers, in the
+panel beside the launcher dot. Temperance handles notifications and passing
+events. Its inputs are in [INPUT.md](INPUT.md).
 
 The widget's setting "Show islands beside the launcher", off, leaves the
 launcher's dot alone in the panel: Ambient shows nothing and takes no width.
@@ -14,9 +13,9 @@ islands fade and an open island closes; they return when it lets go
 
 ## Admission and ownership
 
-An item may enter Ambient only while it has meaningful current state, continued
-presence is useful, a source owner is identifiable, and available actions can be
-routed truthfully to that owner.
+An item enters Ambient only while it has meaningful current state, is worth
+keeping in view, comes from a source Ambient can identify, and has actions
+Ambient can send truthfully to that source.
 
 Current sources are:
 
@@ -38,13 +37,15 @@ rebuild; every other source runs as before. A Plasma or build that names no
 version counts as a match.
 
 Static system status, completed work past its end's minute (§ Ends),
-ordinary notifications, and historical activity do not remain in Ambient. Ambient owns composition and routing; it does
-not own the source operation or retain a completion history.
+ordinary notifications and past activity leave Ambient. Ambient arranges the
+islands and routes actions to their sources; the source keeps the operation,
+and Ambient keeps no history of finished work.
 
 ## Lifecycle and truth
 
-- An activity appears, updates in place, and leaves with its authoritative
-  source. Owner generations reject stale actions after source replacement.
+- An activity appears, updates in place, and leaves when its source does. When
+  a source is replaced, its generation number rejects actions meant for the
+  old one.
 - Paused resumable media stays three minutes, then leaves until it plays
   again, a phone's through KDE Connect included. A lost job leaves, and a stopped one
   leaves or gives its place to its end (§ Ends). A hidden
@@ -54,8 +55,8 @@ not own the source operation or retain a completion history.
   guessing.
 - Determinate progress, transferred bytes, ETA, completion, and controls appear
   only when the source supplies evidence. Unknown progress stays indeterminate.
-- Source loss, quiet filesystem state, cancellation, and disappearance must not
-  be presented as successful completion.
+- A lost source, a quiet file, a cancellation or a disappearance is never shown
+  as a success.
 - The person may set an item aside, which never stops or changes its source:
   media stays away until it starts playing again, a transfer until its source
   ends, its end then filed without its minute, and an end is filed at once.
@@ -66,13 +67,14 @@ not own the source operation or retain a completion history.
 ### MPRIS
 
 Discovery takes an initial snapshot and then follows owner, property, and seek
-events. Missing title, artist, album, artwork, duration, or capabilities remain
-absent. Artwork is shown from a local file, the web, or an image the player
+events. A title, artist, album, artwork, duration or capability the player does
+not give stays empty. Artwork is shown from a local file, the web, or an image the player
 carries inline (`data:image/…`), which is how a player such as Elisa hands over
 a cover embedded in the track; anything else leaves the player's icon in its
-place. The presentation
-clock advances from source position/rate samples and freezes on pause. Controls
-require current capabilities and owner validation. A jump to a point names the
+place. The shown
+position advances from the player's own position and rate, and stops on pause.
+A control shows only while the player supports it, and its owner is checked
+before it acts. A jump to a point names the
 track where the player gives one, so a late request cannot move the next track,
 and stays inside the track's length. Bringing a player forward needs the
 player's own permission to be raised.
@@ -160,26 +162,26 @@ Core island and nothing else changes.
 
 ### Tette operations
 
-`FileBrowser` and KIO keep ownership. The launcher publishes revisioned snapshots
+`FileBrowser` and KIO own each operation. The launcher publishes revisioned snapshots
 of each copy or move, one for each change to its rows, and UUID-checked Cancel, Pause and Resume over its activity
 D-Bus interface. A copy or move that failed stays in the snapshots for ten
 seconds as a failed row, which the applet reports once as an end (§ Ends); a
-hidden launcher waits a second after such a failure before it quits. The applet validates
-the source owner generation before dispatching an action.
+hidden launcher waits a second after such a failure before it quits. The applet
+checks the source's generation before sending an action.
 
 ### Incoming files
 
 A nonblocking inotify descriptor observes the Downloads directory and its parent
 for recovery. Direct writes, witnessed renames, atomic arrivals, preallocation,
 and disappearance are filesystem evidence. Observed length is file size, not
-bytes transferred. Rows retire after bounded quiet observation without claiming
-completion.
+bytes transferred. A row leaves after a set quiet time, without being shown as
+complete.
 
 Only ordinary local direct children are covered. There is no recursion, browser
 scraping, notification parsing, or polling fallback. mmap writes and remote
 filesystem changes may be missed. Overflow or watch invalidation clears uncertain
-state and rearms without inventing missed work. Existing files are not admitted
-merely because the applet starts.
+state and rearms without inventing missed work. A file already there is not shown
+just because the applet started.
 
 ## The islands
 
@@ -282,11 +284,11 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 
 ## Interaction and safety
 
-- Touch, mouse, and keyboard must reach equivalent source-supported actions;
-  [INPUT.md](INPUT.md) lists them.
-- The island's actions affect only the identified source and disappear when
-  unsupported.
+- Touch, mouse and keyboard reach the same actions, as far as the source
+  supports them; [INPUT.md](INPUT.md) lists them.
+- An island's actions act only on its own source, and one the source does not
+  support is not shown.
 - Closing the open island returns it to the band; it never opens search.
-- Empty Ambient leaves clean panel space.
+- With nothing to show, Ambient leaves the panel clean.
 - Do not add a daemon, polling loop, persistent history, replacement task
   manager, notification-derived progress, or cross-product activity owner.

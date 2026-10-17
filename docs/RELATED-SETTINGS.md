@@ -1,8 +1,8 @@
 # Related settings contract
 
-Related setting rows add read-only local context to a canonical KDE settings
-destination. Stable setting IDs select providers; translated display names are
-never routing keys.
+Related setting rows add read-only local details under a KDE settings result.
+Tettegouche picks each provider by the setting's stable ID, not by its
+translated name.
 
 ## Supported context
 
@@ -23,25 +23,25 @@ never routing keys.
 
 Bluetooth is event-driven. Other providers are lazy snapshots taken once per
 launcher process when their parent setting appears. Reopening refreshes them.
-Missing services, malformed output, and timeouts leave the parent functional
-without children.
+If a service is missing, returns malformed output or times out, the parent
+still works and shows no children.
 
-Local helper processes use fixed arguments without a shell, a two-second timeout,
-and a one-MiB output guard. D-Bus property reads disable service autostart and
-time out after 1.5 seconds.
+Local helper processes run with fixed arguments and no shell, time out after two
+seconds, and stop at one MiB of output. D-Bus property reads do not start the
+service and time out after 1.5 seconds.
 
 ## Presentation and activation
 
 Groups show at most three details plus a remaining-count row when more than four
 records exist. Children are separate selectable rows after their parent in
-keyboard order; [INPUT.md](INPUT.md) lists how they are reached. Selection
-retains the pinned parent destination and revalidates the child before
-activation.
+keyboard order; [INPUT.md](INPUT.md) lists how they are reached. Selecting a
+child keeps the parent destination pinned, and Tettegouche checks the child is
+still there before opening it.
 
-A child opens the relevant existing settings page. It never disconnects, pairs,
-mounts, switches audio/output, manages printer jobs, changes profiles, or performs
-another device-specific action. Such controls require stable device identities
-and verified mutation APIs before they can enter this contract.
+A child opens the matching settings page and acts on nothing itself: it does not
+disconnect, pair, mount, switch audio or outputs, manage print jobs, change
+profiles or take any other device action. Adding such controls first needs
+stable device identities and verified APIs for making the change.
 
 ## Current limits
 
@@ -49,4 +49,4 @@ Input-device classification and enabled state, printer defaults/queue counts,
 KDE Connect remote battery/offline details, default-terminal detection, richer
 Night Light schedules, and continuous refresh for every provider are absent.
 Custom performance profiles are not assumed to equal the standard system power
-profile. Storage opens KDE Device Actions; it is not a disk-management surface.
+profile. Storage opens KDE Device Actions, not a disk manager.

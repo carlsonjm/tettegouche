@@ -1,7 +1,7 @@
 # Files contract
 
-This document defines the current Files behavior and the invariants that
-must survive future work. Its inputs are in [INPUT.md](INPUT.md).
+How Files behaves now, and the rules later work has to keep. Its inputs are in
+[INPUT.md](INPUT.md).
 
 ## State and navigation
 
@@ -130,8 +130,8 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
   Nothing is replaced without Replace. In a copy or move of several, a file
   that cannot be read is skipped and the rest go on; the job ends saying what
   was left behind, to Files and to Ambient. Any other error, or an unreadable
-  file alone, stops the job with its message; already-completed items may
-  remain and partial completion must be stated.
+  file alone, stops the job with its message; items already done stay, and
+  the job says it finished only in part.
 - Empty Trash, from the folder's menu after a confirmation giving the count and
   size, is the one permanent delete, and forgets the restore records.
 - Compress and Extract are Ark's own batch jobs, which Plasma tracks, so Ambient
@@ -173,15 +173,16 @@ must survive future work. Its inputs are in [INPUT.md](INPUT.md).
   immediately. An outstanding job defers process exit until it finishes, as
   an open Files window does until it closes. A job that meets a name already
   taken while the launcher is closed reopens it on Files to ask.
-- Reopening cancels deferred quit and restores current operation status. Late
-  errors remain available to the reopened process.
+- Reopening cancels the deferred quit and shows the current state of each
+  operation, including errors that arrived while it was closed.
 - The launcher exports a revisioned snapshot of its copies and moves, and
   UUID-checked Cancel, Pause and Resume, on `/Activities`, interface
   `io.github.carlsonjm.Tettegouche.Activities1`.
-- Ambient may present KIO progress and source-supported Cancel. Presentation does
-  not take ownership of the operation and must generation-check actions.
-- Forced process termination is not transaction-safe; a partial destination may
-  remain. Navigation remains independent of the active job's destination.
+- Ambient may show KIO progress and the Cancel its source supports. Showing a
+  job does not make Ambient its owner, and Ambient checks the generation before
+  acting on it.
+- If the process is killed mid-job, a partly written destination may be left
+  behind. Navigation is independent of a running job's destination.
 
 ## Safety invariants
 
