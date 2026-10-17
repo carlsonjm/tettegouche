@@ -81,13 +81,15 @@ Item {
     readonly property int paperRadius: 8
     readonly property int noteRadius: 12
     readonly property int contentInset: 24
-    // The room the row of modes takes above the rest: its 44 and 16 below.
+    // The room the row of modes takes above the rest: its 40 pills and 16
+    // below them (Comfortable), within the 24 the sheet keeps all round.
     // With the on-screen keys up over a search, the row gives its room to
     // the results.
     readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
-    readonly property int modeRowReach: modeRowShown ? 60 : 0
-    // Search's field, the same on every screen, at the size it first had.
-    readonly property int fieldHeight: 58
+    readonly property int modeRowReach: modeRowShown ? 56 : 0
+    // Search's field, the same on every screen: 44, the height it first had
+    // in use, and the touch target's.
+    readonly property int fieldHeight: 44
     // Which sections of what was used lately the first screen shows, each by
     // its setting: the applications, the files, or both.
     property bool recentApps: true
@@ -203,13 +205,12 @@ Item {
     component FirstPill: Item {
         id: pill
         property string label
-        property string glyph
         // Whether its mode is the one shown.
         property bool selected: false
         // How far it has arrived, 0 to 1.
         property real reveal: 1
         signal activated()
-        width: pillLabel.implicitWidth + 16 + 8 + 32
+        width: pillLabel.implicitWidth + 28
         height: 44
         opacity: reveal
         activeFocusOnTab: true
@@ -232,17 +233,9 @@ Item {
             scale: pillTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: root.ms(90) } }
-            SuiteIcon {
-                x: 16
-                anchors.verticalCenter: parent.verticalCenter
-                glyph: pill.glyph
-                width: 16
-                height: 16
-                opacity: pill.selected ? 1 : 0.66
-            }
             Text {
                 id: pillLabel
-                x: 16 + 16 + 8
+                x: 14
                 anchors.verticalCenter: parent.verticalCenter
                 text: pill.label
                 color: pill.selected ? root.primaryText : root.secondaryText
@@ -1153,18 +1146,25 @@ Item {
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
                 + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
-        readonly property real fullHeight: Math.max(restingHeight, Math.min(maxRestHeight,
-            Math.round(root.launcherController.availableArea.height * 0.64)))
+        readonly property real fullHeight: Math.max(restingHeight,
+            Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
         readonly property real restHeight: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.height - 20)
                 : resting ? restingHeight : fullHeight
-        // Floating on a large display, the sheet stays about a card's size
-        // rather than growing with the display.
-        readonly property real maxRestWidth: 1120
-        readonly property real maxRestHeight: 720
+        // Floating, Search is one size on every display, as tall as both
+        // sections and as wide as eight applications want, never scaled up
+        // with a large display; only a smaller screen trims it.
+        readonly property real universalWidth: 840
+        readonly property real universalHeight: 2 * root.contentInset + 56 + root.fieldHeight
+            + firstRow.gap + firstRow.headHeight + firstRow.appHeight
+            + firstRow.gap + firstRow.headHeight + 2 * firstRow.cardHeight + firstRow.cardGap
+        // With nothing under the field, the sheet is only as wide as the
+        // field needs: 592 and the 24 on each side.
+        readonly property real smallWidth: 640
+        readonly property bool small: resting && firstRow.sections === 0
         // With the keys up the sheet rises only as far as it must, never
         // leaving the room Kadunce gave a guest, then shortens to fit.
         readonly property real keysLine: root.height - root.keysReach
@@ -1186,7 +1186,7 @@ Item {
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
-                : Math.min(maxRestWidth, Math.round(root.launcherController.availableArea.width * 0.64))
+                : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
@@ -1261,8 +1261,8 @@ Item {
                 // Lit while it holds the keys or what was typed.
                 readonly property bool lit: query.activeFocus || query.text.length > 0
                 // One field, in one place, on every screen: under the modes,
-                // at the size it first had, about three quarters of the sheet
-                // wide and centred. Only what is under it changes. In a room
+                // on the same edges as they are, 44 tall. Only what is under
+                // it changes. In a room
                 // taller than it needs, with nothing under it, it rests in
                 // the middle, and rises as a drawer or a mode opens.
                 readonly property real restY: idle && !firstRow.fits
@@ -1274,7 +1274,7 @@ Item {
                         && (root.modeProgress <= 0 || root.modeProgress >= 1)
                     NumberAnimation { duration: root.ms(260); easing.type: Easing.OutCubic }
                 }
-                width: Math.min(parent.width, Math.max(360, Math.round(parent.width * 0.72)))
+                width: parent.width
                 height: root.fieldHeight
                 radius: height / 2
                 color: root.controlColor
@@ -1325,7 +1325,7 @@ Item {
                     id: searchGlyph
                     glyph: "search"
                     anchors.left: parent.left
-                    anchors.leftMargin: 20
+                    anchors.leftMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     width: 18
                     height: 18
@@ -1378,7 +1378,7 @@ Item {
                     id: query
                     objectName: "search-query"
                     anchors.left: searchGlyph.right
-                    anchors.leftMargin: 14
+                    anchors.leftMargin: 12
                     anchors.right: parent.right
                     // Clear, and an open drawer's eye, sit at its end.
                     anchors.rightMargin: 20 + (trailingAction.visible ? 36 : 0) + 42 * root.drawerProgress
@@ -1386,7 +1386,7 @@ Item {
                     color: root.primaryText
                     selectionColor: tone.selection
                     selectedTextColor: tone.selectedText
-                    font.pixelSize: 18
+                    font.pixelSize: 16
                     font.weight: Font.Medium
                     clip: true
                     inputMethodHints: Qt.ImhNoPredictiveText
@@ -1453,7 +1453,7 @@ Item {
                             ? (root.filesMode ? words.i18n("Find in Files") : words.i18n("Find an app"))
                             : words.i18n("Just type")
                         color: tone.placeholderText
-                        font.pixelSize: 13
+                        font.pixelSize: 15
                         font.weight: Font.Medium
                         opacity: root.openingText
                         transform: Translate { y: (1 - root.openingText) * 3 }
@@ -1522,9 +1522,10 @@ Item {
                     if (root.modeOpen) root.closeMode()
                     root.setDrawerOpen(true, mode)
                 }
-                x: -10
-                y: -root.modeRowReach
-                width: parent.width + 10
+                // The dot's pill starts on the field's left edge.
+                x: -2
+                y: -root.modeRowReach - 2
+                width: parent.width + 2
                 height: 44
                 opacity: root.applicationLaunchPending || !root.modeRowShown ? 0 : root.openingControls
                 visible: opacity > 0
@@ -1550,10 +1551,22 @@ Item {
                         Keys.onReturnPressed: modeRow.show("")
                         Keys.onEnterPressed: modeRow.show("")
                         Keys.onSpacePressed: modeRow.show("")
+                        // A pill like the modes', filled when chosen, around
+                        // a small dot.
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 22
-                            height: 22
+                            width: 40
+                            height: 40
+                            radius: width / 2
+                            color: homeTap.pressed ? tone.doorPressed
+                                : homeDot.selected ? tone.current
+                                : homeHover.hovered ? tone.doorHover : "transparent"
+                            Behavior on color { ColorAnimation { duration: root.ms(90) } }
+                        }
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 12
+                            height: 12
                             radius: width / 2
                             color: root.primaryText
                             opacity: homeDot.selected || homeHover.hovered ? 1 : 0.6
@@ -1563,8 +1576,8 @@ Item {
                         }
                         Rectangle {
                             anchors.centerIn: parent
-                            width: 32
-                            height: 32
+                            width: 46
+                            height: 46
                             radius: width / 2
                             color: "transparent"
                             border.width: 1.5
@@ -1587,7 +1600,6 @@ Item {
                         id: appsPill
                         objectName: "apps-pill"
                         label: words.i18n("Apps")
-                        glyph: "layout-grid"
                         selected: modeRow.current === "apps"
                         onActivated: modeRow.show("apps")
                     }
@@ -1595,7 +1607,6 @@ Item {
                         id: filesPill
                         objectName: "files-pill"
                         label: words.i18n("Files")
-                        glyph: "folder"
                         selected: modeRow.current === "files"
                         visible: root.fileBrowser !== null
                         onActivated: modeRow.show("files")
@@ -1604,7 +1615,6 @@ Item {
                         id: notesPill
                         objectName: "notes-pill"
                         label: words.i18n("Notes")
-                        glyph: "sticky-note"
                         selected: modeRow.current === "notes"
                         visible: root.notesPillShown && !!root.notesDoor && root.notesDoor.available
                         onActivated: modeRow.show("notes")
