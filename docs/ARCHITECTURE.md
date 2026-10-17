@@ -1,6 +1,6 @@
 # Architecture
 
-Tettegouche 0.2.0 has two lifetimes: a persistent Plasma panel applet and an
+Tettegouche 1.1.0 has two lifetimes: a persistent Plasma panel applet and an
 on-demand launcher process. The applet owns the panel's launcher dot and the
 Ambient island. The launcher owns search, Apps, local Files state
 and the temporary layer-shell surface. It stays fully useful without Kadunce,
