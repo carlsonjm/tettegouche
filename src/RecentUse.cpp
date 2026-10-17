@@ -214,7 +214,7 @@ QList<RecentUse::Used> RecentUse::readRecord()
     if (!current.isValid() || current.value().isEmpty()) {
         return {};
     }
-    // Enough to fill a row once what is pinned, open or gone is left out.
+    // Enough to fill the grid once what is pinned, open or gone is left out.
     const Query query = UsedResources | RecentlyUsedFirst | Agent::any() | Type::any()
         | Activity(current.value()) | Limit(60);
     QList<Used> record;

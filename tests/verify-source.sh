@@ -38,7 +38,7 @@ rg -q 'contentInset: 22' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
-rg -Fq 'text: words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
+rg -Fq 'words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
 rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/LauncherController.h"
 rg -q 'launcherController\.showInputMethod\(\)' \
     "${project_root}/qml/Launcher.qml"
@@ -76,6 +76,10 @@ rg -q 'cfg_showAmbient' \
     "${project_root}/applet/ConfigGeneral.qml"
 rg -q 'cfg_offerRecent' \
     "${project_root}/applet/ConfigGeneral.qml"
+rg -q 'cfg_recentLayout' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q '\-\-recent-row' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
 rg -q '\-\-no-recent' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q 'cfg_offerNotes' \

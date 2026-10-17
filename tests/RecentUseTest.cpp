@@ -159,20 +159,20 @@ private Q_SLOTS:
     // More than a row ever shows is never kept.
     void keepsAFew()
     {
-        for (int i = 0; i < 12; ++i) {
+        for (int i = 0; i < 24; ++i) {
             write(home(QStringLiteral("Documents/file-%1.txt").arg(i)), "x");
         }
         RecentUse recent;
         recent.setReader([] {
             QList<RecentUse::Used> record;
-            for (int i = 0; i < 12; ++i) {
+            for (int i = 0; i < 24; ++i) {
                 record.append({home(QStringLiteral("Documents/file-%1.txt").arg(i)), uint(100 + i)});
             }
             return record;
         });
         recent.refresh();
         QCOMPARE(recent.count(), RecentUse::Kept);
-        QCOMPARE(names(recent).first(), QStringLiteral("file-11.txt"));
+        QCOMPARE(names(recent).first(), QStringLiteral("file-23.txt"));
     }
 
     // A file gone since Search opened opens nothing.

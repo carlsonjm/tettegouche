@@ -149,7 +149,8 @@ bool forwardOrTakeOver(QLockFile &lock, const QString &method, const QVariantLis
 QStringList settingsIn(const QStringList &arguments)
 {
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
-                               QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill")};
+                               QStringLiteral("--recent-row"), QStringLiteral("--no-notes"),
+                               QStringLiteral("--no-notes-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
         if (settings.contains(argument) && !given.contains(argument)) given.append(argument);
@@ -349,6 +350,9 @@ int main(int argc, char **argv)
         // What is not offered is passed as null; an empty QVariant would
         // reach QML as undefined, which its "!== null" checks let through.
         {QStringLiteral("recentUse"), QVariant::fromValue<QObject *>(offerRecent ? &recent : nullptr)},
+        // Large tiles in a grid, or small ones along a single row.
+        {QStringLiteral("recentLayout"),
+         application.arguments().contains(QStringLiteral("--recent-row")) ? QStringLiteral("row") : QStringLiteral("grid")},
         {QStringLiteral("notesDoor"), QVariant::fromValue<QObject *>(offerNotes ? &notes : nullptr)},
         // The Notes pill can be left off the first screen on its own.
         {QStringLiteral("notesPillShown"),

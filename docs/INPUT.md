@@ -42,7 +42,7 @@ than repeat it.
 | Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
 | Esc | Closes an open menu, then an open drawer, then Search. |
 | Tap or click outside Search | Closes it. Inside Kadunce's Spread, the space round Search belongs to Spread. |
-| Tap or click Close, last in the header's right corner, in Apps, Files or Notes | Closes Search, as a tap outside it does. |
+| Tap or click Close, last at the right of the row of modes, or of Notes' header | Closes Search, as a tap outside it does. |
 | Drag Search sideways inside Kadunce's Spread | Search follows and tells Spread how far it has moved. Let go: if Spread moves on, Search slides away to that side and closes; if not, it springs back. |
 | With the on-screen keys up | Search rises only as far as it must to stay above them, then shortens, so the search field and its results, or an open drawer, stay in view. Inside Kadunce's Spread it keeps its place and shortens instead. It returns as the keys go down. |
 
@@ -59,7 +59,8 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Show recent files and apps", off | Search opens with its modes along its top and the field alone, and nothing used lately is read. |
+| Setting "Recent files and apps", Off | Search opens with its modes along its top and the field alone, and nothing used lately is read. |
+| Setting "Recent files and apps", In a row or In a grid | What was used lately shows under the field as one row of up to eight small tiles, or, by default, a grid of up to twenty large ones. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
@@ -79,7 +80,7 @@ than repeat it.
 | --- | --- |
 | Tap or click Apps in Search | Opens Apps. |
 | Open the Apps launcher, from the dock or Plasma's menus | Opens Search with Apps already open. The launcher carries its own icon, the Apps pill's four squares on a tile, so it can be pinned like any application. |
-| Type | Narrows the applications to those whose names match. What is typed shows in the search field, in the middle of the drawer's header. |
+| Type | Narrows the applications to those whose names match. What is typed shows in the search field, which keeps its place from Search's first screen. |
 | Arrow keys, typed into or not | The first press shows, lifted, the application or folder Enter would open; then Left and Right move one, Up and Down a row, passing over any section's row and keeping it in view. |
 | Enter | Opens the chosen application, or opens or closes the chosen folder: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
@@ -104,7 +105,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click Files in Search | Opens Files. |
-| Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. What is typed shows in the search field, in the middle of the drawer's header. |
+| Type | Narrows what is shown to names that match: the folder, Recent or a search's results. Subfolders are not searched. What is typed shows in the search field, which keeps its place from Search's first screen. |
 | Down, from what is typed | Moves the keys into the files, on the first one. |
 | With text typed and nothing chosen, tap or click "Search inside folders", or press Enter | Looks through this folder and every folder inside it for names containing the text as typed. Results arrive while it runs, each with the folder it is in. Back returns to the folder; Stop searching keeps what it has found. Hidden files are searched only while shown. |
 | Tap or click a place | Opens that folder. |
@@ -129,7 +130,7 @@ than repeat it.
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
 | Tap or click Pop out, beside Expand | Files opens in a window of its own, with its tabs and folder as they were, and Search closes. Each Pop out opens another window. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With a Files window open: `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window last used forward, back from minimized, and shows what was asked there. Files in Search still opens Files in Search. |
-| In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; Back and the corner give way to the window's own title bar. Typing goes into search; Esc clears it. |
+| In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; the row of modes and its buttons give way to the window's own title bar. Typing goes into search; Esc clears it. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |

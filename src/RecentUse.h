@@ -44,8 +44,8 @@ public:
     using Excluded = std::function<bool(const QString &applicationId, const QString &name)>;
     using Thumbnails = std::function<QString(const QString &path, const QString &mimeType, qint64 modified)>;
 
-    // The most kept: more than a row ever shows, so a narrow one still fills.
-    static constexpr int Kept = 8;
+    // The most kept: as many as the grid ever shows.
+    static constexpr int Kept = 20;
 
     explicit RecentUse(QObject *parent = nullptr);
 

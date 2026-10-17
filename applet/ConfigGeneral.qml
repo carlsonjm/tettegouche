@@ -10,6 +10,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_useKadunceDefault
     property bool cfg_offerRecent
     property bool cfg_offerRecentDefault
+    property string cfg_recentLayout
+    property string cfg_recentLayoutDefault
     property bool cfg_offerNotes
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
@@ -30,14 +32,34 @@ KCMUtils.SimpleKCM {
             onToggled: cfg_useKadunce = checked
         }
 
-        QQC2.CheckBox {
-            Kirigami.FormData.label: i18n("Search:")
-            text: i18n("Show recent files and apps")
-            checked: cfg_offerRecent
-            onToggled: cfg_offerRecent = checked
+        // What was used lately: not at all, one row, or a grid of larger
+        // tiles.
+        QQC2.ButtonGroup { id: recentChoice }
+
+        QQC2.RadioButton {
+            Kirigami.FormData.label: i18n("Recent files and apps:")
+            text: i18n("Off")
+            QQC2.ButtonGroup.group: recentChoice
+            checked: !cfg_offerRecent
+            onToggled: if (checked) cfg_offerRecent = false
+        }
+
+        QQC2.RadioButton {
+            text: i18n("In a row")
+            QQC2.ButtonGroup.group: recentChoice
+            checked: cfg_offerRecent && cfg_recentLayout === "row"
+            onToggled: if (checked) { cfg_offerRecent = true; cfg_recentLayout = "row" }
+        }
+
+        QQC2.RadioButton {
+            text: i18n("In a grid")
+            QQC2.ButtonGroup.group: recentChoice
+            checked: cfg_offerRecent && cfg_recentLayout !== "row"
+            onToggled: if (checked) { cfg_offerRecent = true; cfg_recentLayout = "grid" }
         }
 
         QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Notes:")
             text: i18n("Show Notes when Gooseberry is installed")
             checked: cfg_offerNotes
             onToggled: cfg_offerNotes = checked
