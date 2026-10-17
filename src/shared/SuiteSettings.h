@@ -3,6 +3,10 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
+// Shared by Tettegouche and Temperance. This folder in Tettegouche is where
+// the shared code changes; Temperance carries a byte-for-byte copy, which its
+// tools/shared.sh records and checks, so one change reaches both.
+
 #pragma once
 
 #include <KIO/CommandLauncherJob>
@@ -12,8 +16,11 @@
 #include <Plasma/Applet>
 
 #include <QAction>
+#include <QDebug>
 #include <QMetaObject>
 
+namespace suite
+{
 // Where Shuffle Settings is installed, the widget's Configure opens it at
 // the widget's own page; where it isn't, Configure opens the widget's own
 // settings as always. It is looked for at each press, so installing or
@@ -26,8 +33,12 @@
 inline bool openConfigureInSuiteSettings(Plasma::Applet *applet, const QString &page)
 {
     QAction *configure = applet->internalAction(QStringLiteral("configure"));
-    if (!configure || !QObject::disconnect(configure, SIGNAL(triggered()), applet, SLOT(requestConfiguration()))) {
-        qWarning("Configure keeps the widget's own settings page: this Plasma does not connect it as expected");
+    if (!configure) {
+        return false;
+    }
+    if (!QObject::disconnect(configure, SIGNAL(triggered()), applet, SLOT(requestConfiguration()))) {
+        qWarning().noquote() << applet->pluginMetaData().pluginId()
+                             << "could not take over Configure; it opens the widget's own settings";
         return false;
     }
     QObject::connect(configure, &QAction::triggered, applet, [applet, page] {
@@ -42,4 +53,5 @@ inline bool openConfigureInSuiteSettings(Plasma::Applet *applet, const QString &
         job->start();
     });
     return true;
+}
 }

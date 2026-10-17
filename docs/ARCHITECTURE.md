@@ -92,6 +92,11 @@ Source applications and KDE services own activity truth and supported actions.
 Temperance owns notifications and transient event presentation; Tettegouche does
 not duplicate that history in Ambient.
 
+`src/shared` holds the code Tettegouche and Temperance both run: whether Shuffle
+is installed, Configure opening Shuffle Settings, and the room a widget has along
+its panel. It changes here. Temperance builds from a byte-for-byte copy that its
+`tools/shared.sh` records and checks, so one change reaches both widgets.
+
 ## Kadunce integration
 
 At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads

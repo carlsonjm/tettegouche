@@ -2,19 +2,13 @@
 
 #pragma once
 
-#include <QStandardPaths>
+#include "shared/SuitePresence.h"
+
 #include <QString>
 
 namespace tettegouche
 {
-// Shuffle's bottom surface is the one part every Shuffle install has.
-inline bool shuffleInstalled()
-{
-    return !QStandardPaths::locate(QStandardPaths::GenericDataLocation,
-                                   QStringLiteral("plasma/plasmoids/co.goodinput.shuffle.bottomsurface"),
-                                   QStandardPaths::LocateDirectory)
-                .isEmpty();
-}
+using suite::shuffleInstalled;
 
 // The name Tettegouche shows for itself: Search where Shuffle is installed,
 // Tettegouche everywhere else. Identifiers, D-Bus names and settings keys

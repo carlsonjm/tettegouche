@@ -5,7 +5,7 @@
 #include "LauncherKeys.h"
 #include "NotesDoor.h"
 #include "ProductName.h"
-#include "SuiteSettings.h"
+#include "shared/SuiteSettings.h"
 
 #include <KConfigGroup>
 #include <KConfigLoader>
@@ -53,7 +53,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         setTitle(m_productName);
     }
     setHasConfigurationInterface(true);
-    openConfigureInSuiteSettings(this, QStringLiteral("search"));
+    suite::openConfigureInSuiteSettings(this, QStringLiteral("search"));
 
     // The launcher is a process of its own, started in a scope of its own,
     // so restarting or removing the panel leaves it and its work running. It
@@ -191,84 +191,13 @@ void TettegoucheApplet::setAmbientActivities(const QVariantList &activities)
 
 int TettegoucheApplet::availablePanelWidth(QQuickItem *visualParent, int minimumWidth, int gap) const
 {
-    minimumWidth = std::max(1, minimumWidth);
-    gap = std::max(0, gap);
-    if (!visualParent || !visualParent->window() || !containment()) {
-        return minimumWidth;
-    }
-
-    QQuickItem *ownItem = PlasmaQuick::AppletQuickItem::itemForApplet(
-        const_cast<TettegoucheApplet *>(this));
-    if (!ownItem || ownItem->window() != visualParent->window()) {
-        ownItem = visualParent;
-    }
-
-    const qreal ownLeft = ownItem->mapToScene(QPointF(0, 0)).x();
-    const qreal ownRight = ownItem->mapToScene(QPointF(ownItem->width(), 0)).x();
-    qreal nearestRightEdge = -1;
-    for (Plasma::Applet *applet : containment()->applets()) {
-        if (!applet || applet == this || applet->destroyed()) {
-            continue;
-        }
-        const QString pluginId = applet->pluginMetaData().pluginId();
-        if (pluginId == QStringLiteral("org.kde.plasma.panelspacer")
-            || pluginId == QStringLiteral("org.kde.plasma.marginsseparator")
-            || !PlasmaQuick::AppletQuickItem::hasItemForApplet(applet)) {
-            continue;
-        }
-        auto *item = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
-        if (!item || !item->isVisible() || item->window() != ownItem->window()) {
-            continue;
-        }
-        const qreal itemLeft = item->mapToScene(QPointF(0, 0)).x();
-        if (itemLeft >= ownRight - 1
-            && (nearestRightEdge < 0 || itemLeft < nearestRightEdge)) {
-            nearestRightEdge = itemLeft;
-        }
-    }
-    if (nearestRightEdge < 0) {
-        return minimumWidth;
-    }
-    return std::max(minimumWidth,
-                    static_cast<int>(std::floor(nearestRightEdge - ownLeft - gap)));
-}
-
-void TettegoucheApplet::watchGeometryItem(QQuickItem *item)
-{
-    m_watchedGeometryItems.removeIf([](const QPointer<QQuickItem> &watched) {
-        return watched.isNull();
-    });
-    if (!item || m_watchedGeometryItems.contains(item)) {
-        return;
-    }
-    m_watchedGeometryItems.append(item);
-    const auto changed = [this] { Q_EMIT panelGeometryChanged(); };
-    connect(item, &QQuickItem::xChanged, this, changed);
-    connect(item, &QQuickItem::widthChanged, this, changed);
-    connect(item, &QQuickItem::visibleChanged, this, changed);
-    connect(item, &QQuickItem::windowChanged, this, changed);
+    return suite::panelRoom(const_cast<TettegoucheApplet *>(this), visualParent, minimumWidth, gap,
+                            suite::Toward::After);
 }
 
 void TettegoucheApplet::watchPanelGeometry(QQuickItem *visualParent)
 {
-    watchGeometryItem(visualParent);
-    if (!containment()) {
-        return;
-    }
-    if (!m_watchingContainment) {
-        m_watchingContainment = true;
-        connect(containment(), &Plasma::Containment::appletAdded, this,
-                [this](Plasma::Applet *) {
-                    QTimer::singleShot(0, this, [this] { Q_EMIT panelGeometryChanged(); });
-                });
-        connect(containment(), &Plasma::Containment::appletRemoved, this,
-                [this](Plasma::Applet *) { Q_EMIT panelGeometryChanged(); });
-    }
-    for (Plasma::Applet *applet : containment()->applets()) {
-        if (applet && PlasmaQuick::AppletQuickItem::hasItemForApplet(applet)) {
-            watchGeometryItem(PlasmaQuick::AppletQuickItem::itemForApplet(applet));
-        }
-    }
+    m_panelWatch.follow(this, visualParent, [this] { Q_EMIT panelGeometryChanged(); });
 }
 
 void TettegoucheApplet::invokeActivity(const QString &id, int generation, const QString &action,
