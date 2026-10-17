@@ -5,8 +5,8 @@
 
 // The launcher against a stand-in Kadunce on a private bus: the guest
 // handshake it speaks, what it asks and tells as it opens, launches and
-// closes, an open application brought forward, and, with no Kadunce, Plasma's
-// window list in its place. The stand-in answers from a thread of its own on
+// closes, a slow Kadunce that holds nothing up, an open application brought
+// forward, and, with no Kadunce, Plasma's window list in its place. The stand-in answers from a thread of its own on
 // a connection of its own, so the launcher's waiting calls are answered as
 // KWin answers them. Nothing of the person's is read or written.
 
@@ -20,6 +20,7 @@
 
 #include <QDBusConnection>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QGuiApplication>
 #include <QJsonArray>
@@ -62,6 +63,8 @@ public:
     int protocol = 3;
     bool accepts = true;
     bool activates = true;
+    // How long a guest's begin takes to answer, as a busy KWin takes.
+    int delay = 0;
     QString output;
     QString context;
 
@@ -85,6 +88,12 @@ public Q_SLOTS:
     Q_SCRIPTABLE int launcherGuestProtocolVersion() { return note(QStringLiteral("launcherGuestProtocolVersion"), protocol); }
     Q_SCRIPTABLE QString beginLauncherGuest(const QString &launcher)
     {
+        int wait = 0;
+        {
+            QMutexLocker locked(&m_lock);
+            wait = delay;
+        }
+        QThread::msleep(wait);
         QMutexLocker locked(&m_lock);
         m_calls << QStringLiteral("beginLauncherGuest ") + launcher;
         const QJsonObject card{{QStringLiteral("x"), 100}, {QStringLiteral("y"), 50},
@@ -206,11 +215,13 @@ private Q_SLOTS:
     {
         m_kadunce.forget();
         m_controller->open();
-        QVERIFY(m_view->isVisible());
+        QTRY_VERIFY(m_view->isVisible());
         QVERIFY(m_controller->guestMode());
         QCOMPARE(m_controller->guestWidth(), 600);
         QCOMPARE(m_controller->guestHeight(), 400);
-        const QStringList calls = m_kadunce.calls();
+        // What is open is read alongside, in whichever order it is answered.
+        QStringList calls = m_kadunce.calls();
+        calls.removeAll(QStringLiteral("workspaceContext"));
         QCOMPARE(calls.value(0), QStringLiteral("launcherGuestProtocolVersion"));
         QCOMPARE(calls.value(1), QStringLiteral("beginLauncherGuest ") + QDBusConnection::sessionBus().baseService());
 
@@ -225,21 +236,52 @@ private Q_SLOTS:
         QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("endLauncherGuest")));
     }
 
-    // Any other protocol, or a guest declined, leaves the launcher floating.
+    // The protocol is asked once for each Kadunce. Any other protocol, from
+    // a Kadunce come since, or a guest declined, leaves the launcher floating.
     void floatsOtherwise()
     {
-        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.protocol = 2; });
         m_kadunce.forget();
         m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
+        QVERIFY(!m_kadunce.calls().contains(QStringLiteral("launcherGuestProtocolVersion")));
+        m_controller->close();
+
+        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.protocol = 2; });
+        QVERIFY(QMetaObject::invokeMethod(m_controller.get(), "bridgeLost"));
+        m_kadunce.forget();
+        m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
         QVERIFY(!m_controller->guestMode());
+        QVERIFY(m_kadunce.calls().contains(QStringLiteral("launcherGuestProtocolVersion")));
         QVERIFY(!m_kadunce.calls().join(QLatin1Char('\n')).contains(QStringLiteral("beginLauncherGuest")));
         m_controller->close();
 
         m_kadunce.set([](StandInKadunce &kadunce) { kadunce.protocol = 3; kadunce.accepts = false; });
         m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
         QVERIFY(!m_controller->guestMode());
         m_controller->close();
         m_kadunce.set([](StandInKadunce &kadunce) { kadunce.accepts = true; });
+    }
+
+    // A Kadunce slow to answer holds nothing up: open returns at once, the
+    // launcher shows on its own once its wait has passed, and the place
+    // Kadunce made when it does answer is given back.
+    void showsWithoutWaitingOnKadunce()
+    {
+        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.delay = 1500; });
+        m_kadunce.forget();
+        QElapsedTimer opening;
+        opening.start();
+        m_controller->open();
+        QVERIFY(opening.elapsed() < 300);
+        QVERIFY(!m_view->isVisible());
+        QTRY_VERIFY_WITH_TIMEOUT(m_view->isVisible(), 1000);
+        QVERIFY(opening.elapsed() < 1200);
+        QVERIFY(!m_controller->guestMode());
+        QTRY_VERIFY_WITH_TIMEOUT(m_kadunce.calls().contains(QStringLiteral("endLauncherGuest")), 3000);
+        m_controller->close();
+        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.delay = 0; });
     }
 
     // A launch from Search as a guest is awaited as a card, by the
@@ -247,7 +289,7 @@ private Q_SLOTS:
     void awaitsALaunchedWindow()
     {
         m_controller->open();
-        QVERIFY(m_controller->guestMode());
+        QTRY_VERIFY(m_controller->guestMode());
         const int alpha = m_catalog->applicationRow(QStringLiteral("alpha.desktop"));
         QVERIFY(m_controller->beginGuestApplicationLaunch(alpha, true));
         QVERIFY(m_kadunce.calls().contains(QStringLiteral("prepareLauncherGuestLaunch alpha.desktop")));
@@ -292,6 +334,7 @@ private Q_SLOTS:
         m_windows.addWindow(QStringLiteral("alpha"), QStringLiteral("Alpha"), QStringLiteral("{uuid-1}"));
         m_windows.addWindow(QStringLiteral("beta"), QStringLiteral("Beta question"), QStringLiteral("{uuid-2}"), true);
         m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
         QVERIFY(!m_controller->guestMode());
         QTRY_VERIFY(m_controller->contextAvailable());
         const int alpha = m_catalog->applicationRow(QStringLiteral("alpha.desktop"));

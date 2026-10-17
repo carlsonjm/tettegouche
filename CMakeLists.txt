@@ -83,6 +83,7 @@ add_library(tettegouche-launcher STATIC
     src/OpenWindows.cpp
     src/OpenWindows.h
     src/ProductName.h
+    src/shared/SuitePresence.h
     src/DockBand.h
     src/OmniResults.h
     src/ApplicationCatalog.cpp
@@ -197,7 +198,9 @@ plasma_add_applet(co.goodinput.tettegouche
         src/LauncherKeys.cpp
         src/LauncherKeys.h
         src/ProductName.h
-        src/SuiteSettings.h
+        src/shared/PanelRoom.h
+        src/shared/SuitePresence.h
+        src/shared/SuiteSettings.h
     QML_SOURCES
         applet/main.qml
         applet/AmbientSurface.qml

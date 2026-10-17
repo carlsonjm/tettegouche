@@ -9,7 +9,9 @@
 #include "ScreenShareProvider.h"
 #include "WorkspaceContext.h"
 
+#include <QByteArray>
 #include <QDateTime>
+#include <QList>
 #include <QObject>
 #include <QPointer>
 #include <QRect>
@@ -263,7 +265,16 @@ private:
     // keeps the display it chose and measures by it.
     void placeOn(QScreen *screen);
     QScreen *placedScreen() const;
-    void tryBeginGuest();
+    // Asks Kadunce, without waiting on it, whether it takes Search into
+    // Spread. Search shows once it answers, or on its own once GuestWait has
+    // passed; an answer that comes after that is given back.
+    void askGuest();
+    void takeGuest(const QByteArray &answer);
+    void present();
+    // Shown, or on its way to being shown.
+    bool openOrOpening() const;
+    // A step that needs Search shown: run at once where it is, or as it shows.
+    void whenShown(std::function<void()> step);
     void endGuestLease();
     // What is open, read again: from Kadunce where it answers, otherwise from
     // Plasma's window list.
@@ -313,6 +324,16 @@ private:
     quint64 m_presentationGeneration = 0;
     bool m_guestMode = false;
     bool m_guestAllowed = true;
+    // Opened, and waiting on Kadunce's answer before it shows.
+    bool m_opening = false;
+    // A guest asked for and not yet answered.
+    bool m_guestAsking = false;
+    // Kadunce's guest protocol as it last answered, asked once for each
+    // Kadunce; 0 until it answers.
+    int m_guestProtocol = 0;
+    quint64 m_guestGeneration = 0;
+    QTimer m_guestWait;
+    QList<std::function<void()>> m_whenShown;
     quint64 m_contextGeneration = 0;
     QString m_launchToken;
     struct FilesWindow {
