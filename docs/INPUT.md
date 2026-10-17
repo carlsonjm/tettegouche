@@ -70,8 +70,9 @@ than repeat it.
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
-| Setting "Recent files and apps", Off | Search opens with its modes along its top and the field alone, and nothing used lately is read. |
-| Setting "Recent files and apps", In a row or In a grid | What was used lately shows under the field as one row of up to eight small tiles, or, by default, a grid of up to twenty large ones. |
+| Setting "Recent files and apps", Off | Search opens with its modes along its top and the field alone in the middle, and nothing used lately is read. |
+| Setting "Recent files and apps", In a row or In a grid | What was used lately shows under the field as one row of small tiles, or, by default, a grid of large ones. |
+| Setting "At most", under it | No more than that many show, from 4 to 20; twenty by default. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |

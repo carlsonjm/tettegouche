@@ -17,6 +17,12 @@
       <label>How Search shows what was used lately: grid, up to twenty large tiles; or row, a single row of small ones</label>
       <default>grid</default>
     </entry>
+    <entry name="recentCount" type="Int">
+      <label>How many things used lately Search shows at most, as many as fit</label>
+      <default>20</default>
+      <min>4</min>
+      <max>20</max>
+    </entry>
     <entry name="offerNotes" type="Bool">
       <label>Show Notes in Search before anything is typed, when Gooseberry is installed</label>
       <default>true</default>

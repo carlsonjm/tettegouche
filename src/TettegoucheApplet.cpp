@@ -334,6 +334,11 @@ QStringList TettegoucheApplet::launchFlags()
     // As a grid of large tiles, unless a single row is chosen.
     else if (textSetting(QStringLiteral("recentLayout"), QStringLiteral("grid")) == QLatin1String("row"))
         flags << QStringLiteral("--recent-row");
+    // At most twenty, unless fewer are chosen.
+    if (setting(QStringLiteral("offerRecent"), true)) {
+        const int count = textSetting(QStringLiteral("recentCount"), QStringLiteral("20")).toInt();
+        if (count > 0 && count < 20) flags << QStringLiteral("--recent-count=%1").arg(count);
+    }
     // It offers Notes, where the notes application is installed, unless that is off.
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.

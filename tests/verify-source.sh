@@ -80,6 +80,10 @@ rg -q 'cfg_recentLayout' \
     "${project_root}/applet/ConfigGeneral.qml"
 rg -q '\-\-recent-row' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
+rg -q 'cfg_recentCount' \
+    "${project_root}/applet/ConfigGeneral.qml"
+rg -q '\-\-recent-count=' "${project_root}/src/main.cpp" \
+    "${project_root}/src/TettegoucheApplet.cpp"
 rg -q '\-\-no-recent' "${project_root}/src/main.cpp" \
     "${project_root}/src/TettegoucheApplet.cpp"
 rg -q 'cfg_offerNotes' \

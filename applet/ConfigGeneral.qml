@@ -12,6 +12,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerRecentDefault
     property string cfg_recentLayout
     property string cfg_recentLayoutDefault
+    property int cfg_recentCount
+    property int cfg_recentCountDefault
     property bool cfg_offerNotes
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
@@ -58,6 +60,16 @@ KCMUtils.SimpleKCM {
             QQC2.ButtonGroup.group: recentChoice
             checked: cfg_offerRecent && cfg_recentLayout !== "row"
             onToggled: if (checked) { cfg_offerRecent = true; cfg_recentLayout = "grid" }
+        }
+
+        QQC2.SpinBox {
+            Kirigami.FormData.label: i18n("At most:")
+            enabled: cfg_offerRecent
+            from: 4
+            to: 20
+            stepSize: 4
+            value: cfg_recentCount
+            onValueModified: cfg_recentCount = value
         }
 
         QQC2.CheckBox {
