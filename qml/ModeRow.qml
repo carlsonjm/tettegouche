@@ -180,8 +180,8 @@ Item {
                     Repeater {
                         model: 4
                         Rectangle {
-                            width: 4.5
-                            height: 4.5
+                            width: 5
+                            height: 5
                             radius: 1
                             color: launcher.primaryText
                         }
@@ -190,6 +190,9 @@ Item {
                 SuiteIcon {
                     objectName: "home-dot-glyph"
                     anchors.centerIn: parent
+                    // An open folder carries its weight on the left; half a pixel
+                    // right sets it in the middle of the ring to the eye.
+                    anchors.horizontalCenterOffset: modeRow.current === "files" ? 0.5 : 0
                     visible: modeRow.current === "files" || modeRow.current === "notes"
                     glyph: modeRow.current === "notes" ? "notes" : "folder-open"
                     width: 12
