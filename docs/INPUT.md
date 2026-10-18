@@ -37,7 +37,7 @@ than repeat it.
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
-| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. |
+| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files or Notes while that mode shows. |
 | Tab, with nothing typed | Moves along the dot, Apps, Files and Notes, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
@@ -61,7 +61,7 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
+| Tap or click the dot | Opens Search, and the dot's middle clears until it is a ring, holding the mark of the mode Search shows: four squares for Apps, a folder for Files, a page for Notes, and on Search's first screen a new small dot that grows in the middle. While an application Search opened is on its way, a quarter of the ring turns. Again closes it, and the ring fills back into the dot. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
 | Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
@@ -78,7 +78,7 @@ than repeat it.
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
-| Setting "Animate the launcher indicator", off | The ring appears without its ripple, and the dot's hover change is instant. |
+| Setting "Animate the launcher indicator", off | The dot turns into its ring at once, and its hover change is instant. |
 
 ### Related settings
 

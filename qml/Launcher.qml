@@ -28,6 +28,13 @@ Item {
     // setting is off.
     property var notesDoor: null
     property bool notesPillShown: true
+    // What the panel's dot shows of Search while it is up: the mode shown,
+    // and whether an application is on its way.
+    readonly property var dotState: [modeRow.current, applicationLaunchPending]
+    onDotStateChanged: {
+        if (typeof launcherController.reportShowing === "function")
+            launcherController.reportShowing(dotState[0], dotState[1])
+    }
     // The quick note Search writes in its own window; null when the setting is
     // off. Notes is one of Search's modes while the notes application speaks
     // its interface, and opens that application's own card otherwise.

@@ -395,6 +395,9 @@ int main(int argc, char **argv)
     session.registerObject(QStringLiteral("/Launcher"), &controller,
                            QDBusConnection::ExportScriptableSlots | QDBusConnection::ExportScriptableSignals);
     QObject::connect(&view, &QWindow::visibleChanged, &controller, &LauncherController::shown);
+    QObject::connect(&view, &QWindow::visibleChanged, &controller, [&controller](bool visible) {
+        if (visible) controller.repeatShowing();
+    });
     session.registerService(QString::fromLatin1(ServiceName));
     // Answering as the file manager is switched on by pointing D-Bus at this
     // launcher; a launcher started any other way leaves it to whoever answers

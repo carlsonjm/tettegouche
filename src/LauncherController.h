@@ -228,6 +228,11 @@ public Q_SLOTS:
     Q_SCRIPTABLE void dismissGuest();
     Q_SCRIPTABLE void completeGuestLaunch(const QString &requestToken);
     Q_SCRIPTABLE void completeGuestNavigation(int slot);
+    // The mode Search shows and whether an application is on its way, for
+    // the widget's dot.
+    Q_INVOKABLE void reportShowing(const QString &mode, bool loading);
+    // Says it again, for a widget that forgot it while Search was hidden.
+    void repeatShowing();
 
 Q_SIGNALS:
     void filesRequested();
@@ -244,10 +249,13 @@ Q_SIGNALS:
     // Search shown or hidden, for the widget: a launcher kept ready runs on
     // hidden, so a running launcher is not an open one.
     Q_SCRIPTABLE void shown(bool visible);
+    Q_SCRIPTABLE void showing(const QString &mode, bool loading);
 
 private:
     void openFor(bool toType);
     bool m_openedToType = false;
+    QString m_showingMode;
+    bool m_showingLoading = false;
     // Starts a carry while the press that began it is still held, which the
     // compositor requires.
     void carry(QMimeData *mime, const QIcon &icon, const QRectF &sheet);
