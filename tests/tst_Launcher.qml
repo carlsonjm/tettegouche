@@ -1384,20 +1384,24 @@ TestCase {
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
-        // The dot is a ring on the first screen and solid in a mode, and
-        // the panel's dot is told which mode shows.
+        // The dot is a ring holding the mark of the mode shown, empty on
+        // the first screen, and the panel's dot is told which mode shows.
         const mark = findChild(launcher, "home-dot-mark")
         tryCompare(mark, "openness", 1)
         mouseClick(apps, apps.width / 2, apps.height / 2)
         tryCompare(launcher, "drawerProgress", 1)
         verify(apps.selected && !files.selected && !dot.selected)
         verify(apps.visible && files.visible && notes.visible)
-        tryCompare(mark, "openness", 0)
+        compare(mark.openness, 1)
+        verify(findChild(launcher, "home-dot-apps").visible)
+        verify(!findChild(launcher, "home-dot-glyph").visible)
         compare(controller.showing, ["apps", false])
         mouseClick(files, files.width / 2, files.height / 2)
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
         verify(files.selected && !apps.selected)
         compare(controller.showing[0], "files")
+        verify(findChild(launcher, "home-dot-glyph").visible)
+        verify(!findChild(launcher, "home-dot-apps").visible)
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
         verify(!launcher.drawerOpen && notes.selected && !files.selected)
@@ -1419,6 +1423,7 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
         verify(dot.selected)
         tryCompare(mark, "openness", 1)
+        verify(!findChild(launcher, "home-dot-apps").visible && !findChild(launcher, "home-dot-glyph").visible)
         compare(controller.showing[0], "")
         compare(controller.closes, 0)
         launcher.quickNote = null

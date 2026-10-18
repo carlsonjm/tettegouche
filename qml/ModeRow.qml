@@ -152,13 +152,14 @@ Item {
             Keys.onReturnPressed: modeRow.show("")
             Keys.onEnterPressed: modeRow.show("")
             Keys.onSpacePressed: modeRow.show("")
-            // The Tette Dot, as the panel draws it: solid while another
-            // mode is shown, a ring on Search's first screen. Hover and
-            // press show on the mark itself.
+            // The Tette Dot, as the panel draws it while Search is up: a
+            // ring holding the mark of the mode shown, empty on the first
+            // screen. It clears into the ring as Search's controls arrive.
+            // Hover and press show on the mark itself.
             DotMark {
                 objectName: "home-dot-mark"
                 anchors.centerIn: parent
-                openness: homeDot.selected ? 1 : 0
+                openness: launcher.openingControls > 0.5 ? 1 : 0
                 pearl: tone.dark
                 ink: launcher.primaryText
                 opacity: homeTap.pressed ? 0.7 : homeDot.selected || homeHover.hovered ? 1 : 0.8
@@ -166,6 +167,32 @@ Item {
                 Behavior on openness { NumberAnimation { duration: launcher.ms(360); easing.type: Easing.OutCubic } }
                 Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: launcher.ms(90) } }
+
+                // Apps: four squares, as on the panel's ring.
+                Grid {
+                    objectName: "home-dot-apps"
+                    anchors.centerIn: parent
+                    visible: modeRow.current === "apps"
+                    columns: 2
+                    spacing: 2
+                    Repeater {
+                        model: 4
+                        Rectangle {
+                            width: 4.5
+                            height: 4.5
+                            radius: 1
+                            color: launcher.primaryText
+                        }
+                    }
+                }
+                SuiteIcon {
+                    objectName: "home-dot-glyph"
+                    anchors.centerIn: parent
+                    visible: modeRow.current === "files" || modeRow.current === "notes"
+                    glyph: modeRow.current === "notes" ? "notes" : "folder-open"
+                    width: 12
+                    height: 12
+                }
             }
             Rectangle {
                 anchors.centerIn: parent

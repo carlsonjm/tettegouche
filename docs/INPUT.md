@@ -37,7 +37,7 @@ than repeat it.
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
-| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring while that screen shows and solid in the other modes, as the panel's dot is. |
+| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: empty on the first screen, and holding the mark of Apps, Files or Notes while that mode shows. |
 | Tab, with nothing typed | Moves along the dot, Apps, Files and Notes, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
