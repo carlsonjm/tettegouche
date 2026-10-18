@@ -189,6 +189,13 @@ public Q_SLOTS:
     void bridgeLost();
 
     Q_SCRIPTABLE void toggle();
+    // As toggle, from the key that opens Search rather than its button: it
+    // opens ready to type, with the cursor in the field, so keys already
+    // under the person's hands, on screen or not, stay in use.
+    Q_SCRIPTABLE void toggleToType();
+    // Whether Search was last opened by its key, for the field to take the
+    // cursor as it shows.
+    Q_INVOKABLE bool openedToType() const { return m_openedToType; }
     // A drive plugged in, chosen in Ambient: Files opens it, mounting it first.
     Q_SCRIPTABLE void showDrive(const QString &id);
     Q_SCRIPTABLE void showFile(const QString &file);
@@ -239,6 +246,8 @@ Q_SIGNALS:
     Q_SCRIPTABLE void shown(bool visible);
 
 private:
+    void openFor(bool toType);
+    bool m_openedToType = false;
     // Starts a carry while the press that began it is still held, which the
     // compositor requires.
     void carry(QMimeData *mime, const QIcon &icon, const QRectF &sheet);

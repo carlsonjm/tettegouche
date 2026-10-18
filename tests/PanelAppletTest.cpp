@@ -26,12 +26,14 @@ class ToggleEndpoint : public QObject
     Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Tettegouche")
 public:
     int calls = 0;
+    int typedCalls = 0;
     QStringList drawers;
     // The settings it was asked to leave for, joined; and whether it leaves.
     QStringList leaves;
     bool leaving = false;
 public Q_SLOTS:
     Q_SCRIPTABLE void toggle() { ++calls; }
+    Q_SCRIPTABLE void toggleToType() { ++typedCalls; }
     Q_SCRIPTABLE bool leaveFor(const QStringList &settings) { leaves << settings.join(QLatin1Char(' ')); return leaving; }
     Q_SCRIPTABLE void openDrawer(const QString &drawer) { drawers << drawer; }
 };
@@ -345,41 +347,41 @@ private Q_SLOTS:
         // The same signal Plasma emits for a configured global shortcut.
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 1);
-        QCOMPARE(launches().constLast(), QStringLiteral("--standalone"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--standalone --type"));
         configure(QStringLiteral("useKadunce"), true);
         // With recent use off, Search is told so as it starts.
         configure(QStringLiteral("offerRecent"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 2);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --type"));
         configure(QStringLiteral("offerRecent"), true);
         // With Notes off, Search is told so as it starts.
         configure(QStringLiteral("offerNotes"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 3);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes --type"));
         configure(QStringLiteral("offerNotes"), true);
         // With only the Notes pill off, Search is told so as it starts.
         configure(QStringLiteral("showNotesPill"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 4);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill --type"));
         configure(QStringLiteral("showNotesPill"), true);
         // Recent apps off alone, then recent files off alone.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 5);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-apps"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-apps --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 6);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-files"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-files --type"));
         // Both off is recent use off.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
         QTRY_COMPARE(launches().size(), before + 7);
-        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent"));
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), true);
     }
@@ -402,8 +404,10 @@ private Q_SLOTS:
         shown << true;
         QVERIFY(bus.send(shown));
         QTRY_COMPARE(m_applet->status(), Plasma::Types::AcceptingInputStatus);
+        // Search's key asks for it ready to type.
         m_applet->activated();
-        QTRY_COMPARE(endpoint.calls, 1);
+        QTRY_COMPARE(endpoint.typedCalls, 1);
+        QCOMPARE(endpoint.calls, 0);
         QCOMPARE(endpoint.leaves, QStringList{QString()});
         QCOMPARE(launches().size(), before); // No duplicate launch.
         bus.unregisterObject(QStringLiteral("/Launcher"));

@@ -89,6 +89,8 @@ TestCase {
         function close() { closes++ }
         property int keyRequests: 0
         function showInputMethod() { keyRequests++ }
+        property bool toType: false
+        function openedToType() { return toType }
         function relatedOptionLabel(row) { return "Open Bluetooth settings" }
         function updateGuestDrag(value) {}
         function relatedItems(row) {
@@ -992,6 +994,20 @@ TestCase {
         catalog.softwareAsked = false
         results.clear()
         query.text = ""
+    }
+    // Opened by its key, Search is ready to type with the cursor in the
+    // field; by its button, nothing takes the cursor, so no keys rise.
+    function test_openedToType() {
+        const query = findChild(launcher, "search-query")
+        controller.toType = true
+        controller.opened()
+        verify(query.activeFocus)
+        keyClick("k")
+        compare(query.text, "k")
+        controller.toType = false
+        controller.opened()
+        verify(!query.activeFocus)
+        compare(query.text, "")
     }
     function test_bluetoothChildrenCollapse() {
         controller.opened()

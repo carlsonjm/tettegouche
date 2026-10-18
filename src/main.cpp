@@ -219,6 +219,8 @@ int main(int argc, char **argv)
     const int revealIndex = arguments.indexOf(QStringLiteral("--reveal"));
     QStringList reveal = revealIndex >= 0 ? arguments.mid(revealIndex + 1) : QStringList();
     reveal.removeIf([](const QString &argument) { return argument.startsWith(QLatin1String("--")); });
+    // Opened by Search's key rather than its button: ready to type.
+    const bool toType = arguments.contains(QStringLiteral("--type"));
     // Started by D-Bus to answer as the file manager.
     const bool fileManager = arguments.contains(QStringLiteral("--file-manager"));
 
@@ -228,7 +230,7 @@ int main(int argc, char **argv)
     instanceLock.setStaleLockTime(0);
     if (!instanceLock.tryLock()) {
         if (fileManager) return answerForRunningLauncher(application);
-        QString method = QStringLiteral("toggle");
+        QString method = toType ? QStringLiteral("toggleToType") : QStringLiteral("toggle");
         QVariantList request;
         if (!showFile.isEmpty()) { method = QStringLiteral("showFile"); request = {showFile}; }
         else if (!folder.isEmpty()) { method = QStringLiteral("showFolder"); request = {folder}; }
@@ -409,13 +411,14 @@ int main(int argc, char **argv)
         QTimer::singleShot(5000, &controller, &LauncherController::leaveIfUnused);
     }
 
-    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager] {
+    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager, toType] {
         if (!showFile.isEmpty()) controller.showFile(showFile);
         else if (!folder.isEmpty()) controller.showFolder(folder);
         else if (!drive.isEmpty()) controller.showDrive(drive);
         else if (!reveal.isEmpty()) controller.revealItems(reveal);
         else if (!properties.isEmpty()) controller.showItemProperties({properties});
         else if (!drawer.isEmpty()) controller.openDrawer(drawer);
+        else if (toType) controller.toggleToType();
         else if (!fileManager) controller.open();
     });
     const int result = application.exec();

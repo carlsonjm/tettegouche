@@ -740,6 +740,13 @@ Item {
             root.filesHandoff = false
             if (root.quickNote) root.quickNote.refresh()
             root.forceActiveFocus()
+            // Opened by its key, Search is ready to type: the cursor waits in
+            // the field, and keys on screen stay up. Its button leaves the
+            // field alone, so a tap raises no keys.
+            if (root.launcherController.openedToType()) {
+                root.searchEngaged = true
+                query.forceActiveFocus()
+            }
             root.guestDrag = 0
             root.guestExiting = false
             root.guestDragged = false

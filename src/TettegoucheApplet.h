@@ -74,12 +74,14 @@ private:
     // settings page and Shuffle Settings both write it.
     bool setting(const QString &key, bool fallback);
     void startLauncher(bool useKadunce, const QString &showFile = {}, const QString &drawer = {},
-                       const QString &drive = {});
+                       const QString &drive = {}, bool toType = false);
     // What is asked of the launcher: the widget's settings as its arguments,
     // and a file to show, a drawer or a drive; with none of them, a toggle.
     struct Request {
         QStringList flags;
         QString showFile, drawer, drive;
+        // Asked by Search's key, not its button: Search opens ready to type.
+        bool toType = false;
     };
     // The widget's settings, as the launcher's arguments.
     QStringList launchFlags();

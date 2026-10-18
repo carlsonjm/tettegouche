@@ -83,8 +83,9 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         QStringLiteral("/Launcher"), LauncherService,
         QStringLiteral("shown"), this, SLOT(launcherShown(bool)));
 
+    // Search's key, bare Meta, activates the widget; its button launches it.
     connect(this, &Plasma::Applet::activated, this, [this] {
-        launch(setting(QStringLiteral("useKadunce"), true));
+        startLauncher(setting(QStringLiteral("useKadunce"), true), {}, {}, {}, true);
     });
     m_keys = LauncherKeys::acquire();
     m_keys->attach(this, [this](const QString &drawer) { openDrawer(drawer); });
@@ -348,13 +349,13 @@ QStringList TettegoucheApplet::launchFlags()
 }
 
 void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, const QString &drawer,
-                                      const QString &drive)
+                                      const QString &drive, bool toType)
 {
     QStringList flags = launchFlags();
     // Activation asks for its own way into Kadunce, whatever the setting says.
     flags.removeAll(QStringLiteral("--standalone"));
     if (!useKadunce) flags.prepend(QStringLiteral("--standalone"));
-    request({flags, showFile, drawer, drive});
+    request({flags, showFile, drawer, drive, toType});
 }
 
 void TettegoucheApplet::request(const Request &request)
@@ -408,7 +409,8 @@ void TettegoucheApplet::forward(const Request &request)
     auto call = QDBusMessage::createMethodCall(LauncherService, QStringLiteral("/Launcher"), LauncherService,
         !request.showFile.isEmpty() ? QStringLiteral("showFile")
             : !request.drive.isEmpty() ? QStringLiteral("showDrive")
-            : !request.drawer.isEmpty() ? QStringLiteral("openDrawer") : QStringLiteral("toggle"));
+            : !request.drawer.isEmpty() ? QStringLiteral("openDrawer")
+            : request.toType ? QStringLiteral("toggleToType") : QStringLiteral("toggle"));
     if (!request.showFile.isEmpty()) call.setArguments({request.showFile});
     else if (!request.drive.isEmpty()) call.setArguments({request.drive});
     else if (!request.drawer.isEmpty()) call.setArguments({request.drawer});
@@ -433,6 +435,7 @@ void TettegoucheApplet::start(const Request &request)
     if (!request.showFile.isEmpty()) arguments << QStringLiteral("--show-file") << request.showFile;
     else if (!request.drive.isEmpty()) arguments << QStringLiteral("--drive") << request.drive;
     else if (!request.drawer.isEmpty()) arguments << QStringLiteral("--drawer") << request.drawer;
+    else if (request.toType) arguments << QStringLiteral("--type");
     // Started while another is still on its way, the new process hands its
     // request to that one once it answers.
     m_launcherShown = true;

@@ -11,6 +11,9 @@ provenance.
   from three letters on, with the rest a scroll away.
 - Each result is ranked once rather than at every comparison, so a short
   query with many results no longer holds up the next letter.
+- `Meta` opens Search ready to type, the cursor in the field, so on-screen
+  keys that pressed it stay up; the dot still opens it with no cursor, so a
+  tap raises no keys.
 - Opening Notes in Search, or picking one of its filters, no longer puts the
   cursor in its field, so no on-screen keys rise on a tablet. Typing still
   goes straight into it, and a tap on it brings the keys. The field reads
