@@ -17,6 +17,8 @@ provenance.
 - The places beside Files fold and unfold by a button of their own; open,
   they are as wide as their longest name, up to 240, so no name is cut
   short. At Search's size a touch on the folder folds them back.
+- With the places open, their button says Fold beside its glyph, like the
+  names under it; folded, it is an icon among the place icons.
 - Typing in Search stays quick however many files a short query brings:
   each result is judged once for what was typed, never again as more arrive
   or the list is sorted.

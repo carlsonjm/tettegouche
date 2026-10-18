@@ -2029,8 +2029,15 @@ TestCase {
         // Their own button opens the places at a card's size, and the first
         // touch on the folder folds them back.
         const fold=findChild(launcher,"files-places-fold")
+        // Folded, the button is a circle among the icons; open, a pill that
+        // says Fold beside its glyph.
+        compare(fold.width,40)
+        verify(!findChild(launcher,"files-places-fold-label").visible)
         mouseClick(fold)
         tryCompare(places,"width",170)
+        compare(fold.height,40)
+        verify(findChild(launcher,"files-places-fold-label").visible)
+        verify(fold.width>40 && fold.width<places.width)
         mouseClick(pane,pane.width-40,pane.height/2)
         tryCompare(places,"width",54)
         // Filling the screen they stay open until their button folds them;

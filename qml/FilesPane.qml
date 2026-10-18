@@ -617,14 +617,53 @@ Item {
             header: Item {
                 width: ListView.view.width
                 height: 48
-                Action {
+                // Open, a pill that says Fold beside its glyph, like the names
+                // under it; folded, a circle among the place icons, named under
+                // a resting pointer.
+                C.Button {
+                    id: fold
                     objectName: "files-places-fold"
-                    x: pane.placesFolded ? 6 : 4
+                    x: 7
                     anchors.verticalCenter: parent.verticalCenter
-                    width: 42
-                    glyph: pane.placesFolded ? "panel-left-open" : "panel-left-close"
-                    text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold the places")
+                    height: 40
+                    width: pane.placesFolded ? 40 : 12 + 18 + 8 + foldLabel.implicitWidth + 16
+                    padding: 0
+                    hoverEnabled: true
+                    text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold")
+                    Accessible.name: pane.placesFolded ? text : words.i18n("Fold the places")
+                    C.ToolTip.visible: pane.placesFolded && hovered
+                    C.ToolTip.text: text
+                    C.ToolTip.delay: 600
                     onClicked: pane.placesOpen = !pane.placesOpen
+                    background: Rectangle {
+                        radius: 20
+                        color: fold.down ? tone.wash(0.16)
+                            : fold.hovered || fold.visualFocus ? tone.wash(0.12)
+                            : pane.placesFolded ? "transparent" : tone.wash(0.08)
+                        Behavior on color {
+                            enabled: Kirigami.Units.shortDuration > 0
+                            ColorAnimation { duration: Kirigami.Units.shortDuration }
+                        }
+                    }
+                    contentItem: Item {
+                        SuiteIcon {
+                            glyph: pane.placesFolded ? "panel-left-open" : "panel-left-close"
+                            width: 18; height: 18
+                            x: pane.placesFolded ? 11 : 12
+                            anchors.verticalCenter: parent.verticalCenter
+                            opacity: 0.66
+                        }
+                        Text {
+                            id: foldLabel
+                            objectName: "files-places-fold-label"
+                            visible: !pane.placesFolded
+                            x: 12 + 18 + 8
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: words.i18n("Fold")
+                            font: placeFont.font
+                            color: tone.text
+                        }
+                    }
                 }
             }
             // The places, then the drives under a rule. A drive opens on a tap,
