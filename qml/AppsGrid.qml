@@ -137,7 +137,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
                     anchors.topMargin: 10
-                    width: launcher.launcherController.drawerExpanded ? 52 : 42
+                    width: applicationGrid.tile.icon
                     height: width
                     visible: !catalogDelegate.isFolder
                     source: catalogDelegate.isFolder ? "" : catalogDelegate.info.icon
@@ -149,7 +149,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
                     anchors.topMargin: 10
-                    width: launcher.launcherController.drawerExpanded ? 52 : 42
+                    width: applicationGrid.tile.icon
                     height: width
                     radius: width * 0.26
                     visible: catalogDelegate.isFolder
@@ -287,9 +287,21 @@ Item {
         && !launcher.applicationLaunchPending
     z: 3
 
-    readonly property int columns: Math.max(3, Math.min(6, Math.floor(width / 126)))
+    // Tiles in four sizes, as Files has its own, from a pinch, Ctrl with + or
+    // −, or Ctrl and the wheel; as many fit across as the width holds.
+    readonly property var tileLevels: [
+        {cell: 96, height: 88, icon: 36},
+        {cell: 126, height: 112, icon: 52},
+        {cell: 156, height: 136, icon: 72},
+        {cell: 196, height: 172, icon: 96}
+    ]
+    readonly property var tile: tileLevels[Math.max(0, Math.min(3, launcher.applicationCatalog.tileSize || 0))]
+    readonly property int columns: Math.max(3, Math.floor(width / tile.cell))
     readonly property real cellWidth: width / columns
-    readonly property real cellHeight: launcher.launcherController.drawerExpanded ? 112 : 94
+    readonly property real cellHeight: tile.height
+    function resizeTiles(step) {
+        launcher.applicationCatalog.tileSize = Math.max(0, Math.min(3, launcher.applicationCatalog.tileSize + step))
+    }
     property int count: 0
     property int currentIndex: -1
     // The arrow keys have chosen an application or folder, which
@@ -468,6 +480,29 @@ Item {
         cacheBuffer: 400
         // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
         Kirigami.WheelHandler { target: applicationLines; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
+        PinchHandler {
+            id: tilePinch
+            objectName: "apps-pinch"
+            target: null
+            property int startSize: 1
+            onActiveChanged: if (active) startSize = launcher.applicationCatalog.tileSize
+            // One size for each 30% the fingers spread or close, as in Files.
+            onActiveScaleChanged: {
+                const steps = activeScale >= 1 ? Math.floor(Math.log(activeScale)/Math.log(1.3))
+                    : -Math.floor(Math.log(1/activeScale)/Math.log(1.3))
+                launcher.applicationCatalog.tileSize = Math.max(0, Math.min(3, startSize + steps))
+            }
+        }
+        WheelHandler {
+            target: null
+            acceptedModifiers: Qt.ControlModifier
+            property real pending: 0
+            onWheel: event => {
+                pending += event.angleDelta.y
+                while (pending >= 120) { applicationGrid.resizeTiles(1); pending -= 120 }
+                while (pending <= -120) { applicationGrid.resizeTiles(-1); pending += 120 }
+            }
+        }
 
         delegate: Item {
             id: line
@@ -529,4 +564,7 @@ Item {
             }
         }
     }
+    Shortcut { sequences: ["Ctrl++", "Ctrl+="]; enabled: applicationGrid.visible; onActivated: applicationGrid.resizeTiles(1) }
+    Shortcut { sequence: "Ctrl+-"; enabled: applicationGrid.visible; onActivated: applicationGrid.resizeTiles(-1) }
+    Shortcut { sequence: "Ctrl+0"; enabled: applicationGrid.visible; onActivated: launcher.applicationCatalog.tileSize = 1 }
 }

@@ -302,6 +302,23 @@ private Q_SLOTS:
     // arrived, which for those here before Apps kept count is Older. A folder
     // heads the section of its first application in the order. The order
     // chosen is the next catalog's, and Z to A, once kept, reads as A to Z.
+    // Apps' tile size is one of four, kept between runs apart from Files'.
+    void keepsTheTileSize()
+    {
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.tileSize(), 1);
+        QSignalSpy changed(&catalog, &ApplicationCatalog::tileSizeChanged);
+        catalog.setTileSize(3);
+        catalog.setTileSize(9);
+        QCOMPARE(catalog.tileSize(), 3);
+        QCOMPARE(changed.size(), 1);
+        ApplicationCatalog next;
+        QCOMPARE(next.tileSize(), 3);
+        QCOMPARE(QSettings().value(QStringLiteral("Files/tileSize"), 1).toInt(), 1);
+        next.setTileSize(-2);
+        QCOMPARE(next.tileSize(), 0);
+        next.setTileSize(1);
+    }
     void ordersThreeWaysAndKeepsTheChoice()
     {
         const QString alpha = QStringLiteral("alpha.desktop");

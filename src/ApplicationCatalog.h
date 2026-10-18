@@ -30,6 +30,8 @@ class ApplicationCatalog final : public QAbstractListModel
     Q_PROPERTY(QString filterText READ filterText WRITE setFilterText NOTIFY filterTextChanged)
     // Apps' order, one of Order; the choice is kept for the next time.
     Q_PROPERTY(int sortOrder READ sortOrder WRITE setSortOrder NOTIFY sortOrderChanged)
+    // Apps' tiles in four sizes, 0 to 3, kept apart from Files' own.
+    Q_PROPERTY(int tileSize READ tileSize WRITE setTileSize NOTIFY tileSizeChanged)
     // Hidden applications leave Apps; this shows them again.
     Q_PROPERTY(bool showHidden READ showHidden WRITE setShowHidden NOTIFY showHiddenChanged)
     Q_PROPERTY(int hiddenCount READ hiddenCount NOTIFY hiddenCountChanged)
@@ -181,6 +183,8 @@ public:
     void setFilterText(const QString &filterText);
     [[nodiscard]] int sortOrder() const;
     void setSortOrder(int sortOrder);
+    [[nodiscard]] int tileSize() const;
+    void setTileSize(int tileSize);
     void setUseReader(UseReader reader);
     // Reads how much each application has been used again, while Most used is
     // the order, so it is current each time Apps opens.
@@ -194,6 +198,7 @@ public:
 Q_SIGNALS:
     void filterTextChanged();
     void sortOrderChanged();
+    void tileSizeChanged();
     void showHiddenChanged();
     void hiddenCountChanged();
     void softwareReadyChanged();
@@ -267,6 +272,7 @@ private:
     int m_drawnFolders = 0;
     QString m_filterText;
     int m_sortOrder = NameAscending;
+    int m_tileSize = 1;
     UseReader m_useReader;
     QHash<QString, ApplicationUse> m_use;
     QSet<QString> m_hidden;

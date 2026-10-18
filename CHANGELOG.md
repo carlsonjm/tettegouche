@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- Apps' tiles come in four sizes, as Files' do: a pinch, Ctrl with + or −,
+  or Ctrl and the wheel changes them, and Ctrl+0 returns them. Smaller sizes
+  fit more applications across, so a wide screen is no longer held to six.
+  Apps and Files each keep their own size.
 - Search opens in its place at its resting size, with nothing dropping in
   from where it last closed, and Apps, Files and Notes fade in where they
   stand rather than sliding.

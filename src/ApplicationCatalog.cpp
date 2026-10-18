@@ -39,6 +39,7 @@ namespace
 // The applications hidden from Apps, by desktop file id.
 const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
 const QString OrderKey = QStringLiteral("Browse/sortOrder");
+const QString TileSizeKey = QStringLiteral("Browse/tileSize");
 // Apps' folders, as JSON: a list of {id, name, apps}, apps by desktop file id.
 const QString FoldersKey = QStringLiteral("Browse/folders");
 // The folders left open, by id.
@@ -89,6 +90,7 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
     const int order = QSettings().value(OrderKey, int(NameAscending)).toInt();
     m_sortOrder = order == MostUsed || order == NewestInstalled ? order : NameAscending;
+    m_tileSize = std::clamp(QSettings().value(TileSizeKey, 1).toInt(), 0, 3);
     const QStringList open = QSettings().value(OpenFoldersKey).toStringList();
     m_openFolders = QSet<QString>(open.cbegin(), open.cend());
     const QJsonArray folders = QJsonDocument::fromJson(
@@ -875,6 +877,22 @@ void ApplicationCatalog::setFilterText(const QString &filterText)
     m_filterText = normalized;
     rebuildVisibleRows();
     Q_EMIT filterTextChanged();
+}
+
+int ApplicationCatalog::tileSize() const
+{
+    return m_tileSize;
+}
+
+void ApplicationCatalog::setTileSize(int tileSize)
+{
+    tileSize = std::clamp(tileSize, 0, 3);
+    if (m_tileSize == tileSize) {
+        return;
+    }
+    m_tileSize = tileSize;
+    QSettings().setValue(TileSizeKey, tileSize);
+    Q_EMIT tileSizeChanged();
 }
 
 int ApplicationCatalog::sortOrder() const
