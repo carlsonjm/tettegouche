@@ -10,8 +10,6 @@ TestCase {
     visible: true
     when: windowShown
     function init() {
-        // Most cases read the list at every letter; type-ahead has its own.
-        launcher.typeAheadPause = 0
         launcher.filesMode = false
         launcher.fileBrowser = null
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
@@ -132,18 +130,6 @@ TestCase {
         function pinSelection(row) { pinnedRow = row; hasPinnedSelection = true; selectionChanged() }
         function selectionPinned() { return hasPinnedSelection }
         function selectedRow() { return pinnedRow }
-        function predictionFor(typed, held) {
-            const words = typed.trim().toLowerCase()
-            const rows = held ? count : Math.min(1, count)
-            for (let i = 0; i < rows; ++i) {
-                const text = get(i).display
-                const starts = text.toLowerCase().startsWith(words)
-                if (!starts && (held || querying)) continue
-                const kind = get(i).subtext === "Application" ? "App" : get(i).subtext === "Settings" ? "Setting" : ""
-                return { row: i, text: text, starts: starts, kind: kind }
-            }
-            return { row: -1 }
-        }
         signal selectionChanged()
         onQueryStringChanged: { pinnedRow = -1; hasPinnedSelection = false }
     }
@@ -1023,76 +1009,6 @@ TestCase {
         verify(!query.activeFocus)
         compare(query.text, "")
     }
-    // Typing, nothing moves and nothing is laid out: the field finishes the
-    // words with the best match, and Enter opens it. A pause lays the list
-    // out once; typed again, the list holds its rows until the next pause.
-    function test_typeAheadHoldsStill() {
-        launcher.typeAheadPause = 350
-        controller.toType = true
-        controller.opened()
-        controller.toType = false
-        const sheet = findChild(launcher, "launcher-sheet")
-        const list = findChild(launcher, "search-result-list")
-        const completion = findChild(launcher, "search-completion")
-        const kind = findChild(launcher, "search-completion-kind")
-        results.clear()
-        results.querying = false
-        results.append({display: "Firefox", decoration: "firefox", subtext: "Application"})
-        results.append({display: "Firewall", decoration: "preferences-system", subtext: "Settings"})
-        results.append({display: "Files", decoration: "folder", subtext: "Application"})
-        tryCompare(sheet, "height", sheet.targetHeight)
-        const rest = [sheet.width, sheet.height, sheet.y]
-        let resizes = 0, layouts = 0
-        const resized = () => resizes++
-        const laidOut = () => layouts++
-        sheet.targetHeightChanged.connect(resized)
-        list.countChanged.connect(laidOut)
-        list.contentHeightChanged.connect(laidOut)
-        for (const letter of "fir") { keyClick(letter); wait(60) }
-        compare(resizes, 0)
-        compare(layouts, 0)
-        compare([sheet.width, sheet.height, sheet.y], rest)
-        compare(list.count, 0)
-        verify(completion.visible)
-        compare(completion.text, "efox")
-        compare(kind.text, "App")
-        // The pause opens the list, and the sheet changes size once.
-        tryCompare(launcher, "listShown", true)
-        tryCompare(sheet, "height", sheet.targetHeight)
-        compare(resizes, 1)
-        compare(list.count, 3)
-        verify(!completion.visible)
-        resizes = 0
-        layouts = 0
-        keyClick("e")
-        wait(60)
-        keyClick("w")
-        verify(launcher.listStale)
-        compare(results.queryString, "fir")
-        compare(resizes, 0)
-        compare(layouts, 0)
-        compare(completion.text, "all")
-        compare(kind.text, "Setting")
-        // Enter opens the grey match without waiting for the list.
-        controller.activatedRow = -1
-        keyClick(Qt.Key_Return)
-        compare(controller.activatedRow, 1)
-        sheet.targetHeightChanged.disconnect(resized)
-        list.countChanged.disconnect(laidOut)
-        list.contentHeightChanged.disconnect(laidOut)
-        // Down opens the list at once.
-        controller.toType = true
-        controller.opened()
-        controller.toType = false
-        keyClick("f")
-        verify(!launcher.listShown)
-        keyClick(Qt.Key_Down)
-        verify(launcher.listShown)
-        compare(results.queryString, "f")
-        results.clear()
-        findChild(launcher, "search-query").text = ""
-        launcher.typeAheadPause = 0
-    }
     function test_bluetoothChildrenCollapse() {
         controller.opened()
         controller.bluetoothResult = true
@@ -1279,7 +1195,7 @@ TestCase {
         tryCompare(row, "opacity", 1)
     }
     // What is on sets how tall Search rests: the field alone, one section,
-    // or both. Typing gives the sheet the results' height, centred.
+    // or both. Typing gives the sheet its full height, still centred.
     function test_firstRowSections() {
         launcher.fileBrowser = filesMock
         fillRecent(20)
@@ -1305,27 +1221,14 @@ TestCase {
         tryCompare(sheet, "height", small)
         compare(row.sections, 0)
         tryCompare(field, "y", 0)
-        // Centred at rest, and still centred as typing grows it to hold the
-        // results: three for one letter, five for two, and from three
-        // letters eight, the rest scrolling at its full height; never taller
-        // than the results there are.
+        // Centred at rest, and still centred as typing grows it, evenly up
+        // and down.
         const full = sheet.fullHeight
         const centred = height => area.y + Math.round((area.height - height) / 2)
         compare(sheet.y, centred(small))
-        results.clear()
-        for (let i = 0; i < 12; ++i)
-            results.append({display: "Example " + i, decoration: "preferences-system-windows", subtext: "Settings"})
-        const holding = rows => Math.min(full, small + 16 + 32 + 8 + rows * 60 - 4)
-        for (const [typed, rows] of [["e", 3], ["ex", 5], ["exa", 9]]) {
-            query.text = typed
-            tryCompare(sheet, "height", holding(rows))
-            tryCompare(sheet, "y", centred(holding(rows)))
-        }
-        compare(sheet.height, full)
-        results.remove(1, 11)
-        tryCompare(sheet, "height", holding(1))
-        tryCompare(sheet, "y", centred(holding(1)))
-        results.clear()
+        query.text = "x"
+        tryCompare(sheet, "height", full)
+        tryCompare(sheet, "y", centred(full))
         query.text = ""
         tryCompare(sheet, "height", small)
         tryCompare(sheet, "y", centred(small))

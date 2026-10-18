@@ -174,11 +174,10 @@ Rectangle {
             launcher.applicationCatalog.filterText = launcher.drawerOpen && !launcher.filesMode
                 ? text : ""
             if (launcher.fileBrowser && launcher.filesMode) launcher.fileBrowser.filter = text
-            launcher.typed(text)
-            if (launcher.listShown && !launcher.listStale) {
-                resultList.currentIndex = resultList.count > 0 ? 0 : -1
-                resultList.settleAtBeginning()
-            }
+            launcher.searchResults.queryString = launcher.drawerOpen
+                ? "" : text
+            resultList.currentIndex = resultList.count > 0 ? 0 : -1
+            resultList.settleAtBeginning()
             applicationGrid.reset()
         }
 
@@ -202,11 +201,6 @@ Rectangle {
                 // From the filter into the files: the keys move there.
                 filesLoader.item.focusFiles()
                 event.accepted = true
-            } else if (event.key === Qt.Key_Down && !launcher.drawerOpen
-                       && (launcher.typingAhead || launcher.listStale)) {
-                // Down opens the list without waiting for the pause.
-                launcher.showList()
-                event.accepted = true
             } else if (event.key === Qt.Key_Down
                        && resultList.count > 0) {
                 launcher.moveResultSelection(1)
@@ -220,46 +214,6 @@ Rectangle {
                 launcher.submit()
                 event.accepted = true
             }
-        }
-
-        // Typing ahead, the best match finishes the words in grey: the rest
-        // of its name when it starts with them, else its name after a dash,
-        // and on the right what it is. Enter opens it.
-        readonly property bool predicting: (launcher.typingAhead || launcher.listStale)
-            && launcher.prediction.row >= 0 && text.length > 0
-        readonly property bool predictionStarts: predicting
-            && String(launcher.prediction.text).toLowerCase().startsWith(text.toLowerCase())
-        Text {
-            id: completion
-            objectName: "search-completion"
-            x: query.contentWidth
-            width: Math.max(0, (kindLabel.visible ? kindLabel.x - 12 : query.width) - x)
-            height: parent.height
-            verticalAlignment: Text.AlignVCenter
-            visible: query.predicting && query.cursorPosition === query.text.length
-                && query.selectedText.length === 0 && query.contentWidth < query.width - 24
-            text: !query.predicting ? ""
-                : query.predictionStarts ? String(launcher.prediction.text).substring(query.text.length)
-                : "  —  " + launcher.prediction.text
-            elide: Text.ElideRight
-            color: launcher.secondaryText
-            font: query.font
-        }
-        Text {
-            id: kindLabel
-            objectName: "search-completion-kind"
-            anchors.right: parent.right
-            height: parent.height
-            verticalAlignment: Text.AlignVCenter
-            visible: completion.visible && text.length > 0
-            text: query.predicting ? (launcher.prediction.kind || "") : ""
-            color: launcher.secondaryText
-            font.pixelSize: 12
-        }
-        // A tap on the field opens the list without waiting for the pause.
-        TapHandler {
-            enabled: launcher.typingAhead || launcher.listStale
-            onTapped: launcher.showList()
         }
 
         Text {

@@ -3,6 +3,8 @@
 #include <QJsonObject>
 #include <QStandardItemModel>
 #include <QTimer>
+#include <QAbstractListModel>
+#include <QElapsedTimer>
 #include <iostream>
 
 struct Runner : KRunner::AbstractRunner {
@@ -11,10 +13,27 @@ struct Runner : KRunner::AbstractRunner {
             {QStringLiteral("Id"), id}, {QStringLiteral("Name"), id}}}}, id)) {}
     void match(KRunner::RunnerContext &) override {}
 };
+// Matches arriving the way KDE's providers send them: a batch at a time.
+struct Stream : QAbstractListModel {
+    QList<KRunner::QueryMatch> matches;
+    int rowCount(const QModelIndex &parent = {}) const override { return parent.isValid() ? 0 : matches.size(); }
+    QVariant data(const QModelIndex &index, int role) const override {
+        if (!index.isValid() || index.row() >= matches.size()) return {};
+        if (role == KRunner::ResultsModel::QueryMatchRole) return QVariant::fromValue(matches.at(index.row()));
+        if (role == Qt::DisplayRole) return matches.at(index.row()).text();
+        return {};
+    }
+    void add(const QList<KRunner::QueryMatch> &batch) {
+        beginInsertRows({}, matches.size(), matches.size() + batch.size() - 1);
+        matches.append(batch);
+        endInsertRows();
+    }
+};
 struct Results : OmniResults {
     using OmniResults::lessThan;
     QString testQuery;
     QString queryString() const override { return testQuery.isNull() ? OmniResults::queryString() : testQuery; }
+    int checks() const { return m_verdictChecks; }
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override {
         return mapToSource(index).data(role);
     }
@@ -286,6 +305,45 @@ int main(int argc, char **argv)
         if (!core.run(core.index(0, 0)) || actionsOpened != QStringList{QStringLiteral("install: install pdf editor")}) return 80;
         core.clear();
         if (core.rowCount() != 0) return 77;
+    }
+    {
+        // Three thousand files arriving a hundred batches at a time, as a
+        // short query brings them: each is judged once, never again as later
+        // batches arrive or the list is sorted and re-filtered.
+        Results many;
+        many.testQuery = QStringLiteral("rep");
+        Stream stream;
+        many.setSourceModel(&stream);
+        QElapsedTimer clock;
+        clock.start();
+        for (int batch = 0; batch < 100; ++batch) {
+            QList<KRunner::QueryMatch> arriving;
+            for (int i = 0; i < 30; ++i) {
+                const int n = batch * 30 + i;
+                KRunner::QueryMatch file(&files);
+                file.setId(QStringLiteral("file-%1").arg(n));
+                file.setText(QStringLiteral("report %1.pdf").arg(n));
+                file.setData(QUrl::fromLocalFile(QStringLiteral("/home/test/Documents/d%1/report %2.pdf").arg(n % 50).arg(n)));
+                arriving.append(file);
+            }
+            stream.add(arriving);
+            // Search re-filters and re-sorts everything after each batch.
+            many.invalidate();
+            QCoreApplication::processEvents();
+        }
+        QCoreApplication::processEvents();
+        std::cout << "3000 files in 100 batches: " << clock.elapsed() << " ms, "
+                  << many.checks() << " judgements\n";
+        if (many.rowCount() != 3000) return 90;
+        if (many.checks() != 3000) return 91;
+        // The same file twice stands once.
+        stream.add({stream.matches.first()});
+        many.invalidate();
+        if (many.rowCount() != 3000) return 92;
+        // A new query judges afresh.
+        many.testQuery = QStringLiteral("repo");
+        many.invalidate();
+        if (many.checks() != 6000) return 93;
     }
     return 0;
 }

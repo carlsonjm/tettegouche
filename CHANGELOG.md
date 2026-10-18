@@ -5,15 +5,12 @@ provenance.
 
 ## Unreleased
 
-- Search types ahead: while letters arrive nothing moves and no list is laid
-  out; the field finishes the words in grey with the best match, says what it
-  is, and Enter opens it. A pause, Down or a tap on the field opens the list.
-- Search stays centred as it grows: the list, a drawer or a mode grows it
-  evenly up and down rather than only down. The list grows it once, only as
-  far as the results it holds: the three best for one letter, five for two,
-  eight from three letters on, with the rest a scroll away.
-- Each result is ranked once rather than at every comparison, so a short
-  query with many results no longer holds up the next letter.
+- Typing in Search stays quick however many files a short query brings:
+  each result is judged once for what was typed, never again as more arrive
+  or the list is sorted.
+- Search stays centred as it grows: typing, a drawer or a mode grows it
+  evenly up and down rather than only down. Results are rows 56 tall, 4
+  apart.
 - Every search field is the same: Search's first screen, Apps, Files, Notes
   and Files' own window share one pill, the words 46 in from its edge at the
   size of what is typed, reading Just type, Find an app, Find a file or Find

@@ -33,8 +33,8 @@ section; with both, it is its full height. Floating, Search is one size
 on every display, 840 wide and at most as tall as both sections, so a large
 desktop screen shows it no bigger than the tablet does; only a smaller screen
 trims it. It is centred on the screen at every height, above the keys
-while they are up: a drawer or a mode grows it to its full height, and
-typing to the results it holds, evenly up and down. Inside Spread,
+while they are up: typing, a drawer or a mode grows it to its full height,
+evenly up and down. Inside Spread,
 Kadunce sets its size; with neither section on, the field rests in the middle
 of it. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and
@@ -46,21 +46,7 @@ each file it opens, and Plasma's privacy setting decides what is kept.
   anything remote are not.
 - Nothing is offered while the screen is shared or recorded, so no file's name
   is on show; the modes stay.
-- Typing holds still. While letters arrive the sheet keeps its resting size
-  and lays out no list: the field finishes the words in secondary white with
-  the best match, the rest of its name when it starts with them or its name
-  after a dash, and says at its end what that is (App, File, Setting or
-  Note). Enter opens that match at any moment.
-- A pause of about 350 ms, Down, or a tap on the field opens the list once,
-  centred, with the best match on top. The sheet holds the three best for
-  one letter, five for two, and eight from three letters on, never more than
-  there are; past eight it is at its full height and the list scrolls. It is
-  counted once the providers have answered, not at each row that arrives,
-  so it changes size once. Every result stays in the list. Each is a row 56
-  tall, 4 from the next.
-- Typed again with the list open, the list holds the rows it has, faded to
-  66%, and the field finishes the words from among them; the next pause asks
-  again and the list refreshes in one step.
+- Typing hands the room to the results.
 - The widget's settings "Recent apps" and "Recent files" each turn their
   section on, both by default. With both off nothing is read; an older
   setting "offerRecent" off counts as both off.
