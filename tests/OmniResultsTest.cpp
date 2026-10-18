@@ -347,7 +347,8 @@ int main(int argc, char **argv)
         // A new query judges afresh.
         many.testQuery = QStringLiteral("repo");
         many.invalidate();
-        if (many.checks() != 6000) return failed(93);
+        // The list is laid out again when it is next read.
+        if (many.rowCount() != 3000 || many.checks() != 6000) return failed(93);
     }
     return 0;
 }
