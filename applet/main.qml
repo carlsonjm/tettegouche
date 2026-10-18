@@ -375,7 +375,7 @@ PlasmoidItem {
 
         // The Tette Dot is the same Ghost White pearl on every Plasma style.
         // While Search is up its middle clears into a ring holding the mode
-        // Search shows, and the ring turns while an application is on its way.
+        // Search shows, or a new small dot on Search's first screen, and the ring turns while an application is on its way.
         Item {
             id: launcherDimple
             objectName: "tettegouche-launcher-dimple"
@@ -397,6 +397,8 @@ PlasmoidItem {
                 openness: Plasmoid.launcherActive ? 1 : 0
                 loading: Plasmoid.launcherActive && Plasmoid.launcherLoading
                 turnMs: root.ms(1000)
+                seed: Plasmoid.launcherMode === ""
+                speed: root.ms(1000) / 1000
 
                 Behavior on openness {
                     enabled: root.animateIndicator

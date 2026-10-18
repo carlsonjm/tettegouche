@@ -153,13 +153,15 @@ Item {
             Keys.onEnterPressed: modeRow.show("")
             Keys.onSpacePressed: modeRow.show("")
             // The Tette Dot, as the panel draws it while Search is up: a
-            // ring holding the mark of the mode shown, empty on the first
-            // screen. It clears into the ring as Search's controls arrive.
+            // ring holding the mark of the mode shown, or a new small dot
+            // on the first screen. It clears into the ring as Search's controls arrive.
             // Hover and press show on the mark itself.
             DotMark {
                 objectName: "home-dot-mark"
                 anchors.centerIn: parent
                 openness: launcher.openingControls > 0.5 ? 1 : 0
+                seed: modeRow.current === ""
+                speed: launcher.ms(1000) / 1000
                 pearl: tone.dark
                 ink: launcher.primaryText
                 opacity: homeTap.pressed ? 0.7 : homeDot.selected || homeHover.hovered ? 1 : 0.8

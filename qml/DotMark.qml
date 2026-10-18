@@ -11,7 +11,8 @@ import QtQuick.Shapes
 // It is the mark alone, with nothing drawn behind or around it, and the same
 // in the panel and in Search. While something is loading the ring dims and a
 // quarter of it turns. Whatever the dot is given as children sits in the
-// ring's middle once the ring has formed.
+// ring's middle once the ring has formed; with nothing to hold there, a new
+// small dot grows in the middle instead, so the open dot never reads empty.
 Item {
     id: dot
 
@@ -24,6 +25,10 @@ Item {
     // A loop of the turning quarter, in ms.
     property int turnMs: 1000
     default property alias middle: centre.data
+    // Whether the middle holds the new small dot rather than a mark.
+    property bool seed: true
+    // Plasma's animation speed, as a factor of the default.
+    property real speed: 1
 
     readonly property real restSize: 20
     readonly property real openSize: 28
@@ -111,6 +116,33 @@ Item {
                 sweepAngle: 90
                 moveToStart: true
             }
+        }
+    }
+
+    // The new dot: it grows once the ring has formed, and goes at once as the
+    // ring starts to fill back.
+    Rectangle {
+        id: seedDot
+        objectName: "dotMarkSeed"
+        antialiasing: true
+        anchors.centerIn: parent
+        readonly property real grown: dot.seed && !dot.loading && dot.openness > 0.98 ? 1 : 0
+        property real shown: grown
+        Behavior on shown {
+            enabled: seedDot.shown < seedDot.grown
+            NumberAnimation { duration: Math.max(1, Math.round(240 * dot.speed)); easing.type: Easing.OutCubic }
+        }
+        width: 12 * shown
+        height: width
+        radius: width / 2
+        visible: shown > 0
+        color: dot.ink
+        gradient: dot.pearl ? seedFill : null
+        Gradient {
+            id: seedFill
+            GradientStop { position: 0; color: "#FFFFFF" }
+            GradientStop { position: 0.55; color: "#F4F4FA" }
+            GradientStop { position: 1; color: "#DCDCE4" }
         }
     }
 
