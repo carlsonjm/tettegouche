@@ -3168,15 +3168,18 @@ TestCase {
         compare(frame.height, 44)
         compare(frame.x, field.x)
         compare(frame.width, field.width)
+        // The board holds the keys, not its field, so no on-screen keys
+        // rise on a tablet; typing goes into the field.
         const find = findChild(launcher, "notes-find")
-        verify(find.activeFocus)
+        const pane = findChild(launcher, "notes-pane")
+        verify(!find.activeFocus)
+        verify(pane.activeFocus)
         verify(!findChild(launcher, "notes-back").visible)
         const grow = findChild(launcher, "window-pop-out")
         verify(grow.opacity > 0.99)
         verify(grow.mapToItem(sheet, grow.width, 0).x > sheet.width / 2)
         // Today's note first, then the rest; tucked away notes wait under
         // their own filter.
-        const pane = findChild(launcher, "notes-pane")
         compare(pane.rows[0].kind, "heading")
         compare(pane.rows[1].note.id, "note-1")
         verify(!pane.rows.some(row => row.kind === "note" && row.note.id === "note-3"))
@@ -3193,7 +3196,11 @@ TestCase {
         verify(back.visible)
         mouseClick(back, back.width / 2, back.height / 2)
         compare(pane.view, "board")
+        verify(!find.activeFocus)
+        keyClick(Qt.Key_K)
         verify(find.activeFocus)
+        compare(find.text, "k")
+        find.text = ""
         // The dot returns to Search, and nothing was finished.
         const dot = findChild(launcher, "home-dot")
         mouseClick(dot, dot.width / 2, dot.height / 2)

@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Opening Notes in Search, or picking one of its filters, no longer puts the
+  cursor in Find or start a note, so no on-screen keys rise on a tablet.
+  Typing still goes straight into it, and a tap on it brings the keys.
 - The quick note has an island of its own beside the launcher, there while
   Gooseberry is installed: a dot with a plus that starts a quick note on
   Gooseberry's own card, and beside it the note pinned in Gooseberry, a bead

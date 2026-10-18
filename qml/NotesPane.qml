@@ -154,7 +154,10 @@ Item {
             pad.cursorPosition = pad.length
         }
     }
-    function focusFind() { find.forceActiveFocus() }
+    // The board holds the keys itself rather than its field, as Search's own
+    // field does, so opening Notes or picking a filter raises no on-screen
+    // keys on a tablet. Typing goes into the field, and a tap on it focuses it.
+    function focusFind() { pane.forceActiveFocus() }
 
     // What is open over or under the page: "colour", "folder", "window",
     // "remind", "pick", "more" or nothing.
@@ -250,6 +253,27 @@ Item {
             return
         }
         event.accepted = false
+    }
+    Keys.onPressed: event => {
+        if (view !== "board" || find.activeFocus) {
+            event.accepted = false
+            return
+        }
+        if (event.key === Qt.Key_Down || event.key === Qt.Key_Up) {
+            movePick(event.key === Qt.Key_Down ? 1 : -1)
+            event.accepted = true
+        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            if (pickable(picked)) activate(rows[picked])
+            else startNote(find.text.trim())
+            event.accepted = true
+        } else if (event.text.length > 0 && event.text.charCodeAt(0) >= 32 && event.text !== "\x7f"
+                && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
+            find.forceActiveFocus()
+            find.insert(find.cursorPosition, event.text)
+            event.accepted = true
+        } else {
+            event.accepted = false
+        }
     }
 
     Connections {
