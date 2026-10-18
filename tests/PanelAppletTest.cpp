@@ -505,10 +505,12 @@ private Q_SLOTS:
         QAction *configure = m_applet->internalAction(QStringLiteral("configure"));
         QVERIFY(configure);
         configure->trigger();
-        QTRY_VERIFY(QFile::exists(record));
-        QFile opened(record);
-        QVERIFY(opened.open(QIODevice::ReadOnly));
-        QCOMPARE(QString::fromUtf8(opened.readAll()).trimmed(), QStringLiteral("search"));
+        // The script makes the record before it writes the page into it.
+        const auto said = [&record] {
+            QFile opened(record);
+            return opened.open(QIODevice::ReadOnly) ? QString::fromUtf8(opened.readAll()).trimmed() : QString();
+        };
+        QTRY_COMPARE(said(), QStringLiteral("search"));
         QCOMPARE(ownPage.count(), 0);
 
         // Without it, Configure opens the widget's own page.
