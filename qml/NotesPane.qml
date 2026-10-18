@@ -495,9 +495,9 @@ Item {
                 color: pane.primaryText
                 font.pixelSize: 16
                 font.weight: Font.Medium
-                placeholderText: words.i18n("Find or start a note")
+                placeholderText: words.i18n("Find a note")
                 placeholderTextColor: tone.placeholderText
-                Accessible.name: words.i18n("Find or start a note")
+                Accessible.name: words.i18n("Find a note")
                 onTextChanged: findPause.restart()
                 Keys.onDownPressed: pane.movePick(1)
                 Keys.onUpPressed: pane.movePick(-1)

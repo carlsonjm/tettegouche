@@ -61,7 +61,7 @@ application, and Tettegouche works without it.
   whenever KDE's application list changes. Without it, the row of modes has
   no Notes.
 - Notes opens in the same window with the drawer's motion on its board, a
-  search over every note: the field becomes Find or start a note, Search's
+  search over every note: the field becomes Find a note, Search's
   own 44 px pill in its place under the modes, which holds still as Notes
   comes, with a row
   of filters under it, Everything, the current day's, On windows, each folder in the

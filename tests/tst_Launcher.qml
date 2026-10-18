@@ -3133,7 +3133,7 @@ TestCase {
         tryCompare(launcher, "notesProgress", 1)
     }
     // Notes opens in Search's own window with the drawer's motion, on the
-    // board: the field becomes Find or start a note, with every note under
+    // board: the field becomes Find a note, with every note under
     // it, and the window keeps its size. Nothing is handed to Gooseberry's
     // own card, no note is started, and Search stays open.
     function test_notesModeOpensInSearch() {
