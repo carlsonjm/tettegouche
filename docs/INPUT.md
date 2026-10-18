@@ -142,6 +142,7 @@ than repeat it.
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
+| The places' button | Folds the places to the rail or opens them as wide as their longest name, up to 240, so no name is cut short. At Search's size or in a narrow Files window, places opened this way fold back at the first touch on the folder. |
 | Tap or click Pop out, beside Expand | Files opens in a window of its own, with its tabs and folder as they were, and Search closes. Each Pop out opens another window. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With a Files window open: `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window last used forward, back from minimized, and shows what was asked there. Files in Search still opens Files in Search. |
 | In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; the row of modes and its buttons give way to the window's own title bar. Typing goes into search; Esc clears it. |

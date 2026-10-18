@@ -130,7 +130,8 @@ the work area as the screen reports it, less the band Shuffle's dock reserves
 there: on Wayland the screen reports itself whole. The band comes from the
 Bottom Surface's `dockExtent` (version 1) as the launcher opens and as it
 changes; the one Bottom Surface on the bus answers for the display it presents,
-and a display it does not answer for takes the same band. With no Bottom
+and a display it does not answer for takes the same band. A display it answers
+for as not presenting has no band, so expanded Search fills it. With no Bottom
 Surface, the work area is the screen's report. Every drawer and mode opens from Search's
 pills at Search's size, a card in Spread, and from `openDrawer` (the dot's slide,
 Meta+G, Meta+E) filling the screen; Expand, in the corner they all share, fills the screen and

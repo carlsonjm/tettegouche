@@ -5,6 +5,18 @@ provenance.
 
 ## Unreleased
 
+- Search opens in its place at its resting size, with nothing dropping in
+  from where it last closed, and Apps, Files and Notes fade in where they
+  stand rather than sliding.
+- Back from a note handed to the notes application's card reopens Notes at
+  the size it had, not filling the screen. Notes' filters are smaller than
+  the modes above them: 32 tall pills, 8 apart.
+- `Meta` on a Search that was not running yet takes typing once its window
+  is ready, rather than showing a cursor that typing never reached.
+- Files' own window keeps the places and drives beside its folders.
+- The places beside Files fold and unfold by a button of their own; open,
+  they are as wide as their longest name, up to 240, so no name is cut
+  short. At Search's size a touch on the folder folds them back.
 - Typing in Search stays quick however many files a short query brings:
   each result is judged once for what was typed, never again as more arrive
   or the list is sorted.

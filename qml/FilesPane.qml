@@ -44,6 +44,25 @@ Item {
     // At a card's size, as in Spread, the places fold to a rail of their
     // icons and the tiles come one size smaller, so the folder has the room.
     property bool card: false
+    // The places' own button folds them to the rail or opens them as wide as
+    // their longest name, up to 240, so no name is cut short. A card starts
+    // folded and a full size open; opened at a card's size, a touch on the
+    // folder folds them back.
+    property bool placesOpen: !card
+    onCardChanged: placesOpen = !card
+    readonly property bool placesFolded: !placesOpen
+    FontMetrics { id: placeFont }
+    readonly property real placesOpenWidth: {
+        const places = browser ? browser.places : []
+        let widest = 0, eject = false
+        for (let i = 0; i < places.length; ++i) {
+            widest = Math.max(widest, placeFont.advanceWidth(places[i].label || ""))
+            if (places[i].canEject === true) eject = true
+        }
+        // In from the edge, the icon, the gap to the name, and the eject
+        // button or the edge after it.
+        return Math.min(240, Math.max(170, Math.ceil(widest) + 12 + 22 + 12 + (eject ? 50 : 12)))
+    }
     // How far up from the window's bottom the keys reach, so menus open above.
     property real keysReach: 0
     readonly property string rawOperationStatus: browser ? browser.operationStatus : ""
@@ -565,18 +584,49 @@ Item {
             }
         }
     }
+    // At a card's size the places opened by their button give the room back
+    // at the first touch on the folder, which still acts: this only watches,
+    // above everything, and takes nothing from what is under it.
+    Item {
+        anchors.fill: parent
+        z: 10
+        PointHandler {
+            id: folderTouch
+            objectName: "files-folder-touch"
+            enabled: pane.card && pane.placesOpen
+            // Folded as the touch lifts, so what it pressed stays under it.
+            property bool onFolder: false
+            onActiveChanged: {
+                if (active) onFolder = point.position.x > placesList.width
+                else if (onFolder) pane.placesOpen = false
+            }
+        }
+    }
     RowLayout {
         anchors.fill: parent
         spacing: 20
         ListView {
             id: placesList
             objectName: "files-places"
-            Layout.preferredWidth: pane.card ? 54 : 170
+            Layout.preferredWidth: pane.placesFolded ? 54 : pane.placesOpenWidth
             Layout.fillHeight: true
             clip: true
             // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
             Kirigami.WheelHandler { target: placesList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
             model: pane.browser ? pane.browser.places : []
+            header: Item {
+                width: ListView.view.width
+                height: 48
+                Action {
+                    objectName: "files-places-fold"
+                    x: pane.placesFolded ? 6 : 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 42
+                    glyph: pane.placesFolded ? "panel-left-open" : "panel-left-close"
+                    text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold the places")
+                    onClicked: pane.placesOpen = !pane.placesOpen
+                }
+            }
             // The places, then the drives under a rule. A drive opens on a tap,
             // mounted first if it is not; one that is plugged in has an eject
             // button, and says on its row what it is doing.
@@ -587,7 +637,7 @@ Item {
                 readonly property bool firstDrive: modelData.section === "drives"
                     && (index === 0 || ListView.view.model[index - 1].section !== "drives")
                 readonly property bool busy: modelData.busy === true
-                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.card
+                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.placesFolded
                 objectName: "files-place-" + modelData.label
                 width: ListView.view.width; height: 54 + (firstDrive ? 13 : 0)
                 Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: tone.line }
@@ -602,18 +652,18 @@ Item {
                         color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? tone.placeChosen : "transparent"
                     }
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter; x: pane.card ? 16 : 12; spacing: 12
+                        anchors.verticalCenter: parent.verticalCenter; x: pane.placesFolded ? 16 : 12; spacing: 12
                         opacity: place.busy ? 0.6 : 1
                         Kirigami.Icon { source: place.modelData.icon; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter }
                         Column {
-                            visible: !pane.card
+                            visible: !pane.placesFolded
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { text: place.modelData.label; color: tone.text; width: place.ejectable ? 76 : 116; elide: Text.ElideRight }
+                            Text { text: place.modelData.label; color: tone.text; width: place.width - 46 - (place.ejectable ? 50 : 12); elide: Text.ElideRight }
                             Text {
                                 objectName: "files-place-note-" + place.modelData.label
                                 visible: text.length > 0
                                 text: place.modelData.note || ""
-                                color: tone.secondaryText; font.pixelSize: 12; width: 116; elide: Text.ElideRight
+                                color: tone.secondaryText; font.pixelSize: 12; width: place.width - 46 - (place.ejectable ? 50 : 12); elide: Text.ElideRight
                             }
                         }
                     }
@@ -626,7 +676,7 @@ Item {
                         Accessible.onPressAction: if (!place.busy) open()
                         // On the rail a pointer resting on a place names it.
                         HoverHandler { id: placeHover }
-                        C.ToolTip.visible: pane.card && placeHover.hovered
+                        C.ToolTip.visible: pane.placesFolded && placeHover.hovered
                         C.ToolTip.text: place.modelData.label
                         C.ToolTip.delay: 600
                         function open() { place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path) }

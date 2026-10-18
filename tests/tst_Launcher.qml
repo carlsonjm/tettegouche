@@ -1232,6 +1232,14 @@ TestCase {
         query.text = ""
         tryCompare(sheet, "height", small)
         tryCompare(sheet, "y", centred(small))
+        // Opening again after typing, it is at once where and as tall as it
+        // rests: nothing drops in from where it closed.
+        query.text = "x"
+        tryCompare(sheet, "height", full)
+        controller.opened()
+        compare(sheet.height, small)
+        compare(sheet.y, centred(small))
+        tryCompare(launcher, "sheetSettled", true)
         // A drawer gives it its full height too.
         launcher.setDrawerOpen(true)
         tryCompare(sheet, "height", full)
@@ -2018,6 +2026,30 @@ TestCase {
         controller.drawerExpanded=false
         tryCompare(places,"width",54)
         compare(pane.tile.cell,140)
+        // Their own button opens the places at a card's size, and the first
+        // touch on the folder folds them back.
+        const fold=findChild(launcher,"files-places-fold")
+        mouseClick(fold)
+        tryCompare(places,"width",170)
+        mouseClick(pane,pane.width-40,pane.height/2)
+        tryCompare(places,"width",54)
+        // Filling the screen they stay open until their button folds them;
+        // a touch on the folder leaves them as they are.
+        controller.drawerExpanded=true
+        tryCompare(places,"width",170)
+        mouseClick(pane,pane.width-40,pane.height/2)
+        compare(places.width,170)
+        mouseClick(fold)
+        tryCompare(places,"width",54)
+        mouseClick(fold)
+        // Open, they are as wide as the longest name, never more than 240.
+        filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home",section:"places"},
+            {label:"Pictures from the phone",path:"/home/test/Phone",icon:"folder",section:"places"}]
+        tryVerify(() => places.width>170 && places.width<240)
+        filesMock.places=[{label:"A very long folder name that would never fit here at all",path:"/home/test/Long",icon:"folder",section:"places"}]
+        tryCompare(places,"width",240)
+        controller.drawerExpanded=false
+        tryCompare(places,"width",54)
         filesMock.tileSize=1
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
@@ -2891,6 +2923,30 @@ TestCase {
         controller.drawerRequested("notes")
         compare(controller.closes, 1)
     }
+    // Back from a note handed to the notes application's card opens Notes at
+    // the size it had when the note left, not filling the screen.
+    function test_notesBackKeepsSize() {
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const pane = findChild(launcher, "notes-pane")
+        controller.drawerRequested("notes-back")
+        verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, false)
+        pane.finished()
+        compare(launcher.notesLeftExpanded, false)
+        controller.setDrawerExpanded(true, true)
+        pane.finished()
+        compare(launcher.notesLeftExpanded, true)
+        launcher.closeNotes()
+        tryCompare(launcher, "notesProgress", 0)
+        controller.drawerExpanded = false
+        controller.drawerRequested("notes-back")
+        verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        launcher.notesLeftExpanded = false
+    }
     // The panel's quick note island: its dot asks for a new quick note, and
     // its pinned note for that note, each alone at Search's size with no
     // Back to the board.
@@ -3301,6 +3357,9 @@ TestCase {
         findChild(launcher, "notes-find").text = ""
         tryCompare(quickStub, "notesWords", "")
         const tucked = findChild(launcher, "notes-filter-tucked")
+        // Smaller than the modes: a 32 tall pill touched across 40.
+        compare(tucked.height, 40)
+        compare(tucked.children[0].height, 32)
         mouseClick(tucked, tucked.width / 2, tucked.height / 2)
         compare(pane.rows.length, 1)
         compare(pane.rows[0].note.id, "note-3")

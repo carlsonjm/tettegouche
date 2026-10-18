@@ -459,7 +459,7 @@ void LauncherController::openDrawer(const QString &drawer)
     const bool note = drawer == QLatin1String("note")
         || (drawer.startsWith(QLatin1String("note:")) && drawer.size() > 5);
     if (drawer == QLatin1String("apps") || drawer == QLatin1String("files")
-        || drawer == QLatin1String("notes") || note)
+        || drawer == QLatin1String("notes") || drawer == QLatin1String("notes-back") || note)
         whenShown([this, drawer] { Q_EMIT drawerRequested(drawer); });
 }
 
@@ -499,6 +499,14 @@ void LauncherController::present()
     Q_EMIT guestChanged();
     m_view->show();
     m_view->requestActivate();
+    // Started cold, the window may not be on screen yet when it first asks
+    // to take the keys, and the ask is lost: it asks again once its first
+    // frame is shown.
+    // Tied to the window itself, so a frame swapped as it goes away asks
+    // nothing of a window that is gone.
+    connect(m_view, &QQuickWindow::frameSwapped, m_view, [view = m_view] {
+        if (view->isVisible() && !view->isActive()) view->requestActivate();
+    }, Qt::SingleShotConnection);
     Q_EMIT opened();
     const auto steps = std::exchange(m_whenShown, {});
     for (const auto &step : steps) step();
@@ -771,8 +779,11 @@ bool LauncherController::popOutFilesWindow()
         window = made.get();
         m_filesWindows.push_back(std::move(made));
     }
-    // It starts where Search's Files is.
-    if (window->browser) window->browser->adopt(*m_fileBrowser);
+    // It starts where Search's Files is, with its places and drives beside.
+    if (window->browser) {
+        window->browser->adopt(*m_fileBrowser);
+        window->browser->open();
+    }
     QQuickView *view = window->view.get();
     const QRect area = availableArea();
     const QSize size = m_guestMode && m_compactGuestRect.isValid()
@@ -1077,7 +1088,8 @@ void LauncherController::readDockBand()
     }
     // One dock answers on the bus for the display it presents; the others are
     // its copies, so a display it does not answer for takes the same band.
-    // With no dock there, none.
+    // A display it answers for as not presenting there has none: Search
+    // fills down to the screen's edge.
     const quint64 generation = ++m_dockGeneration;
     const auto ask = [](const QString &outputName) {
         QDBusMessage request = bottomSurfaceMethod(QStringLiteral("dockExtent"));
@@ -1099,7 +1111,7 @@ void LauncherController::readDockBand()
             return;
         }
         const int band = dockBandHeight(payload);
-        if (band != 0 || QJsonDocument::fromJson(payload).object().value(QStringLiteral("presenting")).toBool()) {
+        if (band != 0 || isDockExtent(payload)) {
             settle(band);
             return;
         }

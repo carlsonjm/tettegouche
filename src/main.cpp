@@ -322,10 +322,10 @@ int main(int argc, char **argv)
     std::unique_ptr<QuickNote> quickNote;
     if (offerNotes) quickNote = std::make_unique<QuickNote>();
     // A note handed from Notes to the notes application's card leads back to
-    // Notes from there.
+    // Notes from there, at the size Notes had.
     if (quickNote) {
         QObject::connect(quickNote.get(), &QuickNote::backRequested, &controller,
-                         [&controller] { controller.openDrawer(QStringLiteral("notes")); });
+                         [&controller] { controller.openDrawer(QStringLiteral("notes-back")); });
     }
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
