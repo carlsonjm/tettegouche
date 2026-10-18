@@ -11,6 +11,7 @@ TestCase {
     when: windowShown
     function init() {
         launcher.filesMode = false
+        catalog.tileSize = 1
         launcher.fileBrowser = null
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         recentStub.clear()
@@ -137,6 +138,7 @@ TestCase {
         id: catalog
         property string filterText: ""
         property int sortOrder: 0
+        property int tileSize: 1
         property int useReads: 0
         function refreshUse() { useReads++ }
         property int installChecks: 0
@@ -829,6 +831,43 @@ TestCase {
     // A to Z is one run with no rows of its own, applications of different
     // letters sharing a line, and no letters down the edge: the arrow keys
     // start on its first application.
+    // Apps' tiles come in four sizes, kept apart from Files': Ctrl with + or
+    // −, Ctrl and the wheel, or a pinch; as many fit across as the width holds.
+    function test_appsZoom() {
+        controller.opened()
+        for (let i = 0; i < 24; ++i) catalog.append({name: "App " + i, icon: "application-x-executable", kind: "application"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        wait(250)
+        const grid = findChild(launcher, "application-grid")
+        catalog.tileSize = 1
+        compare(grid.columns, Math.max(3, Math.floor(grid.width / 126)))
+        const standard = grid.cellHeight
+        const across = grid.columns
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Minus, Qt.ControlModifier)
+        compare(catalog.tileSize, 0)
+        verify(grid.columns > across)
+        verify(grid.cellHeight < standard)
+        keyClick(Qt.Key_Equal, Qt.ControlModifier)
+        keyClick(Qt.Key_Equal, Qt.ControlModifier)
+        keyClick(Qt.Key_Equal, Qt.ControlModifier)
+        keyClick(Qt.Key_Equal, Qt.ControlModifier)
+        compare(catalog.tileSize, 3)
+        verify(grid.columns < across)
+        verify(grid.cellHeight > standard)
+        keyClick(Qt.Key_0, Qt.ControlModifier)
+        compare(catalog.tileSize, 1)
+        // Ctrl and the wheel, a notch a size.
+        const lines = findChild(launcher, "application-lines")
+        mouseWheel(lines, lines.width / 2, lines.height / 2, 0, 120, Qt.NoButton, Qt.ControlModifier)
+        compare(catalog.tileSize, 2)
+        mouseWheel(lines, lines.width / 2, lines.height / 2, 0, -120, Qt.NoButton, Qt.ControlModifier)
+        compare(catalog.tileSize, 1)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        catalog.clear()
+    }
     function test_oneRun() {
         controller.opened()
         for (let i = 0; i < 4; ++i) catalog.append({name: "Apple " + i, icon: "application-x-executable", kind: "application"})
