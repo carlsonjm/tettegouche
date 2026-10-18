@@ -38,17 +38,17 @@ rg -q 'contentInset: 24' "${project_root}/qml/Launcher.qml"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"
-rg -Fq 'words.i18n("Just type")' "${project_root}/qml/Launcher.qml"
+rg -Fq 'words.i18n("Just type")' "${project_root}/qml/SearchField.qml"
 rg -q 'Q_INVOKABLE void showInputMethod' "${project_root}/src/LauncherController.h"
 rg -q 'launcherController\.showInputMethod\(\)' \
-    "${project_root}/qml/Launcher.qml"
+    "${project_root}/qml/SearchField.qml"
 rg -q 'required property var applicationCatalog' \
     "${project_root}/qml/Launcher.qml"
 # Search's modes run along its top, the dot returning to search, and an open
 # drawer has no Close drawer pill.
-rg -Fq 'objectName: "mode-row"' "${project_root}/qml/Launcher.qml"
-rg -Fq 'objectName: "home-dot"' "${project_root}/qml/Launcher.qml"
-if rg -Fq 'Close drawer' "${project_root}/qml/Launcher.qml"; then
+rg -Fq 'objectName: "mode-row"' "${project_root}/qml/ModeRow.qml"
+rg -Fq 'objectName: "home-dot"' "${project_root}/qml/ModeRow.qml"
+if rg -Fq 'Close drawer' "${project_root}/qml/"; then
     echo "An open drawer closes by the dot or its top edge, not a Close drawer pill" >&2
     exit 1
 fi
