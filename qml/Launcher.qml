@@ -1203,8 +1203,21 @@ Item {
                 visible: root.filesMode && root.drawerProgress>0.01
                 opacity: root.drawerProgress
             }
-            // Apps' row over its applications: the order, a grey pill naming
-            // it at the right, as Files has its own over the folder.
+            // Apps' row over its applications, the same cluster Files has at
+            // the right of its own: New folder, the order, then the size.
+            SizePill {
+                id: appsSize
+                objectName: "apps-size"
+                x: parent.width - width
+                y: sortButton.y
+                width: 72; height: 42
+                visible: sortButton.visible
+                opacity: sortButton.opacity
+                enabled: sortButton.enabled
+                z: 5
+                level: root.applicationCatalog ? root.applicationCatalog.tileSize : 1
+                onResize: step => applicationGrid.resizeTiles(step)
+            }
             Item {
                 id: sortButton
                 objectName: "sort-button"
@@ -1214,7 +1227,7 @@ Item {
                 Accessible.role: Accessible.ButtonMenu
                 Accessible.name: words.i18n("Sort: %1", sortLabel.text)
                 Accessible.onPressAction: root.sortMenuOpen = !root.sortMenuOpen
-                x: parent.width - width
+                x: appsSize.x - 8 - width
                 y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: sortLabel.implicitWidth + 46
                 height: 42
@@ -1472,8 +1485,8 @@ Item {
             Rectangle {
                 id: sortMenu
                 objectName: "sort-menu"
-                // Under the sort button.
-                anchors.right: parent.right
+                // Under the sort button, its right edge level with the button's.
+                x: sortButton.x + sortButton.width - width
                 y: sortButton.y + sortButton.height + 4
                 width: 160
                 height: sortChoices.implicitHeight + 12

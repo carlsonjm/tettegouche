@@ -99,6 +99,7 @@ than repeat it.
 | Enter | Opens the chosen application, or opens or closes the chosen folder: the first one, unless the arrow keys moved it. |
 | Tap or click an application | Opens it, or brings it forward if it is already open. |
 | Turn the mouse wheel over the applications | Scrolls them 80 pixels a notch, as in Search. |
+| Tap or click − or + in the size pill, at the right of the row after the order | Makes the tiles one size smaller or larger, as in Files. |
 | Pinch, Ctrl with + or −, or Ctrl and the scroll wheel | Makes the tiles larger or smaller, in four sizes, as in Files; smaller sizes fit more applications across, as many as the width holds. Ctrl+0 returns them to the usual size. The size is kept, apart from Files' own. |
 | Look over Apps, with nothing typed | A to Z is one run by name, each folder at its name's place among the applications. Most used is divided into sections, each under a row of its own, by when each was last used, within the day, the week, the month or earlier, the most used first in each; Newest installed by when each arrived, within the week, the month, the year or earlier. There a folder heads the section of its most used or newest application. Typing shows every match, in folders or not, with no sections. |
 | Tap or click a folder's tile, or Enter on it | Opens it in place, its applications on lines under its tile's line in the sort, or closes it. A folder's tile shows up to four of its applications. Each folder keeps whether it was left open. |
@@ -129,9 +130,9 @@ than repeat it.
 | Tap or click a part of the path | Opens that folder. |
 | Tap or click Back or Forward, or Alt+Left or Alt+Right | Goes back or forward in this tab's history. |
 | Alt+Up | Opens the folder that holds this one. |
-| Tap or click Path, or Ctrl+L | Shows a field for a folder's full path. Enter goes there; Esc hides the field. |
-| Tap or click Refresh | Reloads the folder. |
-| Tap or click +, or Ctrl+T | Opens a new tab on the current folder. |
+| Tap or click the empty end of the path, or Ctrl+L | Shows a field in the path's place for a folder's full path. Enter goes there; Esc hides the field. |
+| F5, or Refresh in the folder's menu | Reloads the folder. |
+| Ctrl+T, New tab in the folder's menu, or + in the tab row | Opens a new tab on the current folder. The tab row shows only while two or more tabs are open. |
 | Open in new tab, from a folder's menu | Opens that folder in a tab of its own. |
 | Show in folder, from a file's menu in Recent or a search | Opens the folder that holds it, with the file chosen. |
 | Drag the handle at the right edge of a long folder | Scrolls through it at once. |
@@ -139,7 +140,9 @@ than repeat it.
 | Tap or click a tab | Switches to it. |
 | Ctrl+Tab | Switches to the next tab. |
 | Tap or click × on a tab, or Ctrl+W | Closes that tab, or the current one for Ctrl+W. The last tab stays. |
-| Tap or click the sort button, a pill naming the order after New folder, with Paste at the row's end when something waits to be pasted | Offers name A–Z, name Z–A, newest first and largest first. |
+| The row under search | The way around on the left: Back, Forward and the path. On the right: Paste while something waits to be pasted, New folder, the sort button, then the size pill, in the same place as in Apps. While files are chosen, their actions take the right side. |
+| Tap or click the sort button, a pill naming the order after New folder | Offers name A–Z, name Z–A, newest first and largest first. |
+| Tap or click − or + in the size pill | Makes the tiles one size smaller or larger, as a pinch does. |
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
@@ -158,8 +161,8 @@ than repeat it.
 | Touch and hold a file | Selects it and starts choosing several, with a circle on each file. The bar above the files offers what to do with them. |
 | Tap empty space | Clears the selection. |
 | Touch and hold empty space | Opens the folder's action menu beside the finger. |
-| Tap or click "Done selecting" | Stops choosing several and clears the selection. |
-| Tap or click Copy, Cut, Rename or Move to Trash in the bar | Acts on the chosen files, as the keys and the action menu do. Rename shows for one file. |
+| Tap or click "Done" | Stops choosing several and clears the selection. |
+| Tap or click Copy, Cut, Rename or Move to Trash in the row | Acts on the chosen files, as the keys and the action menu do. Rename shows for one file. |
 | Arrow keys, Home or End | Move the selection one file, one row, or to the first or last file. |
 | Shift with an arrow, Home or End | Extends the selection. |
 | Ctrl with an arrow | Moves the focus outline without changing the selection. |
@@ -170,8 +173,8 @@ than repeat it.
 | Choose Compress | Ark makes a zip beside the first: one item keeps its name, several make Archive.zip. Its progress shows in Ambient. |
 | Choose Extract here | Ark unpacks each archive beside itself, in a folder of its own when it holds several items. Its progress shows in Ambient. |
 | Choose Hide | Takes the chosen files out of Files under their own names, listed in their folder's `.hidden`, which Dolphin reads too. The eye shows them dimmed, and Unhide brings them back. A name starting with a dot is hidden by that name, and a folder that cannot be written offers neither. |
-| With one file or folder chosen, tap or click Properties in the bar or the menu, or press Alt+Enter | Shows its kind, size, folder and dates. A folder's total size and what it holds follow once counted; a photo adds its dimensions, date taken and camera, a song its title, artist, album and length, a video its dimensions and length. Close or Esc puts it away. |
-| Right-click empty space, or tap or click ⋯ with nothing chosen | The folder's action menu: Paste here, Select all, New folder, Restore last trashed item, Empty Trash. Recent, a search and a folder that cannot be written offer no Paste here or New folder. |
+| With one file or folder chosen, choose Properties in its menu, or press Alt+Enter | Shows its kind, size, folder and dates. A folder's total size and what it holds follow once counted; a photo adds its dimensions, date taken and camera, a song its title, artist, album and length, a video its dimensions and length. Close or Esc puts it away. |
+| Right-click empty space or the empty end of the path, or touch and hold either | The folder's action menu: Paste here, Select all, New tab, Refresh, New folder, Restore last trashed item, Empty Trash. Recent, a search and a folder that cannot be written offer no Paste here or New folder. |
 | Choose Empty Trash | Asks first, giving how many items and how much space; Empty Trash removes everything in Trash for good. |
 | Ctrl+C, or tap or click Copy | Copies the selection. |
 | Ctrl+X, or Cut | Cuts the selection. |
@@ -182,7 +185,7 @@ than repeat it.
 | Delete, or Move to Trash | Asks first, naming the file or how many; Move to Trash moves them. Nothing is deleted permanently. |
 | Restore last trashed item | Brings back the last item Tettegouche moved to Trash. |
 | Tap or click New folder | Shows a name field. Enter or Create makes the folder; Esc or Cancel leaves it. |
-| Drag a file with the mouse, or touch and hold it and then drag | Carries the selection, labelled with the folder under it; dropped on a folder, it is copied there. Near the top or bottom edge the list scrolls. Dropped anywhere else inside Files, nothing happens. |
+| Drag a file with the mouse, or touch and hold it and then drag | Carries the selection, labelled with the folder or place under it; dropped on a folder, a place or a mounted drive, it is copied there, and dropped on Trash it goes to Trash. Folders dropped on the places' empty room become places. Near the top or bottom edge the list scrolls. Dropped anywhere else inside Files, nothing happens. |
 | Carry files past the edge of Files | They leave Files and go on as the system's own drag, for any application, on this display or another. Dropped on one, it receives a copy; the originals stay. Dropped on nothing, nothing happens. |
 | Drag files from another application over Files, and let go | Labelled with where they would land: the folder tile under them, else the folder shown. Near the top or bottom edge the list scrolls. Let go and they are copied there, never moved. In Recent or a search only a folder tile takes them; outside the list, nothing happens. Only a window on another display can start this, since a press beside Files closes it. |
 | Tap or click a drive under the places | Opens it, mounted first if it is not; its row says Opening… meanwhile. A drive that cannot be opened says why. |
@@ -194,7 +197,14 @@ than repeat it.
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
 | Esc | Cancels a drag; otherwise clears the selection; otherwise closes Files. |
 | Meta+E | Opens Search on Files, filling the screen; pressed there again, closes it. It is listed and changed as Meta+G is. Dolphin holds Meta+E from its own install, so it opens Dolphin until Meta+E is taken from Dolphin in System Settings. |
-| With the on-screen keys up | The current folder, its path and its actions stay above them: the actions join the path's row, and the tabs and the Open row step aside until the keys go down. Menus open above the keys. |
+| With the on-screen keys up | The current folder, its path and its actions stay above them, and the tabs and the Open row step aside until the keys go down. Menus open above the keys. |
+| Drag the places' edge, the gap beside the rule, by finger or pointer | Sizes the places from their rail of icons up to 240; let go under 120 and they fold. The width is kept, apart from each window's own. |
+| Tap or click + beside Fold | Add this folder, Add a folder…, or Show or hide places. Places are KDE's own, shared with Dolphin and every Open dialog. |
+| Touch and hold or right-click a place | Its sheet: Open in new tab, Rename, Hide, and Remove from places for a place you added; Trash adds Empty Trash. |
+| Drag a place you keep with the mouse, or by its handle in Show or hide places | Moves it among the places. |
+| Tap or click the eye in Show or hide places | Shows or hides that place, here and in Dolphin. |
+| Tap or click Trash among the places | Shows what Trash holds, each with the folder it came from. With files chosen, Restore puts them back and Delete for good, after asking, removes them. |
+| A drive among the places | Says how much room it has left. |
 
 ## Ambient
 

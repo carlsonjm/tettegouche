@@ -864,6 +864,18 @@ TestCase {
         compare(catalog.tileSize, 2)
         mouseWheel(lines, lines.width / 2, lines.height / 2, 0, -120, Qt.NoButton, Qt.ControlModifier)
         compare(catalog.tileSize, 1)
+        // The − / + pill at the right of the row, after the order.
+        const larger = findChild(launcher, "apps-size-larger")
+        const smaller = findChild(launcher, "apps-size-smaller")
+        mouseClick(larger, larger.width / 2, larger.height / 2)
+        compare(catalog.tileSize, 2)
+        mouseClick(smaller, smaller.width / 2, smaller.height / 2)
+        mouseClick(smaller, smaller.width / 2, smaller.height / 2)
+        compare(catalog.tileSize, 0)
+        verify(!smaller.enabled)
+        mouseClick(smaller, smaller.width / 2, smaller.height / 2)
+        compare(catalog.tileSize, 0)
+        catalog.tileSize = 1
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
         catalog.clear()
@@ -1684,6 +1696,27 @@ TestCase {
         function showInFolder(path) { shownInFolder = path }
         property int searchStops: 0
         function stopSearch() { searching = false; searchStops++ }
+        property var everyPlace: [{id:"/0",label:"Home",path:"/home/test",icon:"user-home",hidden:false,system:true},
+            {id:"/1",label:"Downloads",path:"/home/test/Downloads",icon:"folder-download",hidden:false,system:true},
+            {id:"/2",label:"Music",path:"/home/test/Music",icon:"folder-music",hidden:true,system:true}]
+        property int placesWidth: 0
+        property var placeCalls: []
+        function isPlace(path) { return everyPlace.some(p => p.path === path) }
+        function addPlace(path) { placeCalls = placeCalls.concat(["add " + path]) }
+        function renamePlace(id, name) { placeCalls = placeCalls.concat(["rename " + id + " " + name]) }
+        function setPlaceHidden(id, hidden) { placeCalls = placeCalls.concat(["hide " + id + " " + hidden]) }
+        function removePlace(id) { placeCalls = placeCalls.concat(["remove " + id]) }
+        function movePlace(id, before) { placeCalls = placeCalls.concat(["move " + id + " " + before]) }
+        property var copiedToPlace: []
+        function copyToPlace(paths, place) { copiedToPlace = [paths, place] }
+        property int restores: 0
+        property int deletes: 0
+        function restoreSelected() { restores++ }
+        function deleteSelected() { deletes++ }
+        property int refreshes: 0
+        function refresh() { refreshes++ }
+        property int tabsAdded: 0
+        function addTab() { tabsAdded++ }
         property var drivesOpened: []
         property var drivesEjected: []
         function openDrive(id) { drivesOpened = drivesOpened.concat([id]) }
@@ -2100,6 +2133,154 @@ TestCase {
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
     }
+    // Files' one row: the size pill after the order, the path typed at the
+    // empty end of the crumbs, and Refresh on F5.
+    function test_filesRow() {
+        launcher.fileBrowser=filesMock
+        filesMock.selectedPath=""
+        filesMock.selecting=false
+        filesMock.placeKind="folder"
+        filesMock.tileSize=1
+        launcher.setDrawerOpen(true,"files")
+        tryCompare(launcher,"drawerProgress",1)
+        wait(250)
+        const size=findChild(launcher,"files-size")
+        const sort=findChild(launcher,"files-sort")
+        verify(size.visible)
+        verify(sort.mapToItem(null,sort.width,0).x <= size.mapToItem(null,0,0).x-7.5)
+        const larger=findChild(launcher,"files-size-larger")
+        mouseClick(larger,larger.width/2,larger.height/2)
+        compare(filesMock.tileSize,2)
+        verify(!findChild(launcher,"path-toggle"))
+        const end=findChild(launcher,"path-open-area")
+        const editor=findChild(launcher,"path-editor")
+        verify(!editor.visible)
+        mouseClick(end,end.width/2,end.height/2)
+        tryVerify(() => editor.visible && editor.activeFocus)
+        compare(editor.text,"/home/test")
+        keyClick(Qt.Key_Escape)
+        verify(!editor.visible)
+        const refreshes=filesMock.refreshes
+        findChild(launcher,"files-grid").forceActiveFocus()
+        keyClick(Qt.Key_F5)
+        compare(filesMock.refreshes,refreshes+1)
+        // A chosen file's actions take the right side.
+        filesMock.selectedPath="/home/test/Notes.txt"
+        verify(!size.visible && !sort.visible)
+        verify(findChild(launcher,"selection-copy").visible)
+        filesMock.selectedPath=""
+        filesMock.tileSize=1
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+    }
+    // The places: + beside Fold, each place's own sheet, which show, the
+    // edge dragged to a width, and Trash's own actions.
+    function test_filesPlaces() {
+        launcher.fileBrowser=filesMock
+        filesMock.selectedPath=""
+        filesMock.selecting=false
+        filesMock.placeKind="folder"
+        filesMock.placeCalls=[]
+        filesMock.placesWidth=0
+        filesMock.places=[{label:"Recent",path:"recentlyused:/",icon:"document-open-recent",section:"places"},
+            {id:"/0",label:"Home",path:"/home/test",icon:"user-home",section:"places",system:true},
+            {id:"/1",label:"Projects",path:"/home/test/Projects",icon:"folder",section:"places",system:false},
+            {id:"/2",label:"Trash",path:"trash:/",icon:"user-trash",section:"places",system:true}]
+        controller.drawerExpanded=true
+        launcher.setDrawerOpen(true,"files")
+        tryCompare(launcher,"drawerProgress",1)
+        wait(250)
+        const places=findChild(launcher,"files-places")
+        findChild(launcher,"files-pane").placesOpen=true
+        tryCompare(places,"width",170)
+        // + opens its sheet; this folder is already a place.
+        const add=findChild(launcher,"files-places-add")
+        verify(add.visible)
+        const fold=findChild(launcher,"files-places-fold")
+        verify(fold.x+fold.width < add.x)
+        mouseClick(add,add.width/2,add.height/2)
+        const addSheet=findChild(launcher,"places-add-sheet")
+        tryCompare(addSheet,"opened",true)
+        verify(!findChild(launcher,"places-add-this").enabled)
+        findChild(launcher,"places-show-hide").choose()
+        const shown=findChild(launcher,"places-shown-sheet")
+        tryCompare(shown,"opened",true)
+        const shownList=findChild(launcher,"places-shown-list")
+        verify(shownList)
+        tryCompare(shownList,"count",3)
+        const eye=findChild(shownList.itemAtIndex(2),"places-shown-eye-Music")
+        verify(eye)
+        compare(eye.glyph,"eye-off")
+        mouseClick(eye,eye.width/2,eye.height/2)
+        compare(filesMock.placeCalls,["hide /2 false"])
+        shown.close()
+        tryCompare(shown,"opened",false)
+        // A place's sheet: KDE's own hide, the person's own also go.
+        const home=findChild(launcher,"files-place-Home")
+        mouseClick(home,home.width/2,home.height-20,Qt.RightButton)
+        const sheet=findChild(launcher,"place-sheet")
+        tryCompare(sheet,"opened",true)
+        verify(findChild(launcher,"place-hide").visible)
+        verify(!findChild(launcher,"place-remove").visible)
+        findChild(launcher,"place-hide").choose()
+        compare(filesMock.placeCalls[1],"hide /0 true")
+        const projects=findChild(launcher,"files-place-Projects")
+        mouseClick(projects,projects.width/2,projects.height-20,Qt.RightButton)
+        tryCompare(sheet,"opened",true)
+        verify(findChild(launcher,"place-remove").visible)
+        findChild(launcher,"place-remove").choose()
+        compare(filesMock.placeCalls[2],"remove /1")
+        const trash=findChild(launcher,"files-place-Trash")
+        mouseClick(trash,trash.width/2,trash.height-20,Qt.RightButton)
+        tryCompare(sheet,"opened",true)
+        verify(findChild(launcher,"place-empty-trash").visible)
+        verify(!findChild(launcher,"place-remove").visible)
+        sheet.close()
+        // The edge: dragged out to a width it keeps, dragged in it folds.
+        const edge=findChild(launcher,"files-places-edge")
+        const at=edge.mapToItem(launcher,0,edge.height/2)
+        mousePress(launcher,at.x,at.y)
+        mouseMove(launcher,at.x+20,at.y)
+        mouseMove(launcher,at.x+40,at.y)
+        mouseRelease(launcher,at.x+40,at.y)
+        tryCompare(filesMock,"placesWidth",210)
+        filesMock.placesWidth=210
+        tryCompare(places,"width",210)
+        const at2=edge.mapToItem(launcher,0,edge.height/2)
+        mousePress(launcher,at2.x,at2.y)
+        mouseMove(launcher,at2.x-60,at2.y)
+        mouseMove(launcher,at2.x-120,at2.y)
+        mouseRelease(launcher,at2.x-120,at2.y)
+        tryCompare(places,"width",54)
+        compare(filesMock.placesWidth,210)
+        mouseClick(fold)
+        tryCompare(places,"width",210)
+        filesMock.placesWidth=0
+        // In Trash, chosen files go back or are deleted for good.
+        filesMock.placeKind="trash"
+        filesMock.selectedPath="/home/test/Notes.txt"
+        verify(findChild(launcher,"selection-restore").visible)
+        verify(findChild(launcher,"selection-delete").visible)
+        verify(!findChild(launcher,"selection-copy").visible)
+        verify(!findChild(launcher,"selection-trash").visible)
+        wait(50)
+        const restore=findChild(launcher,"selection-restore")
+        mouseClick(restore,restore.width/2,restore.height/2)
+        compare(filesMock.restores,1)
+        const del=findChild(launcher,"selection-delete")
+        mouseClick(del,del.width/2,del.height/2)
+        const confirm=findChild(launcher,"delete-confirm")
+        tryCompare(confirm,"opened",true)
+        confirm.accept()
+        compare(filesMock.deletes,1)
+        tryCompare(confirm,"opened",false)
+        filesMock.selectedPath=""
+        filesMock.placeKind="folder"
+        filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home"},{label:"Downloads",path:"/home/test/Downloads",icon:"folder-download"}]
+        controller.drawerExpanded=false
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher,"drawerProgress",0)
+    }
     // Drives follow the places under a rule: a tap opens one, and one plugged
     // in ejects from its own button, by mouse and by touch. Busy, a drive says
     // what it is doing and takes no tap.
@@ -2231,11 +2412,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         const tabs = findChild(launcher, "files-tabs")
         const openRow = findChild(launcher, "files-open-row")
-        verify(tabs.visible && openRow.visible)
+        // One tab gives its row back to the folder.
+        verify(!tabs.visible && openRow.visible)
         const navigation = findChild(launcher, "files-navigation")
         const actionRow = findChild(launcher, "files-actions")
-        // Keys down: the actions sit under the path and its divider, as before.
-        compare(actionRow.mapToItem(launcher, 0, 0).y - bottomOf(navigation), 25)
+        // One row under search: the path, then the actions at its end.
+        compare(actionRow.mapToItem(launcher, 0, 0).y, navigation.mapToItem(launcher, 0, 0).y)
         launcher.keysRect = tallKeys
         tryCompare(sheet, "height", 364)
         const pane = findChild(launcher, "files-pane")
@@ -2249,7 +2431,7 @@ TestCase {
         verify(bottomOf(actions) < bottomOf(files))
         verify(field.mapToItem(launcher, 0, 0).y >= sheet.y)
         verify(bottomOf(field) < navigation.mapToItem(launcher, 0, 0).y)
-        // Keys up: the actions join the path's row, at its end.
+        // Keys up, the same row.
         compare(actionRow.mapToItem(launcher, 0, 0).y, navigation.mapToItem(launcher, 0, 0).y)
         verify(actionRow.mapToItem(launcher, 0, 0).x >= navigation.mapToItem(launcher, navigation.width, 0).x)
         verify(actionRow.mapToItem(launcher, actionRow.width, 0).x <= pane.mapToItem(launcher, pane.width, 0).x + 0.5)
@@ -2257,7 +2439,11 @@ TestCase {
         compare(findChild(launcher, "file-context-menu").bottomMargin, launcher.keysReach)
         compare(launcher.keysReach, 426)
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
-        tryVerify(() => tabs.visible && openRow.visible)
+        tryVerify(() => openRow.visible)
+        // A second tab brings the tab row back.
+        filesMock.tabs = [{label:"Home",path:"/home/test"}, {label:"Downloads",path:"/home/test/Downloads"}]
+        verify(tabs.visible)
+        filesMock.tabs = [{label:"Home",path:"/home/test"}]
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
@@ -2279,6 +2465,7 @@ TestCase {
         query.text = "plan"
         compare(filesMock.filter, "plan")
         tryVerify(() => pill.visible)
+        wait(50) // the row lays out the pill that came with the text
         mouseClick(pill, pill.width / 2, pill.height / 2)
         compare(filesMock.searchedFor, ["plan"])
         // Enter with nothing chosen searches too; with a file chosen it opens it.
@@ -2337,12 +2524,16 @@ TestCase {
         filesMock.placeKind = "folder"
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
-        const pill = findChild(launcher, "selection-properties")
-        verify(!pill.visible)
-        // One file chosen: its properties are a pill away.
+        const more = findChild(launcher, "more-actions")
+        verify(!more.visible)
+        // One file chosen: its properties are in its own menu.
         filesMock.selectedPath = "/home/test/Notes.txt"
-        verify(pill.visible)
-        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(more.visible)
+        wait(50) // the row lays out the pills that came with the choice
+        mouseClick(more, more.width / 2, more.height / 2)
+        const properties = findChild(launcher, "context-properties")
+        tryVerify(() => properties.visible && properties.enabled)
+        properties.choose()
         compare(filesMock.describedPath, "/home/test/Notes.txt")
         const sheet = findChild(launcher, "properties-sheet")
         tryCompare(sheet, "opened", true)
@@ -2861,18 +3052,21 @@ TestCase {
         wait(250) // the sheet's own growth settles before the menu is measured
         const more = findChild(launcher, "more-actions")
         const menu = findChild(launcher, "file-context-menu")
-        compare(more.text, "Folder actions")
+        // Nothing chosen, no actions button: the folder's menu is a
+        // right-click or a hold on the empty end of the path.
+        verify(!more.visible)
+        const pathEnd = findChild(launcher, "path-open-area")
+        verify(pathEnd.visible && pathEnd.width >= 40)
         const checks = filesMock.trashChecks
-        mouseClick(more, more.width / 2, more.height / 2)
+        mouseClick(pathEnd, pathEnd.width / 2, pathEnd.height / 2, Qt.RightButton)
         tryCompare(menu, "opened", true)
-        // Opened from the actions button at the sheet's right edge, the menu
-        // stays inside Files, its right edge level with the button's.
         const filesPane = findChild(launcher, "files-pane")
         verify(menu.x >= 0 && menu.x + menu.width <= filesPane.width)
         verify(menu.y >= 0 && menu.y + menu.height <= filesPane.height)
-        const moreAt = more.mapToItem(filesPane, more.width, more.height)
-        verify(Math.abs(menu.x + menu.width - moreAt.x) < 1 || menu.x + menu.width >= filesPane.width - 9)
         verify(filesMock.trashChecks > checks)
+        // Refresh and New tab are in it too.
+        verify(findChild(launcher, "context-refresh").visible)
+        verify(findChild(launcher, "context-add-tab").visible)
         const empty = findChild(launcher, "context-empty-trash")
         verify(empty.visible && empty.enabled)
         verify(!findChild(launcher, "context-compress").visible)
@@ -2884,10 +3078,11 @@ TestCase {
         confirm.accept()
         compare(filesMock.empties, 1)
         tryCompare(confirm, "opened", false)
-        // With files chosen, the same pill opens their own menu.
+        // With files chosen, a pill opens their own menu.
         filesMock.selectedPath = "/home/test/Notes.txt"
         filesMock.canCompress = true
         compare(more.text, "More actions")
+        wait(50)
         mouseClick(more, more.width / 2, more.height / 2)
         tryCompare(menu, "opened", true)
         verify(findChild(launcher, "context-open-with").visible)
@@ -3053,7 +3248,12 @@ TestCase {
         if (data.mode === "apps") {
             verify(appsSort.enabled)
             verify(appsSort.mapToItem(header, 0, 0).y >= header.height)
-            verify(Math.abs(right(appsSort) - right(header)) < 1)
+            // New folder, the order, then the size at the right edge.
+            const appsSize = findChild(launcher, "apps-size")
+            verify(appsSize.visible)
+            verify(Math.abs(right(appsSize) - right(header)) < 1)
+            compare(appsSize.y, appsSort.y)
+            verify(right(appsSort) <= left(appsSize) - 7.5)
         }
         // The drawer reaches up to the row search held above it.
         tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)

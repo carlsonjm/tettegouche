@@ -1,6 +1,7 @@
 import QtQuick
 import org.kde.ki18n
 import QtQuick.Controls as C
+import QtQuick.Dialogs as D
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
 
@@ -26,6 +27,10 @@ Item {
     property bool draggingFiles: false
     property var dragPaths: []
     property string dropFolder: ""
+    // A place under carried files: its path, "add" over the places' empty
+    // room, where carried folders become places, or nothing.
+    property string dropPlace: ""
+    property string dropPlaceLabel: ""
     property point dragPosition
     // Files carried past this item's edge are handed to carryOut, to leave as
     // a drag another application can take.
@@ -51,8 +56,20 @@ Item {
     property bool placesOpen: !card
     onCardChanged: placesOpen = !card
     readonly property bool placesFolded: !placesOpen
+    // The places show their icons alone while folded, or while their edge is
+    // held narrower than they open.
+    readonly property bool iconsOnly: placesDragWidth >= 0 ? placesDragWidth < 120 : placesFolded
+    // Trash shows what it holds: chosen files go back or are deleted for
+    // good, and nothing else is done with them there.
+    readonly property bool inTrash: !!browser && browser.placeKind === "trash"
+    // While the places' edge is held, the width it is dragged to.
+    property real placesDragWidth: -1
+    // The place being renamed, by its id.
+    property string renamePlaceId: ""
     FontMetrics { id: placeFont }
+    // Dragged to a width, the places keep it; otherwise they fit their names.
     readonly property real placesOpenWidth: {
+        if (browser && browser.placesWidth > 0) return browser.placesWidth
         const places = browser ? browser.places : []
         let widest = 0, eject = false
         for (let i = 0; i < places.length; ++i) {
@@ -100,6 +117,14 @@ Item {
         browser.describe(path)
         propertiesSheet.open()
     }
+    // The path typed in place of the crumbs, its text chosen to replace.
+    function editPath() {
+        if (!browser) return
+        pathEditor.text = browser.folder
+        pathEditor.visible = true
+        pathEditor.forceActiveFocus()
+        pathEditor.selectAll()
+    }
     function resizeTiles(step) { if (browser) browser.tileSize = Math.max(0, Math.min(3, browser.tileSize + step)) }
     // Operations keep their rows while they run; only a start or an end
     // rebuilds the list, so a press on Pause is never lost to a progress tick.
@@ -134,7 +159,7 @@ Item {
         }
     }
     function beginFileDrag(path, position) {
-        if(browser.busy || browser.opening)return
+        if(browser.busy || browser.opening || inTrash)return
         if(selectedPaths.indexOf(path)<0)browser.selectedPath=path
         dragPaths=selectedPaths.slice(); draggingFiles=true
         actions.close(); files.forceActiveFocus(); updateFileDrag(position)
@@ -157,10 +182,67 @@ Item {
             cancelFileDrag(); carryOut(paths); return
         }
         dragPosition=position
+        const spot=placeAt(position)
+        if(spot) { dropFolder=""; aimAtPlace(spot); return }
+        dropPlace=""; dropPlaceLabel=""
         const folder=folderAt(position)
         dropFolder=dragPaths.indexOf(folder)<0 ? folder : ""
     }
-    function cancelFileDrag() { draggingFiles=false; dropFolder=""; dragPaths=[] }
+    // The places' row under a point, or null away from the places.
+    function placeAt(position) {
+        const local=placesList.mapFromItem(pane,position.x,position.y)
+        if(local.x<0 || local.y<0 || local.x>=placesList.width || local.y>=placesList.height)return null
+        const index=placesList.indexAt(local.x+placesList.contentX,local.y+placesList.contentY)
+        return {index: index, place: index>=0 ? placesList.model[index] : null}
+    }
+    // A place the person keeps moves by its row: the rows KDE keeps are the
+    // ones with an id, and a carried one goes before the row it is over.
+    property int placeMoving: -1
+    property int placeTarget: -1
+    function keptRows() {
+        const places = placesList.model, rows = []
+        for (let i = 0; i < places.length; ++i) if (places[i].id) rows.push(i)
+        return rows
+    }
+    function aimPlaceMove(position) {
+        const rows = keptRows()
+        if (!rows.length) return
+        const local = placesList.contentItem.mapFromItem(pane, position.x, position.y)
+        const index = placesList.indexAt(local.x, local.y)
+        let target = rows[rows.length - 1] + 1
+        if (index >= 0) {
+            const item = placesList.itemAtIndex(index)
+            target = item && local.y > item.y + item.height / 2 ? index + 1 : index
+        } else if (local.y < 0) target = rows[0]
+        placeTarget = Math.max(rows[0], Math.min(rows[rows.length - 1] + 1, target))
+    }
+    function finishPlaceMove() {
+        const from = placeMoving, to = placeTarget, rows = keptRows()
+        placeMoving = -1; placeTarget = -1
+        if (from < 0 || to < 0 || to === from || to === from + 1 || !rows.length) return
+        const places = placesList.model
+        pane.browser.movePlace(places[from].id, to <= rows[rows.length - 1] ? places[to].id : "")
+    }
+    // Files carried onto a folder place or a mounted drive are copied there;
+    // onto Trash they go to Trash. Folders carried onto the places' empty
+    // room are added as places.
+    function aimAtPlace(spot) {
+        const place=spot.place
+        dropPlace=""; dropPlaceLabel=""
+        if(place) {
+            const local=place.path.length>0 && place.path.charAt(0)==="/"
+            if(!(local || place.path==="trash:/") || place.mounted===false || place.path===browser.path || dragPaths.indexOf(place.path)>=0)return
+            dropPlace=place.path; dropPlaceLabel=place.label
+            return
+        }
+        if(spot.index>=0)return
+        for(const p of dragPaths) {
+            const entry=browser.entries.find(e=>e.path===p)
+            if(!entry || !entry.directory || browser.isPlace(p))return
+        }
+        dropPlace="add"
+    }
+    function cancelFileDrag() { draggingFiles=false; dropFolder=""; dropPlace=""; dropPlaceLabel=""; dragPaths=[] }
     function trackIncoming(position) {
         dragPosition=position
         dropFolder=folderAt(position)
@@ -169,9 +251,11 @@ Item {
     function endIncoming() { incoming=false; incomingTarget=""; if(!draggingFiles)dropFolder="" }
     function finishFileDrag() {
         if(!draggingFiles)return
-        const paths=dragPaths.slice(), destination=dropFolder
+        const paths=dragPaths.slice(), destination=dropFolder, place=dropPlace
         cancelFileDrag()
-        if(destination.length)browser.copyDropped(paths,destination)
+        if(place==="add") { for(const p of paths)browser.addPlace(p) }
+        else if(place.length)browser.copyToPlace(paths,place)
+        else if(destination.length)browser.copyDropped(paths,destination)
     }
     onVisibleChanged: if(!visible) { cancelFileDrag(); endIncoming() }
     DropArea {
@@ -204,9 +288,10 @@ Item {
         if (!browser.focusedPath.length) browser.focusedPath = browser.entries[0].path
         files.forceActiveFocus()
     }
-    function newFolderForm() { renamePath=""; folderName.text=""; creatingFolder=true; folderName.forceActiveFocus() }
+    function newFolderForm() { renamePath=""; renamePlaceId=""; folderName.text=""; creatingFolder=true; folderName.forceActiveFocus() }
     function renameForm() {
-        if(selectedPaths.length!==1)return
+        if(selectedPaths.length!==1 || inTrash)return
+        renamePlaceId=""
         renamePath=selectedPaths[0]
         const name=renamePath.split("/").pop()
         const entry=browser.entries.find(e=>e.path===renamePath)
@@ -216,7 +301,13 @@ Item {
         // Select the name and leave its extension, as Dolphin does.
         folderName.select(0, entry && !entry.directory && dot>0 ? dot : name.length)
     }
+    function renamePlaceForm(place) {
+        renamePath=""; renamePlaceId=place.id
+        folderName.text=place.label
+        creatingFolder=true; folderName.forceActiveFocus(); folderName.selectAll()
+    }
     function submitName() {
+        if(renamePlaceId.length) { browser.renamePlace(renamePlaceId,folderName.text); creatingFolder=false; renamePlaceId=""; return }
         if(renamePath.length) { if(selectedPaths.length===1 && selectedPaths[0]===renamePath)browser.renameSelected(folderName.text) }
         else browser.newFolder(folderName.text)
         creatingFolder=false; renamePath=""
@@ -244,21 +335,23 @@ Item {
         property string targetPath: ""
         property bool targetDirectory: false
         SheetMenuItem { text: words.i18n("Open"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.browser.openSelected() }
-        SheetMenuItem { objectName: "context-new-tab"; text: words.i18n("Open in new tab"); visible: actions.targetPath.length>0 && actions.targetDirectory; onTriggered: pane.browser.openTab(actions.targetPath) }
+        SheetMenuItem { objectName: "context-restore"; text: words.i18n("Restore"); visible: actions.targetPath.length>0 && pane.inTrash; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.restoreSelected() }
+        SheetMenuItem { objectName: "context-delete"; text: words.i18n("Delete for good…"); destructive: true; visible: actions.targetPath.length>0 && pane.inTrash; enabled: pane.selectedPaths.length>0; onTriggered: deleteConfirm.open() }
+        SheetMenuItem { objectName: "context-new-tab"; text: words.i18n("Open in new tab"); visible: actions.targetPath.length>0 && actions.targetDirectory && !pane.inTrash; onTriggered: pane.browser.openTab(actions.targetPath) }
         SheetMenuItem {
             objectName: "context-show-in-folder"
             text: words.i18n("Show in folder")
             visible: actions.targetPath.length>0 && !!pane.browser && (pane.browser.placeKind === "recent" || pane.browser.placeKind === "search")
             onTriggered: pane.browser.showInFolder(actions.targetPath)
         }
-        SheetMenuItem { text: words.i18n("Copy"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
-        SheetMenuItem { text: words.i18n("Cut"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
-        SheetMenuItem { text: words.i18n("Rename"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
-        SheetMenuItem { objectName: "context-open-with"; text: words.i18n("Open with…"); visible: actions.targetPath.length>0 && !actions.targetDirectory; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
-        SheetMenuItem { text: words.i18n("Move to Trash"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
-        SheetMenuItem { objectName: "context-compress"; text: words.i18n("Compress"); visible: actions.targetPath.length>0; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
-        SheetMenuItem { objectName: "context-extract"; text: words.i18n("Extract here"); visible: actions.targetPath.length>0 && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
-        SheetMenuItem { text: words.i18n("Restore last trashed item"); enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
+        SheetMenuItem { text: words.i18n("Copy"); visible: actions.targetPath.length>0 && !pane.inTrash; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.copySelected() }
+        SheetMenuItem { text: words.i18n("Cut"); visible: actions.targetPath.length>0 && !pane.inTrash; enabled: pane.selectedPaths.length>0; onTriggered: pane.browser.cutSelected() }
+        SheetMenuItem { text: words.i18n("Rename"); visible: actions.targetPath.length>0 && !pane.inTrash; enabled: pane.selectedPaths.length===1; onTriggered: pane.renameForm() }
+        SheetMenuItem { objectName: "context-open-with"; text: words.i18n("Open with…"); visible: actions.targetPath.length>0 && !actions.targetDirectory && !pane.inTrash; enabled: pane.selectedPaths.length===1; onTriggered: pane.showOpenWith(pane.selectedPaths[0]) }
+        SheetMenuItem { text: words.i18n("Move to Trash"); visible: actions.targetPath.length>0 && !pane.inTrash; enabled: pane.selectedPaths.length>0; onTriggered: trashConfirm.open() }
+        SheetMenuItem { objectName: "context-compress"; text: words.i18n("Compress"); visible: actions.targetPath.length>0 && !pane.inTrash; enabled: pane.browser && pane.browser.canCompress; onTriggered: pane.browser.compressSelected() }
+        SheetMenuItem { objectName: "context-extract"; text: words.i18n("Extract here"); visible: actions.targetPath.length>0 && !pane.inTrash && pane.browser && pane.browser.canExtract; onTriggered: pane.browser.extractSelected() }
+        SheetMenuItem { text: words.i18n("Restore last trashed item"); visible: !pane.inTrash; enabled: pane.browser && pane.browser.canRestoreTrash; onTriggered: pane.browser.restoreTrash() }
         SheetMenuItem { objectName: "context-empty-trash"; text: words.i18n("Empty Trash…"); visible: !actions.targetPath.length; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
         SheetMenuItem {
             objectName: "context-paste"
@@ -268,6 +361,9 @@ Item {
             onTriggered: { if(actions.targetDirectory) pane.browser.pasteInto(actions.targetPath); else pane.browser.paste() }
         }
         SheetMenuItem { text: words.i18n("Select all"); onTriggered: pane.browser.selectAll() }
+        // With one tab the tab row steps aside; a second opens from here.
+        SheetMenuItem { objectName: "context-add-tab"; text: words.i18n("New tab"); visible: !actions.targetPath.length; onTriggered: pane.browser.addTab() }
+        SheetMenuItem { objectName: "context-refresh"; text: words.i18n("Refresh"); visible: !actions.targetPath.length; onTriggered: pane.browser.refresh() }
         SheetMenuItem { text: words.i18n("New folder"); visible: !actions.targetPath.length && pane.browser && pane.browser.canWrite; onTriggered: pane.newFolderForm() }
         SheetMenuItem {
             objectName: "context-hide"
@@ -512,6 +608,150 @@ Item {
         body: words.i18n("Restore last trashed item, in Files' menu, brings them back one at a time.")
         onAccepted: pane.browser.trashSelected()
     }
+    // In Trash, the chosen files deleted for good, said plainly first.
+    SheetConfirm {
+        id: deleteConfirm
+        objectName: "delete-confirm"
+        readonly property int items: pane.selectedPaths.length
+        title: words.i18np("Delete 1 item for good?", "Delete %1 items for good?", items)
+        action: words.i18n("Delete for good")
+        body: words.i18n("This can't be undone.")
+        onAccepted: pane.browser.deleteSelected()
+    }
+    // A place's own sheet, from a touch and hold or a right-click on it.
+    SheetMenu {
+        id: placeSheet
+        objectName: "place-sheet"
+        bounds: pane
+        bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
+        property var place: ({})
+        readonly property bool kept: !!place.id
+        readonly property bool openable: !!place.path && place.mounted !== false
+        onAboutToShow: if (pane.browser && place.path === "trash:/") pane.browser.checkTrash()
+        SheetMenuItem { objectName: "place-new-tab"; text: words.i18n("Open in new tab"); visible: placeSheet.openable; onTriggered: pane.browser.openTab(placeSheet.place.path) }
+        SheetMenuItem { objectName: "place-rename"; text: words.i18n("Rename"); visible: placeSheet.kept; onTriggered: pane.renamePlaceForm(placeSheet.place) }
+        SheetMenuItem { objectName: "place-hide"; text: words.i18n("Hide"); visible: placeSheet.kept; onTriggered: pane.browser.setPlaceHidden(placeSheet.place.id, true) }
+        SheetMenuItem { objectName: "place-empty-trash"; text: words.i18n("Empty Trash…"); visible: placeSheet.place.path === "trash:/"; enabled: pane.browser && pane.browser.trashItems>0; onTriggered: emptyTrashConfirm.open() }
+        // Only a place the person added goes; KDE's own are hidden instead.
+        SheetMenuItem { objectName: "place-remove"; text: words.i18n("Remove from places"); destructive: true; visible: placeSheet.kept && !placeSheet.place.system; onTriggered: pane.browser.removePlace(placeSheet.place.id) }
+    }
+    function showPlaceSheet(place, item, point) {
+        placeSheet.place = place
+        if (point) placeSheet.openNear(point.x, point.y); else placeSheet.openBeside(item)
+    }
+    // The places' + : this folder, another, or which places show.
+    SheetMenu {
+        id: addPlaceSheet
+        objectName: "places-add-sheet"
+        bounds: pane
+        bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
+        readonly property string folder: pane.browser ? pane.browser.folder : ""
+        SheetMenuItem {
+            objectName: "places-add-this"
+            text: words.i18n("Add this folder")
+            detail: pane.browser && pane.browser.inFolder ? pane.browser.crumbs.map(c => c.label).join(" › ") : ""
+            enabled: !!pane.browser && pane.browser.inFolder && !pane.browser.everyPlace.some(place => place.path === addPlaceSheet.folder)
+            onTriggered: pane.browser.addPlace(addPlaceSheet.folder)
+        }
+        SheetMenuItem { objectName: "places-add-other"; text: words.i18n("Add a folder…"); onTriggered: placeFolderDialog.open() }
+        SheetMenuItem { objectName: "places-show-hide"; text: words.i18n("Show or hide places"); onTriggered: placesShown.open() }
+    }
+    D.FolderDialog {
+        id: placeFolderDialog
+        title: words.i18n("Add a folder to the places")
+        currentFolder: pane.browser && pane.browser.inFolder ? "file://" + pane.browser.folder : "file://" + (pane.browser ? pane.browser.homePath : "")
+        onAccepted: pane.browser.addPlace(selectedFolder.toString())
+    }
+    // Every place, with an eye to show or hide it and a handle to move it.
+    C.Popup {
+        id: placesShown
+        objectName: "places-shown-sheet"
+        modal: true
+        focus: true
+        width: Math.min(420, pane.width - 48)
+        x: Math.round((pane.width - width) / 2)
+        y: Math.max(8, Math.round((pane.height - pane.keysReach - height) / 2))
+        padding: 20
+        // The row carried by its handle, and the row it would go before.
+        property int moving: -1
+        property int target: -1
+        readonly property var rows: pane.browser ? pane.browser.everyPlace : []
+        function finishMove() {
+            const from = moving, to = target
+            moving = -1; target = -1
+            if (from < 0 || to < 0 || to === from || to === from + 1) return
+            pane.browser.movePlace(rows[from].id, to < rows.length ? rows[to].id : "")
+        }
+        background: Rectangle { radius: 12; color: tone.surface; border.color: tone.outline }
+        contentItem: ColumnLayout {
+            spacing: 12
+            Text { text: words.i18n("Show or hide places"); color: tone.text; font.pixelSize: 17; font.weight: Font.DemiBold }
+            ListView {
+                id: shownList
+                objectName: "places-shown-list"
+                Layout.fillWidth: true
+                Layout.preferredHeight: Math.min(contentHeight, Math.max(132, pane.height - pane.keysReach - 200))
+                clip: true
+                interactive: placesShown.moving < 0
+                model: placesShown.rows
+                delegate: Item {
+                    id: shownRow
+                    required property var modelData
+                    required property int index
+                    objectName: "places-shown-" + modelData.label
+                    width: ListView.view.width; height: 44
+                    opacity: placesShown.moving === index ? 0.5 : 1
+                    Rectangle {
+                        visible: placesShown.moving >= 0 && placesShown.target === shownRow.index
+                        width: parent.width; height: 2; radius: 1; color: tone.text
+                    }
+                    Rectangle {
+                        visible: placesShown.moving >= 0 && placesShown.target === placesShown.rows.length && shownRow.index === placesShown.rows.length - 1
+                        y: parent.height - 2; width: parent.width; height: 2; radius: 1; color: tone.text
+                    }
+                    // The handle: a hold and a drag, by finger or pointer.
+                    Item {
+                        id: grip
+                        objectName: "places-shown-grip-" + shownRow.modelData.label
+                        width: 36; height: parent.height
+                        SuiteIcon { anchors.centerIn: parent; glyph: "grip-vertical"; width: 16; height: 16; opacity: 0.66 }
+                        HoverHandler { cursorShape: Qt.OpenHandCursor }
+                        DragHandler {
+                            target: null
+                            onActiveChanged: {
+                                if (active) { placesShown.moving = shownRow.index; placesShown.target = shownRow.index }
+                                else placesShown.finishMove()
+                            }
+                            onCentroidChanged: {
+                                if (!active) return
+                                const at = grip.mapToItem(shownList.contentItem, centroid.position.x, centroid.position.y)
+                                placesShown.target = Math.max(0, Math.min(placesShown.rows.length, Math.round(at.y / 44)))
+                            }
+                        }
+                    }
+                    Text {
+                        x: 40; anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 40 - 46
+                        text: shownRow.modelData.label
+                        color: shownRow.modelData.hidden ? tone.secondaryText : tone.text
+                        elide: Text.ElideRight
+                    }
+                    Action {
+                        objectName: "places-shown-eye-" + shownRow.modelData.label
+                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                        width: 42
+                        glyph: shownRow.modelData.hidden ? "eye-off" : "eye"
+                        text: shownRow.modelData.hidden ? words.i18n("Show %1", shownRow.modelData.label) : words.i18n("Hide %1", shownRow.modelData.label)
+                        opacity: shownRow.modelData.hidden ? 0.6 : 1
+                        onClicked: pane.browser.setPlaceHidden(shownRow.modelData.id, !shownRow.modelData.hidden)
+                    }
+                }
+            }
+            PillAction { objectName: "places-shown-done"; Layout.alignment: Qt.AlignRight; text: words.i18n("Done"); onClicked: placesShown.close() }
+        }
+    }
     // While Files asks a question, only Files darkens behind it.
     Rectangle {
         anchors.fill: parent
@@ -520,7 +760,7 @@ Item {
         color: "#99000000"
         radius: pane.paperRadius
         visible: opacity > 0
-        opacity: trashConfirm.visible || emptyTrashConfirm.visible ? 1 : 0
+        opacity: trashConfirm.visible || emptyTrashConfirm.visible || deleteConfirm.visible ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: pane.ms(120) } }
     }
     component Action: C.Button {
@@ -597,7 +837,8 @@ Item {
             // Folded as the touch lifts, so what it pressed stays under it.
             property bool onFolder: false
             onActiveChanged: {
-                if (active) onFolder = point.position.x > placesList.width
+                // The places' edge, in the gap after them, is theirs.
+                if (active) onFolder = point.position.x > placesList.width + 41
                 else if (onFolder) pane.placesOpen = false
             }
         }
@@ -608,30 +849,44 @@ Item {
         ListView {
             id: placesList
             objectName: "files-places"
-            Layout.preferredWidth: pane.placesFolded ? 54 : pane.placesOpenWidth
+            Layout.preferredWidth: pane.placesDragWidth >= 0 ? pane.placesDragWidth : pane.placesFolded ? 54 : pane.placesOpenWidth
             Layout.fillHeight: true
             clip: true
+            interactive: pane.placeMoving < 0
             // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
             Kirigami.WheelHandler { target: placesList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
             model: pane.browser ? pane.browser.places : []
+            // Folders carried onto the places' empty room become places.
+            Rectangle {
+                objectName: "files-places-add-drop"
+                parent: placesList
+                anchors.fill: parent; anchors.margins: 3
+                radius: pane.paperRadius
+                color: "#30444444"; border.color: tone.text; border.width: 2
+                visible: pane.draggingFiles && pane.dropPlace === "add"
+            }
             header: Item {
                 width: ListView.view.width
                 height: 48
                 // Open, a pill that says Fold beside its glyph, like the names
                 // under it; folded, a circle among the place icons, named under
                 // a resting pointer.
+                // Fold keeps its word while there is room for it and the +
+                // beside it; narrower, it is a circle too.
+                readonly property real labelled: 12 + 18 + 8 + foldLabel.implicitWidth + 16
+                readonly property bool worded: !pane.iconsOnly && width >= 7 + labelled + 4 + 40 + 7
                 C.Button {
                     id: fold
                     objectName: "files-places-fold"
                     x: 7
                     anchors.verticalCenter: parent.verticalCenter
                     height: 40
-                    width: pane.placesFolded ? 40 : 12 + 18 + 8 + foldLabel.implicitWidth + 16
+                    width: parent.worded ? parent.labelled : 40
                     padding: 0
                     hoverEnabled: true
                     text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold")
                     Accessible.name: pane.placesFolded ? text : words.i18n("Fold the places")
-                    C.ToolTip.visible: pane.placesFolded && hovered
+                    C.ToolTip.visible: (pane.placesFolded || !parent.worded) && hovered
                     C.ToolTip.text: text
                     C.ToolTip.delay: 600
                     onClicked: pane.placesOpen = !pane.placesOpen
@@ -649,20 +904,36 @@ Item {
                         SuiteIcon {
                             glyph: pane.placesFolded ? "panel-left-open" : "panel-left-close"
                             width: 18; height: 18
-                            x: pane.placesFolded ? 11 : 12
+                            x: fold.width === 40 ? 11 : 12
                             anchors.verticalCenter: parent.verticalCenter
                             opacity: 0.66
                         }
                         Text {
                             id: foldLabel
                             objectName: "files-places-fold-label"
-                            visible: !pane.placesFolded
+                            visible: fold.parent.worded
                             x: 12 + 18 + 8
                             anchors.verticalCenter: parent.verticalCenter
                             text: words.i18n("Fold")
                             font: placeFont.font
                             color: tone.text
                         }
+                    }
+                }
+                // Beside Fold while the places are open: add a place, or
+                // choose which show.
+                Action {
+                    id: addPlace
+                    objectName: "files-places-add"
+                    visible: !pane.iconsOnly
+                    x: fold.x + fold.width + 4
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 40; implicitHeight: 40
+                    glyph: "plus"
+                    text: words.i18n("Add a place")
+                    onClicked: {
+                        const at = addPlace.mapToItem(pane, 0, addPlace.height + 4)
+                        addPlaceSheet.openAt(at.x, at.y)
                     }
                 }
             }
@@ -676,13 +947,15 @@ Item {
                 readonly property bool firstDrive: modelData.section === "drives"
                     && (index === 0 || ListView.view.model[index - 1].section !== "drives")
                 readonly property bool busy: modelData.busy === true
-                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.placesFolded
+                readonly property bool ejectable: modelData.canEject === true && !busy && !pane.iconsOnly
                 objectName: "files-place-" + modelData.label
                 width: ListView.view.width; height: 54 + (firstDrive ? 13 : 0)
                 Rectangle { visible: place.firstDrive; x: 12; y: 6; width: parent.width - 24; height: 1; color: tone.line }
                 Item {
+                    id: placeRow
                     anchors { left: parent.left; right: parent.right; bottom: parent.bottom }
                     height: 54
+                    opacity: pane.placeMoving === place.index ? 0.5 : 1
                     PointHandler { id: placeFinger; acceptedDevices: PointerDevice.TouchScreen }
                     scale: placeFinger.active ? 1.04 : 1
                     Behavior on scale { NumberAnimation { duration: pane.ms(placeFinger.active ? 160 : 120); easing.type: Easing.OutCubic } }
@@ -690,12 +963,28 @@ Item {
                         anchors.fill: parent; anchors.margins: 3; radius: pane.paperRadius
                         color: place.modelData.path.length > 0 && pane.browser.path === place.modelData.path ? tone.placeChosen : "transparent"
                     }
+                    // Files carried over it: a grey tint and the ink's edge, as a folder has.
+                    Rectangle {
+                        objectName: "files-place-drop-" + place.modelData.label
+                        anchors.fill: parent; anchors.margins: 3; radius: pane.paperRadius
+                        color: "#30444444"; border.color: tone.text; border.width: 2
+                        visible: pane.draggingFiles && pane.dropPlace.length > 0 && pane.dropPlace === place.modelData.path
+                    }
+                    // Where a moved place would go.
+                    Rectangle {
+                        visible: pane.placeMoving >= 0 && pane.placeTarget === place.index
+                        x: 12; width: parent.width - 24; height: 2; radius: 1; color: tone.text
+                    }
+                    Rectangle {
+                        visible: pane.placeMoving >= 0 && pane.placeTarget === place.index + 1 && (place.index + 1 >= place.ListView.view.count || !place.ListView.view.model[place.index + 1].id)
+                        x: 12; y: parent.height - 2; width: parent.width - 24; height: 2; radius: 1; color: tone.text
+                    }
                     Row {
-                        anchors.verticalCenter: parent.verticalCenter; x: pane.placesFolded ? 16 : 12; spacing: 12
+                        anchors.verticalCenter: parent.verticalCenter; x: pane.iconsOnly ? 16 : 12; spacing: 12
                         opacity: place.busy ? 0.6 : 1
                         Kirigami.Icon { source: place.modelData.icon; width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter }
                         Column {
-                            visible: !pane.placesFolded
+                            visible: !pane.iconsOnly
                             anchors.verticalCenter: parent.verticalCenter
                             Text { text: place.modelData.label; color: tone.text; width: place.width - 46 - (place.ejectable ? 50 : 12); elide: Text.ElideRight }
                             Text {
@@ -715,13 +1004,34 @@ Item {
                         Accessible.onPressAction: if (!place.busy) open()
                         // On the rail a pointer resting on a place names it.
                         HoverHandler { id: placeHover }
-                        C.ToolTip.visible: pane.placesFolded && placeHover.hovered
+                        C.ToolTip.visible: pane.iconsOnly && placeHover.hovered
                         C.ToolTip.text: place.modelData.label
                         C.ToolTip.delay: 600
                         function open() { place.modelData.drive ? pane.browser.openDrive(place.modelData.drive) : pane.browser.navigate(place.modelData.path) }
                         TapHandler {
                             enabled: !place.busy
+                            longPressThreshold: 0.5
                             onTapped: parent.open()
+                            // A touch and hold opens the place's own sheet.
+                            onLongPressed: pane.showPlaceSheet(place.modelData, null, placeRow.mapToItem(pane, point.position.x, point.position.y))
+                        }
+                        TapHandler {
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            acceptedButtons: Qt.RightButton
+                            onTapped: point => pane.showPlaceSheet(place.modelData, null, placeRow.mapToItem(pane, point.position.x, point.position.y))
+                        }
+                        // A place the person keeps moves by dragging it.
+                        DragHandler {
+                            objectName: "files-place-move-" + place.modelData.label
+                            target: null
+                            enabled: !!place.modelData.id
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            onActiveChanged: {
+                                if (active) { pane.placeMoving = place.index; pane.placeTarget = place.index }
+                                else pane.finishPlaceMove()
+                            }
+                            onCentroidChanged: if (active) pane.aimPlaceMove(placeRow.mapToItem(pane, centroid.position.x, centroid.position.y))
+                            onCanceled: { pane.placeMoving = -1; pane.placeTarget = -1 }
                         }
                     }
                     Action {
@@ -737,13 +1047,52 @@ Item {
                 }
             }
         }
-        Rectangle { Layout.fillHeight: true; width: 1; color: tone.line }
+        // The places' edge: the gap on either side of the rule takes a drag,
+        // from the rail of icons up to 240. Let go under 120 and they fold.
+        Item {
+            id: placesEdge
+            objectName: "files-places-edge"
+            Layout.fillHeight: true
+            Layout.preferredWidth: 1
+            z: 11
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                height: parent.height
+                width: edgeDrag.active ? 4 : 1
+                radius: width / 2
+                color: edgeDrag.active ? tone.mark : edgeHover.hovered ? tone.outline : tone.line
+            }
+            Item {
+                x: -20; width: 41; height: parent.height
+                Accessible.role: Accessible.Separator
+                Accessible.name: words.i18n("Places width")
+                HoverHandler { id: edgeHover; cursorShape: Qt.SplitHCursor }
+                DragHandler {
+                    id: edgeDrag
+                    target: null
+                    xAxis.enabled: true; yAxis.enabled: false
+                    property real startWidth: 0
+                    onActiveChanged: {
+                        if (active) { startWidth = placesList.width; pane.placesDragWidth = startWidth; return }
+                        const width = pane.placesDragWidth
+                        pane.placesDragWidth = -1
+                        if (width < 120) { pane.placesOpen = false; return }
+                        pane.browser.placesWidth = Math.round(width)
+                        pane.placesOpen = true
+                    }
+                    onActiveTranslationChanged: if (active) pane.placesDragWidth = Math.max(54, Math.min(240, startWidth + activeTranslation.x))
+                }
+            }
+        }
         ColumnLayout {
-            Layout.fillWidth: true; Layout.fillHeight: true; spacing: 12
+            // Never wider than the room it has, whatever its rows hold.
+            Layout.fillWidth: true; Layout.fillHeight: true; Layout.minimumWidth: 0; spacing: 12
             RowLayout {
                 objectName: "files-tabs"
                 Layout.fillWidth: true
-                visible: !pane.compact
+                // Only once a second tab is open; with one, the folder has
+                // the row.
+                visible: !pane.compact && !!pane.browser && pane.browser.tabs.length > 1
                 ListView {
                     Layout.fillWidth: true; Layout.preferredHeight: 44
                     orientation: ListView.Horizontal; spacing: 6; clip: true
@@ -765,21 +1114,30 @@ Item {
                 }
                 Action { text: words.i18n("New tab"); glyph: "plus"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
             }
-            GridLayout {
+            // One row under search, as every drawer has: the way around on
+            // the left, and on the right New folder, the order and the size,
+            // or what can be done with the files chosen.
+            RowLayout {
+                objectName: "files-row"
                 Layout.fillWidth: true
-                columns: 2; rowSpacing: 12; columnSpacing: 12
+                spacing: 8
                 RowLayout {
                     objectName: "files-navigation"
-                    Layout.row: 0; Layout.column: 0; Layout.columnSpan: pane.compact ? 1 : 2
                     Layout.fillWidth: true
+                    spacing: 4
                     Action { text: words.i18n("Back"); glyph: "arrow-left"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canBack; onClicked: pane.browser.back() }
                     Action { text: words.i18n("Forward"); glyph: "arrow-right"; Layout.preferredWidth: 42; enabled: pane.browser && pane.browser.canForward; onClicked: pane.browser.forward() }
                     Rectangle { Layout.preferredWidth: 1; Layout.preferredHeight: 20; color: tone.line }
                     ListView {
+                        id: crumbsList
+                        objectName: "files-crumbs"
+                        visible: !pathEditor.visible
                         Layout.fillWidth: true; Layout.preferredHeight: 42
+                        Layout.preferredWidth: contentWidth; Layout.maximumWidth: contentWidth; Layout.minimumWidth: 0
                         orientation: ListView.Horizontal; spacing: 4; clip: true
                         model: pane.browser ? pane.browser.crumbs : []
                         onCountChanged: positionViewAtEnd()
+                        onWidthChanged: positionViewAtEnd()
                         delegate: Row {
                             required property var modelData
                             required property int index
@@ -790,46 +1148,64 @@ Item {
                             }
                         }
                     }
-                    PillAction { objectName: "path-toggle"; text: words.i18n("Path"); onClicked: { pathEditor.visible=!pathEditor.visible; pathEditor.text=pane.browser.folder; if(pathEditor.visible)pathEditor.forceActiveFocus() } }
-                    Action { text: words.i18n("Refresh"); glyph: "refresh-cw"; Layout.preferredWidth: 42; onClicked: pane.browser.refresh() }
-                }
-                Rectangle {
-                    objectName: "file-navigation-divider"
-                    Layout.row: 1; Layout.column: 0; Layout.columnSpan: 2
-                    Layout.fillWidth: true
-                    visible: !pane.compact
-                    implicitHeight: 1
-                    color: tone.line
-                }
-                C.TextField {
-                    id: pathEditor
-                    Keys.onEscapePressed: visible=false
-                    Layout.row: 2; Layout.column: 0; Layout.columnSpan: 2
-                    Layout.fillWidth: true; visible: false
-                    placeholderText: words.i18n("Absolute folder path")
-                    onAccepted: { pane.browser.navigate(text); visible=false }
+                    // The empty end of the path: a tap or Ctrl+L types a
+                    // path there; a hold or a right-click opens the folder's
+                    // menu.
+                    Item {
+                        id: pathEnd
+                        objectName: "path-open-area"
+                        visible: !pathEditor.visible
+                        Layout.fillWidth: true; Layout.minimumWidth: 40; Layout.preferredWidth: 40
+                        Layout.preferredHeight: 42
+                        Accessible.role: Accessible.Button
+                        Accessible.name: words.i18n("Type a path")
+                        Accessible.onPressAction: pane.editPath()
+                        HoverHandler { cursorShape: Qt.IBeamCursor }
+                        TapHandler {
+                            longPressThreshold: 0.5
+                            onTapped: pane.editPath()
+                            onLongPressed: pane.showActionsNear("", false, pathEnd.mapToItem(pane, point.position.x, point.position.y))
+                        }
+                        TapHandler {
+                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                            acceptedButtons: Qt.RightButton
+                            onTapped: point => pane.showActions("", false, pathEnd.mapToItem(pane, point.position.x, point.position.y))
+                        }
+                    }
+                    C.TextField {
+                        id: pathEditor
+                        objectName: "path-editor"
+                        Layout.fillWidth: true
+                        visible: false
+                        placeholderText: words.i18n("Absolute folder path")
+                        Keys.onEscapePressed: visible=false
+                        onActiveFocusChanged: if (!activeFocus) visible=false
+                        onAccepted: { pane.browser.navigate(text); visible=false }
+                    }
                 }
                 RowLayout {
                     objectName: "files-actions"
-                    Layout.row: pane.compact ? 0 : 3; Layout.column: pane.compact ? 1 : 0
-                    Layout.columnSpan: pane.compact ? 1 : 2
-                    Layout.fillWidth: !pane.compact
+                    spacing: 8
                     // With text typed and nothing chosen, the folder and
                     // everything inside it can be searched for that text.
                     PillAction { objectName: "stop-search"; text: words.i18n("Stop searching"); visible: !!pane.browser && pane.browser.searching; onClicked: pane.browser.stopSearch() }
                     PillAction { objectName: "search-inside"; text: words.i18n("Search inside folders"); visible: pane.browser && pane.browser.searchOffered && !(pane.selectedPaths && pane.selectedPaths.length>0); onClicked: pane.browser.searchInside(pane.browser.filter) }
                     // While files are chosen, what can be done with them.
-                    PillAction { objectName: "done-selecting"; text: words.i18n("Done selecting"); visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
-                    PillAction { objectName: "selection-copy"; text: words.i18n("Copy"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
-                    PillAction { objectName: "selection-cut"; text: words.i18n("Cut"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.cutSelected() }
-                    PillAction { objectName: "selection-rename"; text: words.i18n("Rename"); visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.renameForm() }
-                    PillAction { objectName: "selection-properties"; text: words.i18n("Properties"); visible: pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.showProperties(pane.selectedPaths[0]) }
-                    PillAction { objectName: "selection-trash"; text: words.i18n("Move to Trash"); visible: pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
+                    PillAction { objectName: "done-selecting"; text: words.i18nc("stop choosing several files", "Done"); Accessible.name: words.i18n("Done selecting"); visible: pane.browser && pane.browser.selecting; onClicked: pane.clearSelection() }
+                    PillAction { objectName: "selection-restore"; text: words.i18n("Restore"); visible: pane.inTrash && pane.selectedPaths.length>0; onClicked: pane.browser.restoreSelected() }
+                    PillAction { objectName: "selection-delete"; text: words.i18n("Delete for good"); visible: pane.inTrash && pane.selectedPaths.length>0; onClicked: deleteConfirm.open() }
+                    PillAction { objectName: "selection-copy"; text: words.i18n("Copy"); visible: !pane.inTrash && pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.copySelected() }
+                    PillAction { objectName: "selection-cut"; text: words.i18n("Cut"); visible: !pane.inTrash && pane.selectedPaths && pane.selectedPaths.length>0; onClicked: pane.browser.cutSelected() }
+                    PillAction { objectName: "selection-rename"; text: words.i18n("Rename"); visible: !pane.inTrash && pane.selectedPaths && pane.selectedPaths.length===1; onClicked: pane.renameForm() }
+                    PillAction { objectName: "selection-trash"; text: words.i18n("Move to Trash"); visible: !pane.inTrash && pane.selectedPaths && pane.selectedPaths.length>0; onClicked: trashConfirm.open() }
                     Item {
                         objectName: "file-operation-status"
-                        Layout.fillWidth: true; Layout.minimumWidth: 0
+                        Layout.minimumWidth: 0
+                        Layout.preferredWidth: visible ? statusRow.implicitWidth : 0
+                        visible: pane.operationStatusText.length > 0
                         implicitHeight: 20
                         Row {
+                            id: statusRow
                             anchors.centerIn: parent
                             spacing: 4
                             SuiteIcon {
@@ -850,6 +1226,8 @@ Item {
                             }
                         }
                     }
+                    // Paste only while something waits on the clipboard.
+                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite && !(pane.selectedPaths && pane.selectedPaths.length>0); enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
                     PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
                     // The order, a grey pill naming it, after New folder; Recent
                     // keeps the order of use.
@@ -900,21 +1278,28 @@ Item {
                             onClicked: sortMenu.openUnder(sortPill)
                         }
                     }
-                    // With files chosen, their own menu; otherwise the folder's.
+                    // The tiles' size, last, where every drawer has it.
+                    SizePill {
+                        objectName: "files-size"
+                        visible: !(pane.selectedPaths && pane.selectedPaths.length > 0)
+                        Layout.preferredWidth: 72; Layout.preferredHeight: 42
+                        level: pane.browser ? pane.browser.tileSize : 1
+                        onResize: step => pane.resizeTiles(step)
+                    }
+                    // With files chosen, their own menu.
                     PillAction {
                         id: moreActions
                         objectName: "more-actions"
-                        text: pane.selectedPaths && pane.selectedPaths.length ? words.i18n("More actions") : words.i18n("Folder actions")
+                        visible: pane.selectedPaths && pane.selectedPaths.length > 0
+                        text: words.i18n("More actions")
                         glyph: "ellipsis-vertical"; Accessible.name: text
                         Layout.preferredWidth: 42
                         onClicked: {
-                            const first = pane.selectedPaths.length ? pane.selectedPaths[0] : ""
-                            const entry = first ? pane.browser.entries.find(e => e.path === first) : null
+                            const first = pane.selectedPaths[0]
+                            const entry = pane.browser.entries.find(e => e.path === first)
                             pane.showActionsUnder(first, entry ? entry.directory : false, moreActions)
                         }
                     }
-                    // Paste only while something waits on the clipboard, last in the row.
-                    PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
                 }
             }
             Repeater {
@@ -974,9 +1359,11 @@ Item {
             }
             RowLayout {
                 Layout.fillWidth: true; visible: pane.creatingFolder
-                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePath.length ? words.i18n("New name") : words.i18n("Folder name"); Keys.onEscapePressed: pane.creatingFolder=false; onAccepted: pane.submitName() }
-                PillAction { objectName: "submit-folder"; text: pane.renamePath.length ? words.i18n("Rename") : words.i18n("Create"); onClicked: pane.submitName() }
-                PillAction { objectName: "cancel-folder"; text: words.i18n("Cancel"); onClicked: pane.creatingFolder=false }
+                C.TextField { id: folderName; objectName: "folder-name"; Layout.fillWidth: true; placeholderText: pane.renamePlaceId.length ? words.i18n("Place name") : pane.renamePath.length ? words.i18n("New name") : words.i18n("Folder name"); Keys.onEscapePressed: { pane.creatingFolder=false; pane.renamePlaceId="" }
+                    onAccepted: pane.submitName()
+                }
+                PillAction { objectName: "submit-folder"; text: pane.renamePath.length || pane.renamePlaceId.length ? words.i18n("Rename") : words.i18n("Create"); onClicked: pane.submitName() }
+                PillAction { objectName: "cancel-folder"; text: words.i18n("Cancel"); onClicked: { pane.creatingFolder=false; pane.renamePlaceId="" } }
             }
             Text { Layout.fillWidth: true; visible: text.length>0 && !(pane.browser && pane.browser.listingFailed); text: pane.browser ? pane.browser.error : ""; color: tone.errorText; wrapMode: Text.Wrap }
             GridView {
@@ -986,7 +1373,20 @@ Item {
                 Accessible.name: pane.browser ? pane.browser.path.split("/").pop() || "/" : ""
                 interactive: !pane.draggingFiles
                 // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
-                Kirigami.WheelHandler { target: files; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
+                Kirigami.WheelHandler {
+                    target: files; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3
+                    // Ctrl and the wheel sizes the tiles. This handler sees the wheel
+                    // before anything else on the list does, so it sizes them itself
+                    // rather than scroll.
+                    property real pending: 0
+                    onWheel: wheel => {
+                        if (!(wheel.modifiers & Qt.ControlModifier)) return
+                        wheel.accepted = true
+                        pending += wheel.angleDelta.y
+                        while (pending >= 120) { pane.resizeTiles(1); pending -= 120 }
+                        while (pending <= -120) { pane.resizeTiles(-1); pending += 120 }
+                    }
+                }
                 // A handle on the right edge for a long folder: slim at rest,
                 // wide enough for a finger to take, broader while held.
                 C.ScrollBar.vertical: C.ScrollBar {
@@ -1038,7 +1438,7 @@ Item {
                     }
                     if (event.key===Qt.Key_Escape && (pane.selectedPaths.length || pane.browser.selecting)) { pane.clearSelection(); event.accepted=true; return }
                     if(event.key===Qt.Key_F2) { pane.renameForm(); event.accepted=true; return }
-                    if(event.key===Qt.Key_Delete) { if(pane.selectedPaths.length)trashConfirm.open(); event.accepted=true; return }
+                    if(event.key===Qt.Key_Delete) { if(pane.selectedPaths.length)(pane.inTrash ? deleteConfirm : trashConfirm).open(); event.accepted=true; return }
                     if (event.modifiers & Qt.ControlModifier) {
                         if (event.key===Qt.Key_C) { pane.browser.copySelected(); event.accepted=true }
                         else if(event.key===Qt.Key_X) { pane.browser.cutSelected(); event.accepted=true }
@@ -1404,7 +1804,15 @@ Item {
         color: tone.control; border.color: tone.outline
         readonly property int count: pane.incoming ? pane.incomingCount : pane.dragPaths.length
         readonly property string target: pane.incoming ? pane.incomingTarget : pane.dropFolder
-        Text { id: dragLabel; anchors.centerIn: parent; color: tone.text; text: parent.target.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, parent.target.split("/").pop()) : words.i18np("Copy 1 · choose a folder", "Copy %1 · choose a folder", parent.count) }
+        Text {
+            id: dragLabel
+            anchors.centerIn: parent; color: tone.text
+            readonly property string place: pane.incoming ? "" : pane.dropPlace
+            text: place === "add" ? words.i18n("Add to places")
+                : place === "trash:/" ? words.i18np("Move 1 to Trash", "Move %1 to Trash", parent.count)
+                : place.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, pane.dropPlaceLabel)
+                : parent.target.length ? words.i18np("Copy 1 to “%2”", "Copy %1 to “%2”", parent.count, parent.target.split("/").pop()) : words.i18np("Copy 1 · choose a folder", "Copy %1 · choose a folder", parent.count)
+        }
     }
     Shortcut { sequence: "Ctrl+T"; enabled: pane.visible; onActivated: pane.browser.addTab() }
     Shortcut { sequences: ["Alt+Return", "Alt+Enter"]; enabled: pane.visible && pane.selectedPaths.length===1; onActivated: pane.showProperties(pane.selectedPaths[0]) }
@@ -1413,7 +1821,8 @@ Item {
     Shortcut { sequence: "Ctrl+0"; enabled: pane.visible; onActivated: pane.browser.tileSize=1 }
     Shortcut { sequence: "Ctrl+W"; enabled: pane.visible; onActivated: pane.browser.closeTab(pane.browser.currentTab) }
     Shortcut { sequence: "Ctrl+Tab"; enabled: pane.visible; onActivated: pane.browser.selectTab((pane.browser.currentTab+1)%pane.browser.tabs.length) }
-    Shortcut { sequence: "Ctrl+L"; enabled: pane.visible; onActivated: { pathEditor.visible=true; pathEditor.text=pane.browser.folder; pathEditor.forceActiveFocus(); pathEditor.selectAll() } }
+    Shortcut { sequence: "Ctrl+L"; enabled: pane.visible; onActivated: pane.editPath() }
+    Shortcut { sequence: "F5"; enabled: pane.visible; onActivated: pane.browser.refresh() }
     Shortcut { sequence: "Alt+Left"; enabled: pane.visible; onActivated: pane.browser.back() }
     Shortcut { sequence: "Alt+Right"; enabled: pane.visible; onActivated: pane.browser.forward() }
     Shortcut { sequence: "Alt+Up"; enabled: pane.visible; onActivated: { const crumbs=pane.browser.crumbs; if(crumbs.length>1)pane.browser.navigate(crumbs[crumbs.length-2].path) } }

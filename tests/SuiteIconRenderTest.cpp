@@ -37,7 +37,7 @@ private Q_SLOTS:
             QStringLiteral("circle"), QStringLiteral("eye"), QStringLiteral("eye-off"),
             QStringLiteral("sticky-note"), QStringLiteral("notes"),
             QStringLiteral("maximize-2"), QStringLiteral("minimize-2"),
-            QStringLiteral("square-arrow-out-up-right")
+            QStringLiteral("square-arrow-out-up-right"), QStringLiteral("minus"), QStringLiteral("grip-vertical")
         };
         // Stand-ins for a dark and a light colour scheme. The software renderer
         // the test runs on draws no layer effects, so the light glyph's
