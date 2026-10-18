@@ -334,16 +334,20 @@ int main(int argc, char **argv)
         QCoreApplication::processEvents();
         std::cout << "3000 files in 100 batches: " << clock.elapsed() << " ms, "
                   << many.checks() << " judgements\n";
-        if (many.rowCount() != 3000) return 90;
-        if (many.checks() != 3000) return 91;
+        const auto failed = [&many](int code) {
+            std::cout << "failed " << code << ": " << many.rowCount() << " rows, " << many.checks() << " judgements\n";
+            return code;
+        };
+        if (many.rowCount() != 3000) return failed(90);
+        if (many.checks() != 3000) return failed(91);
         // The same file twice stands once.
         stream.add({stream.matches.first()});
         many.invalidate();
-        if (many.rowCount() != 3000) return 92;
+        if (many.rowCount() != 3000) return failed(92);
         // A new query judges afresh.
         many.testQuery = QStringLiteral("repo");
         many.invalidate();
-        if (many.checks() != 6000) return 93;
+        if (many.checks() != 6000) return failed(93);
     }
     return 0;
 }

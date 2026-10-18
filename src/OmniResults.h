@@ -366,15 +366,29 @@ public:
         m_rowWatch.clear();
         m_shownStale = true;
         if (source) {
-            const auto stale = [this]() { m_shownStale = true; };
+            // Each row also remembers which verdict is its own, moved along
+            // as rows arrive and leave, so sorting reads it straight back.
+            const auto stale = [this]() { m_shownStale = true; m_rowVerdict.clear(); };
             m_rowWatch = {
-                connect(source, &QAbstractItemModel::rowsInserted, this, stale),
-                connect(source, &QAbstractItemModel::rowsRemoved, this, stale),
+                connect(source, &QAbstractItemModel::rowsInserted, this, [this](const QModelIndex &parent, int first, int last) {
+                    m_shownStale = true;
+                    if (!parent.isValid() && first <= m_rowVerdict.size()) m_rowVerdict.insert(first, last - first + 1, -1);
+                }),
+                connect(source, &QAbstractItemModel::rowsRemoved, this, [this](const QModelIndex &parent, int first, int last) {
+                    m_shownStale = true;
+                    if (!parent.isValid() && first < m_rowVerdict.size())
+                        m_rowVerdict.remove(first, qMin<qsizetype>(last, m_rowVerdict.size() - 1) - first + 1);
+                }),
+                connect(source, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &from, const QModelIndex &to) {
+                    m_shownStale = true;
+                    if (from.parent().isValid()) return;
+                    for (int row = from.row(); row <= to.row() && row < m_rowVerdict.size(); ++row) m_rowVerdict[row] = -1;
+                }),
                 connect(source, &QAbstractItemModel::rowsMoved, this, stale),
-                connect(source, &QAbstractItemModel::dataChanged, this, stale),
                 connect(source, &QAbstractItemModel::modelReset, this, stale),
                 connect(source, &QAbstractItemModel::layoutChanged, this, stale)};
         }
+        m_rowVerdict.clear();
         QSortFilterProxyModel::setSourceModel(source);
     }
     void setLimit(int limit) { m_results.setLimit(limit); }
@@ -597,25 +611,38 @@ protected:
         const auto query = queryString();
         if (query != m_verdictQuery || m_allFiles != m_verdictAllFiles || m_quietFolders != m_verdictQuiet) {
             m_verdicts.clear();
+            m_verdictList.clear();
+            m_rowVerdict.clear();
             m_verdictQuery = query;
             m_verdictAllFiles = m_allFiles;
             m_verdictQuiet = m_quietFolders;
             m_shownStale = true;
         }
+        const bool flat = !index.parent().isValid();
+        const int row = index.row();
+        if (flat && row < m_rowVerdict.size() && m_rowVerdict.at(row) >= 0) return m_verdictList.at(m_rowVerdict.at(row));
         const auto match = index.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
         const auto runner = match.runner() ? match.runner()->id() : QString();
         const auto identity = runner + QLatin1Char('\x1f') + match.id() + QLatin1Char('\x1f') + match.text()
             + QLatin1Char('\x1f') + match.subtext() + QLatin1Char('\x1f') + match.data().toString();
-        const auto known = m_verdicts.constFind(identity);
-        if (known != m_verdicts.cend()) return *known;
-        ++m_verdictChecks;
-        Verdict found;
-        found.priority = resultPriority(match, query);
-        found.tier = searchTier(match);
-        found.key = destinationKey(match);
-        found.setting = runner.contains(QStringLiteral("systemsettings"));
-        found.eligible = candidateEligible(match, found.priority);
-        return *m_verdicts.insert(identity, found);
+        int slot = m_verdicts.value(identity, -1);
+        if (slot < 0) {
+            ++m_verdictChecks;
+            Verdict found;
+            found.priority = resultPriority(match, query);
+            found.tier = searchTier(match);
+            found.key = destinationKey(match);
+            found.setting = runner.contains(QStringLiteral("systemsettings"));
+            found.eligible = candidateEligible(match, found.priority);
+            slot = m_verdictList.size();
+            m_verdictList.append(found);
+            m_verdicts.insert(identity, slot);
+        }
+        if (flat) {
+            if (row >= m_rowVerdict.size()) m_rowVerdict.resize(row + 1, -1);
+            m_rowVerdict[row] = slot;
+        }
+        return m_verdictList.at(slot);
     }
     // Every match judged afresh, counted so a test can hold the work to one
     // judgement for each.
@@ -698,7 +725,9 @@ private:
         });
     }
 
-    mutable QHash<QString, Verdict> m_verdicts;
+    mutable QHash<QString, int> m_verdicts;
+    mutable QList<Verdict> m_verdictList;
+    mutable QList<int> m_rowVerdict;
     mutable QString m_verdictQuery;
     mutable bool m_verdictAllFiles = false;
     mutable QString m_verdictQuiet;
