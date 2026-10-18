@@ -29,9 +29,13 @@ Item {
 
     y: searchField.y + searchField.height + 16
     width: parent.width
-    height: parent.height - y
-    opacity: launcher.applicationLaunchPending ? 0 : 1
-    visible: query.text.length > 0 && !launcher.drawerOpen
+    // As tall as the sheet can grow, whatever it is now: the sheet's own
+    // growth only uncovers rows, never lays the list out again.
+    height: Math.max(0, launcher.listRoom - y)
+    // Typed again since it opened, it holds its rows, faded back, until the
+    // next pause asks again.
+    opacity: launcher.applicationLaunchPending ? 0 : launcher.listStale ? 0.66 : 1
+    visible: launcher.listShown && query.text.length > 0 && !launcher.drawerOpen
 
     Row {
         spacing: 20
@@ -102,7 +106,7 @@ Item {
     }
 
     Behavior on opacity {
-        NumberAnimation { duration: launcher.ms(120); easing.type: Easing.OutCubic }
+        NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic }
     }
 
     ListView {
@@ -115,7 +119,9 @@ Item {
         Kirigami.WheelHandler { target: resultList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
         spacing: resultsArea.rowGap
         currentIndex: count > 0 ? 0 : -1
-        model: launcher.searchResults
+        // Asked for nothing while typing ahead: the rows are laid out once,
+        // when the list opens.
+        model: launcher.listShown ? launcher.searchResults : null
         // Model insertions and changing child heights can preserve
         // an old scroll offset even when the first row is selected.
         // Let layout settle before aligning a fresh search to its
@@ -128,7 +134,11 @@ Item {
                 }
             })
         }
-        onCountChanged: settleAtBeginning()
+        onCountChanged: {
+            settleAtBeginning()
+            if (launcher.listShown && !launcher.listStale && !launcher.searchResults.querying)
+                launcher.heldCount = count
+        }
         onHeightChanged: settleAtBeginning()
 
         Connections {

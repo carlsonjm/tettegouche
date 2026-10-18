@@ -379,14 +379,16 @@ Item {
         duration: launcher.reducedMotion ? 90 : 150
         easing.type: Easing.InCubic
     }
-    readonly property bool resting: searchField.idle
+    // Typing ahead, what was used lately holds still, faded back, until the
+    // list takes its place.
+    readonly property bool resting: searchField.idle || launcher.typingAhead
     onRestingChanged: resting ? arrive(1) : leave()
     x: 0
     y: searchField.y + searchField.height + gap
     width: parent.width
     height: Math.max(0, parent.height - y)
     opacity: fits && !launcher.applicationLaunchPending
-        ? rest * Math.max(0, 1 - launcher.drawerProgress * 3)
+        ? rest * (launcher.typingAhead ? 0.66 : 1) * Math.max(0, 1 - launcher.drawerProgress * 3)
             * Math.max(0, 1 - launcher.modeProgress * 3) : 0
     visible: opacity > 0
     enabled: resting && opacity > 0.5 && !launcher.drawerOpen && !launcher.modeOpen

@@ -85,7 +85,7 @@ Item {
     // below them (Comfortable), within the 24 the sheet keeps all round.
     // With the on-screen keys up over a search, the row gives its room to
     // the results.
-    readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
+    readonly property bool modeRowShown: !(keysUp && listShown && query.text.length > 0 && !drawerOpen && !modeOpen)
     readonly property int modeRowReach: modeRowShown ? 56 : 0
     // Search's field, the same on every screen: 44, the height it first had
     // in use, and the touch target's.
@@ -93,6 +93,8 @@ Item {
     // The field's words and what was found for them, read across the sheet.
     readonly property TextInput query: searchField.query
     readonly property ListView resultList: resultsArea.resultList
+    // The room the results have once the sheet has grown to hold them.
+    readonly property real listRoom: sheet.targetHeight - 2 * contentInset - modeRowReach
     // Which sections of what was used lately the first screen shows, each by
     // its setting: the applications, the files, or both.
     property bool recentApps: true
@@ -118,6 +120,65 @@ Item {
             : where || said
     }
     property bool pendingLaunch: false
+    // Typing, Search finishes the words with its best match and holds still;
+    // a pause, Down or a tap on the field opens the list once. Typed with
+    // the list open, the list holds the rows it has, faded back, and is asked
+    // again at the next pause. The pause is in milliseconds; none opens the
+    // list at every letter.
+    property int typeAheadPause: 350
+    property bool listShown: false
+    property bool listStale: false
+    // What the list was last asked for, and how many rows the sheet holds
+    // for it: counted once the providers have answered, never at each row
+    // that arrives.
+    property string listQuery: ""
+    property int heldCount: 0
+    property var prediction: ({ row: -1 })
+    readonly property bool typingAhead: query.text.length > 0 && !drawerOpen && modeShown === "" && !listShown
+    function typed(text) {
+        if (root.drawerOpen) { root.searchResults.queryString = ""; return }
+        if (text.length === 0) {
+            listPause.stop()
+            listSettle.stop()
+            root.listShown = false
+            root.listStale = false
+            root.listQuery = ""
+            root.prediction = { row: -1 }
+            root.searchResults.queryString = ""
+            return
+        }
+        if (root.typeAheadPause <= 0) { root.showList(); return }
+        if (root.listShown) root.listStale = true
+        else root.searchResults.queryString = text
+        listPause.restart()
+        root.predict()
+    }
+    function showList() {
+        listPause.stop()
+        if (query.text.length === 0 || root.drawerOpen) return
+        if (root.searchResults.queryString !== query.text) root.searchResults.queryString = query.text
+        // Counted before it shows, so the sheet changes size once.
+        if (root.searchResults.querying) listSettle.restart()
+        else root.heldCount = root.searchResults.rowCount()
+        root.listQuery = query.text
+        root.listStale = false
+        root.listShown = true
+        root.prediction = { row: -1 }
+        resultList.currentIndex = resultList.count > 0 ? 0 : -1
+        resultList.settleAtBeginning()
+    }
+    function predict() {
+        root.prediction = root.typingAhead || root.listStale
+            ? root.searchResults.predictionFor(query.text, root.listStale) : { row: -1 }
+    }
+    Timer { id: listPause; interval: Math.max(1, root.typeAheadPause); onTriggered: root.showList() }
+    // A provider still answering a moment after the list opens is not waited
+    // for: the sheet holds what has come, and grows once more when all have.
+    Timer {
+        id: listSettle
+        interval: 250
+        onTriggered: if (root.listShown && !root.listStale) root.heldCount = root.searchResults.rowCount()
+    }
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
 
@@ -211,6 +272,8 @@ Item {
         root.applicationCatalog.filterText = open && !root.filesMode ? query.text : ""
         if (root.fileBrowser) root.fileBrowser.filter = root.filesMode ? query.text : ""
         root.searchResults.queryString = open ? "" : query.text
+        if (open) { listPause.stop(); root.listShown = false; root.listStale = false }
+        else if (query.text.length > 0) root.showList()
         drawerSettle.to = open ? 1 : 0
         drawerSettle.restart()
         if (open) {
@@ -236,7 +299,7 @@ Item {
     }
 
     function runResult(index) {
-        if (index < 0 || index >= resultList.count) {
+        if (index < 0 || index >= root.searchResults.rowCount()) {
             return false
         }
         const activation = root.launcherController.activateIfOpen(index)
@@ -609,6 +672,16 @@ Item {
         }
         if (!root.drawerOpen && root.selectedChildKey !== "") {
             root.openChildSettings()
+        } else if (!root.drawerOpen && (root.typingAhead || root.listStale)) {
+            // Enter opens the match the field finishes the words with; with
+            // none yet, the list opens and Enter waits for it as it would.
+            root.predict()
+            if (root.prediction.row >= 0) {
+                runResult(root.prediction.row)
+            } else {
+                root.showList()
+                root.submit()
+            }
         } else if (!root.drawerOpen && root.searchResults.querying) {
             pendingLaunch = true
         } else if (root.drawerOpen && applicationGrid.choices.length > 0) {
@@ -724,6 +797,7 @@ Item {
             root.searchEngaged = false
             root.drawerOpen = false
             root.drawerProgress = 0
+            root.typed("")
             root.sortMenuOpen = false
             modeSettle.stop()
             modeTimeout.stop()
@@ -823,7 +897,19 @@ Item {
 
     Connections {
         target: root.searchResults
+        // The field's grey ending follows the rows as they arrive; the rows
+        // themselves wait for the list.
+        function onRowsInserted() { if (root.typingAhead || root.listStale) Qt.callLater(root.predict) }
+        function onRowsRemoved() { if (root.typingAhead || root.listStale) Qt.callLater(root.predict) }
+        function onModelReset() { if (root.typingAhead || root.listStale) Qt.callLater(root.predict) }
+        function onLayoutChanged() { if (root.typingAhead || root.listStale) Qt.callLater(root.predict) }
+        function onDataChanged() { if (root.typingAhead || root.listStale) Qt.callLater(root.predict) }
         function onQueryingChanged() {
+            if (!root.searchResults.querying && root.listShown && !root.listStale) {
+                listSettle.stop()
+                root.heldCount = root.searchResults.rowCount()
+            }
+            if (!root.searchResults.querying) Qt.callLater(root.predict)
             if (!root.searchResults.querying && root.pendingLaunch) {
                 root.pendingLaunch = false
                 root.submit()
@@ -858,16 +944,18 @@ Item {
                 + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
         readonly property real fullHeight: Math.max(restingHeight,
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
-        readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
-        readonly property bool searching: query.text.length > 0 && !root.drawerOpen && root.modeShown === ""
+        // Typing ahead it keeps its resting size: nothing moves until the
+        // list opens.
+        readonly property bool resting: (query.text.length === 0 || root.typingAhead) && !root.drawerOpen && root.modeShown === ""
+        readonly property bool searching: root.listShown && !root.drawerOpen && root.modeShown === ""
         // One letter matches almost everything, so the sheet first holds the
         // three best results, then five, then eight; never more than there
         // are, and past eight the list scrolls at the sheet's full height.
         // The list itself holds every result.
         readonly property int resultsShown: {
-            const typed = query.text.trim().length
+            const typed = root.listQuery.trim().length
             const step = typed <= 1 ? 3 : typed === 2 ? 5 : 8
-            const count = root.resultList.count
+            const count = root.heldCount
             return count > step ? (step === 8 ? 9 : step) : Math.max(1, count)
         }
         readonly property real resultsHeight: Math.min(fullHeight,
@@ -914,7 +1002,9 @@ Item {
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
-        height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        // Where its height is going; the height itself eases there.
+        readonly property real targetHeight: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        height: targetHeight
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Moving with its height, so it grows up and down evenly.
         Behavior on y { enabled: root.launcherController.guestMode || !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }

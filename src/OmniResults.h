@@ -546,6 +546,30 @@ public:
         }
         return m_results.run(source);
     }
+    // The match Search finishes the typed words with while the list waits:
+    // the first row when its name starts with them, or, once every provider
+    // has answered, the first row whatever its name. Held rows from an
+    // earlier query offer whichever of them still starts with the words.
+    Q_INVOKABLE QVariantMap predictionFor(const QString &typed, bool held) const {
+        const auto words = typed.trimmed();
+        if (words.isEmpty()) return {{QStringLiteral("row"), -1}};
+        const int rows = held ? rowCount() : qMin(1, rowCount());
+        for (int row = 0; row < rows; ++row) {
+            const auto match = getQueryMatch(index(row, 0));
+            const auto text = index(row, 0).data(Qt::DisplayRole).toString();
+            const bool starts = text.startsWith(words, Qt::CaseInsensitive);
+            if (!starts && (held || querying())) continue;
+            QString kind;
+            const auto id = match.runner() ? match.runner()->id() : QString();
+            if (match.runner() == &m_aliasRunner || id.contains(QStringLiteral("systemsettings"))) kind = i18n("Setting");
+            else if (match.runner() == &m_notesRunner) kind = i18n("Note");
+            else if (searchTier(match) == 0) kind = i18n("App");
+            else if (searchTier(match) == 1) kind = i18n("File");
+            return {{QStringLiteral("row"), row}, {QStringLiteral("text"), text},
+                    {QStringLiteral("starts"), starts}, {QStringLiteral("kind"), kind}};
+        }
+        return {{QStringLiteral("row"), -1}};
+    }
     KRunner::QueryMatch getQueryMatch(const QModelIndex &index) const {
         return index.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
     }

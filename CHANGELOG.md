@@ -5,10 +5,13 @@ provenance.
 
 ## Unreleased
 
-- Search stays centred as it grows: typing, a drawer or a mode grows it
-  evenly up and down rather than only down. Typing grows it only as far as
-  the results it holds: the three best for one letter, five for two, eight
-  from three letters on, with the rest a scroll away.
+- Search types ahead: while letters arrive nothing moves and no list is laid
+  out; the field finishes the words in grey with the best match, says what it
+  is, and Enter opens it. A pause, Down or a tap on the field opens the list.
+- Search stays centred as it grows: the list, a drawer or a mode grows it
+  evenly up and down rather than only down. The list grows it once, only as
+  far as the results it holds: the three best for one letter, five for two,
+  eight from three letters on, with the rest a scroll away.
 - Each result is ranked once rather than at every comparison, so a short
   query with many results no longer holds up the next letter.
 - Every search field is the same: Search's first screen, Apps, Files, Notes
