@@ -1,6 +1,7 @@
 #include "ActivityModel.h"
 #include "ActivityUtils.h"
 #include "PlasmaMatch.h"
+#include <taskmanager/abstracttasksmodel.h>
 #include <taskmanager/windowtasksmodel.h>
 #include <QCoreApplication>
 #include <QDebug>
@@ -64,6 +65,31 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_waiting, &WaitingAppProvider::changed, this, update);
     connect(&m_core, &CoreFactProvider::changed, this, update);
     connect(&m_noteIsland, &NotesIslandProvider::changed, this, update);
+    if (windows) {
+        // The window in use, for its notes on the quick note's island. While
+        // none in the list is, as while a panel or the notes themselves hold
+        // the keys, the last one stays.
+        const auto active = [this, windows] {
+            for (int row = 0; row < windows->rowCount(); ++row) {
+                const auto index = windows->index(row, 0);
+                if (!index.data(TaskManager::AbstractTasksModel::IsActive).toBool()) continue;
+                QStringList ids;
+                for (const auto &id : index.data(TaskManager::AbstractTasksModel::WinIdList).toList()) ids.append(id.toString());
+                m_noteIsland.setActiveWindowIds(ids);
+                return;
+            }
+        };
+        connect(windows, &QAbstractItemModel::dataChanged, this,
+                [active](const QModelIndex &, const QModelIndex &, const QList<int> &roles) {
+                    if (roles.isEmpty() || roles.contains(TaskManager::AbstractTasksModel::IsActive)
+                        || roles.contains(TaskManager::AbstractTasksModel::WinIdList))
+                        active();
+                });
+        connect(windows, &QAbstractItemModel::rowsInserted, this, active);
+        connect(windows, &QAbstractItemModel::rowsRemoved, this, active);
+        connect(windows, &QAbstractItemModel::modelReset, this, active);
+        active();
+    }
     connect(&m_drives, &DriveActivityProvider::openRequested, this, &ActivityModel::driveOpenRequested);
     connect(&m_jobs, &DesktopJobProvider::finished, this, [this](const QVariantMap &job) {
         m_notices.report(job);
@@ -199,6 +225,8 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     else if (sourceId.startsWith(QLatin1String("screen:"))) m_screen.invoke(sourceId, sourceGeneration, action);
     else if (sourceId.startsWith(QLatin1String("waiting:"))) m_waiting.invoke(sourceId, sourceGeneration, action);
     else if (sourceId.startsWith(QLatin1String("core:"))) m_core.invoke(sourceId, sourceGeneration, action);
+    else if (sourceId == QLatin1String(NotesIslandProvider::Id) && action == QLatin1String("windowNotes"))
+        m_noteIsland.toggleWindowNotes();
 }
 void ActivityModel::setAside(const QString &id, int generation) {
     const auto route = m_routes.value(id);

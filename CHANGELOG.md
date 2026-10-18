@@ -10,8 +10,12 @@ provenance.
   Gooseberry's own card, and beside it the note pinned in Gooseberry, a bead
   of its colour and its first words, which opens that note on the card. It stays where the other
   islands come and go, and the widget's setting "Show the quick note island"
-  turns it off.
-- Notes in Search opens on a board of every note: Find or start a note, a row
+  turns it off. The window in use's notes join it, last: their dot in the top
+  note's colour with the count, ringed while they are up over the window, and
+  a tap brings them up or puts them away. While the island shows, notes that
+  fold leave no dot over their window.
+- Notes in Search opens on a board of every note: Find or start a note, the
+  same pill as Search's field, holding still under the modes, a row
   of filters, Everything, Today, On windows, each folder and Tucked away, and
   the notes grouped under them, wide rows showing a note's words and where
   and when it is, and New note floating in the corner in the highlight

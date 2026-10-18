@@ -33,6 +33,7 @@ class TettegoucheApplet final : public Plasma::Applet
 public:
     TettegoucheApplet(QObject *parent, const KPluginMetaData &data,
                       const QVariantList &args);
+    ~TettegoucheApplet() override;
 
     bool launcherActive() const;
     QString productName() const;
@@ -51,6 +52,8 @@ public:
     Q_INVOKABLE void watchPanelGeometry(QQuickItem *visualParent);
     Q_INVOKABLE void invokeActivity(const QString &id, int generation, const QString &action,
                                     const QVariant &value = {});
+    // Whether this widget shows the quick note's island now.
+    Q_INVOKABLE void showNoteIsland(bool shown);
     Q_INVOKABLE qint64 monotonicNowUs() const;
     Q_INVOKABLE QRectF screenRect(QQuickItem *item) const;
     Q_INVOKABLE bool prepareIslandSurface(QWindow *window, QQuickItem *panelItem) const;

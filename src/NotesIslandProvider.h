@@ -7,6 +7,8 @@
 
 #include <QDBusConnection>
 #include <QObject>
+#include <QSet>
+#include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
 
@@ -18,8 +20,11 @@ class QDBusMessage;
 // the application's quick-note interface, version 1, while the application
 // runs: asked when it appears, never started for it, and followed through
 // PinnedChanged after that. An application without Pinned has no pinned note.
-// The row is the one Ambient keeps without activity, and it is never set
-// aside.
+// The notes stuck to the window in use join it, as the application tells
+// them over its stuck-notes interface, version 1: while a panel shows the
+// island, the application is told to leave no dot over a window whose notes
+// are folded, since the island brings them back. The row is the one Ambient
+// keeps without activity, and it is never set aside.
 class NotesIslandProvider : public QObject
 {
     Q_OBJECT
@@ -30,6 +35,8 @@ public:
     static constexpr char Interface[] = "io.github.carlsonjm.Gooseberry.QuickNote";
     static constexpr uint Version = 1;
     static constexpr char Id[] = "note";
+    static constexpr char StuckPath[] = "/StuckNotes";
+    static constexpr char StuckInterface[] = "io.github.carlsonjm.Gooseberry.StuckNotes";
 
     explicit NotesIslandProvider(const QDBusConnection &bus, QObject *parent = nullptr);
 
@@ -41,6 +48,14 @@ public:
     QVariantList activities() const;
     // Looks again for the application, as when KDE's application list changes.
     void refresh();
+    // The ids Plasma's window list gives the window in use.
+    void setActiveWindowIds(const QStringList &ids);
+    // Whether this panel shows the island; while any does, folded notes are
+    // left to it.
+    void setShownBy(const void *panel, bool shown);
+    // The island's tap on the window's notes: they come up over it, open,
+    // when they are away or folded, and go away when they are up.
+    void toggleWindowNotes();
 
     // The island's taps, on the application's own card: an empty id is a new
     // quick note, through its Capture action, and an id that note, asked of
@@ -54,10 +69,16 @@ Q_SIGNALS:
 private Q_SLOTS:
     void ownerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
     void pinnedChanged(const QVariantMap &pinned, const QDBusMessage &message);
+    void stuckChanged(const QDBusMessage &message);
 
 private:
     void ask();
     void setPinned(const QVariantMap &pinned);
+    void askStuck();
+    void setStuck(const QVariantList &windows);
+    void tellShown(bool always);
+    // The stuck-notes entry of the window in use, empty when it has none.
+    QVariantMap activeEntry() const;
 
     QDBusConnection m_bus;
     QString m_owner;
@@ -66,4 +87,10 @@ private:
     bool m_installed = false;
     QVariantMap m_pinned;
     int m_generation = 0;
+    QStringList m_activeIds;
+    QVariantList m_stuck;
+    bool m_stuckSpeaks = false;
+    QSet<const void *> m_shownBy;
+    // What the application was last told, or -1 for nothing yet.
+    int m_toldShown = -1;
 };

@@ -47,7 +47,7 @@ var PIECES = {
         { id: "icon" }, { id: "name" }, { id: "detail" },
     ],
     note: [
-        { id: "dot" }, { id: "pinned" },
+        { id: "dot" }, { id: "window" }, { id: "pinned" },
     ],
 };
 

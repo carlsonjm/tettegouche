@@ -3150,6 +3150,11 @@ TestCase {
         const notes = findChild(launcher, "notes-pill")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         verify(launcher.notesOpen)
+        // Notes' field is Search's own pill, under the modes from the first
+        // frame: it does not rise or grow as Notes comes.
+        const frame = findChild(launcher, "notes-find-frame")
+        compare(frame.y, 0)
+        compare(frame.height, 44)
         compare(quickStub.starts, 0)
         compare(quickStub.finds, [""])
         compare(notesStub.opened, 0)
@@ -3159,6 +3164,10 @@ TestCase {
         compare(sheet.width, rest.width)
         compare(sheet.height, rest.height)
         verify(field.opacity < 0.01)
+        compare(frame.y, 0)
+        compare(frame.height, 44)
+        compare(frame.x, field.x)
+        compare(frame.width, field.width)
         const find = findChild(launcher, "notes-find")
         verify(find.activeFocus)
         verify(!findChild(launcher, "notes-back").visible)

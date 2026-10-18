@@ -37,6 +37,34 @@ Q_SIGNALS:
     void PinnedChanged(const QVariantMap &pinned);
 };
 
+// The application's stuck-notes interface: the windows with notes, and what
+// the island asks of it.
+class FakeStuck : public QObject
+{
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Gooseberry.StuckNotes")
+public:
+    QVariantList windows;
+    QList<bool> drawn;
+    QStringList calls;
+public Q_SLOTS:
+    uint ProtocolVersion() const { return 1; }
+    QVariantList Windows() const { return windows; }
+    void DrawFolded(bool folded) { drawn.append(folded); }
+    bool Show(const QString &id, const QString &, const QString &)
+    {
+        calls.append(QStringLiteral("Show ") + id);
+        return true;
+    }
+    bool Toggle(const QString &id, const QString &, const QString &)
+    {
+        calls.append(QStringLiteral("Toggle ") + id);
+        return true;
+    }
+Q_SIGNALS:
+    void WindowsChanged(const QVariantList &windows);
+};
+
 // An older application, which pins nothing.
 class OlderNotes : public QObject
 {
@@ -104,6 +132,13 @@ QVariantMap note(const QString &id, const QString &title, const QString &hex)
 {
     return {{QStringLiteral("id"), id}, {QStringLiteral("title"), title},
             {QStringLiteral("colour"), QStringLiteral("yellow")}, {QStringLiteral("colourHex"), hex}};
+}
+
+QVariantMap window(bool shown)
+{
+    return {{QStringLiteral("windowIds"), QStringList{QStringLiteral("{W1}")}}, {QStringLiteral("count"), 2u},
+            {QStringLiteral("colour"), QStringLiteral("blue")}, {QStringLiteral("colourHex"), QStringLiteral("#7FB8F0")},
+            {QStringLiteral("shown"), shown}, {QStringLiteral("folded"), false}};
 }
 
 QVariantMap row(const NotesIslandProvider &provider)
@@ -180,6 +215,57 @@ private Q_SLOTS:
         QTRY_VERIFY(!row(provider).contains(QStringLiteral("noteId")));
         peer.unregisterObject(QStringLiteral("/QuickNote"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-notes"));
+        removeNotes();
+    }
+
+    // The window in use's notes join the island; a panel showing it leaves
+    // folded notes to it, and its tap brings them up or puts them away.
+    void windowNotesOnTheIsland()
+    {
+        installNotes(true);
+        FakeNotes notes;
+        FakeStuck stuck;
+        stuck.windows = {window(false)};
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-stuck"));
+        QVERIFY(peer.registerObject(QStringLiteral("/QuickNote"), &notes,
+                                    QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerObject(QStringLiteral("/StuckNotes"), &stuck,
+                                    QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.gooseberry")));
+
+        NotesIslandProvider provider(QDBusConnection::sessionBus());
+        QTRY_VERIFY(!stuck.drawn.isEmpty());
+        QVERIFY(!stuck.drawn.last());
+        QVERIFY(!row(provider).contains(QStringLiteral("windowCount")));
+        provider.setActiveWindowIds({QStringLiteral("{w1}")});
+        QTRY_COMPARE(row(provider).value(QStringLiteral("windowCount")).toInt(), 2);
+        QCOMPARE(row(provider).value(QStringLiteral("windowColourHex")).toString(), QStringLiteral("#7FB8F0"));
+        QVERIFY(!row(provider).value(QStringLiteral("windowShown")).toBool());
+        QVERIFY(row(provider).value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("windowNotes")).toBool());
+        provider.setActiveWindowIds({QStringLiteral("{w2}")});
+        QVERIFY(!row(provider).contains(QStringLiteral("windowCount")));
+        provider.setActiveWindowIds({QStringLiteral("{w1}")});
+
+        int panel = 0;
+        provider.setShownBy(&panel, true);
+        QTRY_VERIFY(stuck.drawn.last());
+        provider.toggleWindowNotes();
+        QTRY_COMPARE(stuck.calls, QStringList{QStringLiteral("Show {W1}")});
+
+        stuck.windows = {window(true)};
+        Q_EMIT stuck.WindowsChanged(stuck.windows);
+        QTRY_VERIFY(row(provider).value(QStringLiteral("windowShown")).toBool());
+        provider.toggleWindowNotes();
+        QTRY_COMPARE(stuck.calls.size(), 2);
+        QCOMPARE(stuck.calls.last(), QStringLiteral("Toggle {W1}"));
+        provider.setShownBy(&panel, false);
+        QTRY_VERIFY(!stuck.drawn.last());
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.gooseberry"));
+        QTRY_VERIFY(!row(provider).contains(QStringLiteral("windowCount")));
+        peer.unregisterObject(QStringLiteral("/StuckNotes"));
+        peer.unregisterObject(QStringLiteral("/QuickNote"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-stuck"));
         removeNotes();
     }
 

@@ -218,6 +218,16 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
     } else m_activities->invoke(id, generation, action, value);
 }
 
+TettegoucheApplet::~TettegoucheApplet()
+{
+    if (m_activities) m_activities->showNoteIsland(this, false);
+}
+
+void TettegoucheApplet::showNoteIsland(bool shown)
+{
+    if (m_activities) m_activities->showNoteIsland(this, shown);
+}
+
 qint64 TettegoucheApplet::monotonicNowUs() const
 {
     using namespace std::chrono;

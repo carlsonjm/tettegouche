@@ -28,6 +28,9 @@ public:
     QVariantList activities() const { return m_rows; }
     // Split Rock's Core, whose facts Search finds as well.
     CoreFactProvider *core() { return &m_core; }
+    // Whether this panel shows the quick note's island, so folded notes are
+    // left to it.
+    void showNoteIsland(const void *panel, bool shown) { m_noteIsland.setShownBy(panel, shown); }
     void invoke(const QString &id, int generation, const QString &action, const QVariant &value = {});
     QUrl destinationForReveal(const QString &id, int generation) const;
     // Show in Files was used on this row; an end waiting there goes no further.
