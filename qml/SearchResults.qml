@@ -20,6 +20,12 @@ Item {
     required property TextInput query
     required property Item searchField
     readonly property alias resultList: resultList
+    // The scope line, 8 above the first row; rows 56 tall, the 32 icon with
+    // 12 above and below, and 4 apart.
+    readonly property int scopeHeight: 32
+    readonly property int listTop: 16 + scopeHeight + 8
+    readonly property int rowHeight: 56
+    readonly property int rowGap: 4
 
     y: searchField.y + searchField.height + 16
     width: parent.width
@@ -36,7 +42,7 @@ Item {
             text: launcher.searchResults.allFiles ? words.i18n("All files ⇄") : words.i18n("Everyday search ⇄")
             color: launcher.primaryText
             font.pixelSize: 12
-            height: 34
+            height: resultsArea.scopeHeight
             verticalAlignment: Text.AlignVCenter
             TapHandler {
                 onTapped: {
@@ -56,7 +62,7 @@ Item {
             text: words.i18n("Quiet folders…")
             color: launcher.secondaryText
             font.pixelSize: 12
-            height: 34
+            height: resultsArea.scopeHeight
             verticalAlignment: Text.AlignVCenter
             TapHandler { onTapped: { quietPaths.text = launcher.searchResults.quietFolders || ""; quietPopup.open() } }
         }
@@ -103,11 +109,11 @@ Item {
         id: resultList
         objectName: "search-result-list"
         anchors.fill: parent
-        anchors.topMargin: 38
+        anchors.topMargin: resultsArea.scopeHeight + 8
         clip: true
         // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
         Kirigami.WheelHandler { target: resultList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
-        spacing: 6
+        spacing: resultsArea.rowGap
         currentIndex: count > 0 ? 0 : -1
         model: launcher.searchResults
         // Model insertions and changing child heights can preserve
@@ -155,12 +161,12 @@ Item {
                 && launcher.launcherController.resultIsOpen(index)
 
             width: resultList.width
-            height: 62 + deviceChildren.height
+            height: resultsArea.rowHeight + deviceChildren.height
             radius: launcher.paperRadius
             color: "transparent"
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
-                width: parent.width; height: 62; radius: launcher.paperRadius
+                width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
                 color: resultDelegate.ListView.isCurrentItem && launcher.selectedChildKey === ""
                     ? tone.current : (hover.hovered ? tone.hover : "transparent")
             }
@@ -169,10 +175,10 @@ Item {
                 anchors.top: parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
-                height: 62
-                anchors.leftMargin: 14
-                anchors.rightMargin: 14
-                spacing: 14
+                height: resultsArea.rowHeight
+                anchors.leftMargin: 12
+                anchors.rightMargin: 12
+                spacing: 12
 
                 Kirigami.Icon {
                     anchors.verticalCenter: parent.verticalCenter
@@ -183,7 +189,7 @@ Item {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 46
+                    width: parent.width - 44
                     spacing: 3
 
                     Row {
@@ -224,9 +230,9 @@ Item {
 
             Column {
                 id: deviceChildren
-                x: 60
-                y: 62
-                width: parent.width - x - 14
+                x: 56
+                y: resultsArea.rowHeight
+                width: parent.width - x - 12
                 spacing: 4
                 Repeater {
                     model: resultDelegate.connectedDevices
@@ -268,7 +274,7 @@ Item {
             Item {
             id: resultTarget
             width: parent.width
-            height: 62
+            height: resultsArea.rowHeight
             HoverHandler { id: hover }
             TapHandler {
                 enabled: !launcher.guestDragged && !launcher.applicationLaunchPending

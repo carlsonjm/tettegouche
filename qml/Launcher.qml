@@ -843,19 +843,34 @@ Item {
         objectName: "launcher-sheet"
         // Resting, the sheet is as tall as what its first screen shows: the
         // field alone, one section of what was used lately, or both, as far
-        // as the screen allows. Typing, a drawer or a mode gives it at least
-        // its working height, growing down from where it rested.
+        // as the screen allows. A drawer or a mode gives it its working
+        // height, and typing as many results as it shows. Whatever its
+        // height, it stays centred.
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
                 + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
         readonly property real fullHeight: Math.max(restingHeight,
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
+        readonly property bool searching: query.text.length > 0 && !root.drawerOpen && root.modeShown === ""
+        // One letter matches almost everything, so the sheet first holds the
+        // three best results, then five, then eight; never more than there
+        // are, and past eight the list scrolls at the sheet's full height.
+        // The list itself holds every result.
+        readonly property int resultsShown: {
+            const typed = query.text.trim().length
+            const step = typed <= 1 ? 3 : typed === 2 ? 5 : 8
+            const count = root.resultList.count
+            return count > step ? (step === 8 ? 9 : step) : Math.max(1, count)
+        }
+        readonly property real resultsHeight: Math.min(fullHeight,
+            2 * root.contentInset + root.modeRowReach + root.fieldHeight
+                + resultsArea.listTop + resultsShown * (resultsArea.rowHeight + resultsArea.rowGap) - resultsArea.rowGap)
         readonly property real restHeight: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.height - 20)
-                : resting ? restingHeight : fullHeight
+                : resting ? restingHeight : searching ? resultsHeight : fullHeight
         // Floating, Search is one size on every display, as tall as both
         // sections and as wide as eight applications want, never scaled up
         // with a large display; only a smaller screen trims it.
@@ -870,6 +885,10 @@ Item {
         // With the keys up the sheet rises only as far as it must, never
         // leaving the room Kadunce gave a guest, then shortens to fit.
         readonly property real keysLine: root.height - root.keysReach
+        // The room it is centred in: the work area, above the keys while
+        // they are up.
+        readonly property real room: Math.min(root.launcherController.availableArea.y
+            + root.launcherController.availableArea.height, keysLine) - root.launcherController.availableArea.y
         readonly property real highest: root.launcherController.guestMode
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
@@ -882,8 +901,7 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((root.launcherController.availableArea.height - restingHeight) / 2),
-                        root.launcherController.availableArea.height - height - 10)))))
+                    : Math.max(0, Math.min(Math.round((room - restHeight) / 2), room - restHeight - 10)))))
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
@@ -891,7 +909,8 @@ Item {
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        // Moving with its height, so it grows up and down evenly.
+        Behavior on y { enabled: root.launcherController.guestMode || !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
         Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }

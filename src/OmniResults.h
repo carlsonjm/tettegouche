@@ -320,6 +320,8 @@ public:
         m_combined.addSourceModel(&m_notes);
         m_core.setColumnCount(1);
         m_combined.addSourceModel(&m_core);
+        // Every re-sort and re-filter ranks the rows afresh.
+        connect(this, &QAbstractItemModel::layoutAboutToBeChanged, this, [this]() { m_ranked = false; });
         setSourceModel(&m_combined);
         m_modules = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings"));
         m_modules.append(KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings_qwidgets")));
@@ -359,6 +361,24 @@ public:
     }
     void releaseSelection() { m_selectedDestination.clear(); m_frozenOrder.clear(); }
     void setRunnerManager(KRunner::RunnerManager *manager) { m_results.setRunnerManager(manager); }
+    // Watched before the proxy's own handlers, so a changed row is never
+    // judged from the ranking of the rows it replaced.
+    void setSourceModel(QAbstractItemModel *source) override {
+        for (const auto &watch : std::as_const(m_rankWatch)) disconnect(watch);
+        m_rankWatch.clear();
+        m_ranked = false;
+        if (source) {
+            const auto stale = [this]() { m_ranked = false; };
+            m_rankWatch = {
+                connect(source, &QAbstractItemModel::rowsInserted, this, stale),
+                connect(source, &QAbstractItemModel::rowsRemoved, this, stale),
+                connect(source, &QAbstractItemModel::rowsMoved, this, stale),
+                connect(source, &QAbstractItemModel::dataChanged, this, stale),
+                connect(source, &QAbstractItemModel::modelReset, this, stale),
+                connect(source, &QAbstractItemModel::layoutChanged, this, stale)};
+        }
+        QSortFilterProxyModel::setSourceModel(source);
+    }
     void setLimit(int limit) { m_results.setLimit(limit); }
     virtual QString queryString() const { return m_results.queryString(); }
     bool allFiles() const { return m_allFiles; }
@@ -536,29 +556,68 @@ Q_SIGNALS:
     void queryingChanged();
 protected:
     bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
-        if (!candidateEligible(row, parent)) return false;
-        const auto match = sourceModel()->index(row, 0, parent)
-            .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
-        const auto key = destinationKey(match);
-        const auto priority = resultPriority(match, queryString());
-        for (int other = 0; other < sourceModel()->rowCount(parent); ++other) {
-            if (other == row) continue;
-            const auto alternative = sourceModel()->index(other, 0, parent)
-                .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
-            if (destinationKey(alternative) != key || !candidateEligible(other, parent)) continue;
-            if (key.startsWith(QStringLiteral("setting:"))) {
-                const bool canonical = match.runner()->id().contains(QStringLiteral("systemsettings"));
-                const bool otherCanonical = alternative.runner()->id().contains(QStringLiteral("systemsettings"));
-                if (canonical != otherCanonical) {
-                    if (otherCanonical) return false;
+        const Ranked &rank = ranked(row, parent);
+        return rank.eligible && m_shownFor.value(rank.key, -1) == row;
+    }
+
+    // Each row's eligibility, destination and priority, worked out once for
+    // the query and its rows rather than at every comparison of a sort or a
+    // filter, which grew with the square of the rows a short query brings.
+    struct Ranked {
+        bool eligible = false;
+        bool setting = false;
+        int priority = 0;
+        int tier = 3;
+        QString key;
+    };
+    Ranked rankOf(const QModelIndex &index) const {
+        if (index.model() == sourceModel()) return ranked(index.row(), index.parent());
+        const auto match = index.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
+        Ranked rank;
+        rank.priority = resultPriority(match, queryString());
+        rank.tier = searchTier(match);
+        return rank;
+    }
+    const Ranked &ranked(int row, const QModelIndex &parent = {}) const {
+        const int rows = sourceModel()->rowCount(parent);
+        if (!m_ranked || m_ranking.size() != rows) {
+            m_ranking = QList<Ranked>(rows);
+            m_shownFor.clear();
+            const auto query = queryString();
+            for (int i = 0; i < rows; ++i) {
+                auto &rank = m_ranking[i];
+                const auto match = sourceModel()->index(i, 0, parent)
+                    .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
+                rank.eligible = candidateEligible(i, parent);
+                rank.key = destinationKey(match);
+                rank.priority = resultPriority(match, query);
+                rank.tier = searchTier(match);
+                rank.setting = match.runner() && match.runner()->id().contains(QStringLiteral("systemsettings"));
+            }
+            // One row stands for each destination: for a setting, KDE's own
+            // module before a shortcut to it; then the stronger match, then
+            // the earlier row.
+            for (int i = 0; i < rows; ++i) {
+                const auto &rank = m_ranking.at(i);
+                if (!rank.eligible) continue;
+                const int shown = m_shownFor.value(rank.key, -1);
+                if (shown < 0) { m_shownFor.insert(rank.key, i); continue; }
+                const auto &current = m_ranking.at(shown);
+                if (rank.key.startsWith(QStringLiteral("setting:")) && rank.setting != current.setting) {
+                    if (rank.setting) m_shownFor.insert(rank.key, i);
                     continue;
                 }
+                if (rank.priority < current.priority) m_shownFor.insert(rank.key, i);
             }
-            const auto otherPriority = resultPriority(alternative, queryString());
-            if (otherPriority < priority || (otherPriority == priority && other < row)) return false;
+            m_ranked = true;
         }
-        return true;
+        static const Ranked none;
+        return row >= 0 && row < m_ranking.size() ? m_ranking.at(row) : none;
     }
+    QList<QMetaObject::Connection> m_rankWatch;
+    mutable bool m_ranked = false;
+    mutable QList<Ranked> m_ranking;
+    mutable QHash<QString, int> m_shownFor;
     bool candidateEligible(int row, const QModelIndex &parent) const {
         const auto match = sourceModel()->index(row, 0, parent)
             .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
@@ -597,12 +656,11 @@ protected:
             const int a = m_frozenOrder.value(keyA, INT_MAX), b = m_frozenOrder.value(keyB, INT_MAX);
             if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
         }
-        const int qualityA = resultPriority(left.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>(), queryString());
-        const int qualityB = resultPriority(right.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>(), queryString());
+        const Ranked rankA = rankOf(left), rankB = rankOf(right);
+        const int qualityA = rankA.priority, qualityB = rankB.priority;
         if (qualityA != qualityB)
             return sortOrder() == Qt::AscendingOrder ? qualityA < qualityB : qualityA > qualityB;
-        const int a = searchTier(left.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
-        const int b = searchTier(right.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
+        const int a = rankA.tier, b = rankB.tier;
         // QSortFilterProxyModel reverses the comparator for descending sorting.
         if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
         // Preserve KDE's relevance order within each tier.

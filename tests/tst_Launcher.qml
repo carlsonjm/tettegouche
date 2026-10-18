@@ -1003,9 +1003,9 @@ TestCase {
         controller.relatedRevision++
         tryVerify(function() { return findChild(launcher, "result-0") !== null })
         const result = findChild(launcher, "result-0")
-        tryCompare(result, "height", 146)
+        tryCompare(result, "height", 140)
         const highlight = findChild(launcher, "parent-highlight-0")
-        compare(highlight.height, 62)
+        compare(highlight.height, 56)
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""
@@ -1038,7 +1038,7 @@ TestCase {
         controller.activationResult = 1
         controller.bluetoothContext.connectedDevices = []
         controller.relatedRevision++
-        tryCompare(result, "height", 62)
+        tryCompare(result, "height", 56)
         results.clear()
         controller.bluetoothResult = false
         query.text = ""
@@ -1179,7 +1179,7 @@ TestCase {
         tryCompare(row, "opacity", 1)
     }
     // What is on sets how tall Search rests: the field alone, one section,
-    // or both. Typing gives the sheet its full height, growing down.
+    // or both. Typing gives the sheet the results' height, centred.
     function test_firstRowSections() {
         launcher.fileBrowser = filesMock
         fillRecent(20)
@@ -1205,15 +1205,30 @@ TestCase {
         tryCompare(sheet, "height", small)
         compare(row.sections, 0)
         tryCompare(field, "y", 0)
-        // Centred at rest; typing grows it down from where it rested.
+        // Centred at rest, and still centred as typing grows it to hold the
+        // results: three for one letter, five for two, and from three
+        // letters eight, the rest scrolling at its full height; never taller
+        // than the results there are.
         const full = sheet.fullHeight
-        compare(sheet.y, area.y + Math.round((area.height - small) / 2))
-        const restTop = sheet.y
-        query.text = "x"
-        tryCompare(sheet, "height", full)
-        compare(sheet.y, Math.min(restTop, area.y + area.height - full - 10))
+        const centred = height => area.y + Math.round((area.height - height) / 2)
+        compare(sheet.y, centred(small))
+        results.clear()
+        for (let i = 0; i < 12; ++i)
+            results.append({display: "Example " + i, decoration: "preferences-system-windows", subtext: "Settings"})
+        const holding = rows => Math.min(full, small + 16 + 32 + 8 + rows * 60 - 4)
+        for (const [typed, rows] of [["e", 3], ["ex", 5], ["exa", 9]]) {
+            query.text = typed
+            tryCompare(sheet, "height", holding(rows))
+            tryCompare(sheet, "y", centred(holding(rows)))
+        }
+        compare(sheet.height, full)
+        results.remove(1, 11)
+        tryCompare(sheet, "height", holding(1))
+        tryCompare(sheet, "y", centred(holding(1)))
+        results.clear()
         query.text = ""
         tryCompare(sheet, "height", small)
+        tryCompare(sheet, "y", centred(small))
         // A drawer gives it its full height too.
         launcher.setDrawerOpen(true)
         tryCompare(sheet, "height", full)
@@ -2080,7 +2095,7 @@ TestCase {
         compare(sheet.y, 10)
         verify(bottomOf(sheet) <= 374.5)
         verify(bottomOf(field) < 374)
-        verify(list.height >= 3 * 62)
+        verify(list.height >= 3 * 56)
         verify(bottomOf(list) <= 374.5)
         // The shortest keys: the sheet rises only as far as it must.
         launcher.keysRect = shortKeys
