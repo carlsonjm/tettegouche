@@ -534,23 +534,24 @@ Item {
         }
 
         // The filters: everything, today, on windows, each folder, and
-        // Tucked away, quieter, last.
+        // Tucked away, quieter, last. Smaller than the modes above them, as
+        // they only sort what is below: 32 tall pills, 8 apart, each touched
+        // across 40.
         Flickable {
             id: filters
             objectName: "notes-filters"
             x: 0
             y: pane.findEnd.y + pane.findEnd.height + 12
             width: pane.width
-            height: 44
+            height: 40
             contentWidth: filterRow.width
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.HorizontalFlick
             opacity: pane.clamp((pane.progress - 0.5) / 0.5)
-            transform: Translate { y: 20 * (1 - pane.progress) }
             Row {
                 id: filterRow
-                spacing: 4
+                spacing: 0
                 Filter { key: "everything"; label: words.i18n("Everything") }
                 Filter { key: "today"; label: words.i18n("Today") }
                 Filter { key: "windows"; label: words.i18n("On windows") }
@@ -582,7 +583,6 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             model: pane.rows
             opacity: pane.clamp((pane.progress - 0.5) / 0.5)
-            transform: Translate { y: 20 * (1 - pane.progress) }
             delegate: Item {
                 id: row
                 required property var modelData
@@ -1112,7 +1112,6 @@ Item {
             width: pane.width
             spacing: 8
             opacity: pane.fromBoard ? 1 : pane.progress
-            transform: Translate { y: pane.fromBoard ? 0 : 20 * (1 - pane.progress) }
 
             // Folder's choices: the folders, the workspace's own marked, and a
             // field for a new one.
@@ -1532,17 +1531,17 @@ Item {
     }
 
     // A filter over the board's notes, filled when chosen.
-    component Filter: Rectangle {
+    component Filter: Item {
         id: filterItem
         property string key
         property string label
         property bool quiet: false
         readonly property bool chosen: pane.filter === key
         objectName: "notes-filter-" + key
-        height: 44
-        width: filterText.implicitWidth + 28
-        radius: 22
-        color: chosen ? tone.chosen : filterHover.hovered ? tone.hover : "transparent"
+        // The touch reaches 4 past the pill on each side, so pills read 8
+        // apart with no gap between their touches.
+        height: 40
+        width: filterPill.width + 8
         activeFocusOnTab: true
         Accessible.role: Accessible.RadioButton
         Accessible.name: label
@@ -1553,6 +1552,14 @@ Item {
         function pick() {
             pane.filter = key
             pane.focusFind()
+        }
+        Rectangle {
+            id: filterPill
+            anchors.centerIn: parent
+            height: 32
+            width: filterText.implicitWidth + 24
+            radius: height / 2
+            color: filterItem.chosen ? tone.chosen : filterHover.hovered ? tone.hover : "transparent"
         }
         Text {
             id: filterText

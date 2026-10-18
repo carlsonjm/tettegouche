@@ -1232,6 +1232,14 @@ TestCase {
         query.text = ""
         tryCompare(sheet, "height", small)
         tryCompare(sheet, "y", centred(small))
+        // Opening again after typing, it is at once where and as tall as it
+        // rests: nothing drops in from where it closed.
+        query.text = "x"
+        tryCompare(sheet, "height", full)
+        controller.opened()
+        compare(sheet.height, small)
+        compare(sheet.y, centred(small))
+        tryCompare(launcher, "sheetSettled", true)
         // A drawer gives it its full height too.
         launcher.setDrawerOpen(true)
         tryCompare(sheet, "height", full)
@@ -2891,6 +2899,30 @@ TestCase {
         controller.drawerRequested("notes")
         compare(controller.closes, 1)
     }
+    // Back from a note handed to the notes application's card opens Notes at
+    // the size it had when the note left, not filling the screen.
+    function test_notesBackKeepsSize() {
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const pane = findChild(launcher, "notes-pane")
+        controller.drawerRequested("notes-back")
+        verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, false)
+        pane.finished()
+        compare(launcher.notesLeftExpanded, false)
+        controller.setDrawerExpanded(true, true)
+        pane.finished()
+        compare(launcher.notesLeftExpanded, true)
+        launcher.closeNotes()
+        tryCompare(launcher, "notesProgress", 0)
+        controller.drawerExpanded = false
+        controller.drawerRequested("notes-back")
+        verify(launcher.notesOpen)
+        compare(controller.drawerExpanded, true)
+        launcher.notesLeftExpanded = false
+    }
     // The panel's quick note island: its dot asks for a new quick note, and
     // its pinned note for that note, each alone at Search's size with no
     // Back to the board.
@@ -3301,6 +3333,9 @@ TestCase {
         findChild(launcher, "notes-find").text = ""
         tryCompare(quickStub, "notesWords", "")
         const tucked = findChild(launcher, "notes-filter-tucked")
+        // Smaller than the modes: a 32 tall pill touched across 40.
+        compare(tucked.height, 40)
+        compare(tucked.children[0].height, 32)
         mouseClick(tucked, tucked.width / 2, tucked.height / 2)
         compare(pane.rows.length, 1)
         compare(pane.rows[0].note.id, "note-3")

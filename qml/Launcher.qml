@@ -171,6 +171,26 @@ Item {
     // the sheet keeps above them itself.
     property rect keysRect: Qt.inputMethod.visible ? Qt.inputMethod.keyboardRectangle : Qt.rect(0, 0, 0, 0)
     readonly property bool keysUp: keysRect.width > 0 && keysRect.height > 0 && keysRect.y < height
+    // Opened to type, the field takes the keys again once the window is
+    // active: started cold, the cursor can show before the window has the
+    // keys, so nothing typed would reach it.
+    property bool typingAwaitsWindow: false
+    Connections {
+        target: root.Window.window
+        ignoreUnknownSignals: true
+        function onActiveChanged() {
+            if (!root.Window.window.active || !root.typingAwaitsWindow) return
+            root.typingAwaitsWindow = false
+            if (!root.searchEngaged) return
+            query.forceActiveFocus()
+            Qt.inputMethod.update(Qt.ImQueryInput)
+        }
+    }
+    // Whether Notes filled the screen when its note went to the notes
+    // application's card, so Back returns to that size.
+    property bool notesLeftExpanded: false
+    // False while Search opens, so the sheet takes its place at once.
+    property bool sheetSettled: true
     // How far up from the window's bottom the sheet must keep clear, eased as
     // the keys come and go.
     property real keysReach: keysUp ? height - keysRect.y + 10 : 0
@@ -716,6 +736,10 @@ Item {
             query.forceActiveFocus()
         }
         function onOpened() {
+            // Search opens where it rests, at its resting size: nothing slides
+            // or shrinks in from where it last closed.
+            root.sheetSettled = false
+            Qt.callLater(() => { root.sheetSettled = true })
             launchTimeout.stop()
             query.text = ""
             root.pendingLaunch = false
@@ -747,6 +771,7 @@ Item {
                 root.searchEngaged = true
                 query.forceActiveFocus()
             }
+            root.typingAwaitsWindow = root.searchEngaged && !(root.Window.window && root.Window.window.active)
             root.guestDrag = 0
             root.guestExiting = false
             root.guestDragged = false
@@ -769,6 +794,14 @@ Item {
             if (mode === "note" || mode.startsWith("note:")) {
                 if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
                 root.openModeDirectly("notes", mode === "note" ? "new" : mode)
+                return
+            }
+            // Back from a note handed to the notes application's card: Notes
+            // again, at the size it had when the note left.
+            if (mode === "notes-back") {
+                if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
+                root.openModeDirectly("notes")
+                if (root.notesLeftExpanded) root.launcherController.setDrawerExpanded(true, true)
                 return
             }
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
@@ -893,7 +926,7 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((room - restHeight) / 2), room - restHeight - 10)))))
+                    : Math.max(0, Math.min(Math.round((room - height) / 2), room - height - 10)))))
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
@@ -901,11 +934,12 @@ Item {
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        // Moving with its height, so it grows up and down evenly.
-        Behavior on y { enabled: root.launcherController.guestMode || !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        Behavior on width { NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        // Centred on its height as that moves, so it grows up and down
+        // evenly with no motion of its own.
+        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on width { enabled: root.sheetSettled; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
-        Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on height { enabled: root.sheetSettled && !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Floating, it is a note that closes; in Spread, a card's paper.
         radius: root.launcherController.guestMode ? root.paperRadius : root.noteRadius
         color: root.surfaceColor
@@ -1138,7 +1172,10 @@ Item {
                 onExpand: root.toggleExpanded()
                 onDismiss: root.launcherController.close()
                 onGrow: root.growNotes()
-                onFinished: root.launcherController.close()
+                onFinished: {
+                    root.notesLeftExpanded = root.launcherController.drawerExpanded
+                    root.launcherController.close()
+                }
             }
 
             Loader {
@@ -1165,7 +1202,6 @@ Item {
                 width: parent.width; height: Math.max(0,parent.height-y)
                 visible: root.filesMode && root.drawerProgress>0.01
                 opacity: root.drawerProgress
-                transform: Translate { y: -20*(1-root.drawerProgress) }
             }
             // Apps' row over its applications: the order, a grey pill naming
             // it at the right, as Files has its own over the folder.
