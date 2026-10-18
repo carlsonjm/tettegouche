@@ -115,7 +115,7 @@ private:
         QVariantList result;
         const auto add = [&result](const QString &path, const QString &icon, bool hidden) {
             if (path.isEmpty()) return;
-            result.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("standard:") + path},
+            result.append(QVariantMap{{QStringLiteral("id"), QString(QStringLiteral("standard:") + path)},
                 {QStringLiteral("label"), standardLabel(path, QFileInfo(path).fileName())}, {QStringLiteral("path"), path},
                 {QStringLiteral("icon"), icon}, {QStringLiteral("hidden"), hidden}, {QStringLiteral("system"), true}});
         };

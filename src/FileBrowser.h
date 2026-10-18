@@ -1085,14 +1085,14 @@ private:
         m_everyPlace=every;
         places.removeIf([](const QVariant &place) {
             const auto map=place.toMap();
-            return map.value(QStringLiteral("section"))==QLatin1String("places") && map.value(QStringLiteral("path"))!=recentLocation();
+            return map.value(QStringLiteral("section")).toString()==QLatin1String("places") && map.value(QStringLiteral("path")).toString()!=recentLocation();
         });
         int kept=1;
         for(const auto &place:m_everyPlace) {
             auto map=place.toMap();
             if(map.value(QStringLiteral("hidden")).toBool())continue;
             map.insert(QStringLiteral("section"),QStringLiteral("places"));
-            if(map.value(QStringLiteral("path"))==PlaceBook::trashLocation())
+            if(map.value(QStringLiteral("path")).toString()==PlaceBook::trashLocation())
                 map.insert(QStringLiteral("note"),m_trashItems>0 ? i18np("1 item","%1 items",m_trashItems) : QString());
             places.insert(kept++,map);
         }
