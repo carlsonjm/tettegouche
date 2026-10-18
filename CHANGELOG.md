@@ -6,8 +6,9 @@ provenance.
 ## Unreleased
 
 - Opening Notes in Search, or picking one of its filters, no longer puts the
-  cursor in Find or start a note, so no on-screen keys rise on a tablet.
-  Typing still goes straight into it, and a tap on it brings the keys.
+  cursor in its field, so no on-screen keys rise on a tablet. Typing still
+  goes straight into it, and a tap on it brings the keys. The field reads
+  Find a note, since New note starts one.
 - The quick note has an island of its own beside the launcher, there while
   Gooseberry is installed: a dot with a plus that starts a quick note on
   Gooseberry's own card, and beside it the note pinned in Gooseberry, a bead
@@ -17,7 +18,7 @@ provenance.
   note's colour with the count, ringed while they are up over the window, and
   a tap brings them up or puts them away. While the island shows, notes that
   fold leave no dot over their window.
-- Notes in Search opens on a board of every note: Find or start a note, the
+- Notes in Search opens on a board of every note: Find a note, the
   same pill as Search's field, holding still under the modes, a row
   of filters, Everything, Today, On windows, each folder and Tucked away, and
   the notes grouped under them, wide rows showing a note's words and where
