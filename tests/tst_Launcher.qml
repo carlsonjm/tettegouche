@@ -2026,6 +2026,30 @@ TestCase {
         controller.drawerExpanded=false
         tryCompare(places,"width",54)
         compare(pane.tile.cell,140)
+        // Their own button opens the places at a card's size, and the first
+        // touch on the folder folds them back.
+        const fold=findChild(launcher,"files-places-fold")
+        mouseClick(fold)
+        tryCompare(places,"width",170)
+        mouseClick(pane,pane.width-40,pane.height/2)
+        tryCompare(places,"width",54)
+        // Filling the screen they stay open until their button folds them;
+        // a touch on the folder leaves them as they are.
+        controller.drawerExpanded=true
+        tryCompare(places,"width",170)
+        mouseClick(pane,pane.width-40,pane.height/2)
+        compare(places.width,170)
+        mouseClick(fold)
+        tryCompare(places,"width",54)
+        mouseClick(fold)
+        // Open, they are as wide as the longest name, never more than 240.
+        filesMock.places=[{label:"Home",path:"/home/test",icon:"user-home",section:"places"},
+            {label:"Pictures from the phone",path:"/home/test/Phone",icon:"folder",section:"places"}]
+        tryVerify(() => places.width>170 && places.width<240)
+        filesMock.places=[{label:"A very long folder name that would never fit here at all",path:"/home/test/Long",icon:"folder",section:"places"}]
+        tryCompare(places,"width",240)
+        controller.drawerExpanded=false
+        tryCompare(places,"width",54)
         filesMock.tileSize=1
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
