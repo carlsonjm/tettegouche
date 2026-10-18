@@ -740,6 +740,13 @@ Item {
             root.filesHandoff = false
             if (root.quickNote) root.quickNote.refresh()
             root.forceActiveFocus()
+            // Opened by its key, Search is ready to type: the cursor waits in
+            // the field, and keys on screen stay up. Its button leaves the
+            // field alone, so a tap raises no keys.
+            if (root.launcherController.openedToType()) {
+                root.searchEngaged = true
+                query.forceActiveFocus()
+            }
             root.guestDrag = 0
             root.guestExiting = false
             root.guestDragged = false
@@ -843,8 +850,8 @@ Item {
         objectName: "launcher-sheet"
         // Resting, the sheet is as tall as what its first screen shows: the
         // field alone, one section of what was used lately, or both, as far
-        // as the screen allows. Typing, a drawer or a mode gives it at least
-        // its working height, growing down from where it rested.
+        // as the screen allows. Typing, a drawer or a mode gives it its
+        // working height. Whatever its height, it stays centred.
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
                 + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
@@ -870,6 +877,10 @@ Item {
         // With the keys up the sheet rises only as far as it must, never
         // leaving the room Kadunce gave a guest, then shortens to fit.
         readonly property real keysLine: root.height - root.keysReach
+        // The room it is centred in: the work area, above the keys while
+        // they are up.
+        readonly property real room: Math.min(root.launcherController.availableArea.y
+            + root.launcherController.availableArea.height, keysLine) - root.launcherController.availableArea.y
         readonly property real highest: root.launcherController.guestMode
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
@@ -882,8 +893,7 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((root.launcherController.availableArea.height - restingHeight) / 2),
-                        root.launcherController.availableArea.height - height - 10)))))
+                    : Math.max(0, Math.min(Math.round((room - restHeight) / 2), room - restHeight - 10)))))
         width: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
@@ -891,7 +901,8 @@ Item {
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        // Moving with its height, so it grows up and down evenly.
+        Behavior on y { enabled: root.launcherController.guestMode || !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
         Behavior on height { enabled: !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }

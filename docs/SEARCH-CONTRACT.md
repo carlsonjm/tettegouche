@@ -14,7 +14,10 @@ that row: Expand while Apps or Files is open, Pop out in Files, and Close,
 last; at rest, Close alone. The field is the same on every screen: a pill
 44 tall on the row's own edges, the dot's pill starting where it starts and
 Close ending where it ends, 16 below the row, with 24 between everything and
-the sheet's edge, so only what is under it changes. Before anything is typed,
+the sheet's edge, so only what is under it changes. Every search is that
+field, Files' own window's too: the search glyph 16 in, the words 12 past it
+at the size of what is typed, reading Just type on the first screen and
+Find an app, Find a file or Find a note in a mode. Before anything is typed,
 what was used lately is under it in two labelled sections, each newest first:
 Recent apps, a row of eight icons with their whole names, and Recent files,
 eight cards in two rows of four, each with its picture or its kind's icon,
@@ -29,9 +32,9 @@ needs; with one, it is as tall as that
 section; with both, it is its full height. Floating, Search is one size
 on every display, 840 wide and at most as tall as both sections, so a large
 desktop screen shows it no bigger than the tablet does; only a smaller screen
-trims it. It is centred on the screen at
-rest, and typing, a drawer or a mode grows it to its full height downward
-from there, moving up only as far as the screen's edge needs. Inside Spread,
+trims it. It is centred on the screen at every height, above the keys
+while they are up: typing, a drawer or a mode grows it to its full height,
+evenly up and down. Inside Spread,
 Kadunce sets its size; with neither section on, the field rests in the middle
 of it. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and

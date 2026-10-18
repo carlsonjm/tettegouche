@@ -89,6 +89,8 @@ TestCase {
         function close() { closes++ }
         property int keyRequests: 0
         function showInputMethod() { keyRequests++ }
+        property bool toType: false
+        function openedToType() { return toType }
         function relatedOptionLabel(row) { return "Open Bluetooth settings" }
         function updateGuestDrag(value) {}
         function relatedItems(row) {
@@ -993,6 +995,20 @@ TestCase {
         results.clear()
         query.text = ""
     }
+    // Opened by its key, Search is ready to type with the cursor in the
+    // field; by its button, nothing takes the cursor, so no keys rise.
+    function test_openedToType() {
+        const query = findChild(launcher, "search-query")
+        controller.toType = true
+        controller.opened()
+        verify(query.activeFocus)
+        keyClick("k")
+        compare(query.text, "k")
+        controller.toType = false
+        controller.opened()
+        verify(!query.activeFocus)
+        compare(query.text, "")
+    }
     function test_bluetoothChildrenCollapse() {
         controller.opened()
         controller.bluetoothResult = true
@@ -1003,9 +1019,9 @@ TestCase {
         controller.relatedRevision++
         tryVerify(function() { return findChild(launcher, "result-0") !== null })
         const result = findChild(launcher, "result-0")
-        tryCompare(result, "height", 146)
+        tryCompare(result, "height", 140)
         const highlight = findChild(launcher, "parent-highlight-0")
-        compare(highlight.height, 62)
+        compare(highlight.height, 56)
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""
@@ -1038,7 +1054,7 @@ TestCase {
         controller.activationResult = 1
         controller.bluetoothContext.connectedDevices = []
         controller.relatedRevision++
-        tryCompare(result, "height", 62)
+        tryCompare(result, "height", 56)
         results.clear()
         controller.bluetoothResult = false
         query.text = ""
@@ -1179,7 +1195,7 @@ TestCase {
         tryCompare(row, "opacity", 1)
     }
     // What is on sets how tall Search rests: the field alone, one section,
-    // or both. Typing gives the sheet its full height, growing down.
+    // or both. Typing gives the sheet its full height, still centred.
     function test_firstRowSections() {
         launcher.fileBrowser = filesMock
         fillRecent(20)
@@ -1205,15 +1221,17 @@ TestCase {
         tryCompare(sheet, "height", small)
         compare(row.sections, 0)
         tryCompare(field, "y", 0)
-        // Centred at rest; typing grows it down from where it rested.
+        // Centred at rest, and still centred as typing grows it, evenly up
+        // and down.
         const full = sheet.fullHeight
-        compare(sheet.y, area.y + Math.round((area.height - small) / 2))
-        const restTop = sheet.y
+        const centred = height => area.y + Math.round((area.height - height) / 2)
+        compare(sheet.y, centred(small))
         query.text = "x"
         tryCompare(sheet, "height", full)
-        compare(sheet.y, Math.min(restTop, area.y + area.height - full - 10))
+        tryCompare(sheet, "y", centred(full))
         query.text = ""
         tryCompare(sheet, "height", small)
+        tryCompare(sheet, "y", centred(small))
         // A drawer gives it its full height too.
         launcher.setDrawerOpen(true)
         tryCompare(sheet, "height", full)
@@ -2080,7 +2098,7 @@ TestCase {
         compare(sheet.y, 10)
         verify(bottomOf(sheet) <= 374.5)
         verify(bottomOf(field) < 374)
-        verify(list.height >= 3 * 62)
+        verify(list.height >= 3 * 56)
         verify(bottomOf(list) <= 374.5)
         // The shortest keys: the sheet rises only as far as it must.
         launcher.keysRect = shortKeys
@@ -2735,6 +2753,8 @@ TestCase {
         const left = item => item.mapToItem(window, 0, 0).x
         const right = item => item.mapToItem(window, item.width, 0).x
         verify(left(eye) >= left(field) && right(eye) <= right(field) - 40)
+        // Search's own field: the words 46 in, and the same words.
+        compare(findChild(window, "files-window-query").mapToItem(field, 0, 0).x, 46)
         verify(findChild(window, "files-sort"))
         verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
         verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
@@ -2916,6 +2936,9 @@ TestCase {
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
+        // Every search reads alike: Find an app, Find a file, Find a note.
+        compare(findChild(launcher, "just-type-placeholder").text, data.mode === "files" ? "Find a file" : "Find an app")
+        compare(query.mapToItem(field, 0, 0).x, 46)
         // The modes, then search, where it is on every screen, holding the
         // header's row; the order sits below, over the drawer.
         verify(back.visible && back.enabled)
@@ -3168,9 +3191,16 @@ TestCase {
         compare(frame.height, 44)
         compare(frame.x, field.x)
         compare(frame.width, field.width)
+        // The words start where Search's do, 46 in from the pill's edge,
+        // the same size, so moving into Notes shifts nothing.
+        const find = findChild(launcher, "notes-find")
+        compare(find.leftPadding, 0)
+        compare(find.mapToItem(frame, 0, 0).x, 46)
+        compare(findChild(launcher, "search-query").mapToItem(field, 0, 0).x, 46)
+        compare(find.font.pixelSize, findChild(launcher, "just-type-placeholder").font.pixelSize)
+        compare(find.placeholderText, "Find a note")
         // The board holds the keys, not its field, so no on-screen keys
         // rise on a tablet; typing goes into the field.
-        const find = findChild(launcher, "notes-find")
         const pane = findChild(launcher, "notes-pane")
         verify(!find.activeFocus)
         verify(pane.activeFocus)

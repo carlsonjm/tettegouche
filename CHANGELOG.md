@@ -5,6 +5,19 @@ provenance.
 
 ## Unreleased
 
+- Typing in Search stays quick however many files a short query brings:
+  each result is judged once for what was typed, never again as more arrive
+  or the list is sorted.
+- Search stays centred as it grows: typing, a drawer or a mode grows it
+  evenly up and down rather than only down. Results are rows 56 tall, 4
+  apart.
+- Every search field is the same: Search's first screen, Apps, Files, Notes
+  and Files' own window share one pill, the words 46 in from its edge at the
+  size of what is typed, reading Just type, Find an app, Find a file or Find
+  a note, so moving between them shifts nothing.
+- `Meta` opens Search ready to type, the cursor in the field, so on-screen
+  keys that pressed it stay up; the dot still opens it with no cursor, so a
+  tap raises no keys.
 - Opening Notes in Search, or picking one of its filters, no longer puts the
   cursor in its field, so no on-screen keys rise on a tablet. Typing still
   goes straight into it, and a tap on it brings the keys. The field reads

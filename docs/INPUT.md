@@ -61,12 +61,12 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. |
+| Tap or click the dot | Opens Search, and a ring round the dot shows it is open. Again closes it. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
 | Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
-| Meta, or Alt+F1 | Opens or closes Search. Tettegouche is an application launcher to Plasma, so Plasma's launcher key reaches it as it reaches Kickoff, Plasma's application menu. Where a screen's panels hold both, the first launcher Plasma finds opens. A shortcut set as the widget's own in Plasma opens Search too. |
+| Meta, or Alt+F1 | Opens or closes Search, ready to type: the cursor waits in the field, and on-screen keys that pressed Meta stay up. Tettegouche is an application launcher to Plasma, so Plasma's launcher key reaches it as it reaches Kickoff, Plasma's application menu. Where a screen's panels hold both, the first launcher Plasma finds opens. A shortcut set as the widget's own in Plasma opens Search too. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |

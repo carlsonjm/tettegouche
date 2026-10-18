@@ -482,6 +482,8 @@ Item {
                 width: 18
                 height: 18
                 anchors.verticalCenter: parent.verticalCenter
+                opacity: findFrame.lit ? 0.9 : 0.55
+                Behavior on opacity { NumberAnimation { duration: 150 } }
             }
             QQC2.TextField {
                 id: find
@@ -491,6 +493,13 @@ Item {
                 anchors.right: findHint.left
                 anchors.rightMargin: 12
                 anchors.verticalCenter: parent.verticalCenter
+                // The style's own padding would set the words further in
+                // than Search's field sets them.
+                padding: 0
+                leftPadding: 0
+                rightPadding: 0
+                topPadding: 0
+                bottomPadding: 0
                 background: null
                 color: pane.primaryText
                 font.pixelSize: 16

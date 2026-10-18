@@ -373,6 +373,15 @@ void LauncherController::toggle()
     else open();
 }
 
+void LauncherController::toggleToType()
+{
+    if (openOrOpening()) {
+        close();
+        return;
+    }
+    openFor(true);
+}
+
 void LauncherController::showDrive(const QString &id)
 {
     if (!m_fileBrowser) { open(); return; }
@@ -456,9 +465,15 @@ void LauncherController::openDrawer(const QString &drawer)
 
 void LauncherController::open()
 {
+    openFor(false);
+}
+
+void LauncherController::openFor(bool toType)
+{
     m_quitAfterFiles = false;
     m_lateQuit.stop();
     if (m_opening) return;
+    m_openedToType = toType;
     m_opening = true;
     m_launchToken.clear();
     endGuestLease();

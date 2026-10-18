@@ -359,6 +359,38 @@ public:
     }
     void releaseSelection() { m_selectedDestination.clear(); m_frozenOrder.clear(); }
     void setRunnerManager(KRunner::RunnerManager *manager) { m_results.setRunnerManager(manager); }
+    // Watched before the proxy's own handlers, so which row stands for a
+    // destination is never judged from the rows that were there before.
+    void setSourceModel(QAbstractItemModel *source) override {
+        for (const auto &watch : std::as_const(m_rowWatch)) disconnect(watch);
+        m_rowWatch.clear();
+        m_shownStale = true;
+        if (source) {
+            // Each row also remembers which verdict is its own, moved along
+            // as rows arrive and leave, so sorting reads it straight back.
+            const auto stale = [this]() { m_shownStale = true; m_rowVerdict.clear(); };
+            m_rowWatch = {
+                connect(source, &QAbstractItemModel::rowsInserted, this, [this](const QModelIndex &parent, int first, int last) {
+                    m_shownStale = true;
+                    if (!parent.isValid() && first <= m_rowVerdict.size()) m_rowVerdict.insert(first, last - first + 1, -1);
+                }),
+                connect(source, &QAbstractItemModel::rowsRemoved, this, [this](const QModelIndex &parent, int first, int last) {
+                    m_shownStale = true;
+                    if (!parent.isValid() && first < m_rowVerdict.size())
+                        m_rowVerdict.remove(first, qMin<qsizetype>(last, m_rowVerdict.size() - 1) - first + 1);
+                }),
+                connect(source, &QAbstractItemModel::dataChanged, this, [this](const QModelIndex &from, const QModelIndex &to) {
+                    m_shownStale = true;
+                    if (from.parent().isValid()) return;
+                    for (int row = from.row(); row <= to.row() && row < m_rowVerdict.size(); ++row) m_rowVerdict[row] = -1;
+                }),
+                connect(source, &QAbstractItemModel::rowsMoved, this, stale),
+                connect(source, &QAbstractItemModel::modelReset, this, stale),
+                connect(source, &QAbstractItemModel::layoutChanged, this, stale)};
+        }
+        m_rowVerdict.clear();
+        QSortFilterProxyModel::setSourceModel(source);
+    }
     void setLimit(int limit) { m_results.setLimit(limit); }
     virtual QString queryString() const { return m_results.queryString(); }
     bool allFiles() const { return m_allFiles; }
@@ -536,33 +568,87 @@ Q_SIGNALS:
     void queryingChanged();
 protected:
     bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
-        if (!candidateEligible(row, parent)) return false;
-        const auto match = sourceModel()->index(row, 0, parent)
-            .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
-        const auto key = destinationKey(match);
-        const auto priority = resultPriority(match, queryString());
-        for (int other = 0; other < sourceModel()->rowCount(parent); ++other) {
-            if (other == row) continue;
-            const auto alternative = sourceModel()->index(other, 0, parent)
-                .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
-            if (destinationKey(alternative) != key || !candidateEligible(other, parent)) continue;
-            if (key.startsWith(QStringLiteral("setting:"))) {
-                const bool canonical = match.runner()->id().contains(QStringLiteral("systemsettings"));
-                const bool otherCanonical = alternative.runner()->id().contains(QStringLiteral("systemsettings"));
-                if (canonical != otherCanonical) {
-                    if (otherCanonical) return false;
-                    continue;
-                }
+        // A copy: judging other rows below may move the one kept.
+        const Verdict found = verdict(sourceModel()->index(row, 0, parent));
+        if (!found.eligible) return false;
+        if (m_shownStale || m_shownRows != sourceModel()->rowCount(parent)) {
+            // One row stands for each destination: for a setting, KDE's own
+            // module before a shortcut to it; then the stronger match, then
+            // the earlier row.
+            m_shownFor.clear();
+            m_shownRows = sourceModel()->rowCount(parent);
+            QHash<QString, Verdict> standing;
+            for (int other = 0; other < m_shownRows; ++other) {
+                const auto &candidate = verdict(sourceModel()->index(other, 0, parent));
+                if (!candidate.eligible) continue;
+                const auto current = standing.constFind(candidate.key);
+                bool wins = current == standing.cend();
+                if (!wins && candidate.key.startsWith(QStringLiteral("setting:")) && candidate.setting != current->setting)
+                    wins = candidate.setting;
+                else if (!wins)
+                    wins = candidate.priority < current->priority;
+                if (!wins) continue;
+                standing.insert(candidate.key, candidate);
+                m_shownFor.insert(candidate.key, other);
             }
-            const auto otherPriority = resultPriority(alternative, queryString());
-            if (otherPriority < priority || (otherPriority == priority && other < row)) return false;
+            m_shownStale = false;
         }
-        return true;
+        return m_shownFor.value(found.key, -1) == row;
     }
-    bool candidateEligible(int row, const QModelIndex &parent) const {
-        const auto match = sourceModel()->index(row, 0, parent)
-            .data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
-        if (searchTier(match) != 1 && resultPriority(match, queryString()) >= 5000) return false;
+
+    // What a match is worth for the query: whether it may be listed, where
+    // it leads and how strongly it answers. Worked out once for each match
+    // and kept until the query or the scope changes, so rows arriving later
+    // never send Search back over the ones it has already judged.
+    struct Verdict {
+        bool eligible = false;
+        bool setting = false;
+        int priority = 0;
+        int tier = 3;
+        QString key;
+    };
+    const Verdict &verdict(const QModelIndex &index) const {
+        const auto query = queryString();
+        if (query != m_verdictQuery || m_allFiles != m_verdictAllFiles || m_quietFolders != m_verdictQuiet) {
+            m_verdicts.clear();
+            m_verdictList.clear();
+            m_rowVerdict.clear();
+            m_verdictQuery = query;
+            m_verdictAllFiles = m_allFiles;
+            m_verdictQuiet = m_quietFolders;
+            m_shownStale = true;
+        }
+        const bool flat = !index.parent().isValid();
+        const int row = index.row();
+        if (flat && row < m_rowVerdict.size() && m_rowVerdict.at(row) >= 0) return m_verdictList.at(m_rowVerdict.at(row));
+        const auto match = index.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
+        const auto runner = match.runner() ? match.runner()->id() : QString();
+        const auto identity = runner + QLatin1Char('\x1f') + match.id() + QLatin1Char('\x1f') + match.text()
+            + QLatin1Char('\x1f') + match.subtext() + QLatin1Char('\x1f') + match.data().toString();
+        int slot = m_verdicts.value(identity, -1);
+        if (slot < 0) {
+            ++m_verdictChecks;
+            Verdict found;
+            found.priority = resultPriority(match, query);
+            found.tier = searchTier(match);
+            found.key = destinationKey(match);
+            found.setting = runner.contains(QStringLiteral("systemsettings"));
+            found.eligible = candidateEligible(match, found.priority);
+            slot = m_verdictList.size();
+            m_verdictList.append(found);
+            m_verdicts.insert(identity, slot);
+        }
+        if (flat) {
+            if (row >= m_rowVerdict.size()) m_rowVerdict.resize(row + 1, -1);
+            m_rowVerdict[row] = slot;
+        }
+        return m_verdictList.at(slot);
+    }
+    // Every match judged afresh, counted so a test can hold the work to one
+    // judgement for each.
+    mutable int m_verdictChecks = 0;
+    bool candidateEligible(const KRunner::QueryMatch &match, int priority) const {
+        if (searchTier(match) != 1 && priority >= 5000) return false;
         if (match.runner() && match.runner() != &m_aliasRunner
             && match.runner()->id().contains(QStringLiteral("systemsettings"))) {
             for (int i = 0; i < m_aliases.rowCount(); ++i) {
@@ -587,7 +673,7 @@ protected:
             m_repoDirectories.insert(directory, repository);
         }
         return !m_repoDirectories.value(directory) && usefulFile(path, queryString())
-            && resultPriority(match, queryString()) < 5000;
+            && priority < 5000;
     }
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
     {
@@ -597,12 +683,12 @@ protected:
             const int a = m_frozenOrder.value(keyA, INT_MAX), b = m_frozenOrder.value(keyB, INT_MAX);
             if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
         }
-        const int qualityA = resultPriority(left.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>(), queryString());
-        const int qualityB = resultPriority(right.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>(), queryString());
+        const auto &judgedA = verdict(left);
+        const int qualityA = judgedA.priority, a = judgedA.tier;
+        const auto &judgedB = verdict(right);
+        const int qualityB = judgedB.priority, b = judgedB.tier;
         if (qualityA != qualityB)
             return sortOrder() == Qt::AscendingOrder ? qualityA < qualityB : qualityA > qualityB;
-        const int a = searchTier(left.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
-        const int b = searchTier(right.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>());
         // QSortFilterProxyModel reverses the comparator for descending sorting.
         if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
         // Preserve KDE's relevance order within each tier.
@@ -639,6 +725,16 @@ private:
         });
     }
 
+    mutable QHash<QString, int> m_verdicts;
+    mutable QList<Verdict> m_verdictList;
+    mutable QList<int> m_rowVerdict;
+    mutable QString m_verdictQuery;
+    mutable bool m_verdictAllFiles = false;
+    mutable QString m_verdictQuiet;
+    mutable QHash<QString, int> m_shownFor;
+    mutable int m_shownRows = -1;
+    mutable bool m_shownStale = true;
+    QList<QMetaObject::Connection> m_rowWatch;
     bool m_refreshQueued = false;
     bool m_notesOffered = false;
     int m_notesAsk = 0;
