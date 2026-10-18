@@ -22,6 +22,10 @@ class TettegoucheApplet final : public Plasma::Applet
 {
     Q_OBJECT
     Q_PROPERTY(bool launcherActive READ launcherActive NOTIFY launcherActiveChanged)
+    // While Search is up: the mode it shows ("apps", "files", "notes", or ""
+    // on its first screen), and whether an application is on its way.
+    Q_PROPERTY(QString launcherMode READ launcherMode NOTIFY launcherShowingChanged)
+    Q_PROPERTY(bool launcherLoading READ launcherLoading NOTIFY launcherShowingChanged)
     // Search where Shuffle is installed, Tettegouche elsewhere.
     Q_PROPERTY(QString productName READ productName CONSTANT)
     Q_PROPERTY(QVariantList ambientActivities READ ambientActivities WRITE setAmbientActivities
@@ -36,6 +40,8 @@ public:
     ~TettegoucheApplet() override;
 
     bool launcherActive() const;
+    QString launcherMode() const { return m_launcherMode; }
+    bool launcherLoading() const { return m_launcherLoading; }
     QString productName() const;
     QVariantList ambientActivities() const;
     void setAmbientActivities(const QVariantList &activities);
@@ -60,10 +66,12 @@ public:
 
 private Q_SLOTS:
     void launcherShown(bool visible);
+    void launcherShowing(const QString &mode, bool loading);
 
 Q_SIGNALS:
     void invocationRequested();
     void launcherActiveChanged();
+    void launcherShowingChanged();
     void ambientActivitiesChanged();
     void panelGeometryChanged();
     void activityActionInvoked(const QString &id, int generation, const QString &action);
@@ -98,6 +106,9 @@ private:
     QTimer m_starting;
     // A launcher kept ready runs on hidden; it says when it shows or hides.
     bool m_launcherShown = false;
+    QString m_launcherMode;
+    bool m_launcherLoading = false;
+    void clearLauncherShowing();
     // Asked to leave for the widget's new settings; the request waits for
     // the launcher that takes its place.
     bool m_leaving = false;

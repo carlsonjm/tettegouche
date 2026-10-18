@@ -152,27 +152,19 @@ Item {
             Keys.onReturnPressed: modeRow.show("")
             Keys.onEnterPressed: modeRow.show("")
             Keys.onSpacePressed: modeRow.show("")
-            // A pill like the modes', filled when chosen, around
-            // a small dot.
-            Rectangle {
+            // The Tette Dot, as the panel draws it: solid while another
+            // mode is shown, a ring on Search's first screen. Hover and
+            // press show on the mark itself.
+            DotMark {
+                objectName: "home-dot-mark"
                 anchors.centerIn: parent
-                width: 40
-                height: 40
-                radius: width / 2
-                color: homeTap.pressed ? tone.doorPressed
-                    : homeDot.selected ? tone.current
-                    : homeHover.hovered ? tone.doorHover : "transparent"
-                Behavior on color { ColorAnimation { duration: launcher.ms(90) } }
-            }
-            Rectangle {
-                anchors.centerIn: parent
-                width: 12
-                height: 12
-                radius: width / 2
-                color: launcher.primaryText
-                opacity: homeDot.selected || homeHover.hovered ? 1 : 0.6
-                scale: homeTap.pressed ? 1.1 : 1
-                Behavior on scale { NumberAnimation { duration: launcher.ms(120); easing.type: Easing.OutCubic } }
+                openness: homeDot.selected ? 1 : 0
+                pearl: tone.dark
+                ink: launcher.primaryText
+                opacity: homeTap.pressed ? 0.7 : homeDot.selected || homeHover.hovered ? 1 : 0.8
+                scale: homeHover.hovered && !homeTap.pressed ? 1.06 : 1
+                Behavior on openness { NumberAnimation { duration: launcher.ms(360); easing.type: Easing.OutCubic } }
+                Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
                 Behavior on opacity { NumberAnimation { duration: launcher.ms(90) } }
             }
             Rectangle {

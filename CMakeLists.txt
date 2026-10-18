@@ -140,7 +140,7 @@ qt_add_executable(tettegouche
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/RecentRow.qml
+    FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml
         qml/SearchResults.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml
@@ -226,6 +226,7 @@ plasma_add_applet(co.goodinput.tettegouche
         applet/AmbientSurface.qml
         applet/IslandRoom.js
         applet/SuiteIcon.qml
+        applet/DotMark.qml
         applet/AmbientColors.qml
         applet/AmbientIsland.qml
         applet/ConfigGeneral.qml

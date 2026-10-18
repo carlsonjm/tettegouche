@@ -82,6 +82,9 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     QDBusConnection::sessionBus().connect(LauncherService,
         QStringLiteral("/Launcher"), LauncherService,
         QStringLiteral("shown"), this, SLOT(launcherShown(bool)));
+    QDBusConnection::sessionBus().connect(LauncherService,
+        QStringLiteral("/Launcher"), LauncherService,
+        QStringLiteral("showing"), this, SLOT(launcherShowing(QString,bool)));
 
     // Search's key, bare Meta, activates the widget; its button launches it.
     connect(this, &Plasma::Applet::activated, this, [this] {
@@ -155,7 +158,21 @@ void TettegoucheApplet::launcherShown(bool visible)
 {
     if ((!m_launcherRunning && !m_starting.isActive()) || visible == m_launcherShown) return;
     m_launcherShown = visible;
+    if (!visible) clearLauncherShowing();
     Q_EMIT launcherActiveChanged();
+}
+
+void TettegoucheApplet::launcherShowing(const QString &mode, bool loading)
+{
+    if (mode == m_launcherMode && loading == m_launcherLoading) return;
+    m_launcherMode = mode;
+    m_launcherLoading = loading;
+    Q_EMIT launcherShowingChanged();
+}
+
+void TettegoucheApplet::clearLauncherShowing()
+{
+    launcherShowing(QString(), false);
 }
 
 void TettegoucheApplet::setLauncherRunning(bool running)
@@ -166,6 +183,7 @@ void TettegoucheApplet::setLauncherRunning(bool running)
         m_starting.stop();
     } else {
         m_launcherShown = false;
+        clearLauncherShowing();
         // A launcher that left for one with the widget's new settings.
         if (m_leaving) {
             m_leaving = false;

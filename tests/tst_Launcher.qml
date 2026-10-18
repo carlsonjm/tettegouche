@@ -67,6 +67,8 @@ TestCase {
         property int catalogActivated: -1
         function activateCatalogIfOpen(row) { catalogActivated = row; return 1 }
         function finishLaunch() { closes++ }
+        property var showing: []
+        function reportShowing(mode, loading) { showing = [mode, loading] }
         property bool dockPresent: false
         property var pinnedRows: []
         function catalogPinned(row) { return pinnedRows.indexOf(row) >= 0 }
@@ -1382,16 +1384,24 @@ TestCase {
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
+        // The dot is a ring on the first screen and solid in a mode, and
+        // the panel's dot is told which mode shows.
+        const mark = findChild(launcher, "home-dot-mark")
+        tryCompare(mark, "openness", 1)
         mouseClick(apps, apps.width / 2, apps.height / 2)
         tryCompare(launcher, "drawerProgress", 1)
         verify(apps.selected && !files.selected && !dot.selected)
         verify(apps.visible && files.visible && notes.visible)
+        tryCompare(mark, "openness", 0)
+        compare(controller.showing, ["apps", false])
         mouseClick(files, files.width / 2, files.height / 2)
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
         verify(files.selected && !apps.selected)
+        compare(controller.showing[0], "files")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
         verify(!launcher.drawerOpen && notes.selected && !files.selected)
+        compare(controller.showing[0], "notes")
         verify(notes.visible && apps.visible)
         mouseClick(apps, apps.width / 2, apps.height / 2)
         tryCompare(launcher, "drawerProgress", 1)
@@ -1408,6 +1418,8 @@ TestCase {
         tryCompare(launcher, "drawerOpen", false)
         tryCompare(launcher, "drawerProgress", 0)
         verify(dot.selected)
+        tryCompare(mark, "openness", 1)
+        compare(controller.showing[0], "")
         compare(controller.closes, 0)
         launcher.quickNote = null
     }

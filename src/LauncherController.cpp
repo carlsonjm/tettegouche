@@ -877,6 +877,18 @@ void LauncherController::completeGuestLaunch(const QString &requestToken)
     }
 }
 
+void LauncherController::reportShowing(const QString &mode, bool loading)
+{
+    m_showingMode = mode;
+    m_showingLoading = loading;
+    Q_EMIT showing(mode, loading);
+}
+
+void LauncherController::repeatShowing()
+{
+    Q_EMIT showing(m_showingMode, m_showingLoading);
+}
+
 void LauncherController::completeGuestNavigation(int slot)
 {
     if (m_guestMode && slot != 0) {

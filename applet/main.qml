@@ -348,6 +348,8 @@ PlasmoidItem {
         Keys.onEnterPressed: Plasmoid.launch(Plasmoid.configuration.useKadunce)
         Keys.onSpacePressed: Plasmoid.launch(Plasmoid.configuration.useKadunce)
 
+        // The magnifier's open state: a thin ring that ripples out once and
+        // stays while Search is up. The pearl shows open on itself instead.
         Rectangle {
             objectName: "tettegouche-launcher-active-ring"
             anchors.centerIn: parent
@@ -357,10 +359,10 @@ PlasmoidItem {
             color: "transparent"
             border.color: tone.text
             border.width: 1
+            visible: root.magnifier
             scale: Plasmoid.launcherActive ? 1 : launcherDimple.width / width
             opacity: Plasmoid.launcherActive ? 0.85 : 0
 
-            // Ripple outward once, then remain as the open-launcher indicator.
             Behavior on scale {
                 enabled: root.animateIndicator
                 NumberAnimation { duration: root.ms(360); easing.type: Easing.OutCubic }
@@ -371,27 +373,62 @@ PlasmoidItem {
             }
         }
 
-        Rectangle {
+        // The Tette Dot is the same Ghost White pearl on every Plasma style.
+        // While Search is up its middle clears into a ring holding the mode
+        // Search shows, and the ring turns while an application is on its way.
+        Item {
             id: launcherDimple
             objectName: "tettegouche-launcher-dimple"
             anchors.centerIn: parent
             width: 20
             height: 20
             visible: !root.magnifier
-            radius: width / 2
-            // Pearl: lit from above and a shade deeper toward its lower edge,
-            // so it reads as a piece that rises rather than a flat disc.
-            // The Tette Dot is the same Ghost White pearl on every Plasma style.
-            gradient: Gradient {
-                GradientStop { position: 0; color: "#FFFFFF" }
-                GradientStop { position: 0.55; color: "#F4F4FA" }
-                GradientStop { position: 1; color: "#DCDCE4" }
-            }
             scale: launcherHover.hovered ? 1.06 : 1
 
             Behavior on scale {
                 enabled: root.animateIndicator
                 NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
+            }
+
+            DotMark {
+                id: launcherDot
+                objectName: "tettegouche-launcher-dot"
+                anchors.centerIn: parent
+                openness: Plasmoid.launcherActive ? 1 : 0
+                loading: Plasmoid.launcherActive && Plasmoid.launcherLoading
+                turnMs: root.ms(1000)
+
+                Behavior on openness {
+                    enabled: root.animateIndicator
+                    NumberAnimation { duration: root.ms(360); easing.type: Easing.OutCubic }
+                }
+
+                // Apps: four squares, as on the slide's door.
+                Grid {
+                    objectName: "tettegouche-launcher-dot-apps"
+                    anchors.centerIn: parent
+                    visible: Plasmoid.launcherMode === "apps"
+                    columns: 2
+                    spacing: 2
+                    Repeater {
+                        model: 4
+                        Rectangle {
+                            width: 4.5
+                            height: 4.5
+                            radius: 1
+                            color: "#F8F8FF"
+                        }
+                    }
+                }
+                SuiteIcon {
+                    objectName: "tettegouche-launcher-dot-glyph"
+                    anchors.centerIn: parent
+                    visible: Plasmoid.launcherMode === "files" || Plasmoid.launcherMode === "notes"
+                    glyph: Plasmoid.launcherMode === "notes" ? "notes" : "folder-open"
+                    ink: "#F8F8FF"
+                    width: 12
+                    height: 12
+                }
             }
         }
 
