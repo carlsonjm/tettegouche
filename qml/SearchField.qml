@@ -223,10 +223,12 @@ Rectangle {
             verticalAlignment: Text.AlignVCenter
             visible: query.text.length === 0
             text: launcher.drawerOpen
-                ? (launcher.filesMode ? words.i18n("Find in Files") : words.i18n("Find an app"))
+                ? (launcher.filesMode ? words.i18n("Find a file") : words.i18n("Find an app"))
                 : words.i18n("Just type")
+            // As large as what is typed, so typing changes nothing but
+            // the words.
             color: tone.placeholderText
-            font.pixelSize: 15
+            font.pixelSize: 16
             font.weight: Font.Medium
             opacity: launcher.openingText
             transform: Translate { y: (1 - launcher.openingText) * 3 }

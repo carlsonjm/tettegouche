@@ -71,7 +71,7 @@ Rectangle {
             id: eye
             objectName: "files-window-hidden"
             readonly property bool showing: !!window.fileBrowser && window.fileBrowser.hidden
-            x: field.x + field.width - 9 - clear.width - width
+            x: field.x + field.width - 8 - clear.width - width
             z: 1
             anchors.verticalCenter: parent.verticalCenter
             width: 42
@@ -108,58 +108,109 @@ Rectangle {
             }
         }
 
+        // Search's own field: the same pill, glyph, inset and words as in
+        // Search, so moving between them nothing shifts.
         Rectangle {
             id: field
             objectName: "files-window-search"
+            readonly property bool lit: filter.activeFocus || filter.text.length > 0
             x: (parent.width - width) / 2
             anchors.verticalCenter: parent.verticalCenter
             width: header.fieldWidth
             height: 44
             radius: height / 2
-            color: filter.activeFocus || filter.text.length > 0 ? tone.control : "transparent"
-            border.width: 1
-            border.color: tone.outline
-            Behavior on color { ColorAnimation { duration: window.ms(150); easing.type: Easing.OutCubic } }
+            color: tone.control
+            Rectangle {
+                anchors.fill: parent
+                radius: parent.radius
+                color: "transparent"
+                border.width: 1
+                border.color: tone.dark ? "#14ffffff" : "#0d000000"
+                opacity: field.lit ? 0 : 1
+                Behavior on opacity { NumberAnimation { duration: window.ms(150) } }
+            }
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -3
+                radius: height / 2
+                color: "transparent"
+                border.width: 3
+                border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.16)
+                opacity: field.lit ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: window.ms(150) } }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.55)
+                }
+            }
+            SuiteIcon {
+                id: filterGlyph
+                glyph: "search"
+                anchors.left: parent.left
+                anchors.leftMargin: 16
+                anchors.verticalCenter: parent.verticalCenter
+                width: 18
+                height: 18
+                opacity: field.lit ? 0.9 : 0.55
+                Behavior on opacity { NumberAnimation { duration: window.ms(150) } }
+            }
 
             TextInput {
                 id: filter
                 objectName: "files-window-query"
-                anchors.left: parent.left
-                anchors.leftMargin: 18
+                anchors.left: filterGlyph.right
+                anchors.leftMargin: 12
                 anchors.right: clear.left
-                anchors.rightMargin: 10 + 42
+                anchors.rightMargin: 12 + 42
                 anchors.verticalCenter: parent.verticalCenter
                 color: tone.primaryText
                 selectionColor: tone.selection
                 selectedTextColor: tone.selectedText
                 font.pixelSize: 16
+                font.weight: Font.Medium
                 clip: true
                 inputMethodHints: Qt.ImhNoPredictiveText
-                Accessible.name: words.i18n("Search this folder")
+                Accessible.name: words.i18n("Find a file")
                 onTextChanged: if (window.fileBrowser) window.fileBrowser.filter = text
                 Text {
                     anchors.verticalCenter: parent.verticalCenter
                     visible: filter.text.length === 0
-                    text: words.i18n("Just type")
+                    text: words.i18n("Find a file")
                     color: tone.placeholderText
                     font.pixelSize: 16
+                    font.weight: Font.Medium
                 }
             }
             Item {
                 id: clear
                 anchors.right: parent.right
-                anchors.rightMargin: 9
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                width: 36
-                height: 36
+                width: 40
+                height: 40
+                visible: filter.text.length > 0
                 Accessible.role: Accessible.Button
-                Accessible.name: filter.text.length > 0 ? words.i18n("Clear search") : words.i18n("Search")
-                Kirigami.Icon {
+                Accessible.name: words.i18n("Clear search")
+                Rectangle {
                     anchors.centerIn: parent
-                    width: 20
-                    height: 20
-                    source: filter.text.length > 0 ? "edit-clear-symbolic" : "system-search"
-                    color: tone.primaryText
+                    width: 30
+                    height: 30
+                    radius: 15
+                    color: clearHover.hovered ? tone.controlHover : "transparent"
+                }
+                SuiteIcon {
+                    anchors.centerIn: parent
+                    glyph: "x"
+                    width: 18
+                    height: 18
+                }
+                HoverHandler {
+                    id: clearHover
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
                 }
                 TapHandler {
                     onTapped: {

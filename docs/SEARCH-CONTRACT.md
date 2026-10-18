@@ -14,7 +14,10 @@ that row: Expand while Apps or Files is open, Pop out in Files, and Close,
 last; at rest, Close alone. The field is the same on every screen: a pill
 44 tall on the row's own edges, the dot's pill starting where it starts and
 Close ending where it ends, 16 below the row, with 24 between everything and
-the sheet's edge, so only what is under it changes. Before anything is typed,
+the sheet's edge, so only what is under it changes. Every search is that
+field, Files' own window's too: the search glyph 16 in, the words 12 past it
+at the size of what is typed, reading Just type on the first screen and
+Find an app, Find a file or Find a note in a mode. Before anything is typed,
 what was used lately is under it in two labelled sections, each newest first:
 Recent apps, a row of eight icons with their whole names, and Recent files,
 eight cards in two rows of four, each with its picture or its kind's icon,

@@ -11,6 +11,10 @@ provenance.
   from three letters on, with the rest a scroll away.
 - Each result is ranked once rather than at every comparison, so a short
   query with many results no longer holds up the next letter.
+- Every search field is the same: Search's first screen, Apps, Files, Notes
+  and Files' own window share one pill, the words 46 in from its edge at the
+  size of what is typed, reading Just type, Find an app, Find a file or Find
+  a note, so moving between them shifts nothing.
 - `Meta` opens Search ready to type, the cursor in the field, so on-screen
   keys that pressed it stay up; the dot still opens it with no cursor, so a
   tap raises no keys.

@@ -2766,6 +2766,8 @@ TestCase {
         const left = item => item.mapToItem(window, 0, 0).x
         const right = item => item.mapToItem(window, item.width, 0).x
         verify(left(eye) >= left(field) && right(eye) <= right(field) - 40)
+        // Search's own field: the words 46 in, and the same words.
+        compare(findChild(window, "files-window-query").mapToItem(field, 0, 0).x, 46)
         verify(findChild(window, "files-sort"))
         verify(Math.abs(left(field) + field.width / 2 - window.width / 2) < 1)
         verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
@@ -2947,6 +2949,9 @@ TestCase {
         const left = item => item.mapToItem(launcher, 0, 0).x
         const right = item => item.mapToItem(launcher, item.width, 0).x
         const middle = item => item.mapToItem(launcher, item.width / 2, item.height / 2)
+        // Every search reads alike: Find an app, Find a file, Find a note.
+        compare(findChild(launcher, "just-type-placeholder").text, data.mode === "files" ? "Find a file" : "Find an app")
+        compare(query.mapToItem(field, 0, 0).x, 46)
         // The modes, then search, where it is on every screen, holding the
         // header's row; the order sits below, over the drawer.
         verify(back.visible && back.enabled)
@@ -3199,9 +3204,16 @@ TestCase {
         compare(frame.height, 44)
         compare(frame.x, field.x)
         compare(frame.width, field.width)
+        // The words start where Search's do, 46 in from the pill's edge,
+        // the same size, so moving into Notes shifts nothing.
+        const find = findChild(launcher, "notes-find")
+        compare(find.leftPadding, 0)
+        compare(find.mapToItem(frame, 0, 0).x, 46)
+        compare(findChild(launcher, "search-query").mapToItem(field, 0, 0).x, 46)
+        compare(find.font.pixelSize, findChild(launcher, "just-type-placeholder").font.pixelSize)
+        compare(find.placeholderText, "Find a note")
         // The board holds the keys, not its field, so no on-screen keys
         // rise on a tablet; typing goes into the field.
-        const find = findChild(launcher, "notes-find")
         const pane = findChild(launcher, "notes-pane")
         verify(!find.activeFocus)
         verify(pane.activeFocus)
