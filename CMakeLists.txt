@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS Config CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
+find_package(KF6 6.26 REQUIRED COMPONENTS Bookmarks Config CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -102,7 +102,7 @@ add_library(tettegouche-launcher STATIC
     src/QuickNote.cpp
     src/QuickNote.h
     src/UseRecord.h
-    src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
+    src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h
     src/FileDetails.cpp src/FileDetails.h
     src/FileThumbnails.cpp src/FileThumbnails.h
     src/TransferActivityBridge.cpp src/TransferActivityBridge.h
@@ -118,6 +118,7 @@ target_link_libraries(tettegouche-launcher PUBLIC
     Qt6::Gui
     Qt6::Qml
     Qt6::Quick
+    KF6::Bookmarks
     KF6::ConfigCore
     KF6::CoreAddons
     KF6::FileMetaData
@@ -143,7 +144,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
     FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/RecentRow.qml
         qml/SearchResults.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
-        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml
+        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
@@ -181,6 +182,8 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/layout-grid.svg
         assets/icons/lucide/folder.svg
         assets/icons/lucide/chevron-right.svg
+        assets/icons/lucide/minus.svg
+        assets/icons/lucide/grip-vertical.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core
@@ -263,16 +266,16 @@ target_compile_definitions(co.goodinput.tettegouche PRIVATE TRANSLATION_DOMAIN="
 
 if(BUILD_TESTING)
     qt_add_executable(activity-provider-test tests/ActivityProviderTest.cpp
-        src/TransferActivityBridge.cpp src/TransferActivityBridge.h src/FileBrowser.h src/FileDevices.h src/FileQuestions.h)
-    target_link_libraries(activity-provider-test PRIVATE tettegouche-activities KF6::KIOCore KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
+        src/TransferActivityBridge.cpp src/TransferActivityBridge.h src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h)
+    target_link_libraries(activity-provider-test PRIVATE tettegouche-activities KF6::Bookmarks KF6::KIOCore KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
     add_test(NAME activity-provider-test COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
         $<TARGET_FILE:activity-provider-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
     set_tests_properties(activity-provider-test PROPERTIES TIMEOUT 45
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software")
-    qt_add_executable(file-browser-test tests/FileBrowserTest.cpp src/FileBrowser.h src/FileDevices.h src/FileQuestions.h
+    qt_add_executable(file-browser-test tests/FileBrowserTest.cpp src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h
         src/FileDetails.cpp src/FileDetails.h src/FileThumbnails.cpp src/FileThumbnails.h)
     target_include_directories(file-browser-test PRIVATE src)
-    target_link_libraries(file-browser-test PRIVATE KF6::I18n KF6::KIOCore KF6::KIOGui KF6::FileMetaData KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
+    target_link_libraries(file-browser-test PRIVATE KF6::Bookmarks KF6::I18n KF6::KIOCore KF6::KIOGui KF6::FileMetaData KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
     target_compile_definitions(file-browser-test PRIVATE TRANSLATION_DOMAIN="tettegouche" FILES_PANE_SOURCE="${CMAKE_CURRENT_SOURCE_DIR}/qml/FilesPane.qml"
         FILES_DESKTOP="${CMAKE_CURRENT_SOURCE_DIR}/io.github.carlsonjm.Tettegouche.Files.desktop"
         FIXTURES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/fixtures")

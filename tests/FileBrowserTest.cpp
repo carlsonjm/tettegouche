@@ -1158,6 +1158,75 @@ private Q_SLOTS:
         QVERIFY(checked>50);
         QVERIFY2(unmarked.isEmpty(),qPrintable(unmarked.join(QLatin1Char('\n'))));
     }
+    // The places are KDE's own: what Files adds, renames, hides or moves is
+    // written where Dolphin and the Open dialogs read it, and read back.
+    void placesKeptWithKde() {
+        const auto savedData=qgetenv("XDG_DATA_HOME");
+        QTemporaryDir data; QVERIFY(data.isValid());
+        qputenv("XDG_DATA_HOME",data.path().toUtf8());
+        const auto restore=qScopeGuard([&savedData]{ if(savedData.isNull())qunsetenv("XDG_DATA_HOME"); else qputenv("XDG_DATA_HOME",savedData); });
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QVERIFY(QDir(dir.path()).mkdir(QStringLiteral("Work")));
+        const QString work=dir.path()+QStringLiteral("/Work");
+        const auto byPath=[](const QVariantList &places,const QString &path) {
+            for(const auto &place:places) if(place.toMap().value(QStringLiteral("path")).toString()==path)return place.toMap();
+            return QVariantMap{};
+        };
+        {
+            PlaceBook book;
+            // Before KDE has written its file, its standard places stand in.
+            auto places=book.places();
+            QVERIFY(!QFile::exists(PlaceBook::file()));
+            QVERIFY(!byPath(places,QDir::homePath()).isEmpty());
+            QVERIFY(!byPath(places,PlaceBook::trashLocation()).isEmpty());
+            QVERIFY(book.add(work));
+            QVERIFY(QFile::exists(PlaceBook::file()));
+            QVERIFY(!book.add(work));
+            QVERIFY(!book.add(dir.path()+QStringLiteral("/missing")));
+            places=book.places();
+            const auto added=places.last().toMap();
+            QCOMPARE(added.value(QStringLiteral("path")).toString(),work);
+            QCOMPARE(added.value(QStringLiteral("label")).toString(),QStringLiteral("Work"));
+            QVERIFY(!added.value(QStringLiteral("system")).toBool());
+            // The standard places were written before it, KDE's own.
+            const auto home=byPath(places,QDir::homePath());
+            QVERIFY(home.value(QStringLiteral("system")).toBool());
+            book.rename(added.value(QStringLiteral("id")).toString(),QStringLiteral("Projects"));
+            book.setHidden(home.value(QStringLiteral("id")).toString(),true);
+            book.remove(home.value(QStringLiteral("id")).toString());
+            QVERIFY(!byPath(book.places(),QDir::homePath()).isEmpty());
+            places=book.places();
+            book.move(byPath(places,work).value(QStringLiteral("id")).toString(),places.first().toMap().value(QStringLiteral("id")).toString());
+            QCOMPARE(book.places().first().toMap().value(QStringLiteral("path")).toString(),work);
+        }
+        {
+            // Read again, as Dolphin would read it.
+            PlaceBook other;
+            const auto places=other.places();
+            QCOMPARE(places.first().toMap().value(QStringLiteral("label")).toString(),QStringLiteral("Projects"));
+            QVERIFY(byPath(places,QDir::homePath()).value(QStringLiteral("hidden")).toBool());
+            other.remove(byPath(places,work).value(QStringLiteral("id")).toString());
+            QVERIFY(byPath(other.places(),work).isEmpty());
+        }
+        {
+            // Files shows Recent, then the places that are not hidden.
+            QSettings::setDefaultFormat(QSettings::IniFormat);
+            QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+            FileBrowser browser;
+            browser.open();
+            QVERIFY(byPath(browser.places(),QDir::homePath()).isEmpty());
+            QVERIFY(!byPath(browser.everyPlace(),QDir::homePath()).isEmpty());
+            QCOMPARE(browser.places().first().toMap().value(QStringLiteral("path")).toString(),QStringLiteral("recentlyused:/"));
+            QVERIFY(!browser.isPlace(work));
+            browser.addPlace(QUrl::fromLocalFile(work).toString());
+            QTRY_VERIFY(browser.isPlace(work));
+            QCOMPARE(byPath(browser.places(),work).value(QStringLiteral("section")).toString(),QStringLiteral("places"));
+            // Dragged to a width, the places keep one from 120 to 240; 0 fits the names.
+            browser.setPlacesWidth(90); QCOMPARE(browser.placesWidth(),120);
+            browser.setPlacesWidth(300); QCOMPARE(browser.placesWidth(),240);
+            browser.setPlacesWidth(0); QCOMPARE(browser.placesWidth(),0);
+        }
+    }
     // A large folder arrives in batches, in no order. Files shows it once,
     // whole and sorted, so nothing shown moves.
     void largeFolderShowsOnceWhole() {

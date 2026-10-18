@@ -12,6 +12,10 @@ Item {
     property string text: ""
     property bool checkable: false
     property bool checked: false
+    // A second, quieter line under the text, such as the folder a line acts on.
+    property string detail: ""
+    // A line that takes something away reads in the theme's warning colour.
+    property bool destructive: false
     property var menu: null
     signal triggered()
     SearchColors {
@@ -27,8 +31,8 @@ Item {
         if (menu) menu.close()
     }
 
-    implicitWidth: label.implicitWidth + 28 + (checkable ? 26 : 0)
-    implicitHeight: visible ? 40 : 0
+    implicitWidth: Math.max(label.implicitWidth, detailLabel.implicitWidth) + 28 + (checkable ? 26 : 0)
+    implicitHeight: visible ? (detail.length ? 52 : 40) : 0
     height: implicitHeight
     Accessible.role: checkable ? Accessible.CheckBox : Accessible.MenuItem
     Accessible.name: text
@@ -47,11 +51,24 @@ Item {
     Text {
         id: label
         anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: line.detail.length ? -8 : 0
         x: 14
         width: parent.width - 28 - (line.checkable ? 26 : 0)
         text: line.text
-        color: line.enabled ? tone.text : tone.disabledText
+        color: !line.enabled ? tone.disabledText : line.destructive ? tone.errorText : tone.text
         font.pixelSize: 14
+        elide: Text.ElideMiddle
+    }
+    Text {
+        id: detailLabel
+        visible: line.detail.length > 0
+        anchors.top: label.bottom
+        anchors.topMargin: 1
+        x: 14
+        width: label.width
+        text: line.detail
+        color: tone.secondaryText
+        font.pixelSize: 12
         elide: Text.ElideMiddle
     }
     SuiteIcon {

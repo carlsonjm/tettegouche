@@ -479,7 +479,20 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         cacheBuffer: 400
         // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
-        Kirigami.WheelHandler { target: applicationLines; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
+        Kirigami.WheelHandler {
+            target: applicationLines; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3
+            // Ctrl and the wheel sizes the tiles. This handler sees the wheel
+            // before anything else on the list does, so it sizes them itself
+            // rather than scroll.
+            property real pending: 0
+            onWheel: wheel => {
+                if (!(wheel.modifiers & Qt.ControlModifier)) return
+                wheel.accepted = true
+                pending += wheel.angleDelta.y
+                while (pending >= 120) { applicationGrid.resizeTiles(1); pending -= 120 }
+                while (pending <= -120) { applicationGrid.resizeTiles(-1); pending += 120 }
+            }
+        }
         PinchHandler {
             id: tilePinch
             objectName: "apps-pinch"

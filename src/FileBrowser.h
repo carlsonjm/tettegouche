@@ -1,6 +1,7 @@
 #pragma once
 
 #include "FileDevices.h"
+#include "PlaceBook.h"
 #include "FileQuestions.h"
 
 #include <KApplicationTrader>
@@ -16,6 +17,7 @@
 #include <KIO/DirectorySizeJob>
 #include <KIO/Job>
 #include <KIO/CopyJob>
+#include <KIO/DeleteJob>
 #include <KIO/MkdirJob>
 #include <KIO/RestoreJob>
 #include <KIO/StatJob>
@@ -35,6 +37,9 @@
 #include <QStandardPaths>
 #include <QVariantList>
 #include <QPointer>
+#include <QStorageInfo>
+#include <QHash>
+#include <QSet>
 #include <QProcess>
 #include <QRegularExpression>
 #include <QUrlQuery>
@@ -62,6 +67,11 @@ class FileBrowser : public QObject
     Q_PROPERTY(QVariantList entries READ entries NOTIFY changed)
     Q_PROPERTY(QVariantList tabs READ tabs NOTIFY changed)
     Q_PROPERTY(QVariantList places READ places NOTIFY placesChanged)
+    // Every place KDE keeps, hidden ones too, for choosing which show.
+    Q_PROPERTY(QVariantList everyPlace READ everyPlace NOTIFY placesChanged)
+    // How wide the places stand when open, as the person dragged them; 0 fits
+    // the longest name.
+    Q_PROPERTY(int placesWidth READ placesWidth WRITE setPlacesWidth NOTIFY placesWidthChanged)
     Q_PROPERTY(QVariantList crumbs READ crumbs NOTIFY changed)
     Q_PROPERTY(int currentTab READ currentTab NOTIFY changed)
     Q_PROPERTY(QString path READ path NOTIFY changed)
@@ -121,10 +131,12 @@ public:
             // Do not stat saved paths during launcher startup. Offline mounts
             // must report through the asynchronous lister, not block Meta.
             if (QDir::isAbsolutePath(p)) m_tabs.append(Tab{{QDir::cleanPath(p)}, 0, 0});
-            else if (p == recentLocation()) m_tabs.append(Tab{{p}, 0, 0});
+            else if (p == recentLocation() || p == PlaceBook::trashLocation()) m_tabs.append(Tab{{p}, 0, 0});
         if (m_tabs.isEmpty()) m_tabs.append(Tab{{QDir::homePath()}, 0, 0});
         m_current = std::clamp(settings.value(QStringLiteral("Files/current"), 0).toInt(), 0, int(m_tabs.size())-1);
         m_tileSize = std::clamp(settings.value(QStringLiteral("Files/tileSize"), 1).toInt(), 0, 3);
+        m_placesWidth = std::clamp(settings.value(QStringLiteral("Files/placesWidth"), 0).toInt(), 0, 240);
+        connect(this, &FileBrowser::trashChanged, this, &FileBrowser::rebuildPlaces);
     }
     ~FileBrowser() override { *m_alive=false; save(); }
     void setThumbnailSource(ThumbnailSource source) { m_thumbnailSource=std::move(source); rebuild(); }
@@ -136,7 +148,7 @@ public:
     // starts where it was.
     void adopt(const FileBrowser &other) {
         m_tabs=other.m_tabs; m_current=other.m_current; m_sort=other.m_sort;
-        m_hidden=other.m_hidden; m_filter=other.m_filter; m_tileSize=other.m_tileSize;
+        m_hidden=other.m_hidden; m_filter=other.m_filter; m_tileSize=other.m_tileSize; m_placesWidth=other.m_placesWidth;
         Q_EMIT tileSizeChanged();
         refresh();
     }
@@ -470,9 +482,10 @@ public:
     }
     // A folder in a tab of its own, or in the tab shown once there are 20.
     Q_INVOKABLE void openTab(const QString &p) {
-        if (!QDir::isAbsolutePath(p)) return;
+        const bool place = p == recentLocation() || p == PlaceBook::trashLocation();
+        if (!QDir::isAbsolutePath(p) && !place) return;
         if (m_tabs.size() >= 20) { navigate(p); return; }
-        m_tabs.append(Tab{{QDir::cleanPath(p)}, 0, 0}); m_current = m_tabs.size()-1; refresh(); save();
+        m_tabs.append(Tab{{place ? p : QDir::cleanPath(p)}, 0, 0}); m_current = m_tabs.size()-1; refresh(); save();
     }
     void setStatus(const QString &status) { m_operationStatus = status; Q_EMIT operationChanged(); }
     QVariantList entries() const { return m_entries; }
@@ -485,6 +498,84 @@ public:
         return result;
     }
     QVariantList places() const { return m_places; }
+    QVariantList everyPlace() const { return m_everyPlace; }
+    int placesWidth() const { return m_placesWidth; }
+    void setPlacesWidth(int width) {
+        width=width<=0 ? 0 : std::clamp(width,120,240);
+        if(width==m_placesWidth)return;
+        m_placesWidth=width;
+        if(m_remembered)QSettings().setValue(QStringLiteral("Files/placesWidth"),width);
+        Q_EMIT placesWidthChanged();
+    }
+    // The places KDE keeps, changed here as in Dolphin.
+    Q_INVOKABLE bool isPlace(const QString &p) {
+        for(const auto &place:m_everyPlace) if(place.toMap().value(QStringLiteral("path")).toString()==p)return true;
+        return false;
+    }
+    // A folder by its path, or by its address as a folder picker gives it.
+    Q_INVOKABLE void addPlace(const QString &p) {
+        if(m_book)m_book->add(p.startsWith(QLatin1String("file:")) ? QUrl(p).toLocalFile() : p);
+    }
+    Q_INVOKABLE void renamePlace(const QString &id, const QString &name) { if(m_book)m_book->rename(id,name); }
+    Q_INVOKABLE void setPlaceHidden(const QString &id, bool hidden) { if(m_book)m_book->setHidden(id,hidden); }
+    Q_INVOKABLE void removePlace(const QString &id) { if(m_book)m_book->remove(id); }
+    Q_INVOKABLE void movePlace(const QString &id, const QString &beforeId) { if(m_book)m_book->move(id,beforeId); }
+    // Files carried onto a place are copied there, as onto a folder; onto
+    // Trash, they go to Trash.
+    Q_INVOKABLE void copyToPlace(const QStringList &paths, const QString &place) {
+        if (m_busy || m_opening || !m_lister || paths.isEmpty() || kindOf(path())==Kind::Trash) return;
+        // Only a place shown beside Files, a mounted drive among them.
+        const bool shown=std::any_of(m_places.cbegin(),m_places.cend(),[&place](const QVariant &row) {
+            return row.toMap().value(QStringLiteral("path")).toString()==place;
+        });
+        if (!shown) return;
+        if (place==PlaceBook::trashLocation()) {
+            QList<QUrl> urls;
+            for (const auto &p:paths) { if (listedItem(p).isNull()) return; urls.append(QUrl::fromLocalFile(p)); }
+            auto *job=KIO::trash(urls,KIO::HideProgressInfo);
+            job->setUiDelegate(nullptr); job->setUiDelegateExtension(nullptr);
+            connect(job,&KJob::result,this,[this]{ checkTrash(); });
+            watchOperation(job,i18n("Moving to Trash…"),true);
+            return;
+        }
+        const auto canonicalTarget=QFileInfo(place).canonicalFilePath();
+        if (canonicalTarget.isEmpty() || !QFileInfo(canonicalTarget).isDir()) return;
+        QList<QUrl> sources;
+        for (const auto &p:paths) {
+            const auto item=listedItem(p);
+            if (item.isNull()) return;
+            const auto canonicalSource=QFileInfo(p).canonicalFilePath();
+            if (canonicalSource.isEmpty() || canonicalTarget==canonicalSource || QFileInfo(canonicalSource).path()==canonicalTarget ||
+                (item.isDir() && canonicalTarget.startsWith(canonicalSource+QLatin1Char('/')))) return;
+            const auto url=QUrl::fromLocalFile(p);
+            if (!sources.contains(url)) sources.append(url);
+        }
+        auto *job=KIO::copy(sources,QUrl::fromLocalFile(canonicalTarget),KIO::HideProgressInfo);
+        askAboutNames(job); job->setUiDelegateExtension(nullptr);
+        watchOperation(job,i18n("Copying…"),true);
+    }
+    // In Trash: what is chosen goes back where it came from, or is deleted
+    // for good once the person confirms it.
+    Q_INVOKABLE void restoreSelected() {
+        if (m_busy || m_opening || kindOf(path())!=Kind::Trash) return;
+        QList<QUrl> urls;
+        for (const auto &p:selectedPaths()) if (m_trashUrls.contains(p)) urls.append(m_trashUrls.value(p));
+        if (urls.isEmpty()) return;
+        auto *job=KIO::restoreFromTrash(urls,KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr);
+        connect(job,&KJob::result,this,[this]{ checkTrash(); });
+        watchOperation(job,i18n("Restoring from Trash…"));
+    }
+    Q_INVOKABLE void deleteSelected() {
+        if (m_busy || m_opening || kindOf(path())!=Kind::Trash) return;
+        QList<QUrl> urls;
+        for (const auto &p:selectedPaths()) if (m_trashUrls.contains(p)) urls.append(m_trashUrls.value(p));
+        if (urls.isEmpty()) return;
+        auto *job=KIO::del(urls,KIO::HideProgressInfo);
+        job->setUiDelegate(nullptr);
+        connect(job,&KJob::result,this,[this]{ checkTrash(); });
+        watchOperation(job,i18n("Deleting…"));
+    }
     // The standard places, then folders mounted where removable media go.
     static QVariantList localPlaces(const QByteArray &mounts) {
         QVariantList result;
@@ -521,6 +612,8 @@ public:
         switch (kindOf(p)) {
         case Kind::Recent:
             return {QVariantMap{{QStringLiteral("label"), i18n("Recent")}, {QStringLiteral("path"), p}}};
+        case Kind::Trash:
+            return {QVariantMap{{QStringLiteral("label"), i18n("Trash")}, {QStringLiteral("path"), p}}};
         case Kind::Search: {
             // The folder searched, then the search itself.
             auto result = folderCrumbs(searchFolderOf(p));
@@ -539,6 +632,7 @@ public:
         switch (kindOf(path())) {
         case Kind::Recent: return QStringLiteral("recent");
         case Kind::Search: return QStringLiteral("search");
+        case Kind::Trash: return QStringLiteral("trash");
         case Kind::Folder: break;
         }
         return QStringLiteral("folder");
@@ -556,7 +650,7 @@ public:
     // in a folder, and in a search once the text differs from what was searched.
     bool searchOffered() const {
         const auto term = m_filter.trimmed();
-        return !term.isEmpty() && kindOf(path()) != Kind::Recent && term != searchText();
+        return !term.isEmpty() && kindOf(path()) != Kind::Recent && kindOf(path()) != Kind::Trash && term != searchText();
     }
     QString error() const { return m_error; }
     // The place shown could not be listed: Files says why where its files
@@ -884,12 +978,13 @@ public:
         QFile mounts(QStringLiteral("/proc/self/mountinfo"));
         m_mounts = mounts.open(QIODevice::ReadOnly) ? mounts.readAll() : QByteArray{};
         rebuildPlaces();
+        checkTrash();
         m_drivePaths = mountedDrivePaths();
         if(!m_lister) refresh(); else Q_EMIT changed();
     }
     Q_INVOKABLE void navigate(const QString &p) {
         if(p==path())return;
-        if(p==recentLocation()) { go(p); return; }
+        if(p==recentLocation() || p==PlaceBook::trashLocation()) { go(p); return; }
         if(!QDir::isAbsolutePath(p)) { m_error=i18n("Enter an absolute local folder path."); Q_EMIT changed(); return; }
         go(QDir::cleanPath(p));
     }
@@ -951,6 +1046,7 @@ public:
 Q_SIGNALS:
     void changed();
     void placesChanged();
+    void placesWidthChanged();
     void selectionChanged();
     void operationChanged();
     void clipboardChanged();
@@ -979,6 +1075,27 @@ private:
     // Places, the listed drives after them, and any other mounted media.
     void rebuildPlaces() {
         auto places=localPlaces(m_mounts);
+        if(!m_book) {
+            m_book=std::make_unique<PlaceBook>();
+            connect(m_book.get(),&PlaceBook::changed,this,&FileBrowser::rebuildPlaces);
+        }
+        // Recent first, then the places KDE keeps, in its order.
+        const auto every=m_book->places();
+        const bool everyChanged=every!=m_everyPlace;
+        m_everyPlace=every;
+        places.removeIf([](const QVariant &place) {
+            const auto map=place.toMap();
+            return map.value(QStringLiteral("section"))==QLatin1String("places") && map.value(QStringLiteral("path"))!=recentLocation();
+        });
+        int kept=1;
+        for(const auto &place:m_everyPlace) {
+            auto map=place.toMap();
+            if(map.value(QStringLiteral("hidden")).toBool())continue;
+            map.insert(QStringLiteral("section"),QStringLiteral("places"));
+            if(map.value(QStringLiteral("path"))==PlaceBook::trashLocation())
+                map.insert(QStringLiteral("note"),m_trashItems>0 ? i18np("1 item","%1 items",m_trashItems) : QString());
+            places.insert(kept++,map);
+        }
         if(m_devices) {
             const auto drives=m_devices->drives();
             QStringList drivePaths;
@@ -993,7 +1110,9 @@ private:
                 rows.append(QVariantMap{{QStringLiteral("label"),drive.label},{QStringLiteral("path"),drive.path},{QStringLiteral("icon"),drive.icon},
                     {QStringLiteral("section"),QStringLiteral("drives")},{QStringLiteral("drive"),drive.id},{QStringLiteral("mounted"),drive.mounted},
                     {QStringLiteral("canEject"),drive.removable && !drive.phone && drive.mounted},
-                    {QStringLiteral("busy"),!note.isEmpty()},{QStringLiteral("note"),note}});
+                    {QStringLiteral("busy"),!note.isEmpty()},
+                    {QStringLiteral("note"),!note.isEmpty() || !drive.mounted || drive.phone ? note : m_free.value(drive.path)}});
+                if(drive.mounted && !drive.phone)measureFree(drive.path);
             }
             places.removeIf([&drivePaths](const QVariant &place) {
                 const auto map=place.toMap();
@@ -1003,7 +1122,29 @@ private:
             while(at<places.size() && places[at].toMap().value(QStringLiteral("section"))==QLatin1String("places"))++at;
             for(const auto &row:rows)places.insert(at++,row);
         }
-        if(places!=m_places) { m_places=places; Q_EMIT placesChanged(); }
+        if(places!=m_places || everyChanged) { m_places=places; Q_EMIT placesChanged(); }
+    }
+    // How much room a mounted drive has left, read away from the screen: the
+    // answer shows on its row when it comes, and is read again at most every
+    // half minute. Only the drives KDE lists are read, never network mounts.
+    void measureFree(const QString &drivePath) {
+        const auto now=QDateTime::currentMSecsSinceEpoch();
+        if(m_measuring.contains(drivePath) || (m_free.contains(drivePath) && now-m_measuredAt.value(drivePath)<30000))return;
+        m_measuring.insert(drivePath);
+        m_measuredAt.insert(drivePath,now);
+        QPointer<FileBrowser> self(this);
+        QThreadPool::globalInstance()->start([self,drivePath]{
+            const QStorageInfo storage(drivePath);
+            const auto text=storage.isValid() && storage.isReady()
+                ? i18n("%1 free",QLocale().formattedDataSize(storage.bytesAvailable())) : QString();
+            QMetaObject::invokeMethod(QCoreApplication::instance(),[self,drivePath,text]{
+                if(!self)return;
+                self->m_measuring.remove(drivePath);
+                if(self->m_free.value(drivePath)==text)return;
+                self->m_free.insert(drivePath,text);
+                self->rebuildPlaces();
+            },Qt::QueuedConnection);
+        });
     }
     // A drive that went away takes every tab showing it, or searching it, Home.
     void drivesChanged() {
@@ -1073,9 +1214,10 @@ private:
         }
         rebuildPlaces();
     }
-    enum class Kind { Folder, Recent, Search };
+    enum class Kind { Folder, Recent, Search, Trash };
     static Kind kindOf(const QString &location) {
         if (location == recentLocation()) return Kind::Recent;
+        if (location == PlaceBook::trashLocation()) return Kind::Trash;
         if (location.startsWith(QStringLiteral("filenamesearch:"))) return Kind::Search;
         return Kind::Folder;
     }
@@ -1101,6 +1243,7 @@ private:
     QString locationLabel(const QString &location) const {
         switch (kindOf(location)) {
         case Kind::Recent: return i18n("Recent");
+        case Kind::Trash: return i18n("Trash");
         case Kind::Search: return QStringLiteral("“%1”").arg(searchTermOf(location));
         case Kind::Folder: break;
         }
@@ -1119,6 +1262,7 @@ private:
         const auto p = path();
         switch (kindOf(p)) {
         case Kind::Recent:
+        case Kind::Trash:
             return QUrl(p);
         case Kind::Search: {
             // Names only, matched as typed: the text is a literal, not a pattern.
@@ -1261,7 +1405,13 @@ private:
         if((!m_busy && !m_searching) || (m_searching && m_entries.isEmpty())) { m_showArrived.stop(); rebuild(); return; }
         if(!m_showArrived.isActive()) m_showArrived.start(m_entries.isEmpty() ? 500 : std::max<qint64>(1000, 3*m_rebuildMs));
     }
-    QVariantList m_entries, m_places;
+    QVariantList m_entries, m_places, m_everyPlace;
+    std::unique_ptr<PlaceBook> m_book;
+    int m_placesWidth=0;
+    QHash<QString,QUrl> m_trashUrls;
+    QHash<QString,QString> m_free;
+    QHash<QString,qint64> m_measuredAt;
+    QSet<QString> m_measuring;
     QPointer<FileDevices> m_devices;
     QByteArray m_mounts;
     QStringList m_drivePaths;
@@ -1402,14 +1552,22 @@ private:
             if(m_sort==3 && a.size()!=b.size())return a.size()>b.size();
             const int c=collator.compare(a.text(),b.text());return m_sort==1 ? c>0 : c<0;
         });
-        m_entries.clear();
+        m_entries.clear(); m_trashUrls.clear();
         for(const auto &f:items) {
             const auto local=localPathOf(f);
             if(local.isEmpty() || !f.text().contains(m_filter,Qt::CaseInsensitive))continue;
+            // In Trash each file is known by the file Trash keeps, and says
+            // where it came from.
+            QString detail;
+            if(kind==Kind::Trash) {
+                m_trashUrls.insert(local,f.url());
+                const auto from=f.entry().stringValue(KIO::UDSEntry::UDS_EXTRA);
+                detail=from.isEmpty() ? QString() : folderLabel(from);
+            }
             m_entries.append(QVariantMap{{QStringLiteral("name"),f.text()},{QStringLiteral("path"),local},
                 {QStringLiteral("directory"),f.isDir()},{QStringLiteral("hidden"),f.isHidden()},{QStringLiteral("icon"),f.iconName()},
                 {QStringLiteral("thumbnail"),!f.isDir() && m_thumbnailSource ? m_thumbnailSource(local,typeOf(f),f.time(KFileItem::ModificationTime).toSecsSinceEpoch()) : QString()},
-                {QStringLiteral("detail"),kind!=Kind::Folder ? folderLabel(local) : f.isDir()?i18n("Folder"):QLocale().formattedDataSize(f.size())}});
+                {QStringLiteral("detail"),kind==Kind::Trash ? detail : kind!=Kind::Folder ? folderLabel(local) : f.isDir()?i18n("Folder"):QLocale().formattedDataSize(f.size())}});
         }
         m_rebuildMs=took.elapsed();
         Q_EMIT changed();

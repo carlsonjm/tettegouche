@@ -5,6 +5,19 @@ provenance.
 
 ## Unreleased
 
+- Files has one row under search, as every drawer does: Back, Forward and
+  the path on the left; New folder, the order and a new − / + size pill on
+  the right, in the same place as in Apps' row. The tab row shows only once
+  a second tab is open, the path is typed at its empty end or with Ctrl+L,
+  and Refresh is in the folder's menu and on F5.
+- Files' places are KDE's own, shared with Dolphin and every Open dialog:
+  + beside Fold adds this folder or another and shows or hides places; a
+  place's own sheet renames, hides or removes it; places move by dragging.
+  Their edge drags from the rail of icons up to 240. Trash is a place to
+  open and restore from, drives say how much room is left, and files
+  dropped on a place are copied there.
+- Ctrl and the scroll wheel sizes Apps' and Files' tiles with a mouse;
+  before, Plasma's own wheel handling took it first.
 - Apps' tiles come in four sizes, as Files' do: a pinch, Ctrl with + or −,
   or Ctrl and the wheel changes them, and Ctrl+0 returns them. Smaller sizes
   fit more applications across, so a wide screen is no longer held to six.
