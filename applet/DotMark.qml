@@ -41,50 +41,41 @@ Item {
     implicitWidth: openSize
     implicitHeight: openSize
 
-    Shape {
+    // The face: a disc whose edge thickens inward to fill it at rest and
+    // thins to the ring's edge as it opens. The scene graph smooths a
+    // rectangle's rounded edge at any scale, where a path showed steps.
+    Item {
         objectName: "dotMarkFace"
         anchors.fill: parent
-        preferredRendererType: Shape.CurveRenderer
         opacity: dot.loading ? 0.3 : 1
         Behavior on opacity { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
 
-        ShapePath {
-            strokeWidth: -1
-            strokeColor: "transparent"
-            fillRule: ShapePath.OddEvenFill
-            fillColor: dot.ink
-            fillGradient: dot.pearl ? pearlFill : null
-
-            PathAngleArc {
-                centerX: dot.width / 2
-                centerY: dot.height / 2
-                radiusX: dot.outer
-                radiusY: dot.outer
-                startAngle: 0
-                sweepAngle: 360
-                moveToStart: true
-            }
-            PathAngleArc {
-                centerX: dot.width / 2
-                centerY: dot.height / 2
-                radiusX: dot.inner < 0.25 ? 0 : dot.inner
-                radiusY: dot.inner < 0.25 ? 0 : dot.inner
-                startAngle: 0
-                sweepAngle: 360
-                moveToStart: true
+        Rectangle {
+            anchors.centerIn: parent
+            width: 2 * dot.outer
+            height: width
+            radius: width / 2
+            antialiasing: true
+            color: "transparent"
+            border.width: dot.outer - dot.inner
+            border.color: dot.pearl ? "#F4F4FA" : dot.ink
+        }
+        // At rest the pearl is lit from above and a shade deeper toward its
+        // lower edge; that light fades as the middle starts to clear.
+        Rectangle {
+            anchors.centerIn: parent
+            width: 2 * dot.outer
+            height: width
+            radius: width / 2
+            antialiasing: true
+            opacity: Math.max(0, 1 - dot.openness * 4)
+            visible: dot.pearl && opacity > 0
+            gradient: Gradient {
+                GradientStop { position: 0; color: "#FFFFFF" }
+                GradientStop { position: 0.55; color: "#F4F4FA" }
+                GradientStop { position: 1; color: "#DCDCE4" }
             }
         }
-    }
-
-    LinearGradient {
-        id: pearlFill
-        x1: 0
-        y1: dot.height / 2 - dot.outer
-        x2: 0
-        y2: dot.height / 2 + dot.outer
-        GradientStop { position: 0; color: "#FFFFFF" }
-        GradientStop { position: 0.55; color: "#F4F4FA" }
-        GradientStop { position: 1; color: "#DCDCE4" }
     }
 
     // Loading: a quarter of the ring, lit, going round.
@@ -119,19 +110,30 @@ Item {
         }
     }
 
-    // The new dot: it grows once the ring has formed, and goes at once as the
-    // ring starts to fill back.
+    // The new dot: it grows from nothing once the ring has formed, and goes
+    // at once as the ring starts to fill back.
     Rectangle {
         id: seedDot
         objectName: "dotMarkSeed"
+        readonly property bool grown: dot.seed && !dot.loading && dot.openness > 0.98
+        property real shown: 0
+        onGrownChanged: {
+            seedGrowth.stop()
+            if (grown) seedGrowth.start()
+            else shown = 0
+        }
+        Component.onCompleted: shown = grown ? 1 : 0
+        NumberAnimation {
+            id: seedGrowth
+            target: seedDot
+            property: "shown"
+            from: 0
+            to: 1
+            duration: Math.max(1, Math.round(240 * dot.speed))
+            easing.type: Easing.OutCubic
+        }
         antialiasing: true
         anchors.centerIn: parent
-        readonly property real grown: dot.seed && !dot.loading && dot.openness > 0.98 ? 1 : 0
-        property real shown: grown
-        Behavior on shown {
-            enabled: seedDot.shown < seedDot.grown
-            NumberAnimation { duration: Math.max(1, Math.round(240 * dot.speed)); easing.type: Easing.OutCubic }
-        }
         width: 12 * shown
         height: width
         radius: width / 2

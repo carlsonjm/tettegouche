@@ -415,8 +415,8 @@ PlasmoidItem {
                     Repeater {
                         model: 4
                         Rectangle {
-                            width: 4.5
-                            height: 4.5
+                            width: 5
+                            height: 5
                             radius: 1
                             color: "#F8F8FF"
                         }
@@ -425,6 +425,9 @@ PlasmoidItem {
                 SuiteIcon {
                     objectName: "tettegouche-launcher-dot-glyph"
                     anchors.centerIn: parent
+                    // An open folder carries its weight on the left; half a pixel
+                    // right sets it in the middle of the ring to the eye.
+                    anchors.horizontalCenterOffset: Plasmoid.launcherMode === "files" ? 0.5 : 0
                     visible: Plasmoid.launcherMode === "files" || Plasmoid.launcherMode === "notes"
                     glyph: Plasmoid.launcherMode === "notes" ? "notes" : "folder-open"
                     ink: "#F8F8FF"
