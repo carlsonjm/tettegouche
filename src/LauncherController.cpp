@@ -502,8 +502,10 @@ void LauncherController::present()
     // Started cold, the window may not be on screen yet when it first asks
     // to take the keys, and the ask is lost: it asks again once its first
     // frame is shown.
-    connect(m_view, &QQuickWindow::frameSwapped, this, [this] {
-        if (m_view->isVisible() && !m_view->isActive()) m_view->requestActivate();
+    // Tied to the window itself, so a frame swapped as it goes away asks
+    // nothing of a window that is gone.
+    connect(m_view, &QQuickWindow::frameSwapped, m_view, [view = m_view] {
+        if (view->isVisible() && !view->isActive()) view->requestActivate();
     }, Qt::SingleShotConnection);
     Q_EMIT opened();
     const auto steps = std::exchange(m_whenShown, {});
@@ -1086,7 +1088,8 @@ void LauncherController::readDockBand()
     }
     // One dock answers on the bus for the display it presents; the others are
     // its copies, so a display it does not answer for takes the same band.
-    // With no dock there, none.
+    // A display it answers for as not presenting there has none: Search
+    // fills down to the screen's edge.
     const quint64 generation = ++m_dockGeneration;
     const auto ask = [](const QString &outputName) {
         QDBusMessage request = bottomSurfaceMethod(QStringLiteral("dockExtent"));
@@ -1108,7 +1111,7 @@ void LauncherController::readDockBand()
             return;
         }
         const int band = dockBandHeight(payload);
-        if (band != 0 || QJsonDocument::fromJson(payload).object().value(QStringLiteral("presenting")).toBool()) {
+        if (band != 0 || isDockExtent(payload)) {
             settle(band);
             return;
         }

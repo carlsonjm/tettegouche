@@ -11,6 +11,10 @@ int main()
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":true,"reserving":false,"band":{"height":56}})") != 0) return 3;
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":false,"band":{"height":0}})") != 0) return 4;
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":2,"presenting":true,"band":{"height":56}})") != 0) return 5;
+    // A display the dock answers for as not presenting is an answer, so it
+    // takes no band from another display; no answer, or another schema, is not.
+    if (!isDockExtent(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"output":"eDP-1","presenting":false,"reserving":true,"band":{"height":0}})")) return 26;
+    if (isDockExtent("") || isDockExtent(R"({"schema":"co.goodinput.shuffle.clock-extent","version":1})")) return 27;
     if (dockBandHeight("not json") != 0) return 6;
 
     // A monitor reported whole loses the band at its bottom.

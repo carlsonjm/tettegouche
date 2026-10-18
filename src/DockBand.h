@@ -21,6 +21,15 @@ inline int dockBandHeight(const QByteArray &payload)
     return std::max(0, extent.value(QStringLiteral("band")).toObject().value(QStringLiteral("height")).toInt());
 }
 
+// Whether the payload is a dock-extent answer (version 1) at all, presenting
+// or not: a display the dock answers for as not presenting there has no band.
+inline bool isDockExtent(const QByteArray &payload)
+{
+    const QJsonObject extent = QJsonDocument::fromJson(payload).object();
+    return extent.value(QStringLiteral("schema")).toString() == QStringLiteral("co.goodinput.shuffle.dock-extent")
+        && extent.value(QStringLiteral("version")).toInt() == 1;
+}
+
 // The height of Shuffle's Context Bar along the top of a display, read from
 // its clock-extent answer (version 1). Zero when the answer is not one or no
 // bar presents there.
