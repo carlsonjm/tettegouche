@@ -1142,6 +1142,10 @@ private Q_SLOTS:
         QStringList named=dir.path().split(QLatin1Char('/'),Qt::SkipEmptyParts);
         named<<QStringLiteral("Folder")<<QStringLiteral("note.txt")<<QLocale().formattedDataSize(4)<<dir.path();
         for(const auto &place:browser.places()) named<<place.toMap().value(QStringLiteral("label")).toString();
+        // The folder's own path, as "Add this folder" spells it under itself.
+        QStringList crumbs;
+        for(const auto &crumb:browser.crumbs()) crumbs<<crumb.toMap().value(QStringLiteral("label")).toString();
+        named<<crumbs.join(QStringLiteral(" › "));
         int checked=0; QStringList unmarked;
         for(auto *object:view.rootObject()->findChildren<QObject*>()) {
             for(const char *property:{"text","placeholderText","title","action"}) {
