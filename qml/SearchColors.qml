@@ -7,9 +7,11 @@ import QtQuick
 import org.kde.kirigami as Kirigami
 
 // Search's colours, read from the theme of the item they paint. On a dark
-// ground they are the suite's fixed values, so a dark colour scheme looks as
-// it always has; on a light ground the ink and the ground come from the theme
-// and every wash, control and line is that ink laid over the ground.
+// ground they are the suite's values, leaning toward the ground's colour as
+// far as the ground leans from grey, so a plain dark scheme looks as it
+// always has and a tinted one carries its tint. On a light ground the ink
+// and the ground come from the theme, and every wash, control and line is
+// that ink laid over the ground.
 QtObject {
     id: tone
     objectName: "searchColors"
@@ -35,10 +37,10 @@ QtObject {
     // The light that sweeps across the field's first words.
     readonly property color shine: dark ? "#ffffff" : themeInk
     // Words on a pill filled with the text colour.
-    readonly property color textOnInk: dark ? "#141414" : ground
+    readonly property color textOnInk: dark ? suite("#141414") : ground
 
     // Small capitals and hints over the note's own controls.
-    readonly property color hintText: dark ? "#8A8A90" : wash(0.55)
+    readonly property color hintText: dark ? suite("#8A8A90") : wash(0.55)
 
     // Report colours: something went wrong, went well, or waits.
     readonly property color errorText: dark ? "#ffb5a8" : themeColor("negativeTextColor", "#DA4453")
@@ -48,23 +50,23 @@ QtObject {
     readonly property color waitingText: dark ? "#E3B866" : themeColor("neutralTextColor", "#F67400")
 
     // The sheet, the boxes laid on it and the lines between them.
-    readonly property color surface: dark ? "#141414" : ground
-    readonly property color sheet: dark ? "#1B1B1B" : over(0.03)
-    readonly property color outline: dark ? "#5a5a5a" : over(0.32)
-    readonly property color line: dark ? "#333333" : over(0.16)
-    readonly property color mark: dark ? "#888888" : over(0.5)
-    readonly property color crumb: dark ? "#777777" : over(0.45)
+    readonly property color surface: dark ? suite("#141414") : ground
+    readonly property color sheet: dark ? suite("#1B1B1B") : over(0.03)
+    readonly property color outline: dark ? suite("#5a5a5a") : over(0.32)
+    readonly property color line: dark ? suite("#333333") : over(0.16)
+    readonly property color mark: dark ? suite("#888888") : over(0.5)
+    readonly property color crumb: dark ? suite("#777777") : over(0.45)
 
     // The suite's grey pill, under the pointer and pressed.
-    readonly property color control: dark ? "#242424" : over(0.07)
-    readonly property color controlHover: dark ? "#333333" : over(0.12)
-    readonly property color controlPressed: dark ? "#4A4A4A" : over(0.22)
+    readonly property color control: dark ? suite("#242424") : over(0.07)
+    readonly property color controlHover: dark ? suite("#333333") : over(0.12)
+    readonly property color controlPressed: dark ? suite("#4A4A4A") : over(0.22)
     readonly property color lightPressed: dark ? "#d8d8de" : wash(0.8)
-    readonly property color doorHover: dark ? "#2a2a2a" : over(0.09)
-    readonly property color doorPressed: dark ? "#303030" : over(0.11)
-    readonly property color tilePressed: dark ? "#262626" : over(0.08)
-    readonly property color chosen: dark ? "#333333" : over(0.12)
-    readonly property color placeChosen: dark ? "#2C2C2C" : over(0.10)
+    readonly property color doorHover: dark ? suite("#2a2a2a") : over(0.09)
+    readonly property color doorPressed: dark ? suite("#303030") : over(0.11)
+    readonly property color tilePressed: dark ? suite("#262626") : over(0.08)
+    readonly property color chosen: dark ? suite("#333333") : over(0.12)
+    readonly property color placeChosen: dark ? suite("#2C2C2C") : over(0.10)
 
     // See-through washes for rows and tiles.
     readonly property color hover: dark ? "#22ffffff" : wash(0.08)
@@ -77,13 +79,27 @@ QtObject {
     readonly property color progress: dark ? "#d9ffffff" : wash(0.85)
 
     // The scroll handle at rest, under the pointer and held.
-    readonly property color handle: dark ? "#4A4A4A" : over(0.28)
-    readonly property color handleHover: dark ? "#6A6A6A" : over(0.38)
-    readonly property color handlePressed: dark ? "#8A8A8A" : over(0.5)
+    readonly property color handle: dark ? suite("#4A4A4A") : over(0.28)
+    readonly property color handleHover: dark ? suite("#6A6A6A") : over(0.38)
+    readonly property color handlePressed: dark ? suite("#8A8A8A") : over(0.5)
 
     // Selected words in the search field.
     readonly property color selection: dark ? "#6da9ddff" : themeColor("highlightColor", "#3DAEE9")
     readonly property color selectedText: dark ? "#ffffffff" : themeColor("highlightedTextColor", "#FFFFFF")
+
+    // How far the ground leans from grey: nothing on a plain scheme, the
+    // look's tint on a tinted one, so the suite's dark greys lean with it.
+    readonly property var lean: {
+        const mean = (ground.r + ground.g + ground.b) / 3;
+        return [ground.r - mean, ground.g - mean, ground.b - mean];
+    }
+
+    // One of the suite's dark values, leaning as the ground does.
+    function suite(value) {
+        const c = Qt.color(value);
+        const channel = (v, i) => Math.round(Math.min(1, Math.max(0, v + lean[i])) * 255) / 255;
+        return Qt.rgba(channel(c.r, 0), channel(c.g, 1), channel(c.b, 2), c.a);
+    }
 
     // The ink at a given strength, for see-through washes and fills.
     function wash(alpha) {
