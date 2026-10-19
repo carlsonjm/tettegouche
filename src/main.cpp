@@ -314,6 +314,19 @@ int main(int argc, char **argv)
     results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
+    // Apps found by the names Windows gives its own tools, such as Task
+    // Manager, where they are installed.
+    results.setApplications([](const QString &name) {
+        const auto service = KService::serviceByDesktopName(name);
+        if (!service || service->noDisplay()) return QVariantMap();
+        return QVariantMap{{QStringLiteral("id"), service->storageId()}, {QStringLiteral("name"), service->name()},
+                           {QStringLiteral("icon"), service->icon()}, {QStringLiteral("description"), service->genericName()}};
+    }, [](const QString &id) {
+        const auto service = KService::serviceByStorageId(id);
+        if (!service) return false;
+        (new KIO::ApplicationLauncherJob(service))->start();
+        return true;
+    });
     // Where Core removes apps, an application's Uninstall goes to it.
     catalog.setRemover([&core] { return core.removesApps(); },
                        [&core](const QString &id, const QString &name) { core.removeApp(id, name); });

@@ -76,6 +76,33 @@ inline bool settingIntent(const QString &id, const QString &query) {
     return false;
 }
 
+// The names Windows gives its own tools, kept for the apps that do those jobs
+// here, so someone moving from Windows finds them by the words they know.
+// A name of two words counts once the second word is begun: "file" alone
+// still means files, "file e" means the file manager.
+inline const QHash<QString, QStringList> &windowsNames() {
+    static const QHash<QString, QStringList> names = {
+        {QStringLiteral("systemsettings"), {QStringLiteral("control panel")}},
+        {QStringLiteral("org.kde.plasma-systemmonitor"), {QStringLiteral("task manager")}},
+        {QStringLiteral("org.kde.dolphin"), {QStringLiteral("file explorer"), QStringLiteral("windows explorer"),
+            QStringLiteral("this pc"), QStringLiteral("my computer")}},
+        {QStringLiteral("org.kde.kinfocenter"), {QStringLiteral("device manager")}}
+    };
+    return names;
+}
+
+inline QStringList windowsWordsReached(const QString &application, const QString &query) {
+    const auto typed = intentText(query);
+    QStringList reached;
+    auto name = QFileInfo(application).fileName();
+    if (name.endsWith(QStringLiteral(".desktop"))) name.chop(8);
+    for (const auto &words : windowsNames().value(name)) {
+        const auto first = intentText(words.section(QLatin1Char(' '), 0, 0));
+        if (typed.size() > first.size() && intentText(words).startsWith(typed)) reached.append(words);
+    }
+    return reached;
+}
+
 // Local aliases only expose modules actually installed on this machine.
 // Launching remains an explicit user action and uses no shell.
 class SettingsAliasRunner : public KRunner::AbstractRunner {
@@ -105,6 +132,17 @@ public:
     static constexpr const char *Id = "split-rock-core";
     CoreRunner() : AbstractRunner(nullptr, KPluginMetaData(QJsonObject{
         {QStringLiteral("KPlugin"), QJsonObject{{QStringLiteral("Id"), QString::fromLatin1(Id)}, {QStringLiteral("Name"), QStringLiteral("Core")}}}},
+        QString::fromLatin1(Id))) {}
+    void match(KRunner::RunnerContext &) override {}
+};
+
+// An app found by a Windows name for it; Search starts the app itself.
+// Never registered with KRunner.
+class WindowsWordsRunner : public KRunner::AbstractRunner {
+public:
+    static constexpr const char *Id = "windows-words";
+    WindowsWordsRunner() : AbstractRunner(nullptr, KPluginMetaData(QJsonObject{
+        {QStringLiteral("KPlugin"), QJsonObject{{QStringLiteral("Id"), QString::fromLatin1(Id)}, {QStringLiteral("Name"), QStringLiteral("Applications")}}}},
         QString::fromLatin1(Id))) {}
     void match(KRunner::RunnerContext &) override {}
 };
@@ -214,7 +252,8 @@ inline QString matchFilePath(const KRunner::QueryMatch &match)
 // browser history, or online requests while the user is typing.
 inline int searchTier(const QString &id)
 {
-    if (id == QStringLiteral("services") || id == QStringLiteral("krunner_services")) return 0;
+    if (id == QStringLiteral("services") || id == QStringLiteral("krunner_services")
+        || id == QLatin1String(WindowsWordsRunner::Id)) return 0;
     if (id == QStringLiteral("baloosearch") || id == QStringLiteral("recentdocuments")
         || id == QStringLiteral("krunner_recentdocuments")) return 1;
     if (id == QStringLiteral("krunner_systemsettings") || id == QStringLiteral("systemsettings")
@@ -244,6 +283,7 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
     }
     const bool setting = match.runner() && match.runner()->id().contains(QStringLiteral("systemsettings"));
     auto aliases = setting ? settingAliases(match.id()) : QStringList();
+    if (tier == 0) aliases.append(windowsWordsReached(runnerApplicationId(match), query));
     if (tier == 1) aliases.append(QFileInfo(matchFilePath(match)).completeBaseName());
     auto evidence = SearchPolicy::evaluate(match.text(), aliases,
         tier == 1 ? QString() : match.subtext(), query);
@@ -320,6 +360,8 @@ public:
         m_combined.addSourceModel(&m_notes);
         m_core.setColumnCount(1);
         m_combined.addSourceModel(&m_core);
+        m_windowsWords.setColumnCount(1);
+        m_combined.addSourceModel(&m_windowsWords);
         setSourceModel(&m_combined);
         m_modules = KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings"));
         m_modules.append(KPluginMetaData::findPlugins(QStringLiteral("plasma/kcms/systemsettings_qwidgets")));
@@ -445,6 +487,36 @@ public:
         m_coreActions = std::move(actions);
         m_openCoreAction = std::move(open);
     }
+    // How to find an installed app by its desktop name (its name, icon,
+    // description and storage id, or nothing where it is not installed), and
+    // how to start it, for the apps found by their Windows names.
+    void setApplications(std::function<QVariantMap(const QString &)> find,
+                         std::function<bool(const QString &)> open) {
+        m_findApplication = std::move(find);
+        m_openApplication = std::move(open);
+    }
+    void showWindowsWords(const QString &query) {
+        m_windowsWords.removeRows(0, m_windowsWords.rowCount());
+        if (!m_findApplication) return;
+        for (auto it = windowsNames().cbegin(); it != windowsNames().cend(); ++it) {
+            const auto &name = it.key();
+            if (windowsWordsReached(name, query).isEmpty()) continue;
+            const auto app = m_findApplication(name);
+            const auto id = app.value(QStringLiteral("id")).toString();
+            const auto title = app.value(QStringLiteral("name")).toString();
+            if (id.isEmpty() || title.isEmpty()) continue;
+            KRunner::QueryMatch match(&m_windowsWordsRunner);
+            match.setId(id);
+            match.setText(title);
+            match.setSubtext(app.value(QStringLiteral("description")).toString());
+            match.setData(QUrl(QStringLiteral("applications:") + id));
+            auto *item = new QStandardItem(QIcon::fromTheme(app.value(QStringLiteral("icon")).toString()), title);
+            item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+            item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
+            item->setData(true, KRunner::ResultsModel::EnabledRole);
+            m_windowsWords.appendRow(item);
+        }
+    }
     void showCore(const QString &query) {
         m_core.removeRows(0, m_core.rowCount());
         for (const auto &fact : m_coreFacts ? m_coreFacts() : QList<QVariantMap>{}) {
@@ -492,6 +564,7 @@ public:
         m_aliases.removeRows(0, m_aliases.rowCount());
         askNotes(query);
         showCore(query);
+        showWindowsWords(query);
         for (const auto &module : m_modules) {
             if (!settingIntent(module.pluginId(), query)) continue;
             KRunner::QueryMatch match(&m_aliasRunner);
@@ -518,6 +591,7 @@ public:
         m_aliases.removeRows(0, m_aliases.rowCount());
         m_notes.removeRows(0, m_notes.rowCount());
         m_core.removeRows(0, m_core.rowCount());
+        m_windowsWords.removeRows(0, m_windowsWords.rowCount());
         m_results.clear();
     }
     Q_INVOKABLE bool run(const QModelIndex &index) {
@@ -542,6 +616,8 @@ public:
             m_openCore(target);
             return true;
         }
+        if (source.model() == &m_windowsWords)
+            return m_openApplication && m_openApplication(getQueryMatch(index).id());
         if (source.model() == &m_aliases) {
             const auto module = getQueryMatch(index).data().toString();
             auto bus = QDBusConnection::sessionBus();
@@ -746,6 +822,9 @@ private:
     SettingsAliasRunner m_aliasRunner;
     NotesRunner m_notesRunner;
     CoreRunner m_coreRunner;
+    WindowsWordsRunner m_windowsWordsRunner;
+    std::function<QVariantMap(const QString &)> m_findApplication;
+    std::function<bool(const QString &)> m_openApplication;
     std::function<QList<QVariantMap>()> m_coreFacts;
     std::function<void(const QString &)> m_openCore;
     std::function<QList<QVariantMap>()> m_coreActions;
@@ -754,6 +833,7 @@ private:
     QStandardItemModel m_aliases;
     QStandardItemModel m_notes;
     QStandardItemModel m_core;
+    QStandardItemModel m_windowsWords;
     SearchSources m_combined;
     QList<KPluginMetaData> m_modules;
 };

@@ -159,6 +159,13 @@ Notes had when the note left. A
    precise setting may beat an incidental app; an explicit filename stays strong.
 5. Aliases describe destinations. Two-letter aliases remain ambiguous; longer
    alias prefixes express stronger intent without per-query exceptions.
+   The names Windows gives its own tools are aliases for the apps that do
+   those jobs here: Control Panel for System Settings, Task Manager for System
+   Monitor, File Explorer, Windows Explorer, This PC and My Computer for
+   Dolphin, and Device Manager for Info Center. Such a name counts once its
+   second word is begun ("file e"), so "file" still means files, and it lists
+   the app even where KDE's own search would not, wherever the app is
+   installed.
 6. Matching ignores punctuation and case and uses word boundaries rather than
    arbitrary scattered letters.
 7. Typing alone never opens the browser or changes a setting. The web fallback
@@ -218,6 +225,7 @@ does nothing. A new query or scope releases the lock.
 | `soun` | Sound intent before a Soundcloud asset prefix |
 | `soundcloud` | Exact Soundcloud name beats the Sound alias |
 | `sound.png` | Explicit file beats unrelated settings |
+| `task manager` | System Monitor before any file or folder of that name |
 | unmatched text | No invented destination; explicit browser fallback |
 
 Ranking works only on what KDE's providers return: it cannot rank a candidate

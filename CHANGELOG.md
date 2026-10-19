@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- Search knows the names Windows gives its own tools: Control Panel finds
+  System Settings, Task Manager finds System Monitor, File Explorer and This
+  PC find Dolphin, and Device Manager finds Info Center, ahead of any file or
+  folder with those words.
 - Files has one row under search, as every drawer does: Back, Forward and
   the path on the left; New folder, the order and a new − / + size pill on
   the right, in the same place as in Apps' row. The tab row shows only once
