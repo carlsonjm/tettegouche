@@ -3899,9 +3899,9 @@ TestCase {
             {id: "restore", title: "Restore points", sub: "Go back to an earlier state", icon: "document-revert"}
         ]
         tryCompare(pill, "visible", true)
-        const files = findChild(launcher, "files-pill")
+        // Last in the row: Files and Notes are not offered here, so after Apps.
         const left = item => item.mapToItem(launcher, 0, 0).x
-        verify(left(files) < left(pill))
+        verify(left(findChild(launcher, "apps-pill")) < left(pill))
         mouseClick(pill, pill.width / 2, pill.height / 2)
         verify(launcher.helpersShown)
         verify(pill.selected)
