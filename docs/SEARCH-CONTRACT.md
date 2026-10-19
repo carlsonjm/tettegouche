@@ -7,8 +7,8 @@ tested against unrelated examples, before it lands. Its inputs are in [INPUT.md]
 ## First screen
 
 Search's modes run along its top on every screen, one row above the field: the
-dot for this first screen, then Apps, Files and, where Gooseberry is installed,
-Notes. The grey pill marks the mode shown, and a tap moves straight to another;
+dot for this first screen, then Apps, Files, where Gooseberry is installed
+Notes, and where Split Rock's Core lists its Helpers, Helpers. The grey pill marks the mode shown, and a tap moves straight to another;
 the dot comes back here with what was typed. The window's own buttons end
 that row: Expand while Apps or Files is open, Pop out in Files, and Close,
 last; at rest, Close alone. The field is the same on every screen: a pill
@@ -53,6 +53,21 @@ each file it opens, and Plasma's privacy setting decides what is kept.
   setting "offerRecent" off counts as both off.
 - A section that is on with nothing to show says so in a line, and keeps its
   room, so Search's size does not depend on what the record holds.
+
+### Helpers
+
+The Helpers chip is this first screen with only Split Rock's Helpers on it, so
+nobody has to remember a Helper's name to find it. Under the field, labelled
+Helpers, every upkeep card Core lists is a tile in Core's own order: its icon
+and its name on the subtle paper, 96 by 88 and 12 apart, narrower only when
+more than fit in one row. The field reads "Look over the computer, free up
+space…"; what is typed lists only Helpers, by the same words that find them
+on the first screen, best first, and never searches the web. A tap or Enter
+opens a Helper on its own, as its row does, and Search closes; Enter with
+nothing typed opens the first. Escape or the dot comes back to the first
+screen, and any other mode closes the Helpers. Without Core, or while Core
+lists none, there is no chip. The Helpers still show among the first screen's
+results as before.
 
 ### Notes
 

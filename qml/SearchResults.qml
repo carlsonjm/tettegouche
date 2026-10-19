@@ -33,7 +33,9 @@ Item {
     opacity: launcher.applicationLaunchPending ? 0 : 1
     visible: query.text.length > 0 && !launcher.drawerOpen
 
+    // The files' scope, which the Helpers have no use for.
     Row {
+        visible: !launcher.helpersShown
         spacing: 20
         Text {
             objectName: "file-scope-toggle"

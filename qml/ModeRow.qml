@@ -11,8 +11,9 @@ import org.kde.kirigami as Kirigami
 pragma ComponentBehavior: Bound
 
 // Search's modes along its top, on every screen, as one row: the
-// dot for Search's first screen, then Apps, Files and, where
-// Gooseberry is installed, Notes. The grey pill marks the one
+// dot for Search's first screen, then Apps, Files, where
+// Gooseberry is installed Notes, and where Split Rock's Core lists
+// them the Helpers. The grey pill marks the one
 // shown, the dot while none is, and a tap moves between them. The
 // field and whatever the mode shows sit below it.
 Item {
@@ -94,15 +95,24 @@ Item {
         }
     }
 
-    // The mode shown: "apps", "files", "notes", or "" on the
-    // first screen.
+    // The mode shown: "apps", "files", "notes", "helpers", or "" on
+    // the first screen.
     readonly property string current: launcher.notesOpen ? "notes"
-        : launcher.drawerOpen ? (launcher.filesMode ? "files" : "apps") : ""
+        : launcher.drawerOpen ? (launcher.filesMode ? "files" : "apps")
+        : launcher.helpersShown ? "helpers" : ""
     readonly property real pillGap: 4
     function show(mode) {
         if (mode === current) return
         if (mode === "") {
             launcher.goBack()
+            return
+        }
+        // The Helpers are Search's first screen with only the Helpers on it:
+        // whatever is open closes, and what was typed stays.
+        if (mode === "helpers") {
+            if (launcher.drawerOpen) launcher.setDrawerOpen(false)
+            if (launcher.modeOpen) launcher.closeMode()
+            launcher.showHelpers(true)
             return
         }
         // From one to another, Search keeps the size chosen.
@@ -243,6 +253,14 @@ Item {
             selected: modeRow.current === "notes"
             visible: launcher.notesPillShown && !!launcher.notesDoor && launcher.notesDoor.available
             onActivated: modeRow.show("notes")
+        }
+        FirstPill {
+            id: helpersPill
+            objectName: "helpers-pill"
+            label: words.i18n("Helpers")
+            selected: modeRow.current === "helpers"
+            visible: launcher.helpers.length > 0
+            onActivated: modeRow.show("helpers")
         }
     }
 

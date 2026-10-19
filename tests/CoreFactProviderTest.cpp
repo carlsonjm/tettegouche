@@ -91,10 +91,13 @@ private Q_SLOTS:
         QCOMPARE(provider.facts().size(), 1);
         QVERIFY(changed.size() >= 1);
 
-        // Core leaving takes its facts with it.
+        // Core leaving takes its facts with it, and Search's Helpers hear
+        // that its cards went.
+        QSignalSpy actionsGone(&provider, &CoreFactProvider::actionsChanged);
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
         QTRY_VERIFY(provider.facts().isEmpty());
         QVERIFY(provider.actions().isEmpty());
+        QCOMPARE(actionsGone.size(), 1);
         peer.unregisterObject(QStringLiteral("/Core"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-core"));
     }

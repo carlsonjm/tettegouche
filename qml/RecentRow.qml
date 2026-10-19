@@ -385,7 +385,7 @@ Item {
     y: searchField.y + searchField.height + gap
     width: parent.width
     height: Math.max(0, parent.height - y)
-    opacity: fits && !launcher.applicationLaunchPending
+    opacity: fits && !launcher.helpersShown && !launcher.applicationLaunchPending
         ? rest * Math.max(0, 1 - launcher.drawerProgress * 3)
             * Math.max(0, 1 - launcher.modeProgress * 3) : 0
     visible: opacity > 0

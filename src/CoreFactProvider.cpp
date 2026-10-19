@@ -31,7 +31,7 @@ void CoreFactProvider::ownerChanged(const QString &name, const QString &, const 
     if (name != service()) return;
     ++m_generation;
     m_owner = owner;
-    m_actions.clear();
+    if (!m_actions.isEmpty()) { m_actions.clear(); Q_EMIT actionsChanged(); }
     if (!m_facts.isEmpty()) { m_facts.clear(); Q_EMIT changed(); }
     if (!owner.isEmpty()) ask();
 }
@@ -55,7 +55,9 @@ void CoreFactProvider::ask() {
             QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Actions")), 5000), this);
         connect(actions, &QDBusPendingCallWatcher::finished, this, [this, actions, generation] {
             const QDBusPendingReply<QList<QVariantMap>> reply = *actions; actions->deleteLater();
-            if (!reply.isError() && generation == m_generation) m_actions = reply.value();
+            if (reply.isError() || generation != m_generation || reply.value() == m_actions) return;
+            m_actions = reply.value();
+            Q_EMIT actionsChanged();
         });
     });
 }

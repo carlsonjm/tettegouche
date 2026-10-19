@@ -314,6 +314,7 @@ int main(int argc, char **argv)
     results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
+    QObject::connect(&core, &CoreFactProvider::actionsChanged, &results, &OmniResults::helpersChanged);
     // Apps found by the names Windows gives its own tools, such as Task
     // Manager, where they are installed.
     results.setApplications([](const QString &name) {

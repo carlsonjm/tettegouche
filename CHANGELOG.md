@@ -5,6 +5,10 @@ provenance.
 
 ## Unreleased
 
+- Search has a Helpers chip after Notes, where Split Rock's Core is
+  installed: every Helper shows as a tile, typing narrows them, and a tap or
+  Enter opens one, so nobody has to remember "Restore points" or "What
+  changed" to find it.
 - Search knows the names Windows gives its own tools: Control Panel finds
   System Settings, Task Manager finds System Monitor, File Explorer and This
   PC find Dolphin, and Device Manager finds Info Center, ahead of any file or
