@@ -399,6 +399,11 @@ TestCase {
         property color textColor: "#E0E0E0"
     }
     QtObject {
+        id: tintedDarkScheme
+        property color backgroundColor: "#10151A"
+        property color textColor: "#F6F9FC"
+    }
+    QtObject {
         id: lightScheme
         property color backgroundColor: "#F2F2F2"
         property color textColor: "#102729"
@@ -437,6 +442,19 @@ TestCase {
         }
         for (const role in kept)
             verify(Qt.colorEqual(dark[role], kept[role]), role + " is " + dark[role])
+
+        // A tinted dark scheme leans every suite grey toward its tint, by as
+        // much as its ground leans from grey; text and washes stay the suite's.
+        const tinted = createTemporaryObject(colorsComponent, test, {theme: tintedDarkScheme})
+        verify(tinted.dark)
+        verify(Qt.colorEqual(tinted.surface, "#0F1419"), "surface is " + tinted.surface)
+        for (const role of ["surface", "sheet", "outline", "line", "control", "controlHover"]) {
+            const grey = tinted[role]
+            verify(grey.b > grey.r, role + " leans blue: " + grey)
+            verify(Math.abs(grey.hslLightness - Qt.color(kept[role]).hslLightness) < 0.02, role)
+        }
+        for (const role of ["text", "primaryText", "secondaryText", "hover", "errorText"])
+            verify(Qt.colorEqual(tinted[role], kept[role]), role + " is " + tinted[role])
 
         const light = createTemporaryObject(colorsComponent, test, {theme: lightScheme})
         verify(!light.dark)
