@@ -261,8 +261,12 @@ private Q_SLOTS:
         QVERIFY(m_face->property("scrubbing").toBool());
         QTest::mouseMove(m_window, middle(files));
         QCOMPARE(m_face->property("scrubChoice").toString(), QStringLiteral("files"));
+        // The dot opens into its ring and holds the mark of the door chosen.
+        QVERIFY(m_face->property("dotOpen").toBool());
+        QCOMPARE(m_face->property("dotMode").toString(), QStringLiteral("files"));
         QTest::mouseMove(m_window, middle(apps));
         QCOMPARE(m_face->property("scrubChoice").toString(), QStringLiteral("apps"));
+        QCOMPARE(m_face->property("dotMode").toString(), QStringLiteral("apps"));
         QTest::mouseMove(m_window, middle(files));
         QTest::mouseRelease(m_window, Qt::LeftButton, Qt::NoModifier, middle(files));
         QTRY_COMPARE(launches().size(), before + 1);

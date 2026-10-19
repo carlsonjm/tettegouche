@@ -267,6 +267,9 @@ inline int searchTier(const KRunner::QueryMatch &match)
     return match.runner() ? searchTier(match.runner()->id()) : 3;
 }
 
+// Above every confidence an app, setting, Helper or note can hold.
+constexpr int FilesAfterAids = 6000;
+
 inline int resultPriority(const KRunner::QueryMatch &match, const QString &query) {
     const int tier = searchTier(match);
     // Core's rows are listed only when the query asks for one by its words
@@ -293,7 +296,16 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
         evidence.confidence = SearchPolicy::Prefix;
     if (match.runner() && (match.runner()->id() == QStringLiteral("calculator")
         || match.runner()->id() == QStringLiteral("unitconverter"))) evidence = {SearchPolicy::Exact, 0};
-    return SearchPolicy::priority(evidence, tier);
+    const int ranked = SearchPolicy::priority(evidence, tier);
+    // Files and folders follow every app, setting, Helper, note and sum the
+    // words found, whatever their own confidence: a folder called settings
+    // never pushes Settings down. A file whose whole name was typed with its
+    // extension ("sound.png") is asked for by name and keeps its place.
+    const bool namedFile = evidence.confidence == SearchPolicy::Exact
+        && !QFileInfo(query.trimmed()).suffix().isEmpty();
+    if (tier == 1 && !namedFile && evidence.confidence != SearchPolicy::Unrelated)
+        return ranked + FilesAfterAids;
+    return ranked;
 }
 
 inline QString destinationKey(const KRunner::QueryMatch &match) {
@@ -791,8 +803,10 @@ protected:
             } while (parent.cdUp());
             m_repoDirectories.insert(directory, repository);
         }
+        // A file the words found sits past FilesAfterAids; one they did not
+        // find stays below it, unrelated.
         return !m_repoDirectories.value(directory) && usefulFile(path, queryString())
-            && priority < 5000;
+            && (priority < 5000 || priority >= FilesAfterAids);
     }
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
     {

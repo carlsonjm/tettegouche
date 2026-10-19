@@ -157,7 +157,7 @@ PlasmoidItem {
 
     // A slide from the dot: press it and move away from the dot's edge,
     // right, or left where the dot sits at the end, and Search's doors,
-    // Apps, Files, Notes and Ask, line up in the band; the one under the
+    // Apps, Files and Notes, line up in the band; the one under the
     // finger or pointer is chosen and opens when it lets go. Held still,
     // the doors come up as well, to look before choosing. Let go back on the
     // dot opens nothing. A panel down a side of the screen keeps the tap.
@@ -165,6 +165,11 @@ PlasmoidItem {
     property bool scrubbing: false
     property string scrubChoice: ""
     readonly property int holdMs: 300
+
+    // While a slide is on, the dot opens into its ring as Search's does and
+    // holds the mark of the door chosen, or the new small dot while none is.
+    readonly property bool dotOpen: Plasmoid.launcherActive || scrubbing
+    readonly property string dotMode: scrubbing ? scrubChoice : Plasmoid.launcherMode
 
     function beginScrub() {
         if (scrubbing || !canScrub) return;
@@ -221,14 +226,18 @@ PlasmoidItem {
                 readonly property string door: modelData
                 readonly property bool chosen: root.scrubChoice === door
                 objectName: "tettegouche-pearl-door-" + door
-                width: doorFace.implicitWidth + 24
+                width: doorLabel.implicitWidth + 28
                 height: 30
                 Accessible.role: Accessible.Button
                 Accessible.name: doorLabel.text
                 Rectangle {
                     anchors.fill: parent
                     radius: height / 2
-                    color: doorItem.chosen ? tone.text : tone.over(root.bandOpaque ? 0.2 : 0.16)
+                    color: doorItem.chosen ? tone.over(root.bandOpaque ? 0.34 : 0.3) : tone.over(root.bandOpaque ? 0.2 : 0.16)
+                    Behavior on color {
+                        enabled: root.animateIndicator
+                        ColorAnimation { duration: root.ms(90) }
+                    }
                     scale: doorItem.chosen ? 1.06 : 1
                     // Each door arrives a moment after the one before it.
                     opacity: root.scrubbing ? 1 : 0
@@ -243,43 +252,20 @@ PlasmoidItem {
                             NumberAnimation { duration: root.ms(120); easing.type: Easing.OutCubic }
                         }
                     }
-                    Row {
-                        id: doorFace
+                    // Words alone, as on Search's own pills; the mark of the
+                    // door chosen shows in the dot's ring instead.
+                    Text {
+                        id: doorLabel
                         anchors.centerIn: parent
-                        spacing: 6
-                        // Apps: four squares, as on Search's own pill.
-                        Grid {
-                            visible: doorItem.door === "apps"
-                            anchors.verticalCenter: parent.verticalCenter
-                            columns: 2
-                            spacing: 2
-                            Repeater {
-                                model: 4
-                                Rectangle {
-                                    width: 5
-                                    height: 5
-                                    radius: 1
-                                    color: doorItem.chosen ? tone.textOnInk : tone.text
-                                }
-                            }
-                        }
-                        SuiteIcon {
-                            visible: doorItem.door !== "apps"
-                            anchors.verticalCenter: parent.verticalCenter
-                            glyph: doorItem.door === "notes" ? "notes" : "folder-open"
-                            ink: doorItem.chosen ? tone.textOnInk : tone.text
-                            width: 15
-                            height: 15
-                        }
-                        Text {
-                            id: doorLabel
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: doorItem.door === "apps" ? i18n("Apps")
-                                : doorItem.door === "files" ? i18n("Files")
-                                : doorItem.door === "notes" ? i18n("Notes") : i18n("Ask")
-                            color: doorItem.chosen ? tone.textOnInk : tone.text
-                            font.pixelSize: 13
-                            font.weight: Font.Medium
+                        text: doorItem.door === "apps" ? i18n("Apps")
+                            : doorItem.door === "files" ? i18n("Files") : i18n("Notes")
+                        color: tone.text
+                        opacity: doorItem.chosen ? 1 : 0.72
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                        Behavior on opacity {
+                            enabled: root.animateIndicator
+                            NumberAnimation { duration: root.ms(90) }
                         }
                     }
                 }
@@ -394,10 +380,10 @@ PlasmoidItem {
                 id: launcherDot
                 objectName: "tettegouche-launcher-dot"
                 anchors.centerIn: parent
-                openness: Plasmoid.launcherActive ? 1 : 0
-                loading: Plasmoid.launcherActive && Plasmoid.launcherLoading
+                openness: root.dotOpen ? 1 : 0
+                loading: Plasmoid.launcherActive && Plasmoid.launcherLoading && !root.scrubbing
                 turnMs: root.ms(1000)
-                seed: Plasmoid.launcherMode === ""
+                seed: root.dotMode === ""
                 speed: root.ms(1000) / 1000
 
                 Behavior on openness {
@@ -409,7 +395,7 @@ PlasmoidItem {
                 Grid {
                     objectName: "tettegouche-launcher-dot-apps"
                     anchors.centerIn: parent
-                    visible: Plasmoid.launcherMode === "apps"
+                    visible: root.dotMode === "apps"
                     columns: 2
                     spacing: 2
                     Repeater {
@@ -427,9 +413,9 @@ PlasmoidItem {
                     anchors.centerIn: parent
                     // An open folder carries its weight on the left; half a pixel
                     // right sets it in the middle of the ring to the eye.
-                    anchors.horizontalCenterOffset: Plasmoid.launcherMode === "files" ? 0.5 : 0
-                    visible: Plasmoid.launcherMode === "files" || Plasmoid.launcherMode === "notes"
-                    glyph: Plasmoid.launcherMode === "notes" ? "notes" : "folder-open"
+                    anchors.horizontalCenterOffset: root.dotMode === "files" ? 0.5 : 0
+                    visible: root.dotMode === "files" || root.dotMode === "notes"
+                    glyph: root.dotMode === "notes" ? "notes" : "folder-open"
                     ink: "#F8F8FF"
                     width: 12
                     height: 12

@@ -291,6 +291,28 @@ int main(int argc, char **argv)
         exactApp.setText(QStringLiteral("Update"));
         if (resultPriority(match, QStringLiteral("update")) >= resultPriority(folder, QStringLiteral("update"))) return 81;
         if (resultPriority(match, QStringLiteral("update")) <= resultPriority(exactApp, QStringLiteral("update"))) return 82;
+        // A folder named exactly what was typed still follows an app, a
+        // setting or a note that the words only start or describe.
+        KRunner::QueryMatch settingsFolder(&files), settingsApp(&apps), browser(&apps), wifiSetting(&aids);
+        settingsFolder.setText(QStringLiteral("settings"));
+        settingsApp.setText(QStringLiteral("Shuffle Settings"));
+        if (resultPriority(settingsApp, QStringLiteral("settings")) >= resultPriority(settingsFolder, QStringLiteral("settings"))) return 83;
+        KRunner::QueryMatch browserFolder(&files);
+        browserFolder.setText(QStringLiteral("browser"));
+        browser.setText(QStringLiteral("Zen"));
+        browser.setSubtext(QStringLiteral("Web browser"));
+        if (resultPriority(browser, QStringLiteral("browser")) >= resultPriority(browserFolder, QStringLiteral("browser"))) return 84;
+        wifiSetting.setId(QStringLiteral("kcm_networkmanagement"));
+        wifiSetting.setText(QStringLiteral("Wi-Fi & Networking"));
+        KRunner::QueryMatch wifiFolder(&files);
+        wifiFolder.setText(QStringLiteral("wifi"));
+        if (resultPriority(wifiSetting, QStringLiteral("wifi")) >= resultPriority(wifiFolder, QStringLiteral("wifi"))) return 85;
+        // A file typed in full, extension and all, is still asked for by name.
+        KRunner::QueryMatch soundFile(&files), soundSetting(&aids);
+        soundFile.setText(QStringLiteral("sound.png"));
+        soundSetting.setId(QStringLiteral("kcm_pulseaudio"));
+        soundSetting.setText(QStringLiteral("Sound"));
+        if (resultPriority(soundFile, QStringLiteral("sound.png")) >= resultPriority(soundSetting, QStringLiteral("sound.png"))) return 86;
         // The upkeep cards, found by their words; Install an app gets what was typed.
         const QVariantMap install{{QStringLiteral("id"), QStringLiteral("install")}, {QStringLiteral("title"), QStringLiteral("Install an app")},
             {QStringLiteral("sub"), QStringLiteral("Say what you need, or remove one")}, {QStringLiteral("icon"), QStringLiteral("system-software-install")},
