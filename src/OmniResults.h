@@ -516,6 +516,7 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_windowsWords.appendRow(item);
         }
+        invalidate();
     }
     void showCore(const QString &query) {
         m_core.removeRows(0, m_core.rowCount());
@@ -617,7 +618,7 @@ public:
             return true;
         }
         if (source.model() == &m_windowsWords)
-            return m_openApplication && m_openApplication(getQueryMatch(index).id());
+            return m_openApplication && m_openApplication(runnerApplicationId(getQueryMatch(index)));
         if (source.model() == &m_aliases) {
             const auto module = getQueryMatch(index).data().toString();
             auto bus = QDBusConnection::sessionBus();
