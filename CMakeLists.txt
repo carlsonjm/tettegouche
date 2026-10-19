@@ -141,7 +141,7 @@ qt_add_executable(tettegouche
 )
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
-    FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml
+    FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml qml/HelpersRow.qml
         qml/SearchResults.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml

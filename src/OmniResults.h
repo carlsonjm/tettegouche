@@ -346,6 +346,10 @@ class OmniResults : public QSortFilterProxyModel
     Q_PROPERTY(bool querying READ querying NOTIFY queryingChanged)
     Q_PROPERTY(bool allFiles READ allFiles WRITE setAllFiles NOTIFY scopeChanged)
     Q_PROPERTY(QString quietFolders READ quietFolders WRITE setQuietFolders NOTIFY scopeChanged)
+    // Search's Helpers chip: every upkeep card Core lists, as its tiles, and
+    // while it is shown, what is typed finds only those.
+    Q_PROPERTY(QVariantList helpers READ helpers NOTIFY helpersChanged)
+    Q_PROPERTY(bool helpersOnly READ helpersOnly WRITE setHelpersOnly NOTIFY helpersOnlyChanged)
 public:
     explicit OmniResults(QObject *parent = nullptr) : QSortFilterProxyModel(parent) {
         QSettings settings(QStringLiteral("co.goodinput"), QStringLiteral("tettegouche-search"));
@@ -486,6 +490,35 @@ public:
                         std::function<void(const QString &, const QString &)> open) {
         m_coreActions = std::move(actions);
         m_openCoreAction = std::move(open);
+        Q_EMIT helpersChanged();
+    }
+    // Every upkeep card Core lists, in Core's own order: its id, title, the
+    // line under it and its icon. None without Core.
+    QVariantList helpers() const {
+        QVariantList listed;
+        for (const auto &action : m_coreActions ? m_coreActions() : QList<QVariantMap>{}) {
+            const auto id = action.value(QStringLiteral("id")).toString();
+            const auto title = action.value(QStringLiteral("title")).toString();
+            if (id.isEmpty() || title.isEmpty()) continue;
+            listed.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("title"), title},
+                                      {QStringLiteral("sub"), action.value(QStringLiteral("sub")).toString()},
+                                      {QStringLiteral("icon"), action.value(QStringLiteral("icon")).toString()}});
+        }
+        return listed;
+    }
+    // Asks Core to open one on its own, as Enter on its row does.
+    Q_INVOKABLE bool openHelper(const QString &id) {
+        if (!m_openCoreAction || id.isEmpty()) return false;
+        m_openCoreAction(id, QString());
+        return true;
+    }
+    bool helpersOnly() const { return m_helpersOnly; }
+    void setHelpersOnly(bool only) {
+        if (m_helpersOnly == only) return;
+        releaseSelection();
+        m_helpersOnly = only;
+        invalidate();
+        Q_EMIT helpersOnlyChanged();
     }
     // How to find an installed app by its desktop name (its name, icon,
     // description and storage id, or nothing where it is not installed), and
@@ -643,8 +676,12 @@ Q_SIGNALS:
     void scopeChanged();
     void queryStringChanged(const QString &query);
     void queryingChanged();
+    void helpersChanged();
+    void helpersOnlyChanged();
 protected:
     bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
+        // Under the Helpers chip only the upkeep cards are listed.
+        if (m_helpersOnly && !helperRow(sourceModel()->index(row, 0, parent))) return false;
         // A copy: judging other rows below may move the one kept.
         const Verdict found = verdict(sourceModel()->index(row, 0, parent));
         if (!found.eligible) return false;
@@ -671,6 +708,11 @@ protected:
             m_shownStale = false;
         }
         return m_shownFor.value(found.key, -1) == row;
+    }
+
+    static bool helperRow(const QModelIndex &index) {
+        const auto match = index.data(KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>();
+        return coreMatch(match) && match.data().toString().startsWith(QLatin1String("action:"));
     }
 
     // What a match is worth for the query: whether it may be listed, where
@@ -818,6 +860,7 @@ private:
     QString m_selectedDestination;
     QHash<QString, int> m_frozenOrder;
     bool m_allFiles = false;
+    bool m_helpersOnly = false;
     QString m_quietFolders;
     mutable QHash<QString, bool> m_repoDirectories;
     SettingsAliasRunner m_aliasRunner;

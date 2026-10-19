@@ -11,6 +11,9 @@ TestCase {
     when: windowShown
     function init() {
         launcher.filesMode = false
+        results.helpers = []
+        results.helpersOnly = false
+        results.helpersOpened = []
         catalog.tileSize = 1
         launcher.fileBrowser = null
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
@@ -135,6 +138,11 @@ TestCase {
         function selectedRow() { return pinnedRow }
         signal selectionChanged()
         onQueryStringChanged: { pinnedRow = -1; hasPinnedSelection = false }
+        // Split Rock's Core's upkeep cards, as the Helpers chip shows them.
+        property var helpers: []
+        property bool helpersOnly: false
+        property var helpersOpened: []
+        function openHelper(id) { helpersOpened = helpersOpened.concat([id]); return true }
     }
     ListModel {
         id: catalog
@@ -3875,5 +3883,74 @@ TestCase {
         tryCompare(launcher, "openingControls", 1)
         verify(!findChild(launcher, "notes-pill").visible)
         verify(findChild(launcher, "genie-pill") === null)
+    }
+
+    // The Helpers chip: offered only while Core lists Helpers, it shows them
+    // all as tiles, what is typed finds only Helpers, a tile opens one on its
+    // own, and Escape leads back to Search's first screen.
+    function test_helpersChipShowsEveryHelper() {
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const pill = findChild(launcher, "helpers-pill")
+        verify(!pill.visible)
+        results.helpers = [
+            {id: "update", title: "Check for updates", sub: "Everything, with a restore point first", icon: "system-software-update"},
+            {id: "space", title: "Free up space", sub: "Old copies, caches and the trash", icon: "drive-harddisk"},
+            {id: "restore", title: "Restore points", sub: "Go back to an earlier state", icon: "document-revert"}
+        ]
+        tryCompare(pill, "visible", true)
+        const files = findChild(launcher, "files-pill")
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        verify(left(files) < left(pill))
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown)
+        verify(pill.selected)
+        verify(!findChild(launcher, "home-dot").selected)
+        verify(results.helpersOnly)
+        const row = findChild(launcher, "helpers-row")
+        tryCompare(row, "opacity", 1)
+        tryCompare(findChild(launcher, "first-row"), "visible", false)
+        compare(findChild(launcher, "just-type-placeholder").text, "Look over the computer, free up space…")
+        const update = findChild(launcher, "helper-update")
+        const space = findChild(launcher, "helper-space")
+        verify(update.visible && space.visible && findChild(launcher, "helper-restore").visible)
+        compare(update.width, 96)
+        compare(update.height, 88)
+        compare(left(space) - left(update), 96 + 12)
+        // At rest the sheet is as tall as the row of Helpers, at its full width.
+        const sheet = findChild(launcher, "launcher-sheet")
+        tryCompare(sheet, "height", 2 * launcher.contentInset + launcher.modeRowReach + launcher.fieldHeight + row.gap + row.naturalHeight)
+        compare(sheet.width, sheet.universalWidth)
+        const closes = controller.closes
+        mouseClick(space, space.width / 2, space.height / 2)
+        compare(results.helpersOpened, ["space"])
+        compare(controller.closes, closes + 1)
+        // Enter with nothing typed opens the first.
+        launcher.submit()
+        compare(results.helpersOpened, ["space", "update"])
+        // What is typed is searched among the Helpers alone, and never on the web.
+        const webSearches = controller.webSearches
+        launcher.query.text = "zzz"
+        launcher.submit()
+        compare(controller.webSearches, webSearches)
+        tryCompare(row, "visible", false)
+        launcher.query.text = ""
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.helpersShown)
+        verify(!results.helpersOnly)
+        tryCompare(findChild(launcher, "first-row"), "visible", true)
+        // Apps closes the Helpers, and Core's leaving takes the chip with it.
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown)
+        const apps = findChild(launcher, "apps-pill")
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        verify(!launcher.helpersShown && launcher.drawerOpen)
+        launcher.goBack()
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown)
+        results.helpers = []
+        verify(!launcher.helpersShown)
+        tryCompare(pill, "visible", false)
     }
 }

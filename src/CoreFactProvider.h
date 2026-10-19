@@ -46,6 +46,8 @@ public:
     void open(const QString &topic);
 Q_SIGNALS:
     void changed();
+    // The upkeep cards Core lists came or went.
+    void actionsChanged();
 private Q_SLOTS:
     void ownerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
     void factChanged(const QVariantMap &fact, const QDBusMessage &message);

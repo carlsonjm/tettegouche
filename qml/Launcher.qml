@@ -30,7 +30,7 @@ Item {
     property bool notesPillShown: true
     // What the panel's dot shows of Search while it is up: the mode shown,
     // and whether an application is on its way.
-    readonly property var dotState: [modeRow.current, applicationLaunchPending]
+    readonly property var dotState: [modeRow.current === "helpers" ? "" : modeRow.current, applicationLaunchPending]
     onDotStateChanged: {
         if (typeof launcherController.reportShowing === "function")
             launcherController.reportShowing(dotState[0], dotState[1])
@@ -60,6 +60,24 @@ Item {
     readonly property bool notesGrowing: modeGrowing && modeShown === "notes"
     readonly property bool notesHandoff: modeHandoff && modeShown === "notes"
     property bool filesMode: false
+    // Search's Helpers chip: its first screen shows every Helper Split Rock's
+    // Core lists, and what is typed there finds only Helpers. Offered only
+    // while Core lists some.
+    property bool helpersShown: false
+    readonly property var helpers: root.searchResults.helpers || []
+    onHelpersShownChanged: root.searchResults.helpersOnly = root.helpersShown
+    onHelpersChanged: if (root.helpersShown && root.helpers.length === 0) root.helpersShown = false
+    function showHelpers(shown) {
+        if (shown && root.helpers.length === 0) return
+        root.helpersShown = shown
+        root.selectedChildKey = ""
+    }
+    // Core opens the Helper on its own; Search closes, as from its row.
+    function openHelper(id) {
+        if (!root.searchResults.openHelper(id)) return false
+        root.launcherController.finishLaunch()
+        return true
+    }
     // Plasma's animation speed, read through Kirigami's durations: 1 at the
     // default, smaller when faster, 0 for instant. Search's travel, the sheet,
     // its drawers, modes and presses, passes through ms(), so it keeps step
@@ -224,6 +242,7 @@ Item {
     function setDrawerOpen(open, mode, keepSize) {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
+        if (open) root.showHelpers(false)
         root.guestDrag = 0
         // Every drawer opens at Search's own size, a card in Spread; Expand
         // fills the screen. Moving between drawers and Notes keeps the size
@@ -346,6 +365,7 @@ Item {
         else {
             root.setDrawerOpen(false)
             if (root.modeOpen) root.closeMode()
+            root.showHelpers(false)
         }
     }
 
@@ -482,6 +502,7 @@ Item {
     function openMode(name, view) {
         const client = name === "notes" ? root.quickNote : null
         if (!client || !client.available || root.modeGrowing) return false
+        root.showHelpers(false)
         if (view === "page") client.start()
         root.modeShown = name
         root.modeOpen = true
@@ -624,6 +645,10 @@ Item {
     }
 
     function submit() {
+        if (root.helpersShown && !root.drawerOpen && query.text.trim().length === 0) {
+            if (root.helpers.length > 0) root.openHelper(root.helpers[0].id)
+            return
+        }
         if (root.drawerOpen && root.filesMode) {
             // With nothing chosen, Enter searches inside the folder as its
             // pill does; otherwise it opens what is chosen.
@@ -650,7 +675,7 @@ Item {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
             pendingLaunch = true
-        } else if (!root.drawerOpen && query.text.trim().length > 0) {
+        } else if (!root.drawerOpen && !root.helpersShown && query.text.trim().length > 0) {
             const waiting = root.launcherController.beginGuestWebLaunch()
             if (waiting) {
                 root.applicationLaunchPending = true
@@ -691,6 +716,12 @@ Item {
             }
             if (root.drawerProgress > 0.01) {
                 root.setDrawerOpen(false)
+                event.accepted = true
+                return
+            }
+            if (root.helpersShown) {
+                query.text = ""
+                root.showHelpers(false)
                 event.accepted = true
                 return
             }
@@ -762,6 +793,7 @@ Item {
             modeWait.stop()
             root.modeAwaited = ""
             root.modeOpen = false
+            root.helpersShown = false
             root.modeShown = ""
             root.modeProgress = 0
             root.modeGrowing = false
@@ -894,7 +926,8 @@ Item {
         // working height. Whatever its height, it stays centred.
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
-                + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
+                + (root.helpersShown ? helpersRow.gap + helpersRow.naturalHeight
+                    : firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0))
         readonly property real fullHeight: Math.max(restingHeight,
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
@@ -913,7 +946,7 @@ Item {
         // With nothing under the field, the sheet is only as wide as the
         // field needs: 592 and the 24 on each side.
         readonly property real smallWidth: 640
-        readonly property bool small: resting && firstRow.sections === 0
+        readonly property bool small: resting && firstRow.sections === 0 && !root.helpersShown
         // With the keys up the sheet rises only as far as it must, never
         // leaving the room Kadunce gave a guest, then shortens to fit.
         readonly property real keysLine: root.height - root.keysReach
@@ -1030,6 +1063,14 @@ Item {
                 modeRow: modeRow
                 searchField: searchField
                 sheet: sheet
+            }
+
+            HelpersRow {
+                id: helpersRow
+                launcher: root
+                tone: tone
+                words: words
+                searchField: searchField
             }
 
             SearchResults {

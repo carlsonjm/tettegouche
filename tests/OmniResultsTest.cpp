@@ -305,6 +305,27 @@ int main(int argc, char **argv)
         if (!core.run(core.index(0, 0)) || actionsOpened != QStringList{QStringLiteral("install: install pdf editor")}) return 80;
         core.clear();
         if (core.rowCount() != 0) return 77;
+        // The Helpers chip: every upkeep card as a tile, opened on its own
+        // with nothing typed, and while it shows, what is typed finds only
+        // the cards, never a fact.
+        const auto helpers = core.helpers();
+        if (helpers.size() != 1) return 107;
+        const auto tile = helpers.first().toMap();
+        if (tile.value(QStringLiteral("id")).toString() != QStringLiteral("install")
+            || tile.value(QStringLiteral("title")).toString() != QStringLiteral("Install an app")
+            || tile.value(QStringLiteral("icon")).toString() != QStringLiteral("system-software-install")) return 108;
+        if (!core.openHelper(QStringLiteral("install")) || actionsOpened.last() != QStringLiteral("install: ")) return 109;
+        if (core.openHelper(QString())) return 110;
+        core.testQuery = QStringLiteral("storage install");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 2) return 111;
+        core.setHelpersOnly(true);
+        if (core.rowCount() != 1 || core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Install an app")) return 112;
+        core.setHelpersOnly(false);
+        if (core.rowCount() != 2) return 113;
+        core.clear();
+        Results without;
+        if (!without.helpers().isEmpty() || without.openHelper(QStringLiteral("install"))) return 114;
     }
     {
         // Windows names find the apps that do those jobs here, once the
