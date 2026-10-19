@@ -1359,7 +1359,12 @@ private Q_SLOTS:
         });
         pulse.start(10);
         QSignalSpy placesChanged(&browser, &FileBrowser::placesChanged);
+        QSignalSpy trashCounted(&browser, &FileBrowser::trashChanged);
         browser.open();
+        // Trash's count and size come back later and note the Trash row; on
+        // a machine whose Trash holds anything that changes Places, so they
+        // settle before Places is taken as the starting point.
+        QTRY_VERIFY_WITH_TIMEOUT(trashCounted.count() >= 2, 5000);
         QVERIFY(browser.places().size() >= 4);
         const auto initialPlaces = browser.places();
         const auto initialSignals = placesChanged.count();
