@@ -304,7 +304,7 @@ TestCase {
         settle();
         const pillArt = findChild(pill, "ambient-media-art");
         compare(pillArt.width, 30);
-        compare(pillArt.corner, 8);
+        compare(pillArt.corner, 10);
         compare(pill.gap, 8);
         compare(pill.margin, 0);
 

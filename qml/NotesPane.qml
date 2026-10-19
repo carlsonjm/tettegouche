@@ -610,7 +610,7 @@ Item {
                 Rectangle {
                     visible: !row.heading
                     anchors.fill: parent
-                    radius: 8
+                    radius: 10
                     color: pane.picked === row.index ? tone.current : rowTap.pressed ? tone.tilePressed
                         : rowHover.hovered ? tone.hover : "transparent"
                 }
@@ -832,7 +832,7 @@ Item {
             y: pane.lerp(pane.fieldRest.y, pane.pageEnd.y, from)
             width: pane.lerp(pane.fieldRest.width, pane.pageEnd.width, from)
             height: pane.lerp(pane.fieldRest.height, pane.pageEnd.height, from)
-            readonly property real cornerRadius: pane.lerp(pane.fieldRest.height / 2, 8, from)
+            readonly property real cornerRadius: pane.lerp(pane.fieldRest.height / 2, 10, from)
 
             Rectangle {
                 id: paper
@@ -1648,7 +1648,7 @@ Item {
         signal activated()
         width: parent ? parent.width : 0
         height: 44
-        radius: 8
+        radius: 10
         color: menuTap.pressed ? tone.controlPressed : menuHover.hovered ? tone.hover : "transparent"
         Accessible.role: Accessible.MenuItem
         Accessible.name: label

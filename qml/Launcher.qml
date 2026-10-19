@@ -103,7 +103,7 @@ Item {
     readonly property color controlColor: tone.control
     // Shuffle's corner tiers: paper for the sheet and all laid in it, notes for
     // what floats above and closes; anything pressed is a pill.
-    readonly property int paperRadius: 8
+    readonly property int paperRadius: 10
     readonly property int noteRadius: 12
     readonly property int contentInset: 24
     // The room the row of modes takes above the rest: its 40 pills and 16

@@ -316,7 +316,7 @@ Window {
     component Art: Rectangle {
         id: artBox
         property var art: win.nowPlaying
-        radius: 8
+        radius: 10
         gradient: Gradient {
             GradientStop { position: 0; color: artBox.art.a }
             GradientStop { position: 1; color: artBox.art.b }
@@ -698,7 +698,7 @@ Window {
                         anchors.verticalCenter: parent.verticalCenter
                         width: strip.style.art
                         height: strip.style.art
-                        radius: strip.style.art > 26 ? 8 : 6
+                        radius: strip.style.art > 26 ? 10 : 8
                     }
                     Column {
                         x: strip.style.art + 10
@@ -751,7 +751,7 @@ Window {
                 spacing: 2
                 Item { width: (strip.pillHeight - strip.style.art) / 2 - 6; height: 1 }
                 Art { anchors.verticalCenter: parent.verticalCenter; width: strip.style.art; height: strip.style.art
-                    radius: strip.style.art > 26 ? 8 : 6 }
+                    radius: strip.style.art > 26 ? 10 : 8 }
                 GlyphButton { anchors.verticalCenter: parent.verticalCenter; width: strip.style.step; height: strip.style.reach
                     glyph: win.playing ? "pause" : "play"; size: strip.style.play; onActivated: win.playing = !win.playing }
                 Label {

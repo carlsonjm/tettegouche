@@ -333,7 +333,7 @@ application's artwork in that square, 42 of its 48, which is 40 px in a 64 px
 band, a square with softened corners, 0.15 of its side; an icon
 drawn at the whole square, as the dock draws one. The words beside them begin
 8 px away. Outlined, art keeps to its pill, 68% of the island's height with
-8 px corners, and the icons are 24 px, each a little less on a short panel.
+10 px corners, and the icons are 24 px, each a little less on a short panel.
 
 ## Interaction and safety
 
