@@ -200,6 +200,10 @@ private Q_SLOTS:
 
         m_view = std::make_unique<QQuickView>();
         m_view->resize(1280, 800);
+        // No runner is loaded. Each installed runner has a thread of its own
+        // that the manager only asks to stop as it goes, so on a computer with
+        // Plasma's runners one could still be running as the test exits.
+        m_runners.setAllowedRunners({QStringLiteral("no-runner")});
         m_results.setRunnerManager(&m_runners);
         m_catalog = std::make_unique<ApplicationCatalog>();
         m_controller = std::make_unique<LauncherController>(m_view.get(), &m_runners, &m_results, m_catalog.get(), true);
