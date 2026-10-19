@@ -3901,7 +3901,8 @@ TestCase {
         tryCompare(pill, "visible", true)
         // Last in the row: Files and Notes are not offered here, so after Apps.
         const left = item => item.mapToItem(launcher, 0, 0).x
-        verify(left(findChild(launcher, "apps-pill")) < left(pill))
+        // The row places it once it shows.
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
         mouseClick(pill, pill.width / 2, pill.height / 2)
         verify(launcher.helpersShown)
         verify(pill.selected)
