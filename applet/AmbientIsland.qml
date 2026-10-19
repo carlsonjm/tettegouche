@@ -169,7 +169,7 @@ Window {
     component Art: Item {
         id: art
         property var activity: null
-        property real corner: 8
+        property real corner: 10
         Rectangle {
             anchors.fill: parent
             radius: art.corner

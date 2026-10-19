@@ -21,7 +21,7 @@ Item {
     }
     // Shuffle's paper corner, for all Files lays in its sheet; anything pressed
     // is a pill.
-    readonly property int paperRadius: 8
+    readonly property int paperRadius: 10
     property bool creatingFolder: false
     property string renamePath: ""
     property bool draggingFiles: false

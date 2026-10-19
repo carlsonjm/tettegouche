@@ -96,7 +96,7 @@ Item {
     readonly property int appSquare: Math.max(24, Math.round(height * 5 / 7))
     readonly property int pictureSize: outlined ? artSize
         : Math.min(pillHeight, Math.round(appSquare * 42 / 48))
-    readonly property real pictureCorner: outlined ? (artSize > 26 ? 8 : 6) : Math.round(pictureSize * 0.15)
+    readonly property real pictureCorner: outlined ? (artSize > 26 ? 10 : 8) : Math.round(pictureSize * 0.15)
     readonly property real pictureLead: outlined ? lead : pictureSize + Kirigami.Units.largeSpacing - 6
     // Tall enough for a second line of words.
     readonly property bool tall: pillHeight >= 40
@@ -917,7 +917,7 @@ Item {
     component Art: Item {
         id: art
         property var activity: null
-        property real corner: 8
+        property real corner: 10
         Rectangle {
             anchors.fill: parent
             radius: art.corner
