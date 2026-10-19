@@ -262,10 +262,13 @@ counts follow the language.
   Ghost White at the same size and place; the touch square, ring and press are
   the dot's either way ([AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) § Host
   settings).
-- Search follows the window's colour scheme, and Ambient the Plasma style's
-  colours. On a dark one they keep the suite's dark values; on a light one
-  their ground and text are the theme's, and every wash, control and line is
-  that text laid over the ground (`qml/SearchColors.qml`,
+- Search and Files follow the window's colour scheme, and Ambient the Plasma
+  style's colours. On a dark one Search and Files keep the suite's dark
+  values, each leaning toward the scheme's ground as far as that ground leans
+  from grey, so a tinted scheme tints them and a plain one leaves them as
+  they are; Ambient keeps them exactly. On a light one their ground and text
+  are the theme's, and every wash, control and line is that text laid over
+  the ground (`qml/SearchColors.qml`,
   `applet/AmbientColors.qml`). Colours come from the theme alone. The Tette
   Dot, a note's paper and a recording's red dot keep their own colours.
 - Action glyphs come from a pinned, vendored Lucide subset
