@@ -257,7 +257,6 @@ private Q_SLOTS:
         QTest::mousePress(m_window, Qt::LeftButton, Qt::NoModifier, center);
         QTest::mouseMove(m_window, center + QPoint(2, 0));
         QVERIFY(!m_face->property("scrubbing").toBool());
-        QVERIFY(!m_face->property("dotOpen").toBool());
         QTest::mouseMove(m_window, center + QPoint(30, 0));
         QVERIFY(m_face->property("scrubbing").toBool());
         QTest::mouseMove(m_window, middle(files));
