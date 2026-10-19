@@ -37,8 +37,9 @@ Rectangle {
     // on the same edges as they are, 44 tall. Only what is under
     // it changes. In a room
     // taller than it needs, with nothing under it, it rests in
-    // the middle, and rises as a drawer or a mode opens.
-    readonly property real restY: idle && !firstRow.fits
+    // the middle, and rises as a drawer or a mode opens. The
+    // Helpers' row sits under it, so it stays at the top for them.
+    readonly property real restY: idle && !firstRow.fits && !launcher.helpersShown
         ? Math.max(0, Math.round((parent.height - height) / 2)) : 0
     x: Math.round((parent.width - width) / 2)
     y: Math.round(restY * (1 - launcher.drawerProgress) * (1 - launcher.modeProgress))

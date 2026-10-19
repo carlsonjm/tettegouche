@@ -3922,6 +3922,10 @@ TestCase {
         const sheet = findChild(launcher, "launcher-sheet")
         tryCompare(sheet, "height", 2 * launcher.contentInset + launcher.modeRowReach + launcher.fieldHeight + row.gap + row.naturalHeight)
         compare(sheet.width, sheet.universalWidth)
+        // The field stays under the modes, so every tile and its name show
+        // whole inside the sheet, however tall the room is.
+        tryCompare(findChild(launcher, "search-field"), "y", 0)
+        tryVerify(() => update.mapToItem(sheet, 0, update.height).y <= sheet.height - launcher.contentInset)
         const closes = controller.closes
         mouseClick(space, space.width / 2, space.height / 2)
         compare(results.helpersOpened, ["space"])
