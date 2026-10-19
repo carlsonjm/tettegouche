@@ -329,6 +329,43 @@ int main(int argc, char **argv)
         if (core.rowCount() != 0) return 77;
     }
     {
+        // Windows names find the apps that do those jobs here, once the
+        // second word is begun, and only where the app is installed.
+        if (windowsWordsReached(QStringLiteral("org.kde.dolphin.desktop"), QStringLiteral("File E")).isEmpty()
+            || windowsWordsReached(QStringLiteral("systemsettings"), QStringLiteral("control panel")).isEmpty()
+            || windowsWordsReached(QStringLiteral("org.kde.plasma-systemmonitor"), QStringLiteral("task-m")).isEmpty()
+            || windowsWordsReached(QStringLiteral("org.kde.kinfocenter"), QStringLiteral("device man")).isEmpty()) return 100;
+        if (!windowsWordsReached(QStringLiteral("org.kde.dolphin"), QStringLiteral("file")).isEmpty()
+            || !windowsWordsReached(QStringLiteral("org.kde.dolphin"), QStringLiteral("files")).isEmpty()
+            || !windowsWordsReached(QStringLiteral("systemsettings"), QStringLiteral("control")).isEmpty()
+            || !windowsWordsReached(QStringLiteral("org.kde.kate"), QStringLiteral("task manager")).isEmpty()) return 101;
+        Results windows;
+        QStringList started;
+        windows.setApplications([](const QString &name) {
+            if (name != QStringLiteral("org.kde.plasma-systemmonitor")) return QVariantMap();
+            return QVariantMap{{QStringLiteral("id"), QStringLiteral("org.kde.plasma-systemmonitor.desktop")},
+                               {QStringLiteral("name"), QStringLiteral("System Monitor")}, {QStringLiteral("icon"), QStringLiteral("utilities-system-monitor")},
+                               {QStringLiteral("description"), QStringLiteral("System Monitor")}};
+        }, [&started](const QString &id) { started.append(id); return true; });
+        windows.testQuery = QStringLiteral("task manager");
+        windows.showWindowsWords(windows.testQuery);
+        if (windows.rowCount() != 1) return 102;
+        const auto found = windows.getQueryMatch(windows.index(0, 0));
+        if (found.text() != QStringLiteral("System Monitor") || searchTier(found) != 0
+            || runnerApplicationId(found) != QStringLiteral("org.kde.plasma-systemmonitor.desktop")
+            || destinationKey(found) != QStringLiteral("app:org.kde.plasma-systemmonitor.desktop")) return 103;
+        if (!windows.run(windows.index(0, 0)) || started != QStringList{QStringLiteral("org.kde.plasma-systemmonitor.desktop")}) return 104;
+        // An app found by its Windows name comes before a folder of that name.
+        KRunner::QueryMatch folder(&files);
+        folder.setText(QStringLiteral("task manager"));
+        if (resultPriority(found, windows.testQuery) >= resultPriority(folder, windows.testQuery)) return 105;
+        // Device Manager is not installed here: no row.
+        windows.testQuery = QStringLiteral("device manager");
+        windows.showWindowsWords(windows.testQuery);
+        if (windows.rowCount() != 0) return 106;
+        windows.clear();
+    }
+    {
         // Three thousand files arriving a hundred batches at a time, as a
         // short query brings them: each is judged once, never again as later
         // batches arrive or the list is sorted and re-filtered.
