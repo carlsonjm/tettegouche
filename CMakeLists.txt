@@ -188,6 +188,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core
     tettegouche-launcher
+    Plasma::Plasma
 )
 
 target_compile_definitions(tettegouche PRIVATE TRANSLATION_DOMAIN="tettegouche")
