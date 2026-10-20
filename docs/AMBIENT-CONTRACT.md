@@ -165,7 +165,10 @@ it is and how it stands ("Storage · 91% full") and, below, its detail and what
 can be done ("45 GB free · Free up space"). A tap on the island, or on the
 bubble holding it, asks Core to open the card that acts on it; Core opens it
 and takes the fact off the island. Setting it aside tells Core it was
-dismissed, and Core stays quiet about it until it gets worse. Core owns the
+dismissed, and Core stays quiet about it until it gets worse. A fact about a
+Windows program in Downloads, and no other, adds a "Don't tell me again" pill
+after its words; a tap on the pill asks Core never to raise Windows programs
+again, and a tap anywhere else on the island still opens the card. Core owns the
 fact and its history; Ambient keeps neither. Without Split Rock there is no
 Core island and nothing else changes.
 
@@ -272,7 +275,7 @@ together and settle without overshoot.
 | Drive | icon, size, Open, name |
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
-| Core | icon, what it is and how it stands, detail and what can be done |
+| Core | icon, what it is and how it stands, Don't tell me again (Windows programs only), detail and what can be done |
 | Quick note | dot with a plus, pinned note (its bead and first words) |
 
 Beside a neighbour, an island reads what it is, then its words, then its

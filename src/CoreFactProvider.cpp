@@ -82,6 +82,9 @@ QVariantList CoreFactProvider::activities() const {
     for (const auto &fact : m_facts) {
         if (fact.value(QStringLiteral("attention")).toString() != QLatin1String("island")) continue;
         const auto topic = fact.value(QStringLiteral("topic")).toString();
+        QVariantMap capabilities{{QStringLiteral("open"), true}};
+        // Core takes "never" only for Windows programs.
+        if (topic == QLatin1String("windows")) capabilities.insert(QStringLiteral("never"), true);
         rows.append(QVariantMap{
             {QStringLiteral("id"), QString(Prefix + topic)}, {QStringLiteral("generation"), m_generation},
             {QStringLiteral("kind"), QStringLiteral("core")}, {QStringLiteral("state"), QStringLiteral("running")},
@@ -90,14 +93,16 @@ QVariantList CoreFactProvider::activities() const {
             {QStringLiteral("detail"), fact.value(QStringLiteral("detail")).toString()},
             {QStringLiteral("actionText"), fact.value(QStringLiteral("actionText")).toString()},
             {QStringLiteral("icon"), fact.value(QStringLiteral("icon")).toString()},
-            {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("open"), true}}}});
+            {QStringLiteral("capabilities"), capabilities}});
     }
     return rows;
 }
 
 void CoreFactProvider::invoke(const QString &id, int generation, const QString &action) {
-    if (!id.startsWith(Prefix) || generation != m_generation || action != QLatin1String("open")) return;
-    act(id.mid(Prefix.size()), QStringLiteral("open"));
+    if (!id.startsWith(Prefix) || generation != m_generation) return;
+    const auto topic = id.mid(Prefix.size());
+    if (action == QLatin1String("open")) act(topic, action);
+    else if (action == QLatin1String("never") && topic == QLatin1String("windows")) act(topic, action);
 }
 
 void CoreFactProvider::dismiss(const QString &id) {

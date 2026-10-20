@@ -365,6 +365,8 @@ Item {
     readonly property string coreDetail: coreShown
         ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
     readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
+    // A Windows program's fact can be told never to come back.
+    readonly property string neverLabel: words.i18n("Don't tell me again")
 
     // The quick note's island, there while Gooseberry is installed: a dot
     // with a plus that starts a quick note or resumes it, and beside it the
@@ -389,6 +391,7 @@ Item {
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
+    FontMetrics { id: neverMetrics; font.pixelSize: 13; font.weight: Font.Medium }
 
     // ---------------------------------------------------------------- sizes
 
@@ -434,6 +437,11 @@ Item {
     function coreWords(name, detail) {
         return column(name ? textWidth(strongMetrics, coreName) : 0,
             detail ? textWidth(smallMetrics, coreDetail) : 0, 180);
+    }
+    // "Don't tell me again": 12 after the words, then the pill, its words with
+    // 14 either side.
+    function neverWidth() {
+        return 12 + textWidth(neverMetrics, neverLabel) + 28;
     }
     // The pinned note: its bead, then its first words, one line within a
     // finger's reach.
@@ -487,7 +495,8 @@ Item {
         if (kind === "waiting")
             return 2 * inset + (has("icon") ? pictureLead : 0) + waitingWords(has("name"), has("question"));
         if (kind === "core")
-            return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"));
+            return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"))
+                + (has("never") ? neverWidth() : 0);
         if (kind === "note")
             return 2 * inset + (has("dot") ? reach : 0) + (has("window") ? reach : 0)
                 + (has("pinned") ? pinnedWidth() : 0);
@@ -522,6 +531,7 @@ Item {
         case "waiting.question": return tall && waitingQuestion !== "";
         case "core.icon": case "core.name": return coreShown !== null;
         case "core.detail": return tall && coreDetail !== "";
+        case "core.never": return capability(coreShown, "never");
         case "note.dot": return noteShown !== null;
         case "note.pinned": return pinnedNote !== null;
         case "note.window": return windowNotes > 0;
@@ -1466,7 +1476,8 @@ Item {
 
     // A fact from Split Rock's Core: its icon, what it is and how it stands,
     // and below, the detail and what can be done. The whole island is one
-    // tap, which opens the card that does it.
+    // tap, which opens the card that does it. A Windows program's fact adds
+    // "Don't tell me again", which Core keeps for good.
     BandIsland {
         id: coreIsland
         kind: "core"
@@ -1505,6 +1516,45 @@ Item {
                     visible: coreIsland.has("detail")
                     text: surface.coreDetail
                 }
+            }
+        }
+        Piece {
+            id: neverPiece
+            island: coreIsland
+            name: "never"
+            size: surface.neverWidth()
+            Rectangle {
+                objectName: "ambient-core-never"
+                x: 12
+                anchors.verticalCenter: parent.verticalCenter
+                width: neverPiece.size - 12
+                height: Math.min(32, surface.pillHeight - 8)
+                radius: height / 2
+                color: tone.wash(neverArea.pressed ? 0.24 : 0.16)
+                scale: neverArea.pressed ? 1.06 : 1
+                activeFocusOnTab: true
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("%1: %2", surface.neverLabel, surface.coreName)
+                Accessible.onPressAction: surface.invoke(surface.coreShown, "never")
+                Keys.onReturnPressed: surface.invoke(surface.coreShown, "never")
+                Keys.onEnterPressed: surface.invoke(surface.coreShown, "never")
+                Keys.onSpacePressed: surface.invoke(surface.coreShown, "never")
+                border.width: activeFocus ? 1 : 0
+                border.color: tone.text
+                Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
+                Label {
+                    anchors.centerIn: parent
+                    text: surface.neverLabel
+                    font.pixelSize: 13
+                    font.weight: Font.Medium
+                }
+            }
+            // The pill's own reach, the island's height: the rest of the
+            // island still opens.
+            MouseArea {
+                id: neverArea
+                anchors.fill: parent
+                onClicked: surface.invoke(surface.coreShown, "never")
             }
         }
     }
