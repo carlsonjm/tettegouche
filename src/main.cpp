@@ -24,18 +24,21 @@
 #include <KRunner/RunnerManager>
 #include <KService/KService>
 #include <LayerShellQt/Window>
+#include <Plasma/Theme>
 
 #include <QCursor>
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QElapsedTimer>
 #include <QGuiApplication>
+#include <QPalette>
 #include <QLockFile>
 #include <QLoggingCategory>
 #include <QProcess>
 #include <QQmlEngine>
 #include <QQuickView>
 #include <QScreen>
+#include <QStandardPaths>
 #include <QThread>
 #include <QTimer>
 
@@ -203,6 +206,26 @@ int main(int argc, char **argv)
         QStringLiteral("io.github.carlsonjm.Tettegouche"));
     application.setOrganizationDomain(QStringLiteral("github.com/carlsonjm"));
     application.setQuitOnLastWindowClosed(false); // a hidden Files job still owns this process
+    // Search and Files are Plasma surfaces: while the Plasma style brings
+    // colours of its own, they paint in those rather than the programs'
+    // scheme, and name them as their scheme so Files' title bar matches.
+    Plasma::Theme surfaces;
+    const auto followSurfaces = [&surfaces] {
+        const QString colors = QStandardPaths::locate(QStandardPaths::GenericDataLocation,
+                                                      QStringLiteral("plasma/desktoptheme/%1/colors").arg(surfaces.themeName()));
+        const bool had = qApp->property("KDE_COLOR_SCHEME_PATH").isValid();
+        if (colors.isEmpty()) {
+            if (had) {
+                qApp->setProperty("KDE_COLOR_SCHEME_PATH", QVariant());
+                QGuiApplication::setPalette(QPalette());
+            }
+            return;
+        }
+        qApp->setProperty("KDE_COLOR_SCHEME_PATH", colors);
+        QGuiApplication::setPalette(surfaces.palette());
+    };
+    followSurfaces();
+    QObject::connect(&surfaces, &Plasma::Theme::themeChanged, &application, followSurfaces);
     const QStringList arguments = application.arguments();
     const auto valueAfter = [&arguments](const QString &flag) {
         const int index = arguments.indexOf(flag);
