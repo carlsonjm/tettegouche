@@ -159,6 +159,9 @@ Notes had when the note left. A
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
   pill, and the dot's Notes door with it; notes still answer a search.
+- "Show the Helpers pill", on by default, hides the first screen's Helpers
+  pill and the dot's Helpers door; Helpers still answer a search. The door is
+  offered where Split Rock's Core is running or ready to start.
 
 ## Eligibility and confidence
 

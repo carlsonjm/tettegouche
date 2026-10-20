@@ -14,6 +14,7 @@ TestCase {
         results.helpers = []
         results.helpersOnly = false
         results.helpersOpened = []
+        launcher.helpersPillShown = true
         catalog.tileSize = 1
         launcher.fileBrowser = null
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
@@ -2143,8 +2144,8 @@ TestCase {
         controller.drawerExpanded=false
         tryCompare(places,"width",54)
         compare(pane.tile.cell,140)
-        // Their own button opens the places at a card's size, and the first
-        // touch on the folder folds them back.
+        // Their own button opens the places at a card's size, and a touch on
+        // the folder leaves them open: moving files onto a place needs both.
         const fold=findChild(launcher,"files-places-fold")
         // Folded, the button is a circle among the icons; open, a pill that
         // says Fold beside its glyph.
@@ -2156,7 +2157,13 @@ TestCase {
         verify(findChild(launcher,"files-places-fold-label").visible)
         verify(fold.width>40 && fold.width<places.width)
         mouseClick(pane,pane.width-40,pane.height/2)
+        wait(300)
+        compare(places.width,170)
+        verify(pane.placesOpen)
+        mouseClick(fold)
         tryCompare(places,"width",54)
+        mouseClick(fold)
+        tryCompare(places,"width",170)
         // Filling the screen they stay open until their button folds them;
         // a touch on the folder leaves them as they are.
         controller.drawerExpanded=true
@@ -3926,6 +3933,13 @@ TestCase {
         verify(pill.selected)
         verify(!findChild(launcher, "home-dot").selected)
         verify(results.helpersOnly)
+        // The dot's ring holds the Helpers' sparkles, and the panel's dot is
+        // told so it shows them too.
+        const glyph = findChild(launcher, "home-dot-glyph")
+        verify(glyph.visible)
+        compare(glyph.glyph, "sparkles")
+        verify(!findChild(launcher, "home-dot-mark").seed)
+        compare(controller.showing[0], "helpers")
         const row = findChild(launcher, "helpers-row")
         tryCompare(row, "opacity", 1)
         tryCompare(findChild(launcher, "first-row"), "visible", false)
@@ -3975,5 +3989,78 @@ TestCase {
         results.helpers = []
         verify(!launcher.helpersShown)
         tryCompare(pill, "visible", false)
+    }
+    // The dot's slide asks for the Helpers: the first screen with only the
+    // Helpers on it, once Core has listed them, and again closes Search.
+    // Their pill can be left out, and the Helpers still show among results.
+    function test_helpersFromTheSlide() {
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        controller.closes = 0
+        controller.drawerRequested("helpers")
+        verify(!launcher.helpersShown)
+        verify(launcher.helpersAwaited)
+        results.helpers = [{id: "update", title: "Check for updates", sub: "", icon: "system-software-update"}]
+        verify(launcher.helpersShown)
+        verify(!launcher.helpersAwaited)
+        compare(findChild(launcher, "home-dot-glyph").glyph, "sparkles")
+        controller.drawerRequested("helpers")
+        compare(controller.closes, 1)
+        controller.opened()
+        verify(!launcher.helpersShown)
+        launcher.setDrawerOpen(true, "apps")
+        controller.drawerRequested("helpers")
+        verify(launcher.helpersShown && !launcher.drawerOpen)
+        launcher.helpersPillShown = false
+        tryCompare(findChild(launcher, "helpers-pill"), "visible", false)
+        launcher.helpersPillShown = true
+        tryCompare(findChild(launcher, "helpers-pill"), "visible", true)
+        results.helpers = []
+    }
+    // Notes comes as Apps and Files do: nothing in it rises, slides or
+    // grows, and New note shows only once the sheet holds still, so nothing
+    // rides its edge as it grows to fill the screen.
+    function test_notesHoldsStill() {
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        fillRecent(6)
+        controller.opened()
+        tryCompare(launcher, "openingControls", 1)
+        const sheet = findChild(launcher, "launcher-sheet")
+        const parts = ["notes-find-frame", "notes-filters", "notes-list", "notes-paper"].map(name => findChild(launcher, name))
+        const at = () => parts.map(part => part.mapToItem(sheet, 0, 0).y)
+        const newNote = findChild(launcher, "notes-new")
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        const first = at()
+        while (launcher.notesProgress < 1) {
+            compare(at(), first)
+            wait(16)
+        }
+        compare(at(), first)
+        tryCompare(newNote, "opacity", 1)
+        launcher.goBack()
+        tryCompare(launcher, "notesProgress", 0)
+        // From the dot's slide it fills the screen: the sheet grows, and New
+        // note waits for it.
+        controller.drawerRequested("notes")
+        tryVerify(() => launcher.notesOpen)
+        const start = at()
+        let moving = 0
+        let lastY = newNote.mapToItem(sheet, 0, 0).y
+        while (launcher.notesProgress < 1 || sheet.height !== sheet.restHeight) {
+            compare(at(), start)
+            const y = newNote.mapToItem(sheet, 0, 0).y
+            if (y !== lastY) {
+                moving++
+                compare(newNote.opacity, 0)
+                lastY = y
+            }
+            wait(16)
+        }
+        verify(moving > 0)
+        tryCompare(newNote, "opacity", 1)
+        controller.drawerExpanded = false
+        launcher.quickNote = null
     }
 }

@@ -18,6 +18,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
     property bool cfg_showNotesPillDefault
+    property bool cfg_showHelpersPill
+    property bool cfg_showHelpersPillDefault
     property bool cfg_showAmbient
     property bool cfg_showAmbientDefault
     property bool cfg_showQuickNote
@@ -71,6 +73,13 @@ KCMUtils.SimpleKCM {
             enabled: cfg_offerNotes
             checked: cfg_showNotesPill
             onToggled: cfg_showNotesPill = checked
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Helpers:")
+            text: i18n("Show the Helpers pill when Split Rock is installed")
+            checked: cfg_showHelpersPill
+            onToggled: cfg_showHelpersPill = checked
         }
 
         QQC2.CheckBox {

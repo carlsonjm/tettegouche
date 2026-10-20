@@ -150,7 +150,8 @@ QStringList settingsIn(const QStringList &arguments)
 {
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
                                QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
-                               QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill")};
+                               QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill"),
+                               QStringLiteral("--no-helpers-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
         if (settings.contains(argument) && !given.contains(argument))
@@ -386,6 +387,9 @@ int main(int argc, char **argv)
         // The Notes pill can be left off the first screen on its own.
         {QStringLiteral("notesPillShown"),
          !application.arguments().contains(QStringLiteral("--no-notes-pill"))},
+        // So can the Helpers pill.
+        {QStringLiteral("helpersPillShown"),
+         !application.arguments().contains(QStringLiteral("--no-helpers-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));

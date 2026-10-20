@@ -227,7 +227,7 @@ private Q_SLOTS:
         const QStringList doors = m_applet->property("pearlDoors").toStringList();
         QCOMPARE(doors.mid(0, 2), (QStringList{QStringLiteral("apps"), QStringLiteral("files")}));
         const QStringList known{QStringLiteral("apps"), QStringLiteral("files"),
-                                QStringLiteral("notes")};
+                                QStringLiteral("notes"), QStringLiteral("helpers")};
         int last = -1;
         for (const QString &door : doors) {
             QVERIFY2(known.indexOf(door) > last, qPrintable(doors.join(QLatin1Char(','))));
@@ -371,20 +371,26 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 4);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill --type"));
         configure(QStringLiteral("showNotesPill"), true);
+        // So with only the Helpers pill off.
+        configure(QStringLiteral("showHelpersPill"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 5);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-helpers-pill --type"));
+        configure(QStringLiteral("showHelpersPill"), true);
         // Recent apps off alone, then recent files off alone.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 5);
+        QTRY_COMPARE(launches().size(), before + 6);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-apps --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 6);
+        QTRY_COMPARE(launches().size(), before + 7);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-files --type"));
         // Both off is recent use off.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 7);
+        QTRY_COMPARE(launches().size(), before + 8);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), true);
@@ -463,6 +469,10 @@ private Q_SLOTS:
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note:n1"))));
         QTRY_COMPARE(launches().size(), before + 3);
         QCOMPARE(launches().constLast(), QStringLiteral("--drawer note:n1"));
+        // The Helpers door on the dot's slide.
+        QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("helpers"))));
+        QTRY_COMPARE(launches().size(), before + 4);
+        QCOMPARE(launches().constLast(), QStringLiteral("--drawer helpers"));
 
         // A running launcher is asked for the drawer instead.
         ToggleEndpoint endpoint;
@@ -476,7 +486,7 @@ private Q_SLOTS:
         QVERIFY(QMetaObject::invokeMethod(m_applet, "openDrawer", Q_ARG(QString, QStringLiteral("note:n1"))));
         QTRY_COMPARE(endpoint.drawers, (QStringList{QStringLiteral("apps"), QStringLiteral("note:n1")}));
         QCOMPARE(endpoint.calls, 0);
-        QCOMPARE(launches().size(), before + 3);
+        QCOMPARE(launches().size(), before + 4);
         bus.unregisterObject(QStringLiteral("/Launcher"));
         bus.unregisterService(QStringLiteral("io.github.carlsonjm.Tettegouche"));
         QTest::qWait(100);
@@ -654,7 +664,7 @@ private Q_SLOTS:
         const QStringList glyphs{
             QStringLiteral("skip-back"), QStringLiteral("play"), QStringLiteral("pause"),
             QStringLiteral("skip-forward"), QStringLiteral("download"), QStringLiteral("x"),
-            QStringLiteral("folder-open"), QStringLiteral("notes")
+            QStringLiteral("folder-open"), QStringLiteral("sparkles"), QStringLiteral("notes")
         };
         // Stand-ins for a dark and a light Plasma style. The software renderer
         // the test runs on draws no layer effects, so the light glyph's

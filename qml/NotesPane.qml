@@ -22,7 +22,7 @@ Item {
     required property var quickNote
     // How far the mode has opened, 0 to 1, on the drawer's own easing.
     required property real progress
-    // Where the search field rests, which the mode grows out of.
+    // Where the search field rests: the find field takes its place.
     required property rect fieldRest
     SearchColors {
         id: tone
@@ -33,6 +33,10 @@ Item {
     property color controlColor: tone.control
     property color primaryText: tone.primaryText
     property bool growing: false
+    // Whether the sheet is changing its height, as it does when Notes opens
+    // filling the screen. What sits on its lower edge waits for it to hold
+    // still, so nothing rides that edge as it moves.
+    property bool resizing: false
     // Whether Search fills the screen, which Expand changes.
     property bool expanded: false
 
@@ -41,8 +45,6 @@ Item {
     signal dismiss()
     signal finished()
 
-    function lerp(a, b, t) { return a + (b - a) * t }
-    function clamp(v) { return Math.max(0, Math.min(1, v)) }
 
     KI18nContext {
         id: words
@@ -524,7 +526,7 @@ Item {
                 color: tone.edgeText
                 font.pixelSize: 13
                 font.weight: Font.DemiBold
-                opacity: pane.clamp((pane.progress - 0.72) / 0.28)
+                opacity: pane.progress
             }
             Timer {
                 id: findPause
@@ -548,7 +550,7 @@ Item {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             flickableDirection: Flickable.HorizontalFlick
-            opacity: pane.clamp((pane.progress - 0.5) / 0.5)
+            opacity: pane.progress
             Row {
                 id: filterRow
                 spacing: 0
@@ -582,7 +584,7 @@ Item {
             clip: true
             boundsBehavior: Flickable.StopAtBounds
             model: pane.rows
-            opacity: pane.clamp((pane.progress - 0.5) / 0.5)
+            opacity: pane.progress
             delegate: Item {
                 id: row
                 required property var modelData
@@ -727,7 +729,25 @@ Item {
         implicitHeight: 56
         implicitWidth: newNoteRow.implicitWidth + 48
         visible: opacity > 0
-        opacity: pane.clamp((pane.progress - 0.72) / 0.28) * (1 - pane.pageShown)
+        opacity: pane.progress * (1 - pane.pageShown) * edgeShown
+        // Gone while the sheet's edge moves, faded back once it holds still.
+        property real edgeShown: 1
+        Connections {
+            target: pane
+            function onResizingChanged() {
+                newNoteReturn.stop()
+                if (pane.resizing) newNote.edgeShown = 0
+                else newNoteReturn.start()
+            }
+        }
+        NumberAnimation {
+            id: newNoteReturn
+            target: newNote
+            property: "edgeShown"
+            to: 1
+            duration: Math.max(1, Kirigami.Units.shortDuration)
+            easing.type: Easing.OutCubic
+        }
         enabled: pane.view === "board" && !!pane.quickNote && !pane.quickNote.readOnly
         focusPolicy: Qt.NoFocus
         Accessible.name: words.i18n("New note")
@@ -824,38 +844,30 @@ Item {
         opacity: pane.pageShown
         enabled: pane.view === "page"
 
-        // The page: from the search field's place and shape to its own.
+        // The page stands in its own place from the first frame and fades
+        // in there as Apps and Files do: nothing grows, rises or slides.
         Item {
             id: padFrame
             readonly property real from: pane.fromBoard ? 1 : pane.progress
-            x: pane.lerp(pane.fieldRest.x, pane.pageEnd.x, from)
-            y: pane.lerp(pane.fieldRest.y, pane.pageEnd.y, from)
-            width: pane.lerp(pane.fieldRest.width, pane.pageEnd.width, from)
-            height: pane.lerp(pane.fieldRest.height, pane.pageEnd.height, from)
-            readonly property real cornerRadius: pane.lerp(pane.fieldRest.height / 2, 10, from)
+            x: pane.pageEnd.x
+            y: pane.pageEnd.y
+            width: pane.pageEnd.width
+            height: pane.pageEnd.height
 
             Rectangle {
                 id: paper
                 objectName: "notes-paper"
                 anchors.fill: parent
-                radius: padFrame.cornerRadius
+                radius: 10
                 color: pane.noteHex
-                opacity: pane.clamp(padFrame.from * 2)
-            }
-            Rectangle {
-                anchors.fill: parent
-                radius: padFrame.cornerRadius
-                color: "transparent"
-                border.width: 1
-                border.color: pane.surfaceOutline
-                opacity: 1 - padFrame.from
+                opacity: padFrame.from
             }
             QQC2.ScrollView {
                 id: padScroll
                 anchors.fill: parent
                 anchors.rightMargin: 44
                 visible: !pane.quickNote || !pane.quickNote.checklist
-                opacity: pane.clamp((padFrame.from - 0.5) / 0.5)
+                opacity: padFrame.from
                 QQC2.TextArea {
                     id: pad
                     objectName: "notes-pad"
@@ -1032,7 +1044,7 @@ Item {
                 anchors.margins: 4
                 width: 44
                 height: 44
-                opacity: pane.clamp((padFrame.from - 0.72) / 0.28)
+                opacity: padFrame.from
                 enabled: pane.writable
                 focusPolicy: Qt.NoFocus
                 Accessible.name: words.i18n("Colour")

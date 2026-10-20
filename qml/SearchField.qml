@@ -89,8 +89,8 @@ Rectangle {
     }
 
     Behavior on opacity {
-        // The notes pad grows out of the field; its own motion
-        // carries the fade.
+        // Notes' own field takes this one's place; the mode's
+        // motion carries the fade.
         enabled: launcher.modeProgress <= 0 || launcher.modeProgress >= 1
         NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic }
     }
