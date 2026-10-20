@@ -8,6 +8,13 @@ provenance.
 - Search opens where it rests and at its size from its first frame on a
   stock Plasma desktop too: KWin's window animation no longer zooms it in
   from smaller, faded and blurred, or out again as it closes.
+- Search opens in one motion: the whole sheet fades in as it rises a few
+  pixels into place, with the modes, the field and what was used lately
+  already there, and the field's ring up from the first frame when opened to
+  type. Nothing it held when it last closed shows for a frame.
+- Growing as typing starts, or shrinking back, the field moves in step with
+  the sheet, and the results settle once the sheet has its size rather than on
+  every frame.
 - Search's dot, and the panel's while Search is up, holds sparkles in its
   ring while the Helpers show, as it holds the mark of Apps, Files and Notes.
 - The dot's slide has a Helpers door where Split Rock's Core is installed, and

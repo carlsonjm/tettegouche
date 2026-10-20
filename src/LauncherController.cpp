@@ -500,6 +500,10 @@ void LauncherController::present()
     m_guestWait.stop();
     readDockBand();
     Q_EMIT guestChanged();
+    // Search sets out its first screen before the window shows, since the
+    // window's first frame can be drawn as it is shown: what it held when it
+    // last closed never reaches the screen.
+    Q_EMIT opened();
     m_view->show();
     m_view->requestActivate();
     // Started cold, the window may not be on screen yet when it first asks
@@ -510,7 +514,6 @@ void LauncherController::present()
     connect(m_view, &QQuickWindow::frameSwapped, m_view, [view = m_view] {
         if (view->isVisible() && !view->isActive()) view->requestActivate();
     }, Qt::SingleShotConnection);
-    Q_EMIT opened();
     const auto steps = std::exchange(m_whenShown, {});
     for (const auto &step : steps) step();
 }

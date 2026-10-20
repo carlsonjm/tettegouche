@@ -32,7 +32,9 @@ Rectangle {
         && !launcher.searchResults.querying
         && !launcher.applicationLaunchPending
     // Lit while it holds the keys or what was typed.
-    readonly property bool lit: query.activeFocus || query.text.length > 0
+    // Opened to type, the ring is up from the first frame, before the window
+    // is given the keys.
+    readonly property bool lit: query.activeFocus || query.text.length > 0 || launcher.typingAwaitsWindow
     // One field, in one place, on every screen: under the modes,
     // on the same edges as they are, 44 tall. Only what is under
     // it changes. In a room
@@ -46,7 +48,9 @@ Rectangle {
     Behavior on y {
         enabled: (launcher.drawerProgress <= 0 || launcher.drawerProgress >= 1)
             && (launcher.modeProgress <= 0 || launcher.modeProgress >= 1)
-        NumberAnimation { duration: launcher.ms(260); easing.type: Easing.OutCubic }
+        // In step with the sheet as it grows or shrinks about its centre, so
+        // the field travels on screen in one even motion.
+        NumberAnimation { duration: launcher.ms(220); easing.type: Easing.OutCubic }
     }
     width: parent.width
     height: launcher.fieldHeight

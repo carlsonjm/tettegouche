@@ -347,6 +347,14 @@ Item {
         arriving.delay = Math.max(1, delay)
         arriving.start()
     }
+    // Where Search opens, the row is there from the first frame.
+    function settle() {
+        leaving.stop()
+        arriving.stop()
+        returning.stop()
+        arrival = 1
+        rest = resting ? 1 : 0
+    }
     function leave() {
         arriving.stop()
         returning.stop()

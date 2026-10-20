@@ -293,9 +293,11 @@ counts follow the language.
 - Motion explains a change of state or place, can be interrupted, and never
   shows progress or success a source has not reported.
 - Motion follows Plasma's animation speed, read through Kirigami's durations.
-  The first screen's arrival in Search and an island's arrival and departure
-  in Ambient keep their own pace, as moments meant to be seen; with animations
-  set to instant they only fade.
+  Search's opening and an island's arrival and departure in Ambient keep
+  their own pace, as moments meant to be seen; with animations set to instant
+  they only fade. Search's opening moves only the sheet's opacity and place,
+  and its first screen is set out before the window shows, so its first frame
+  is already the screen it opens to.
 
 ## Verification boundaries
 
