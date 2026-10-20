@@ -12,6 +12,10 @@ provenance.
   pixels into place, with the modes, the field and what was used lately
   already there, and the field's ring up from the first frame when opened to
   type. Nothing it held when it last closed shows for a frame.
+- Opened by its key, Search takes the keys once its window is shown, and
+  asks for them again while the desktop is still settling, as just after
+  signing in, or when another window is made active the moment it opens, so
+  what is typed reaches the field rather than the window behind.
 - Growing as typing starts, or shrinking back, the field moves in step with
   the sheet, and the results settle once the sheet has its size rather than on
   every frame.

@@ -87,6 +87,7 @@ TestCase {
         property QtObject bluetoothContext: QtObject {
             property var connectedDevices: []
         }
+        signal aboutToOpen()
         signal opened()
         signal filesRequested()
         signal guestLaunchReady()

@@ -296,6 +296,52 @@ Item {
         NumberAnimation { target: root; property: "openingShine"; to: 1; duration: root.own(460); easing.type: Easing.InOutSine }
     }
 
+    // Set once the first screen is laid out for an open still to come.
+    property bool openingPrepared: false
+    function prepareOpening() {
+        // Search opens where it rests, at its resting size: nothing slides
+        // or shrinks in from where it last closed.
+        root.sheetSettled = false
+        Qt.callLater(() => { root.sheetSettled = true })
+        launchTimeout.stop()
+        query.text = ""
+        root.pendingLaunch = false
+        root.applicationLaunchPending = false
+        root.launchingApplication = ""
+        root.drawerOpen = false
+        root.drawerProgress = 0
+        root.sortMenuOpen = false
+        modeSettle.stop()
+        modeTimeout.stop()
+        modeExit.stop()
+        modeWait.stop()
+        root.modeAwaited = ""
+        root.modeOpen = false
+        root.helpersShown = false
+        helpersWait.stop()
+        root.helpersAwaited = false
+        root.modeShown = ""
+        root.modeProgress = 0
+        root.modeGrowing = false
+        root.modeHandoff = false
+        root.modeToken = ""
+        filesHandoffTimeout.stop()
+        root.filesHandoff = false
+        if (root.quickNote) root.quickNote.refresh()
+        // Opened by its key, Search is ready to type: the cursor waits in
+        // the field, and keys on screen stay up. Its button leaves the
+        // field alone, so a tap raises no keys. The field takes the keys
+        // once the window is shown; its ring is up from the first frame.
+        root.searchEngaged = root.launcherController.openedToType()
+        root.typingAwaitsWindow = root.searchEngaged
+        root.guestDrag = 0
+        root.guestExiting = false
+        root.guestDragged = false
+        sheet.scale = 1
+        firstRow.settle()
+        root.beginOpening()
+        root.openingPrepared = true
+    }
     function setDrawerOpen(open, mode, keepSize) {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
@@ -830,52 +876,16 @@ Item {
             sheet.scale = 1
             query.forceActiveFocus()
         }
+        // Before the window shows: the first screen is set out, so the
+        // window's first frame is already it.
+        function onAboutToOpen() { root.prepareOpening() }
+        // Once the window is shown, it takes the keys.
         function onOpened() {
-            // Search opens where it rests, at its resting size: nothing slides
-            // or shrinks in from where it last closed.
-            root.sheetSettled = false
-            Qt.callLater(() => { root.sheetSettled = true })
-            launchTimeout.stop()
-            query.text = ""
-            root.pendingLaunch = false
-            root.applicationLaunchPending = false
-            root.launchingApplication = ""
-            root.searchEngaged = false
-            root.drawerOpen = false
-            root.drawerProgress = 0
-            root.sortMenuOpen = false
-            modeSettle.stop()
-            modeTimeout.stop()
-            modeExit.stop()
-            modeWait.stop()
-            root.modeAwaited = ""
-            root.modeOpen = false
-            root.helpersShown = false
-            helpersWait.stop()
-            root.helpersAwaited = false
-            root.modeShown = ""
-            root.modeProgress = 0
-            root.modeGrowing = false
-            root.modeHandoff = false
-            root.modeToken = ""
-            filesHandoffTimeout.stop()
-            root.filesHandoff = false
-            if (root.quickNote) root.quickNote.refresh()
+            if (!root.openingPrepared) root.prepareOpening()
+            root.openingPrepared = false
             root.forceActiveFocus()
-            // Opened by its key, Search is ready to type: the cursor waits in
-            // the field, and keys on screen stay up. Its button leaves the
-            // field alone, so a tap raises no keys.
-            if (root.launcherController.openedToType()) {
-                root.searchEngaged = true
-                query.forceActiveFocus()
-            }
+            if (root.searchEngaged) query.forceActiveFocus()
             root.typingAwaitsWindow = root.searchEngaged && !(root.Window.window && root.Window.window.active)
-            root.guestDrag = 0
-            root.guestExiting = false
-            root.guestDragged = false
-            sheet.scale = 1
-            firstRow.settle()
-            root.beginOpening()
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
         // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
