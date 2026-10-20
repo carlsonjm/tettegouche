@@ -204,7 +204,9 @@ Item {
                     // right sets it in the middle of the ring to the eye.
                     anchors.horizontalCenterOffset: modeRow.current === "files" ? 0.5 : 0
                     visible: modeRow.current === "files" || modeRow.current === "notes"
-                    glyph: modeRow.current === "notes" ? "notes" : "folder-open"
+                        || modeRow.current === "helpers"
+                    glyph: modeRow.current === "notes" ? "notes"
+                        : modeRow.current === "helpers" ? "sparkles" : "folder-open"
                     width: 12
                     height: 12
                 }
@@ -259,7 +261,7 @@ Item {
             objectName: "helpers-pill"
             label: words.i18n("Helpers")
             selected: modeRow.current === "helpers"
-            visible: launcher.helpers.length > 0
+            visible: launcher.helpersPillShown && launcher.helpers.length > 0
             onActivated: modeRow.show("helpers")
         }
     }

@@ -307,7 +307,7 @@ void TettegoucheApplet::openDrawer(const QString &drawer)
     const bool note = drawer == QLatin1String("note")
         || (drawer.startsWith(QLatin1String("note:")) && drawer.size() > 5);
     if (drawer != QLatin1String("apps") && drawer != QLatin1String("files")
-        && drawer != QLatin1String("notes") && !note) return;
+        && drawer != QLatin1String("notes") && drawer != QLatin1String("helpers") && !note) return;
     if (note && NotesIslandProvider::openOnCard(drawer.mid(5), this)) return;
     startLauncher(setting(QStringLiteral("useKadunce"), true), {}, drawer);
 }
@@ -331,6 +331,14 @@ void TettegoucheApplet::setPearlDoors()
                 doors << QStringLiteral("notes");
             }
         }
+    }
+    // The Helpers as Search shows their pill: the pill shown, and Split
+    // Rock's Core running or ready to start on the session bus.
+    if (setting(QStringLiteral("showHelpersPill"), true)) {
+        const QString core = QStringLiteral("io.github.carlsonjm.splitrock.Core");
+        QDBusConnectionInterface *bus = QDBusConnection::sessionBus().interface();
+        if (bus && (bus->isServiceRegistered(core).value() || bus->activatableServiceNames().value().contains(core)))
+            doors << QStringLiteral("helpers");
     }
     if (doors == m_pearlDoors) return;
     m_pearlDoors = doors;
@@ -363,6 +371,8 @@ QStringList TettegoucheApplet::launchFlags()
     if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
     // Its pill alone can be left out; notes still answer a search.
     else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+    // The Helpers pill can be left out; Helpers still answer a search.
+    if (!setting(QStringLiteral("showHelpersPill"), true)) flags << QStringLiteral("--no-helpers-pill");
     return flags;
 }
 
