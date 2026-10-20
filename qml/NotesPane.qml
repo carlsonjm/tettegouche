@@ -730,15 +730,33 @@ Item {
         implicitWidth: newNoteRow.implicitWidth + 48
         visible: opacity > 0
         opacity: pane.progress * (1 - pane.pageShown) * edgeShown
-        // Gone while the sheet's edge moves, faded back once it holds still.
+        // Gone while the sheet's edge moves, faded back once it has held
+        // still a moment, however it moved.
         property real edgeShown: 1
+        function edgeMoved() {
+            newNoteReturn.stop()
+            newNote.edgeShown = 0
+            edgeHold.restart()
+        }
         Connections {
             target: pane
             function onResizingChanged() {
-                newNoteReturn.stop()
-                if (pane.resizing) newNote.edgeShown = 0
-                else newNoteReturn.start()
+                if (pane.resizing) {
+                    newNoteReturn.stop()
+                    edgeHold.stop()
+                    newNote.edgeShown = 0
+                } else {
+                    edgeHold.restart()
+                }
             }
+            function onHeightChanged() { if (newNote.edgeShown > 0 || newNoteReturn.running || edgeHold.running) newNote.edgeMoved() }
+            function onWidthChanged() { if (newNote.edgeShown > 0 || newNoteReturn.running || edgeHold.running) newNote.edgeMoved() }
+            function onYChanged() { if (newNote.edgeShown > 0 || newNoteReturn.running || edgeHold.running) newNote.edgeMoved() }
+        }
+        Timer {
+            id: edgeHold
+            interval: 60
+            onTriggered: if (!pane.resizing) newNoteReturn.start()
         }
         NumberAnimation {
             id: newNoteReturn
