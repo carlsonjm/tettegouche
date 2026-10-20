@@ -7,6 +7,9 @@ provenance.
 
 - Asked to show the Trash, as Split Rock's Tidy up Downloads does, Files opens
   its own Trash at once rather than handing it on to Dolphin.
+- Installing asks a launcher kept ready in the background to leave, so the
+  next request, "Show in folder" among them, runs the new launcher rather than
+  the one from before.
 - A Windows program's island has "Don't tell me again" after its words, where
   Split Rock's Core is installed: a tap tells Core never to raise Windows
   programs again, and a tap anywhere else on the island still opens the card.
