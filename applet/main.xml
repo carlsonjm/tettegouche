@@ -29,6 +29,10 @@
       <label>Show the Notes pill on Search's first screen, while Notes is offered; notes still show among the results</label>
       <default>true</default>
     </entry>
+    <entry name="showHelpersPill" type="Bool">
+      <label>Show the Helpers pill on Search's first screen and a Helpers door on the dot's slide, while Split Rock's Core is installed; Helpers still show among the results</label>
+      <default>true</default>
+    </entry>
     <entry name="showAmbient" type="Bool">
       <label>Show Ambient's islands beside the launcher in the panel</label>
       <default>true</default>

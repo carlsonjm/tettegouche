@@ -48,7 +48,7 @@ Qt gives as the keyboard rectangle, and keeps its sheet above them itself.
 settings, under Tettegouche, by whichever Tettegouche widget came first. A
 press starts the launcher with `--drawer apps` or `--drawer files`, or asks a
 running one through `openDrawer` on its D-Bus interface; a slide from the dot
-does the same for any of `apps`, `files` or `notes`. The Apps desktop
+does the same for any of `apps`, `files`, `notes` or `helpers`. The Apps desktop
 entry, `io.github.carlsonjm.Tettegouche.Apps.desktop`, runs `--drawer apps`.
 The widget declares itself Plasma's application launcher
 (`org.kde.plasma.launchermenu`), so Plasma's launcher key reaches it as it

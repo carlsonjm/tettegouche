@@ -51,8 +51,8 @@ Item {
     property bool card: false
     // The places' own button folds them to the rail or opens them as wide as
     // their longest name, up to 240, so no name is cut short. A card starts
-    // folded and a full size open; opened at a card's size, a touch on the
-    // folder folds them back.
+    // folded and a full size open; once opened they stay open until their
+    // button or their edge folds them.
     property bool placesOpen: !card
     onCardChanged: placesOpen = !card
     readonly property bool placesFolded: !placesOpen
@@ -821,25 +821,6 @@ Item {
             Behavior on color {
                 enabled: Kirigami.Units.shortDuration > 0
                 ColorAnimation { duration: Kirigami.Units.shortDuration }
-            }
-        }
-    }
-    // At a card's size the places opened by their button give the room back
-    // at the first touch on the folder, which still acts: this only watches,
-    // above everything, and takes nothing from what is under it.
-    Item {
-        anchors.fill: parent
-        z: 10
-        PointHandler {
-            id: folderTouch
-            objectName: "files-folder-touch"
-            enabled: pane.card && pane.placesOpen
-            // Folded as the touch lifts, so what it pressed stays under it.
-            property bool onFolder: false
-            onActiveChanged: {
-                // The places' edge, in the gap after them, is theirs.
-                if (active) onFolder = point.position.x > placesList.width + 41
-                else if (onFolder) pane.placesOpen = false
             }
         }
     }

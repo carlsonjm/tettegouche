@@ -178,6 +178,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/eye.svg
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
+        assets/icons/lucide/sparkles.svg
         assets/icons/lucide/sticky-note.svg
         assets/icons/lucide/layout-grid.svg
         assets/icons/lucide/folder.svg
@@ -247,6 +248,7 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/search.svg
         assets/icons/lucide/check.svg
         assets/icons/lucide/folder-open.svg
+        assets/icons/lucide/sparkles.svg
         assets/icons/lucide/plus.svg
         assets/icons/suite/notes.svg
 )

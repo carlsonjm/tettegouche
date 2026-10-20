@@ -37,7 +37,7 @@ than repeat it.
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
 | Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
-| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files or Notes while that mode shows. |
+| Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files, Notes or the Helpers while that mode shows. |
 | Tab, with nothing typed | Moves along the dot, Apps, Files and Notes, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
@@ -61,8 +61,8 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click the dot | Opens Search, and the dot's middle clears until it is a ring, holding the mark of the mode Search shows: four squares for Apps, a folder for Files, a page for Notes, and on Search's first screen a new small dot that grows in the middle. While an application Search opened is on its way, a quarter of the ring turns. Again closes it, and the ring fills back into the dot. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
-| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files and Notes, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Tap or click the dot | Opens Search, and the dot's middle clears until it is a ring, holding the mark of the mode Search shows: four squares for Apps, a folder for Files, a page for Notes, sparkles for the Helpers, and on Search's first screen a new small dot that grows in the middle. While an application Search opened is on its way, a quarter of the ring turns. Again closes it, and the ring fills back into the dot. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
+| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files, Notes and Helpers, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it, and Helpers where Split Rock's Core is installed; Helpers opens at Search's size, as its pill does. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -76,6 +76,7 @@ than repeat it.
 | Tap or click See all beside a section | Opens Apps or Files. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
+| Setting "Show the Helpers pill", off | The row of modes leaves out the Helpers pill, and a slide from the dot its Helpers door; Helpers still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
 | Setting "Animate the launcher indicator", off | The dot turns into its ring at once, and its hover change is instant. |
@@ -146,7 +147,7 @@ than repeat it.
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden files, dimmed; again, hides them. |
 | Tap or click Expand, at the header's right | Files fills the screen, or returns to Search's size, as Expand does in Apps. |
 | Files at Search's size, as in Spread | The places fold to a rail of their icons, each named when a pointer rests on it, and the tiles come one size smaller. Filling the screen brings both back; the tile size you chose is kept. |
-| The places' button, which says Fold while they are open | Folds the places to the rail or opens them as wide as their longest name, up to 240, so no name is cut short. At Search's size or in a narrow Files window, places opened this way fold back at the first touch on the folder. |
+| The places' button, which says Fold while they are open | Folds the places to the rail or opens them as wide as their longest name, up to 240, so no name is cut short. Open, they stay open until this button or their edge folds them; a touch on the folder leaves them as they are. |
 | Tap or click Pop out, beside Expand | Files opens in a window of its own, with its tabs and folder as they were, and Search closes. Each Pop out opens another window. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With a Files window open: `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window last used forward, back from minimized, and shows what was asked there. Files in Search still opens Files in Search. |
 | In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; the row of modes and its buttons give way to the window's own title bar. Typing goes into search; Esc clears it. |

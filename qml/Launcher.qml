@@ -30,7 +30,7 @@ Item {
     property bool notesPillShown: true
     // What the panel's dot shows of Search while it is up: the mode shown,
     // and whether an application is on its way.
-    readonly property var dotState: [modeRow.current === "helpers" ? "" : modeRow.current, applicationLaunchPending]
+    readonly property var dotState: [modeRow.current, applicationLaunchPending]
     onDotStateChanged: {
         if (typeof launcherController.reportShowing === "function")
             launcherController.reportShowing(dotState[0], dotState[1])
@@ -66,7 +66,25 @@ Item {
     property bool helpersShown: false
     readonly property var helpers: root.searchResults.helpers || []
     onHelpersShownChanged: root.searchResults.helpersOnly = root.helpersShown
-    onHelpersChanged: if (root.helpersShown && root.helpers.length === 0) root.helpersShown = false
+    onHelpersChanged: {
+        if (root.helpersShown && root.helpers.length === 0) root.helpersShown = false
+        if (root.helpersAwaited && root.helpers.length > 0) {
+            helpersWait.stop()
+            root.helpersAwaited = false
+            root.showHelpers(true)
+        }
+    }
+    // Its pill can be left off the first screen; Helpers still answer what
+    // is typed.
+    property bool helpersPillShown: true
+    // Asked for by the dot's slide before Core has listed its Helpers: they
+    // show once it does, or Search stays on its first screen.
+    property bool helpersAwaited: false
+    Timer {
+        id: helpersWait
+        interval: 1500
+        onTriggered: root.helpersAwaited = false
+    }
     function showHelpers(shown) {
         if (shown && root.helpers.length === 0) return
         root.helpersShown = shown
@@ -794,6 +812,8 @@ Item {
             root.modeAwaited = ""
             root.modeOpen = false
             root.helpersShown = false
+            helpersWait.stop()
+            root.helpersAwaited = false
             root.modeShown = ""
             root.modeProgress = 0
             root.modeGrowing = false
@@ -841,6 +861,23 @@ Item {
                 if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
                 root.openModeDirectly("notes")
                 if (root.notesLeftExpanded) root.launcherController.setDrawerExpanded(true, true)
+                return
+            }
+            // The Helpers, from the dot's slide: Search's first screen with
+            // only the Helpers on it, at Search's size.
+            if (mode === "helpers") {
+                if (root.helpersShown) {
+                    root.launcherController.close()
+                    return
+                }
+                if (root.drawerOpen) root.setDrawerOpen(false)
+                if (root.modeOpen) root.closeMode()
+                if (root.helpers.length > 0) {
+                    root.showHelpers(true)
+                } else {
+                    root.helpersAwaited = true
+                    helpersWait.restart()
+                }
                 return
             }
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
@@ -979,7 +1016,7 @@ Item {
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { enabled: root.sheetSettled; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
-        Behavior on height { enabled: root.sheetSettled && !keysMotion.running; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on height { enabled: root.sheetSettled && !keysMotion.running; NumberAnimation { id: sheetResize; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Floating, it is a note that closes; in Spread, a card's paper.
         radius: root.launcherController.guestMode ? root.paperRadius : root.noteRadius
         color: root.surfaceColor
@@ -1210,6 +1247,7 @@ Item {
                 z: 5
                 quickNote: root.quickNote
                 progress: root.notesProgress
+                resizing: sheetResize.running
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)
                 growing: root.modeGrowing
                 expanded: root.launcherController.drawerExpanded

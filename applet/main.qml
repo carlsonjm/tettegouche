@@ -157,7 +157,7 @@ PlasmoidItem {
 
     // A slide from the dot: press it and move away from the dot's edge,
     // right, or left where the dot sits at the end, and Search's doors,
-    // Apps, Files and Notes, line up in the band; the one under the
+    // Apps, Files, Notes and the Helpers, line up in the band; the one under the
     // finger or pointer is chosen and opens when it lets go. Held still,
     // the doors come up as well, to look before choosing. Let go back on the
     // dot opens nothing. A panel down a side of the screen keeps the tap.
@@ -258,7 +258,8 @@ PlasmoidItem {
                         id: doorLabel
                         anchors.centerIn: parent
                         text: doorItem.door === "apps" ? i18n("Apps")
-                            : doorItem.door === "files" ? i18n("Files") : i18n("Notes")
+                            : doorItem.door === "files" ? i18n("Files")
+                            : doorItem.door === "helpers" ? i18n("Helpers") : i18n("Notes")
                         color: tone.text
                         opacity: doorItem.chosen ? 1 : 0.72
                         font.pixelSize: 14
@@ -415,7 +416,9 @@ PlasmoidItem {
                     // right sets it in the middle of the ring to the eye.
                     anchors.horizontalCenterOffset: root.dotMode === "files" ? 0.5 : 0
                     visible: root.dotMode === "files" || root.dotMode === "notes"
-                    glyph: root.dotMode === "notes" ? "notes" : "folder-open"
+                        || root.dotMode === "helpers"
+                    glyph: root.dotMode === "notes" ? "notes"
+                        : root.dotMode === "helpers" ? "sparkles" : "folder-open"
                     ink: "#F8F8FF"
                     width: 12
                     height: 12

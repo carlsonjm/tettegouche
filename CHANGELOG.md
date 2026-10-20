@@ -8,6 +8,14 @@ provenance.
 - Search opens where it rests and at its size from its first frame on a
   stock Plasma desktop too: KWin's window animation no longer zooms it in
   from smaller, faded and blurred, or out again as it closes.
+- Search's dot, and the panel's while Search is up, holds sparkles in its
+  ring while the Helpers show, as it holds the mark of Apps, Files and Notes.
+- The dot's slide has a Helpers door where Split Rock's Core is installed, and
+  the widget's "Show the Helpers pill" setting leaves out the pill and the
+  door together; Helpers still answer a search.
+- Notes opens as Apps and Files do: everything fades in where it stands, a
+  note's page included, and New note waits for the sheet to stop growing
+  before it shows, so nothing rides up or down as Notes comes.
 - Asked to show the Trash, as Split Rock's Tidy up Downloads does, Files opens
   its own Trash at once rather than handing it on to Dolphin.
 - Installing asks a launcher kept ready in the background to leave, so the
@@ -52,7 +60,8 @@ provenance.
 - Files' own window keeps the places and drives beside its folders.
 - The places beside Files fold and unfold by a button of their own; open,
   they are as wide as their longest name, up to 240, so no name is cut
-  short. At Search's size a touch on the folder folds them back.
+  short. Once open they stay open until their button folds them, so a
+  touch on the folder, or carrying files onto a place, never folds them.
 - With the places open, their button says Fold beside its glyph, like the
   names under it; folded, it is an icon among the place icons.
 - Typing in Search stays quick however many files a short query brings:
