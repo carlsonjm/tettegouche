@@ -392,7 +392,9 @@ if(BUILD_TESTING)
     add_test(NAME panel-applet-test
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
             $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    set_tests_properties(panel-applet-test PROPERTIES TIMEOUT 45)
+    # Room for a slow computer, where install.sh runs it too: KDE's
+    # application list is built afresh for the test's own home.
+    set_tests_properties(panel-applet-test PROPERTIES TIMEOUT 120)
     add_test(NAME ambient-fixture-applet-test
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/tests/run-panel-test.sh
             $<TARGET_FILE:panel-applet-test> ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} normalAndFixtureSources)
