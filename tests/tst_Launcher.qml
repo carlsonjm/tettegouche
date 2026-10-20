@@ -25,6 +25,8 @@ TestCase {
         launcher.recentFiles = true
         recentStub.opened = []
         launcher.notesDoor = null
+        launcher.askClient = null
+        askStub.reset()
         notesStub.available = true
         notesStub.opened = 0
         launcher.quickNote = null
@@ -145,6 +147,9 @@ TestCase {
         property bool helpersOnly: false
         property var helpersOpened: []
         function openHelper(id) { helpersOpened = helpersOpened.concat([id]); return true }
+        // What Ask's answer names, first among the Helpers.
+        property var askedHelpers: []
+        property string askedQuery: ""
     }
     ListModel {
         id: catalog
@@ -237,6 +242,33 @@ TestCase {
         // The rows before the files, as the launcher's model counts them.
         property int applicationCount: 0
         function open(row) { opened = opened.concat([row]); return true }
+    }
+    // Split Rock's Ask, as Search's client of it shows it.
+    QtObject {
+        id: askStub
+        property bool available: true
+        property string state: "idle"
+        property string question: ""
+        property string text: ""
+        property string who: ""
+        property var helpers: []
+        property string query: ""
+        property real progress: 0
+        property string size: ""
+        property var typed: []
+        property int asksNow: 0
+        property int downloads: 0
+        property int declines: 0
+        function type(words) { typed = typed.concat([words]) }
+        function askNow() { asksNow++ }
+        function clear() {}
+        function download() { downloads++; state = "downloading" }
+        function notNow() { declines++; state = "idle"; text = "" }
+        function reset() {
+            available = true; state = "idle"; question = ""; text = ""; who = ""
+            helpers = []; query = ""; progress = 0; size = ""
+            typed = []; asksNow = 0; downloads = 0; declines = 0
+        }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
     QtObject {
@@ -3934,6 +3966,8 @@ TestCase {
         const left = item => item.mapToItem(launcher, 0, 0).x
         // The row places it once it shows.
         tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
+        // And makes room for it, or a tap on it lands outside the row.
+        tryVerify(() => pill.x + pill.width <= pill.parent.width)
         mouseClick(pill, pill.width / 2, pill.height / 2)
         verify(launcher.helpersShown)
         verify(pill.selected)
@@ -3996,6 +4030,82 @@ TestCase {
         verify(!launcher.helpersShown)
         tryCompare(pill, "visible", false)
     }
+    // With Split Rock's Ask installed the chip is named Ask: a question typed
+    // there is handed to Ask, its answer shows above the Helpers it names,
+    // and the first question without the model offers the download.
+    function test_askChipAnswersAboveTheHelpers() {
+        launcher.askClient = askStub
+        controller.opened()
+        waitForOpen()
+        results.helpers = [
+            {id: "health", title: "Health check", sub: "A look over the computer", icon: "checkmark"},
+            {id: "changes", title: "What changed", sub: "Undo, or go back to before", icon: "document-revert"}
+        ]
+        const pill = findChild(launcher, "helpers-pill")
+        tryCompare(pill, "visible", true)
+        compare(pill.label, "Ask")
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        // The row places it once it shows.
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
+        // And makes room for it, or a tap on it lands outside the row.
+        tryVerify(() => pill.x + pill.width <= pill.parent.width)
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown && launcher.askShown)
+        compare(findChild(launcher, "just-type-placeholder").text, "Ask a question, or find a Helper")
+        launcher.query.text = "my wifi keeps dropping"
+        compare(askStub.typed[askStub.typed.length - 1], "my wifi keeps dropping")
+        const answer = findChild(launcher, "ask-answer")
+        verify(!answer.visible)
+        // The answer, who gave it, and the Helpers it names first.
+        askStub.text = "Wi-Fi that drops often comes from power saving."
+        askStub.who = "computer"
+        askStub.helpers = ["changes", "health"]
+        askStub.query = "wifi"
+        askStub.state = "answered"
+        tryCompare(answer, "visible", true)
+        compare(findChild(launcher, "ask-answer-text").text, "Wi-Fi that drops often comes from power saving.")
+        compare(findChild(launcher, "ask-answer-who").text,
+            "Answered on this computer · nothing changes until you open a Helper")
+        compare(results.askedHelpers, ["changes", "health"])
+        compare(results.askedQuery, "wifi")
+        verify(!findChild(launcher, "web-fallback").visible)
+        // The list starts under the answer.
+        const list = findChild(launcher, "search-result-list")
+        compare(list.anchors.topMargin, answer.height + 8)
+        // Without the model: what Ask needs, Download and Not now.
+        askStub.state = "needsModel"
+        askStub.text = "To answer on this computer, Ask needs a one-time download of about 2.5 GB."
+        const download = findChild(launcher, "ask-download")
+        tryCompare(download, "visible", true)
+        verify(findChild(launcher, "ask-not-now").visible)
+        // The box places its pills under the words once they show.
+        const top = item => item.mapToItem(answer, 0, 0).y
+        tryVerify(() => top(download) > top(findChild(launcher, "ask-answer-text"))
+            && top(download) + download.height <= answer.height)
+        mouseClick(download, download.width / 2, download.height / 2)
+        compare(askStub.downloads, 1)
+        askStub.progress = 0.44
+        askStub.size = "about 2.5 GB"
+        tryCompare(findChild(launcher, "ask-answer-who"), "text", "Downloading the model · 44% of about 2.5 GB")
+        verify(!download.visible)
+        // Enter with nothing listed sends the question at once.
+        askStub.state = "idle"
+        launcher.submit()
+        compare(askStub.asksNow, 1)
+        // Leaving the chip clears what Ask was asked, and the Helpers' order.
+        const asked = askStub.typed.length
+        launcher.query.text = ""
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.helpersShown)
+        compare(askStub.typed[askStub.typed.length - 1], "")
+        verify(askStub.typed.length > asked)
+        compare(results.askedHelpers, [])
+        // Without Ask the chip keeps its name.
+        askStub.available = false
+        compare(pill.label, "Helpers")
+    }
+
     // The dot's slide asks for the Helpers: the first screen with only the
     // Helpers on it, once Core has listed them, and again closes Search.
     // Their pill can be left out, and the Helpers still show among results.

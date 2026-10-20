@@ -333,15 +333,23 @@ void TettegoucheApplet::setPearlDoors()
         }
     }
     // The Helpers as Search shows their pill: the pill shown, and Split
-    // Rock's Core running or ready to start on the session bus.
+    // Rock's Core running or ready to start on the session bus. With Split
+    // Rock's Ask there too, the door reads Ask.
+    bool ask = false;
     if (setting(QStringLiteral("showHelpersPill"), true)) {
-        const QString core = QStringLiteral("io.github.carlsonjm.splitrock.Core");
         QDBusConnectionInterface *bus = QDBusConnection::sessionBus().interface();
-        if (bus && (bus->isServiceRegistered(core).value() || bus->activatableServiceNames().value().contains(core)))
+        const QStringList activatable = bus ? bus->activatableServiceNames().value() : QStringList();
+        const auto onBus = [bus, &activatable](const QString &name) {
+            return bus && (bus->isServiceRegistered(name).value() || activatable.contains(name));
+        };
+        if (onBus(QStringLiteral("io.github.carlsonjm.splitrock.Core"))) {
             doors << QStringLiteral("helpers");
+            ask = onBus(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        }
     }
-    if (doors == m_pearlDoors) return;
+    if (doors == m_pearlDoors && ask == m_askOffered) return;
     m_pearlDoors = doors;
+    m_askOffered = ask;
     Q_EMIT pearlDoorsChanged();
 }
 

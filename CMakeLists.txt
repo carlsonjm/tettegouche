@@ -86,6 +86,8 @@ target_compile_definitions(tettegouche-related PRIVATE TRANSLATION_DOMAIN="tette
 add_library(tettegouche-launcher STATIC
     src/LauncherController.cpp
     src/LauncherController.h
+    src/AskClient.cpp
+    src/AskClient.h
     src/KadunceClient.h
     src/OpenWindows.cpp
     src/OpenWindows.h
@@ -144,7 +146,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
     FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml qml/HelpersRow.qml
         qml/SearchResults.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
-        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml
+        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml qml/AskAnswer.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
@@ -353,6 +355,13 @@ if(BUILD_TESTING)
     target_link_libraries(omni-results-test PRIVATE KF6::Runner KF6::I18n Qt6::Gui Qt6::DBus)
     add_test(NAME omni-results-test COMMAND omni-results-test)
     set_tests_properties(omni-results-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+    # Split Rock's Ask, as a stand-in on a private bus.
+    qt_add_executable(ask-client-test tests/AskClientTest.cpp src/AskClient.cpp src/AskClient.h)
+    target_include_directories(ask-client-test PRIVATE src)
+    target_link_libraries(ask-client-test PRIVATE Qt6::DBus Qt6::Test)
+    add_test(NAME ask-client-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:ask-client-test>)
+    set_tests_properties(ask-client-test PROPERTIES TIMEOUT 60)
     qt_add_executable(dock-band-test tests/DockBandTest.cpp src/DockBand.h)
     target_include_directories(dock-band-test PRIVATE src)
     target_link_libraries(dock-band-test PRIVATE Qt6::Core)

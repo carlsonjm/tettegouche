@@ -71,6 +71,28 @@ screen, and any other mode closes the Helpers. Without Core, or while Core
 lists none, there is no chip. The Helpers still show among the first screen's
 results as before.
 
+#### Ask
+
+Where Split Rock's Ask is installed, the chip, its slide door and Helpers in
+the panel are named Ask, and the field reads "Ask a question, or find a
+Helper". With nothing typed it is the same row of tiles. Typed words that read
+as a question, three words or more or ending in "?", go to Ask once typing
+pauses for 0.7 seconds, or at once on Enter when nothing is listed; a Helper's
+name alone is never sent. Ask's answer sits above the list on the subtle
+paper, 8 round, 12 by 16 inside, its words at 15 as they are written, and
+beneath at 12 who gave it: "Answered on this computer · nothing changes until
+you open a Helper". The Helpers the answer names come first in its order,
+then those the words find; Install an app opens searching for the app the
+answer named. Ask changes nothing; only a Helper's row does, after a tap.
+
+Before the model is downloaded, the first question gets what Ask needs in the
+answer's place, with Download, the light pill, and Not now. Not now holds
+until the field is cleared. While it downloads, a 4 tall bar fills in the same
+box with "Downloading the model · N% of" its size, the Helpers stay listed
+under it, and the question is answered when the download ends if Search is
+still open. Leaving the chip, or Search closing, stops the question. Without
+Ask, the chip is Helpers, as above, and nothing is asked.
+
 ### Notes
 
 Notes is one of Search's modes. Gooseberry keeps the note; Search draws it in

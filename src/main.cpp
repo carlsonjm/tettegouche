@@ -4,6 +4,7 @@
 */
 
 #include "ApplicationCatalog.h"
+#include "AskClient.h"
 #include "CoreFactProvider.h"
 #include "FileBrowser.h"
 #include "FileDetails.h"
@@ -340,6 +341,9 @@ int main(int argc, char **argv)
     // Split Rock's Core, where it is installed: its facts and its upkeep
     // cards are found by their words, and Core opens the card.
     CoreFactProvider core(QDBusConnection::sessionBus());
+    // Split Rock's Ask, where installed, answers a question typed under the
+    // Helpers chip, which is then named Ask.
+    AskClient ask(QDBusConnection::sessionBus());
     results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
@@ -419,6 +423,7 @@ int main(int argc, char **argv)
         {QStringLiteral("helpersPillShown"),
          !application.arguments().contains(QStringLiteral("--no-helpers-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
+        {QStringLiteral("askClient"), QVariant::fromValue<QObject *>(&ask)},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

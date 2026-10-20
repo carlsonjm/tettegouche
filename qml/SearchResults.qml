@@ -107,11 +107,21 @@ Item {
         NumberAnimation { duration: launcher.ms(120); easing.type: Easing.OutCubic }
     }
 
+    // Ask's answer, above the Helpers it names.
+    AskAnswer {
+        id: askAnswer
+        width: parent.width
+        askClient: launcher.askClient
+        tone: resultsArea.tone
+        words: resultsArea.words
+        visible: launcher.askShown && shown
+    }
+
     ListView {
         id: resultList
         objectName: "search-result-list"
         anchors.fill: parent
-        anchors.topMargin: resultsArea.scopeHeight + 8
+        anchors.topMargin: askAnswer.visible ? askAnswer.height + 8 : resultsArea.scopeHeight + 8
         clip: true
         // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
         Kirigami.WheelHandler { target: resultList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
@@ -314,6 +324,7 @@ Item {
         visible: query.text.length > 0
             && !launcher.searchResults.querying
             && resultList.count === 0
+            && !askAnswer.visible
         objectName: "web-fallback"
         Accessible.role: Accessible.Button
         Accessible.name: text

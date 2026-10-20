@@ -362,6 +362,12 @@ class OmniResults : public QSortFilterProxyModel
     // while it is shown, what is typed finds only those.
     Q_PROPERTY(QVariantList helpers READ helpers NOTIFY helpersChanged)
     Q_PROPERTY(bool helpersOnly READ helpersOnly WRITE setHelpersOnly NOTIFY helpersOnlyChanged)
+    // The Helpers an answer from Ask names, by Core's ids: listed first, in
+    // Ask's order, whatever words were typed.
+    Q_PROPERTY(QStringList askedHelpers READ askedHelpers WRITE setAskedHelpers NOTIFY askedHelpersChanged)
+    // What an asked Helper is opened with, such as the app Ask found the
+    // question names; empty, it is opened with what is typed.
+    Q_PROPERTY(QString askedQuery MEMBER m_askedQuery NOTIFY askedHelpersChanged)
 public:
     explicit OmniResults(QObject *parent = nullptr) : QSortFilterProxyModel(parent) {
         QSettings settings(QStringLiteral("co.goodinput"), QStringLiteral("tettegouche-search"));
@@ -524,6 +530,16 @@ public:
         m_openCoreAction(id, QString());
         return true;
     }
+    QStringList askedHelpers() const { return m_askedHelpers; }
+    void setAskedHelpers(const QStringList &ids) {
+        if (ids == m_askedHelpers) return;
+        releaseSelection();
+        m_askedHelpers = ids;
+        // The rows move under the same query, so each is judged again.
+        m_verdictQuery = QStringLiteral("\x1f");
+        showCore(queryString());
+        Q_EMIT askedHelpersChanged();
+    }
     bool helpersOnly() const { return m_helpersOnly; }
     void setHelpersOnly(bool only) {
         if (m_helpersOnly == only) return;
@@ -587,8 +603,20 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
-        for (const auto &action : m_coreActions ? m_coreActions() : QList<QVariantMap>{}) {
-            if (!coreFactFits(action, query)) continue;
+        // The Helpers Ask named come first, in its order; then those the
+        // words find.
+        const auto actions = m_coreActions ? m_coreActions() : QList<QVariantMap>{};
+        QList<QVariantMap> listed;
+        for (const auto &asked : m_askedHelpers) {
+            for (const auto &action : actions) {
+                if (action.value(QStringLiteral("id")).toString() == asked) listed.append(action);
+            }
+        }
+        for (const auto &action : actions) {
+            if (!m_askedHelpers.contains(action.value(QStringLiteral("id")).toString()) && coreFactFits(action, query))
+                listed.append(action);
+        }
+        for (const auto &action : listed) {
             const auto id = action.value(QStringLiteral("id")).toString();
             const auto title = action.value(QStringLiteral("title")).toString();
             if (id.isEmpty() || title.isEmpty()) continue;
@@ -655,7 +683,9 @@ public:
             const auto target = getQueryMatch(index).data().toString();
             if (target.startsWith(QLatin1String("action:"))) {
                 if (!m_openCoreAction) return false;
-                m_openCoreAction(target.mid(7), queryString().trimmed());
+                const auto id = target.mid(7);
+                m_openCoreAction(id, m_askedHelpers.contains(id) && !m_askedQuery.isEmpty()
+                        ? m_askedQuery : queryString().trimmed());
                 return true;
             }
             if (!m_openCore) return false;
@@ -690,6 +720,7 @@ Q_SIGNALS:
     void queryingChanged();
     void helpersChanged();
     void helpersOnlyChanged();
+    void askedHelpersChanged();
 protected:
     bool filterAcceptsRow(int row, const QModelIndex &parent) const override {
         // Under the Helpers chip only the upkeep cards are listed.
@@ -875,6 +906,8 @@ private:
     QHash<QString, int> m_frozenOrder;
     bool m_allFiles = false;
     bool m_helpersOnly = false;
+    QStringList m_askedHelpers;
+    QString m_askedQuery;
     QString m_quietFolders;
     mutable QHash<QString, bool> m_repoDirectories;
     SettingsAliasRunner m_aliasRunner;

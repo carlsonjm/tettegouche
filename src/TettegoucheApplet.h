@@ -33,6 +33,9 @@ class TettegoucheApplet final : public Plasma::Applet
     // What a slide from the dot can open, in Search's order: "apps", "files",
     // then "notes" where Search offers it.
     Q_PROPERTY(QStringList pearlDoors READ pearlDoors NOTIFY pearlDoorsChanged)
+    // Split Rock's Ask is installed, so the Helpers door reads Ask, as
+    // Search's chip does.
+    Q_PROPERTY(bool askOffered READ askOffered NOTIFY pearlDoorsChanged)
 
 public:
     TettegoucheApplet(QObject *parent, const KPluginMetaData &data,
@@ -52,6 +55,7 @@ public:
     // quick note's island does.
     Q_INVOKABLE void openDrawer(const QString &drawer);
     QStringList pearlDoors() const { return m_pearlDoors; }
+    bool askOffered() const { return m_askOffered; }
     // Looks again for Notes, as a press on the dot does.
     Q_INVOKABLE void refreshPearlDoors();
     Q_INVOKABLE int availablePanelWidth(QQuickItem *visualParent, int minimumWidth, int gap) const;
@@ -116,6 +120,7 @@ private:
     QString m_productName;
     QVariantList m_ambientActivities;
     QStringList m_pearlDoors{QStringLiteral("apps"), QStringLiteral("files")};
+    bool m_askOffered = false;
     void setPearlDoors();
     suite::PanelWatch m_panelWatch;
     std::shared_ptr<ActivityModel> m_activities;
