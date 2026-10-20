@@ -216,6 +216,7 @@ than repeat it.
 | Tap or click a drive's island, or its Open | Files opens the drive, mounting it first. |
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
 | Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. |
+| Tap or click Don't tell me again on a Windows program's island | Split Rock's Core stops telling about Windows programs for good and takes the fact off the island. Only that fact has the pill. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Starts a quick note on Gooseberry's own card. |
 | Tap or click the pinned note on the quick note's island | Opens that note on Gooseberry's own card. |

@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- A Windows program's island has "Don't tell me again" after its words, where
+  Split Rock's Core is installed: a tap tells Core never to raise Windows
+  programs again, and a tap anywhere else on the island still opens the card.
 - Search has a Helpers chip after Notes, where Split Rock's Core is
   installed: every Helper shows as a tile, typing narrows them, and a tap or
   Enter opens one, so nobody has to remember "Restore points" or "What

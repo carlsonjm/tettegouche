@@ -44,7 +44,7 @@ var PIECES = {
         { id: "icon" }, { id: "size" }, { id: "open" }, { id: "name", name: true },
     ],
     core: [
-        { id: "icon" }, { id: "name" }, { id: "detail" },
+        { id: "icon" }, { id: "name" }, { id: "never" }, { id: "detail" },
     ],
     note: [
         { id: "dot" }, { id: "window" }, { id: "pinned" },

@@ -667,6 +667,39 @@ TestCase {
         compare(shown(surface, "core"), ["icon"]);
     }
 
+    // A Windows program's fact adds "Don't tell me again" after its words: a
+    // tap on it tells Core never, a tap elsewhere still opens the card. Other
+    // facts have no such pill.
+    function test_a_windows_fact_offers_dont_tell_me_again() {
+        const storage = {id: "core:storage", generation: 3, kind: "core", state: "running",
+            title: "Storage", line: "91% full", icon: "drive-harddisk", capabilities: {open: true}};
+        const plain = createSurface(640, [storage]);
+        settle();
+        verify(shown(plain, "core").indexOf("never") < 0);
+        verify(!findChild(plain, "ambient-core-never").visible);
+
+        const fact = {id: "core:windows", generation: 5, kind: "core", state: "running",
+            title: "Windows program", line: "setup.exe", actionText: "Find the Linux version",
+            icon: "application-x-ms-dos-executable", capabilities: {open: true, never: true}};
+        const surface = createSurface(640, [fact]);
+        settle();
+        const shape = island(surface, "core");
+        verify(shown(surface, "core").indexOf("never") >= 0);
+        const never = findChild(surface, "ambient-core-never");
+        verify(never.visible);
+        compare(never.Accessible.name, "Don't tell me again: Windows program · setup.exe");
+        verify(leftOf(surface, never) >= rightOf(surface, findChild(surface, "ambient-core-name")) + 12 - 1);
+        const invoked = spyOn(surface, "invokeRequested");
+        mouseClick(never, never.width / 2, never.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "core:windows");
+        compare(invoked.signalArguments[0][1], 5);
+        compare(invoked.signalArguments[0][2], "never");
+        mouseClick(shape, 12, shape.height / 2);
+        compare(invoked.count, 2);
+        compare(invoked.signalArguments[1][2], "open");
+    }
+
     // The quick note's island: a dot with a plus that opens the quick note,
     // and the pinned note beside it, its colour's bead and first words, which
     // opens that note. Narrow, the pinned note goes first.

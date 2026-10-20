@@ -35,6 +35,13 @@ QVariantMap storage(const QString &attention, int percent = 91) {
             {QStringLiteral("actionText"), QStringLiteral("Free up space")},
             {QStringLiteral("keywords"), QStringList{QStringLiteral("storage"), QStringLiteral("disk")}}};
 }
+
+QVariantMap windows() {
+    return {{QStringLiteral("topic"), QStringLiteral("windows")}, {QStringLiteral("title"), QStringLiteral("Windows program")},
+            {QStringLiteral("line"), QStringLiteral("setup.exe is for Windows")}, {QStringLiteral("level"), QStringLiteral("island")},
+            {QStringLiteral("attention"), QStringLiteral("island")}, {QStringLiteral("icon"), QStringLiteral("application-x-ms-dos-executable")},
+            {QStringLiteral("actionText"), QStringLiteral("Find the Linux version")}};
+}
 }
 
 class CoreFactProviderTest : public QObject {
@@ -100,6 +107,38 @@ private Q_SLOTS:
         QCOMPARE(actionsGone.size(), 1);
         peer.unregisterObject(QStringLiteral("/Core"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-core"));
+    }
+
+    // "Don't tell me again" is Core's to keep, and only for Windows programs.
+    void neverOnlyForWindows() {
+        FakeCore core;
+        core.facts = {storage(QStringLiteral("island")), windows()};
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-core-3"));
+        QVERIFY(peer.registerObject(QStringLiteral("/Core"), &core, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Core")));
+
+        CoreFactProvider provider(QDBusConnection::sessionBus());
+        QTRY_COMPARE(provider.activities().size(), 2);
+        int generation = 0;
+        for (const auto &value : provider.activities()) {
+            const auto row = value.toMap();
+            const auto capabilities = row.value(QStringLiteral("capabilities")).toMap();
+            generation = row.value(QStringLiteral("generation")).toInt();
+            QCOMPARE(capabilities.value(QStringLiteral("never")).toBool(),
+                     row.value(QStringLiteral("id")).toString() == QLatin1String("core:windows"));
+        }
+
+        provider.invoke(QStringLiteral("core:storage"), generation, QStringLiteral("never"));
+        provider.invoke(QStringLiteral("core:windows"), generation + 1, QStringLiteral("never"));
+        provider.invoke(QStringLiteral("core:windows"), generation, QStringLiteral("never"));
+        QTRY_COMPARE(core.acts.size(), 1);
+        QCOMPARE(core.acts.first(), QStringLiteral("windows never"));
+        QTest::qWait(100);
+        QCOMPARE(core.acts.size(), 1);
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
+        peer.unregisterObject(QStringLiteral("/Core"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-core-3"));
     }
 
     // A Core that speaks another version is left alone.
