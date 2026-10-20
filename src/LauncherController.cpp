@@ -420,6 +420,8 @@ void LauncherController::showFolders(const QStringList &locations)
         const auto phone = m_fileBrowser ? m_fileBrowser->phoneForAddress(url) : QString();
         if (url.isLocalFile()) folders.append(QDir::cleanPath(QFileInfo(url.toLocalFile()).absoluteFilePath()));
         else if (url.scheme() == QLatin1String("recentlyused")) recent = true;
+        // Trash is one of Files' own places, so it never goes on to Dolphin.
+        else if (url.scheme() == QLatin1String("trash")) folders.append(PlaceBook::trashLocation());
         else if (!phone.isEmpty()) phones.append(phone);
         else if (url.isValid()) elsewhere.append(url);
     }

@@ -71,6 +71,13 @@ announce_activity() {
     fi
 }
 
+# A launcher kept ready, hidden, still runs the program it started with, and
+# would answer the next request, a file manager's among them, as before. It is
+# asked to leave, as for other settings, so that request starts the new one;
+# one in use stays, and leaves when it closes.
+dbus-send --session --print-reply --reply-timeout=2000 --dest=io.github.carlsonjm.Tettegouche \
+    /Launcher io.github.carlsonjm.Tettegouche.leaveFor array:string:--installed >/dev/null 2>&1 || true
+
 # The shell keeps the widget it loaded, so it restarts to run the new one.
 # Windows and the session stay as they are.
 widget="$(grep -m1 '/plasma/applets/co\.goodinput\.tettegouche\.so$' \
