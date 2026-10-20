@@ -5,6 +5,9 @@ provenance.
 
 ## Unreleased
 
+- Search opens where it rests and at its size from its first frame on a
+  stock Plasma desktop too: KWin's window animation no longer zooms it in
+  from smaller, faded and blurred, or out again as it closes.
 - Asked to show the Trash, as Split Rock's Tidy up Downloads does, Files opens
   its own Trash at once rather than handing it on to Dolphin.
 - Installing asks a launcher kept ready in the background to leave, so the

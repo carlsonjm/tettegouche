@@ -79,7 +79,12 @@ void configureSurface(QQuickView *view, QScreen *screen)
 
     auto *surface = LayerShellQt::Window::get(view);
     surface->setScreen(screen);
-    surface->setScope(QStringLiteral("tettegouche-launcher"));
+    // KWin types a layer surface by its scope, and one it does not know
+    // becomes a normal window, which its open and close animation zooms from
+    // four fifths with a fade and a blur. Search is one size where it rests
+    // from its first frame, so it asks as a utility surface, which no such
+    // animation takes.
+    surface->setScope(QStringLiteral("utility"));
     // Top, not overlay: KWin keeps the on-screen keyboard in the overlay layer,
     // and a later overlay surface stacks above it and takes every touch meant
     // for the keys. Opening activates the launcher, which takes a full-screen

@@ -36,6 +36,8 @@ rg -q 'outline: dark \? suite\("#5a5a5a"\)' "${project_root}/qml/SearchColors.qm
 rg -q 'control: dark \? suite\("#242424"\)' "${project_root}/qml/SearchColors.qml"
 rg -q 'paperRadius: 10' "${project_root}/qml/Launcher.qml"
 rg -q 'contentInset: 24' "${project_root}/qml/Launcher.qml"
+# KWin's open animation takes no utility surface: Search does not zoom in.
+rg -Fq 'setScope(QStringLiteral("utility"))' "${project_root}/src/main.cpp"
 rg -q 'applicationLaunchPending' "${project_root}/qml/Launcher.qml"
 rg -q 'interval: 10000' "${project_root}/qml/Launcher.qml"
 rg -q 'centroid\.velocity\.x' "${project_root}/qml/Launcher.qml"

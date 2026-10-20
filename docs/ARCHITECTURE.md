@@ -73,6 +73,12 @@ them and closed the search. The keys now stack above the launcher, and a whole
 search can be typed on them. Opening activates the launcher, which keeps a
 full-screen window from covering it. Notification banners draw over it.
 
+The launcher's layer surface asks for KWin's `utility` scope. KWin makes a
+layer surface of any scope it does not know a normal window, and its stock
+open and close animation zooms a normal window in from four fifths with a
+fade and a blur; a utility surface is left out of it, so Search shows where it
+rests and at its size from the first frame.
+
 Tettegouche adds no daemon or polling loop and keeps no activity history. It
 does not take over the compositor or the task manager, or hold state for other
 products.
