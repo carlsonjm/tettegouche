@@ -500,19 +500,43 @@ void LauncherController::present()
     m_guestWait.stop();
     readDockBand();
     Q_EMIT guestChanged();
+    // Search sets out its first screen before the window shows, since the
+    // window's first frame can be drawn as it is shown: what it held when it
+    // last closed never reaches the screen. It takes the keys once shown.
+    Q_EMIT aboutToOpen();
     m_view->show();
     m_view->requestActivate();
-    // Started cold, the window may not be on screen yet when it first asks
-    // to take the keys, and the ask is lost: it asks again once its first
-    // frame is shown.
-    // Tied to the window itself, so a frame swapped as it goes away asks
-    // nothing of a window that is gone.
-    connect(m_view, &QQuickWindow::frameSwapped, m_view, [view = m_view] {
-        if (view->isVisible() && !view->isActive()) view->requestActivate();
-    }, Qt::SingleShotConnection);
     Q_EMIT opened();
+    keepTheKeys();
     const auto steps = std::exchange(m_whenShown, {});
     for (const auto &step : steps) step();
+}
+
+void LauncherController::keepTheKeys()
+{
+    m_shownAt.start();
+    // Started cold, or as the desktop is still settling, the window may not
+    // be on screen yet when it first asks to take the keys, and the ask is
+    // lost: it asks again once its first frame is shown, and a few times
+    // more while it still has not been given them.
+    // Tied to the window itself, so nothing is asked of a window that is
+    // gone.
+    const auto ask = [view = m_view] {
+        if (view->isVisible() && !view->isActive()) view->requestActivate();
+    };
+    connect(m_view, &QQuickWindow::frameSwapped, m_view, ask, Qt::SingleShotConnection);
+    for (const int after : {100, 300, 700})
+        QTimer::singleShot(after, m_view, ask);
+    // Another window made active just as Search opens, as one the desktop
+    // was still raising, gives the keys straight back: what is typed then
+    // was meant for Search.
+    if (m_keysKept) return;
+    m_keysKept = true;
+    connect(m_view, &QWindow::activeChanged, this, [this, ask] {
+        if (!m_view->isActive() && m_view->isVisible() && !m_guestMode
+                && m_shownAt.isValid() && m_shownAt.elapsed() < 1500)
+            QTimer::singleShot(0, m_view, ask);
+    });
 }
 
 bool LauncherController::openOrOpening() const
@@ -546,6 +570,7 @@ void LauncherController::close()
     m_opening = false;
     m_guestWait.stop();
     m_whenShown.clear();
+    m_shownAt.invalidate();
     endGuestLease();
     m_results->clear();
     m_runnerManager->matchSessionComplete();

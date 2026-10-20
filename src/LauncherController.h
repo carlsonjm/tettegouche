@@ -18,6 +18,7 @@
 #include <QRectF>
 #include <QSet>
 #include <QStringList>
+#include <QElapsedTimer>
 #include <QTimer>
 #include <QVariantList>
 
@@ -239,6 +240,8 @@ Q_SIGNALS:
     void drawerRequested(const QString &drawer);
     void relatedChanged();
     void pinnedChanged();
+    // Search is about to show: its first screen is set out now.
+    void aboutToOpen();
     void opened();
     void contextChanged();
     void guestChanged();
@@ -290,6 +293,7 @@ private:
     void askGuest();
     void takeGuest(const QByteArray &answer);
     void present();
+    void keepTheKeys();
     // Shown, or on its way to being shown.
     bool openOrOpening() const;
     // A step that needs Search shown: run at once where it is, or as it shows.
@@ -352,6 +356,9 @@ private:
     int m_guestProtocol = 0;
     quint64 m_guestGeneration = 0;
     QTimer m_guestWait;
+    // When Search was last shown, while it is open.
+    QElapsedTimer m_shownAt;
+    bool m_keysKept = false;
     QList<std::function<void()>> m_whenShown;
     quint64 m_contextGeneration = 0;
     QString m_launchToken;

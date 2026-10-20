@@ -34,8 +34,10 @@ on every display, 840 wide and at most as tall as both sections, so a large
 desktop screen shows it no bigger than the tablet does; only a smaller screen
 trims it. It is centred on the screen at every height, above the keys
 while they are up: typing, a drawer or a mode grows it to its full height,
-evenly up and down. It opens in its place at its resting size, with nothing
-sliding in; Apps, Files and Notes fade in where they stand. Inside Spread,
+evenly up and down, with the field moving in step. It opens at its resting
+size in one motion: the whole sheet, already as it will rest, fades in as it
+rises the last 12 pixels into place over 180 ms, and nothing inside it
+arrives on its own. Apps, Files and Notes fade in where they stand. Inside Spread,
 Kadunce sets its size; with neither section on, the field rests in the middle
 of it. Its source is KDE's record of use for the current activity, read when
 Search opens; Tettegouche tells that record each application it starts and

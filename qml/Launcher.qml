@@ -223,10 +223,11 @@ Item {
         ignoreUnknownSignals: true
         function onActiveChanged() {
             if (!root.Window.window.active || !root.typingAwaitsWindow) return
+            if (root.searchEngaged) {
+                query.forceActiveFocus()
+                Qt.inputMethod.update(Qt.ImQueryInput)
+            }
             root.typingAwaitsWindow = false
-            if (!root.searchEngaged) return
-            query.forceActiveFocus()
-            Qt.inputMethod.update(Qt.ImQueryInput)
         }
     }
     // Whether Notes filled the screen when its note went to the notes
@@ -234,6 +235,9 @@ Item {
     property bool notesLeftExpanded: false
     // False while Search opens, so the sheet takes its place at once.
     property bool sheetSettled: true
+    // While the sheet grows or shrinks, what it holds waits to settle until
+    // it has its size, rather than laying itself out again on every frame.
+    readonly property bool sheetResizing: sheetResize.running || sheetWiden.running
     // How far up from the window's bottom the sheet must keep clear, eased as
     // the keys come and go.
     property real keysReach: keysUp ? height - keysRect.y + 10 : 0
@@ -241,22 +245,103 @@ Item {
         NumberAnimation { id: keysMotion; duration: root.ms(220); easing.type: Easing.OutCubic }
     }
 
+    // How far below its place the sheet still is as it opens.
+    property real openingRise: 0
+    // True from Search being asked to open until the sheet is in its place.
+    readonly property bool opening: openingFrame.enabled || openingWait.running
+        || (openingSequence.running && sheet.opacity < 1)
+    // Search opens in one motion: the whole sheet, already as it will rest,
+    // fades in as it rises the last few pixels into place. Only its opacity
+    // and position move, so no frame is spent laying anything out, and a
+    // display that draws fewer frames shows the same motion in fewer steps.
+    // The placeholder's light passes once it is there. The motion starts from
+    // the window's first frame on screen, so time spent showing the window is
+    // not taken out of it.
+    function beginOpening() {
+        openingSequence.stop()
+        root.openingText = 1
+        root.openingControls = 1
+        root.openingIcon = 1
+        root.openingShine = 0
+        sheet.opacity = 0
+        root.openingRise = root.launcherController.guestMode || root.reducedMotion ? 0 : 12
+        openingFrame.enabled = true
+        openingWait.restart()
+    }
+    function startOpening() {
+        openingFrame.enabled = false
+        openingWait.stop()
+        if (!openingSequence.running) openingSequence.start()
+    }
+    Connections {
+        id: openingFrame
+        target: root.Window.window
+        enabled: false
+        ignoreUnknownSignals: true
+        function onFrameSwapped() { root.startOpening() }
+    }
+    // A window that draws no frame of its own still opens.
+    Timer {
+        id: openingWait
+        interval: 120
+        onTriggered: root.startOpening()
+    }
     SequentialAnimation {
         id: openingSequence
-        ScriptAction { script: { root.openingText = 0; root.openingControls = 0; root.openingIcon = 0; root.openingShine = 0 } }
-        PauseAnimation { duration: root.own(60) }
-        NumberAnimation { target: root; property: "openingControls"; to: 1; duration: root.own(240); easing.type: Easing.OutCubic }
-        NumberAnimation { target: root; property: "openingIcon"; to: 1; duration: root.own(120); easing.type: Easing.OutCubic }
-        PauseAnimation { duration: root.own(140) }
         ParallelAnimation {
-            NumberAnimation { target: root; property: "openingText"; to: 1; duration: root.own(280); easing.type: Easing.OutCubic }
-            SequentialAnimation {
-                PauseAnimation { duration: root.own(180) }
-                NumberAnimation { target: root; property: "openingShine"; to: 1; duration: root.own(460); easing.type: Easing.InOutSine }
-            }
+            NumberAnimation { target: sheet; property: "opacity"; to: 1; duration: root.own(180); easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "openingRise"; to: 0; duration: root.own(180); easing.type: Easing.OutCubic }
         }
+        PauseAnimation { duration: root.own(120) }
+        NumberAnimation { target: root; property: "openingShine"; to: 1; duration: root.own(460); easing.type: Easing.InOutSine }
     }
 
+    // Set once the first screen is laid out for an open still to come.
+    property bool openingPrepared: false
+    function prepareOpening() {
+        // Search opens where it rests, at its resting size: nothing slides
+        // or shrinks in from where it last closed.
+        root.sheetSettled = false
+        Qt.callLater(() => { root.sheetSettled = true })
+        launchTimeout.stop()
+        query.text = ""
+        root.pendingLaunch = false
+        root.applicationLaunchPending = false
+        root.launchingApplication = ""
+        root.drawerOpen = false
+        root.drawerProgress = 0
+        root.sortMenuOpen = false
+        modeSettle.stop()
+        modeTimeout.stop()
+        modeExit.stop()
+        modeWait.stop()
+        root.modeAwaited = ""
+        root.modeOpen = false
+        root.helpersShown = false
+        helpersWait.stop()
+        root.helpersAwaited = false
+        root.modeShown = ""
+        root.modeProgress = 0
+        root.modeGrowing = false
+        root.modeHandoff = false
+        root.modeToken = ""
+        filesHandoffTimeout.stop()
+        root.filesHandoff = false
+        if (root.quickNote) root.quickNote.refresh()
+        // Opened by its key, Search is ready to type: the cursor waits in
+        // the field, and keys on screen stay up. Its button leaves the
+        // field alone, so a tap raises no keys. The field takes the keys
+        // once the window is shown; its ring is up from the first frame.
+        root.searchEngaged = root.launcherController.openedToType()
+        root.typingAwaitsWindow = root.searchEngaged
+        root.guestDrag = 0
+        root.guestExiting = false
+        root.guestDragged = false
+        sheet.scale = 1
+        firstRow.settle()
+        root.beginOpening()
+        root.openingPrepared = true
+    }
     function setDrawerOpen(open, mode, keepSize) {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
@@ -791,54 +876,16 @@ Item {
             sheet.scale = 1
             query.forceActiveFocus()
         }
+        // Before the window shows: the first screen is set out, so the
+        // window's first frame is already it.
+        function onAboutToOpen() { root.prepareOpening() }
+        // Once the window is shown, it takes the keys.
         function onOpened() {
-            // Search opens where it rests, at its resting size: nothing slides
-            // or shrinks in from where it last closed.
-            root.sheetSettled = false
-            Qt.callLater(() => { root.sheetSettled = true })
-            launchTimeout.stop()
-            query.text = ""
-            root.pendingLaunch = false
-            root.applicationLaunchPending = false
-            root.launchingApplication = ""
-            root.searchEngaged = false
-            root.drawerOpen = false
-            root.drawerProgress = 0
-            root.sortMenuOpen = false
-            modeSettle.stop()
-            modeTimeout.stop()
-            modeExit.stop()
-            modeWait.stop()
-            root.modeAwaited = ""
-            root.modeOpen = false
-            root.helpersShown = false
-            helpersWait.stop()
-            root.helpersAwaited = false
-            root.modeShown = ""
-            root.modeProgress = 0
-            root.modeGrowing = false
-            root.modeHandoff = false
-            root.modeToken = ""
-            filesHandoffTimeout.stop()
-            root.filesHandoff = false
-            if (root.quickNote) root.quickNote.refresh()
+            if (!root.openingPrepared) root.prepareOpening()
+            root.openingPrepared = false
             root.forceActiveFocus()
-            // Opened by its key, Search is ready to type: the cursor waits in
-            // the field, and keys on screen stay up. Its button leaves the
-            // field alone, so a tap raises no keys.
-            if (root.launcherController.openedToType()) {
-                root.searchEngaged = true
-                query.forceActiveFocus()
-            }
+            if (root.searchEngaged) query.forceActiveFocus()
             root.typingAwaitsWindow = root.searchEngaged && !(root.Window.window && root.Window.window.active)
-            root.guestDrag = 0
-            root.guestExiting = false
-            root.guestDragged = false
-            sheet.opacity = 1
-            sheet.scale = 1
-            openingSequence.restart()
-            // The doors follow the field's outline in.
-            firstRow.arrive(root.own(140), true)
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
         // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
@@ -1014,7 +1061,7 @@ Item {
         // Centred on its height as that moves, so it grows up and down
         // evenly with no motion of its own.
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        Behavior on width { enabled: root.sheetSettled; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
+        Behavior on width { enabled: root.sheetSettled; NumberAnimation { id: sheetWiden; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
         Behavior on height { enabled: root.sheetSettled && !keysMotion.running; NumberAnimation { id: sheetResize; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Floating, it is a note that closes; in Spread, a card's paper.
@@ -1023,7 +1070,7 @@ Item {
         border.width: 1
         border.color: root.surfaceOutline
         clip: true
-        transform: Translate { x: root.guestDrag }
+        transform: Translate { x: root.guestDrag; y: root.openingRise }
 
         DragHandler {
             id: guestDragHandler

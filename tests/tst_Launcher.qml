@@ -87,6 +87,7 @@ TestCase {
         property QtObject bluetoothContext: QtObject {
             property var connectedDevices: []
         }
+        signal aboutToOpen()
         signal opened()
         signal filesRequested()
         signal guestLaunchReady()
@@ -1205,7 +1206,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         fillRecent(20)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const modes = findChild(launcher, "mode-row")
         const dot = findChild(launcher, "home-dot")
         const row = findChild(launcher, "first-row")
@@ -1280,7 +1281,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         fillRecent(20)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const row = findChild(launcher, "first-row")
         const sheet = findChild(launcher, "launcher-sheet")
         const field = findChild(launcher, "search-field")
@@ -1352,7 +1353,7 @@ TestCase {
         fillRecent(20)
         controller.availableArea = Qt.rect(0, 0, 640, 740)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const row = findChild(launcher, "first-row")
         tryCompare(row, "appColumns", Math.floor(row.width / 72))
         verify(row.appColumns < 8)
@@ -1368,7 +1369,7 @@ TestCase {
     function test_firstRowWithNothingUsed() {
         launcher.fileBrowser = filesMock
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const row = findChild(launcher, "first-row")
         const field = findChild(launcher, "search-field")
         const sheet = findChild(launcher, "launcher-sheet")
@@ -1388,7 +1389,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         launcher.recentUse = null
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const row = findChild(launcher, "first-row")
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
@@ -1418,7 +1419,7 @@ TestCase {
         launcher.quickNote = quickStub
         controller.closes = 0
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const dot = findChild(launcher, "home-dot")
         const apps = findChild(launcher, "apps-pill")
         const files = findChild(launcher, "files-pill")
@@ -1474,7 +1475,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         fillRecent(3)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const apps = findChild(launcher, "apps-pill")
         mouseClick(apps, apps.width / 2, apps.height / 2)
         tryCompare(launcher, "drawerProgress", 1)
@@ -1500,7 +1501,7 @@ TestCase {
         fillRecent(3)
         controller.closes = 0
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         tryCompare(findChild(launcher, "first-row"), "arrival", 1)
         const second = findChild(launcher, "recent-1")
         mouseClick(second, second.width / 2, second.height / 2)
@@ -1536,7 +1537,7 @@ TestCase {
     function test_notesAbsent() {
         launcher.fileBrowser = filesMock
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const modes = findChild(launcher, "mode-row")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
@@ -1553,7 +1554,7 @@ TestCase {
         launcher.notesDoor = notesStub
         fillRecent(8)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const modes = findChild(launcher, "mode-row")
         const files = findChild(launcher, "files-pill")
         const notes = findChild(launcher, "notes-pill")
@@ -1571,7 +1572,7 @@ TestCase {
         controller.closes = 0
         controller.guestMode = true
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const notes = findChild(launcher, "notes-pill")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         compare(notesStub.opened, 1)
@@ -1603,7 +1604,7 @@ TestCase {
         launcher.notesDoor = notesStub
         controller.closes = 0
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         notesStub.available = false
         verify(!launcher.openNotes())
         compare(controller.closes, 0)
@@ -2990,7 +2991,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
@@ -3006,7 +3007,7 @@ TestCase {
         compare(controller.closes, 1)
         verify(controller.filesWindowOpen)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         // With a Files window open, the Files pill opens Files here, and
         // Search stays.
         const files = findChild(launcher, "files-pill")
@@ -3202,7 +3203,7 @@ TestCase {
         launcher.notesDoor = notesStub
         launcher.quickNote = quickStub
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         controller.closes = 0
         controller.drawerRequested("apps")
         tryCompare(launcher, "drawerOpen", true)
@@ -3222,7 +3223,7 @@ TestCase {
         launcher.notesDoor = notesStub
         launcher.quickNote = quickStub
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const pane = findChild(launcher, "notes-pane")
         controller.drawerRequested("notes-back")
         verify(launcher.notesOpen)
@@ -3246,7 +3247,7 @@ TestCase {
     function test_islandRequests() {
         launcher.notesDoor = notesStub
         launcher.quickNote = quickStub
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         controller.closes = 0
         controller.drawerRequested("note")
         verify(launcher.notesOpen)
@@ -3442,7 +3443,7 @@ TestCase {
         catalog.useReads = 0
         catalog.installChecks = 0
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const label = findChild(launcher, "apps-pill")
         verify(label)
         mouseClick(label, label.width / 2, label.height / 2)
@@ -3498,13 +3499,18 @@ TestCase {
         verify(!launcher.modeOpen && !launcher.drawerOpen)
         compare(controller.drawerExpanded, false)
     }
+    // Search in its place at its size: the opening motion over and the sheet
+    // done growing or shrinking.
+    function waitForOpen() {
+        tryVerify(function() { return !launcher.opening && !launcher.sheetResizing }, 3000)
+    }
     function openNotesMode() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
         launcher.quickNote = quickStub
         controller.closes = 0
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const notes = findChild(launcher, "notes-pill")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
@@ -3519,7 +3525,7 @@ TestCase {
         launcher.notesDoor = notesStub
         launcher.quickNote = quickStub
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         controller.closes = 0
         const rest = Qt.size(sheet.width, sheet.height)
         const field = findChild(launcher, "search-field")
@@ -3905,7 +3911,7 @@ TestCase {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = undefined
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         verify(!findChild(launcher, "notes-pill").visible)
         verify(findChild(launcher, "genie-pill") === null)
     }
@@ -3915,7 +3921,7 @@ TestCase {
     // own, and Escape leads back to Search's first screen.
     function test_helpersChipShowsEveryHelper() {
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const pill = findChild(launcher, "helpers-pill")
         verify(!pill.visible)
         results.helpers = [
@@ -3995,7 +4001,7 @@ TestCase {
     // Their pill can be left out, and the Helpers still show among results.
     function test_helpersFromTheSlide() {
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         controller.closes = 0
         controller.drawerRequested("helpers")
         verify(!launcher.helpersShown)
@@ -4025,7 +4031,7 @@ TestCase {
         launcher.quickNote = quickStub
         fillRecent(6)
         controller.opened()
-        tryCompare(launcher, "openingControls", 1)
+        waitForOpen()
         const sheet = findChild(launcher, "launcher-sheet")
         const parts = ["notes-find-frame", "notes-filters", "notes-list", "notes-paper"].map(name => findChild(launcher, name))
         const at = () => parts.map(part => part.mapToItem(sheet, 0, 0).y)

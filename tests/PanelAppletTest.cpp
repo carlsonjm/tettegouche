@@ -504,16 +504,26 @@ private Q_SLOTS:
         QVERIFY(QDir().mkpath(applications));
         // KDE's application list notices a change only past the coarsest
         // file system clock, and is read again until it has it.
-        const auto installed = [] {
+        const auto settings = [] {
             KSycoca::self()->ensureCacheValid();
-            return bool(KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings")));
+            return KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
         };
+        const auto installed = [&settings] { return bool(settings()); };
+        // The stand-in, not a Settings this machine may have.
+        const auto standIn = [&settings, &program] {
+            const KService::Ptr found = settings();
+            return found && found->exec().contains(program);
+        };
+        // Shuffle installed on this machine puts Settings among the system's
+        // applications, which the test's own home does not hide: the entry
+        // here still comes first, but Settings can't be taken away again.
+        const bool alreadyInstalled = installed();
         QTest::qSleep(1100);
         QFile entry(applications + QStringLiteral("/co.goodinput.Shuffle.Settings.desktop"));
         QVERIFY(entry.open(QIODevice::WriteOnly));
         entry.write("[Desktop Entry]\nType=Application\nName=Shuffle Settings\nExec=" + program.toUtf8() + " %u\n");
         entry.close();
-        QTRY_VERIFY_WITH_TIMEOUT(installed(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(standIn(), 15000);
 
         QSignalSpy ownPage(m_panel, &Plasma::Containment::configureRequested);
         QAction *configure = m_applet->internalAction(QStringLiteral("configure"));
@@ -528,6 +538,10 @@ private Q_SLOTS:
         QCOMPARE(ownPage.count(), 0);
 
         // Without it, Configure opens the widget's own page.
+        if (alreadyInstalled) {
+            QVERIFY(entry.remove());
+            QSKIP("Shuffle Settings is installed on this machine, so Configure without it is not tried");
+        }
         QTest::qSleep(1100);
         QVERIFY(QFile::remove(entry.fileName()));
         QTRY_VERIFY_WITH_TIMEOUT(!installed(), 15000);

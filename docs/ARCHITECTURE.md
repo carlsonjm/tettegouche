@@ -73,6 +73,12 @@ them and closed the search. The keys now stack above the launcher, and a whole
 search can be typed on them. Opening activates the launcher, which keeps a
 full-screen window from covering it. Notification banners draw over it.
 
+The launcher's layer surface asks for KWin's `utility` scope. KWin makes a
+layer surface of any scope it does not know a normal window, and its stock
+open and close animation zooms a normal window in from four fifths with a
+fade and a blur; a utility surface is left out of it, so Search shows where it
+rests and at its size from the first frame.
+
 Tettegouche adds no daemon or polling loop and keeps no activity history. It
 does not take over the compositor or the task manager, or hold state for other
 products.
@@ -287,9 +293,11 @@ counts follow the language.
 - Motion explains a change of state or place, can be interrupted, and never
   shows progress or success a source has not reported.
 - Motion follows Plasma's animation speed, read through Kirigami's durations.
-  The first screen's arrival in Search and an island's arrival and departure
-  in Ambient keep their own pace, as moments meant to be seen; with animations
-  set to instant they only fade.
+  Search's opening and an island's arrival and departure in Ambient keep
+  their own pace, as moments meant to be seen; with animations set to instant
+  they only fade. Search's opening moves only the sheet's opacity and place,
+  and its first screen is set out before the window shows, so its first frame
+  is already the screen it opens to.
 
 ## Verification boundaries
 

@@ -131,7 +131,13 @@ Item {
             })
         }
         onCountChanged: settleAtBeginning()
-        onHeightChanged: settleAtBeginning()
+        onHeightChanged: if (!launcher.sheetResizing) settleAtBeginning()
+        Connections {
+            target: launcher
+            function onSheetResizingChanged() {
+                if (!launcher.sheetResizing) resultList.settleAtBeginning()
+            }
+        }
 
         Connections {
             target: launcher.searchResults
