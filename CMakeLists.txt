@@ -59,7 +59,7 @@ add_library(tettegouche-activities STATIC
     src/ActivityModel.cpp src/ActivityModel.h src/ActivityUtils.h src/PlasmaMatch.h)
 target_include_directories(tettegouche-activities PUBLIC src)
 set_target_properties(tettegouche-activities PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare tettegouche-core tettegouche-notes-island Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
+target_link_libraries(tettegouche-activities PUBLIC tettegouche-screenshare tettegouche-core tettegouche-notes-island Qt6::DBus Qt6::Core Qt6::Gui KF6::I18n KF6::Service KF6::Solid PW::LibNotificationManager PW::LibTaskManager)
 # Ambient's words are the panel widget's, in the catalog Plasma gives it.
 target_compile_definitions(tettegouche-activities PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
 # The Plasma whose window list and job list this build reads; on another,
