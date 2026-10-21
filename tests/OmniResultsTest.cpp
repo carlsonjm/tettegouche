@@ -345,6 +345,22 @@ int main(int argc, char **argv)
         if (core.rowCount() != 1 || core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Install an app")) return 112;
         core.setHelpersOnly(false);
         if (core.rowCount() != 2) return 113;
+        // The Helpers an answer from Ask names come first, in its order,
+        // whatever was typed.
+        const QVariantMap health{{QStringLiteral("id"), QStringLiteral("health")}, {QStringLiteral("title"), QStringLiteral("Health check")},
+            {QStringLiteral("icon"), QStringLiteral("security-high")}, {QStringLiteral("keywords"), QStringList{QStringLiteral("health")}}};
+        core.setCoreActions([&install, &health] { return QList<QVariantMap>{install, health}; },
+                            [&actionsOpened](const QString &id, const QString &query) { actionsOpened.append(id + QStringLiteral(": ") + query); });
+        core.setHelpersOnly(true);
+        core.testQuery = QStringLiteral("my wifi keeps dropping");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 0) return 125;
+        core.setAskedHelpers({QStringLiteral("health"), QStringLiteral("install")});
+        if (core.rowCount() != 2 || core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Health check")
+            || core.getQueryMatch(core.index(1, 0)).text() != QStringLiteral("Install an app")) return 126;
+        core.setAskedHelpers({});
+        if (core.rowCount() != 0) return 127;
+        core.setHelpersOnly(false);
         core.clear();
         Results without;
         if (!without.helpers().isEmpty() || without.openHelper(QStringLiteral("install"))) return 114;

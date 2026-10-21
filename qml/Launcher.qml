@@ -85,6 +85,23 @@ Item {
         interval: 1500
         onTriggered: root.helpersAwaited = false
     }
+    // Split Rock's Ask, where installed: the Helpers chip is named Ask, and
+    // a question typed there gets a short answer above the Helpers it names.
+    property var askClient: null
+    readonly property bool askOffered: !!root.askClient && root.askClient.available
+    readonly property bool askShown: root.askOffered && root.helpersShown && !root.drawerOpen
+    readonly property string askTyped: root.askShown ? query.text : ""
+    onAskTypedChanged: if (root.askClient) root.askClient.type(root.askTyped)
+    Binding {
+        target: root.searchResults
+        property: "askedHelpers"
+        value: root.askShown ? root.askClient.helpers : []
+    }
+    Binding {
+        target: root.searchResults
+        property: "askedQuery"
+        value: root.askShown ? root.askClient.query : ""
+    }
     function showHelpers(shown) {
         if (shown && root.helpers.length === 0) return
         root.helpersShown = shown
@@ -778,6 +795,9 @@ Item {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
             pendingLaunch = true
+        } else if (root.askShown && query.text.trim().length > 0) {
+            // Nothing listed yet: the question goes to Ask without waiting.
+            root.askClient.askNow()
         } else if (!root.drawerOpen && !root.helpersShown && query.text.trim().length > 0) {
             const waiting = root.launcherController.beginGuestWebLaunch()
             if (waiting) {

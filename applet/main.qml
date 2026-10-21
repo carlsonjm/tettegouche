@@ -259,7 +259,7 @@ PlasmoidItem {
                         anchors.centerIn: parent
                         text: doorItem.door === "apps" ? i18n("Apps")
                             : doorItem.door === "files" ? i18n("Files")
-                            : doorItem.door === "helpers" ? i18n("Helpers") : i18n("Notes")
+                            : doorItem.door === "helpers" ? (Plasmoid.askOffered ? i18n("Ask") : i18n("Helpers")) : i18n("Notes")
                         color: tone.text
                         opacity: doorItem.chosen ? 1 : 0.72
                         font.pixelSize: 14

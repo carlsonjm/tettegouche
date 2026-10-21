@@ -229,6 +229,7 @@ Rectangle {
             visible: query.text.length === 0
             text: launcher.drawerOpen
                 ? (launcher.filesMode ? words.i18n("Find a file") : words.i18n("Find an app"))
+                : launcher.askShown ? words.i18n("Ask a question, or find a Helper")
                 : launcher.helpersShown ? words.i18n("Look over the computer, free up space…")
                 : words.i18n("Just type")
             // As large as what is typed, so typing changes nothing but

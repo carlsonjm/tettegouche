@@ -259,7 +259,7 @@ Item {
         FirstPill {
             id: helpersPill
             objectName: "helpers-pill"
-            label: words.i18n("Helpers")
+            label: launcher.askOffered ? words.i18n("Ask") : words.i18n("Helpers")
             selected: modeRow.current === "helpers"
             visible: launcher.helpersPillShown && launcher.helpers.length > 0
             onActivated: modeRow.show("helpers")
