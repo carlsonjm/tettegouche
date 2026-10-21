@@ -38,6 +38,7 @@ AskClient::AskClient(const QDBusConnection &bus, QObject *parent)
     m_bus.connect(service(), path(), iface(), QStringLiteral("Said"), this, SLOT(said(uint, QString)));
     m_bus.connect(service(), path(), iface(), QStringLiteral("Answered"), this, SLOT(answered(uint, QVariantMap)));
     m_bus.connect(service(), path(), iface(), QStringLiteral("ModelChanged"), this, SLOT(modelChanged(QVariantMap)));
+    m_bus.connect(service(), path(), iface(), QStringLiteral("CodexChanged"), this, SLOT(codexStateChanged(QVariantMap)));
     auto *watcher = new QDBusServiceWatcher(service(), m_bus, QDBusServiceWatcher::WatchForRegistration, this);
     connect(watcher, &QDBusServiceWatcher::serviceRegistered, this, [this] {
         if (!m_available) {
@@ -109,6 +110,7 @@ void AskClient::send()
     m_who.clear();
     m_helpers.clear();
     m_query.clear();
+    m_handedToCodex = false;
     m_id = 0;
     m_sending = true;
     if (m_state != QLatin1String("downloading"))
@@ -145,6 +147,7 @@ void AskClient::clear()
     m_who.clear();
     m_helpers.clear();
     m_query.clear();
+    m_handedToCodex = false;
     setState(m_state == QLatin1String("downloading") ? m_state : QStringLiteral("idle"));
 }
 
@@ -182,6 +185,9 @@ void AskClient::answered(uint id, const QVariantMap &result)
     m_who = result.value(QStringLiteral("who")).toString();
     m_helpers = result.value(QStringLiteral("helpers")).toStringList();
     m_query = result.value(QStringLiteral("query")).toString();
+    m_handedToCodex = result.value(QStringLiteral("handedToCodex")).toBool();
+    // Ask is running now, so asking after Codex starts nothing.
+    lookAtCodex();
     if (result.value(QStringLiteral("off")).toBool())
         setState(QStringLiteral("off"));
     else if (result.value(QStringLiteral("needsModel")).toBool())
@@ -215,6 +221,34 @@ void AskClient::modelChanged(const QVariantMap &model)
         return;
     }
     setState(state == QLatin1String("failed") ? QStringLiteral("problem") : QStringLiteral("idle"));
+}
+
+bool AskClient::askCodex()
+{
+    if (!m_codexReady || m_question.isEmpty()) return false;
+    m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("OpenCodex")) << m_question);
+    return true;
+}
+
+void AskClient::lookAtCodex()
+{
+    auto *call = new QDBusPendingCallWatcher(
+        m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Codex")), 5000),
+        this);
+    connect(call, &QDBusPendingCallWatcher::finished, this, [this, call] {
+        const QDBusPendingReply<QVariantMap> reply = *call;
+        call->deleteLater();
+        // An Ask from before Codex has no answer, and offers no Codex.
+        codexStateChanged(reply.isError() ? QVariantMap() : reply.value());
+    });
+}
+
+void AskClient::codexStateChanged(const QVariantMap &codex)
+{
+    const bool ready = codex.value(QStringLiteral("installed")).toBool() && codex.value(QStringLiteral("signedIn")).toBool();
+    if (ready == m_codexReady) return;
+    m_codexReady = ready;
+    Q_EMIT codexChanged();
 }
 
 void AskClient::setState(const QString &state)

@@ -259,7 +259,11 @@ TestCase {
         property int asksNow: 0
         property int downloads: 0
         property int declines: 0
+        property bool codexReady: false
+        property bool handedToCodex: false
+        property int codexAsks: 0
         function type(words) { typed = typed.concat([words]) }
+        function askCodex() { if (!codexReady) return false; codexAsks++; return true }
         function askNow() { asksNow++ }
         function clear() {}
         function download() { downloads++; state = "downloading" }
@@ -268,6 +272,7 @@ TestCase {
             available = true; state = "idle"; question = ""; text = ""; who = ""
             helpers = []; query = ""; progress = 0; size = ""
             typed = []; asksNow = 0; downloads = 0; declines = 0
+            codexReady = false; handedToCodex = false; codexAsks = 0
         }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
@@ -4055,6 +4060,7 @@ TestCase {
         launcher.query.text = "my wifi keeps dropping"
         compare(askStub.typed[askStub.typed.length - 1], "my wifi keeps dropping")
         const answer = findChild(launcher, "ask-answer")
+        const top = item => item.mapToItem(answer, 0, 0).y
         verify(!answer.visible)
         // The answer, who gave it, and the Helpers it names first.
         askStub.text = "Wi-Fi that drops often comes from power saving."
@@ -4072,6 +4078,26 @@ TestCase {
         // The list starts under the answer.
         const list = findChild(launcher, "search-result-list")
         compare(list.anchors.topMargin, answer.height + 8)
+        // Codex is offered only once it is signed in, and only on a tap,
+        // which hands the question on and closes Search.
+        let codex = findChild(launcher, "ask-codex")
+        verify(!codex || !codex.visible)
+        askStub.codexReady = true
+        tryVerify(() => (codex = findChild(launcher, "ask-codex")) !== null)
+        tryVerify(() => codex.visible && codex.height === 56)
+        // After the Helpers the answer names, as the list's last row.
+        compare(list.footerItem, codex.parent)
+        controller.closes = 0
+        mouseClick(codex, codex.width / 2, codex.height / 2)
+        compare(askStub.codexAsks, 1)
+        compare(controller.closes, 1)
+        // Handed on by the person's switch: the answer says Codex has it.
+        askStub.handedToCodex = true
+        askStub.text = "This is a bigger one, so Codex is taking it, in its own window."
+        tryCompare(codex, "visible", false)
+        compare(findChild(launcher, "ask-answer-who").text, "From this computer · Codex answers in its own window")
+        askStub.handedToCodex = false
+        askStub.codexReady = false
         // Without the model: what Ask needs, Download and Not now.
         askStub.state = "needsModel"
         askStub.text = "To answer on this computer, Ask needs a one-time download of about 2.5 GB."
@@ -4079,7 +4105,6 @@ TestCase {
         tryCompare(download, "visible", true)
         verify(findChild(launcher, "ask-not-now").visible)
         // The box places its pills under the words once they show.
-        const top = item => item.mapToItem(answer, 0, 0).y
         tryVerify(() => top(download) > top(findChild(launcher, "ask-answer-text"))
             && top(download) + download.height <= answer.height)
         mouseClick(download, download.width / 2, download.height / 2)

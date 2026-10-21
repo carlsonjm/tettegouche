@@ -160,6 +160,66 @@ Item {
             }
         }
 
+        // Ask Codex, after the Helpers an answer names: a bigger fix goes on
+        // to Codex's own window only on this tap, and Search closes, as from
+        // a Helper's row.
+        footer: Item {
+            width: resultList.width
+            height: askAnswer.visible && askAnswer.codexOffered ? resultsArea.rowGap + resultsArea.rowHeight : 0
+            visible: height > 0
+            Rectangle {
+                id: codexRow
+                objectName: "ask-codex"
+                y: resultsArea.rowGap
+                width: parent.width
+                height: resultsArea.rowHeight
+                radius: launcher.paperRadius
+                color: codexHover.hovered ? tone.hover : "transparent"
+                Accessible.role: Accessible.Button
+                Accessible.name: codexTitle.text
+                Accessible.description: codexSub.text
+                Accessible.onPressAction: codexRow.activate()
+                function activate() {
+                    if (launcher.askClient.askCodex()) launcher.launcherController.finishLaunch()
+                }
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 12
+                    anchors.rightMargin: 12
+                    spacing: 12
+                    Kirigami.Icon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 32
+                        height: 32
+                        source: "dialog-messages"
+                    }
+                    Column {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: parent.width - 44
+                        spacing: 3
+                        Text {
+                            id: codexTitle
+                            width: parent.width
+                            text: words.i18n("Ask Codex")
+                            color: launcher.primaryText
+                            font.pixelSize: 16
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            id: codexSub
+                            width: parent.width
+                            text: words.i18n("For a bigger fix, with your ChatGPT plan")
+                            color: launcher.secondaryText
+                            font.pixelSize: 12
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+                HoverHandler { id: codexHover }
+                TapHandler { onTapped: codexRow.activate() }
+            }
+        }
+
         delegate: Rectangle {
             id: resultDelegate
             objectName: "result-" + index

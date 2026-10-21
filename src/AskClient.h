@@ -17,7 +17,8 @@ class QDBusMessage;
 // typing pauses, shows the words as they come, and lists the Helpers the
 // answer names. Ask changes nothing; a Helper opens only from its row. The bus
 // starts Ask on the first question. Without it, the chip stays Helpers and
-// nothing here is asked.
+// nothing here is asked. Where Codex is signed in, a bigger fix goes on to it
+// on the person's tap, in Codex's own window and under its own name.
 class AskClient : public QObject {
     Q_OBJECT
     // Ask is installed: the chip is named Ask, and a question gets an answer.
@@ -36,6 +37,10 @@ class AskClient : public QObject {
     // While the model downloads: how far, and its size in words.
     Q_PROPERTY(double progress READ progress NOTIFY changed)
     Q_PROPERTY(QString size READ size NOTIFY changed)
+    // Codex is installed and signed in, so the answer offers Ask Codex.
+    Q_PROPERTY(bool codexReady READ codexReady NOTIFY codexChanged)
+    // Ask handed this question on to Codex itself, by the person's switch.
+    Q_PROPERTY(bool handedToCodex READ handedToCodex NOTIFY changed)
 public:
     static constexpr char Service[] = "io.github.carlsonjm.splitrock.Ask";
     static constexpr char Path[] = "/Ask";
@@ -53,6 +58,8 @@ public:
     QString query() const { return m_query; }
     double progress() const { return m_progress; }
     QString size() const { return m_size; }
+    bool codexReady() const { return m_codexReady; }
+    bool handedToCodex() const { return m_handedToCodex; }
 
     // What is typed now. A question is sent once the typing pauses and it
     // reads as one; anything else clears the answer.
@@ -63,6 +70,9 @@ public:
     // After the person's tap on Download, and Not now.
     Q_INVOKABLE void download();
     Q_INVOKABLE void notNow();
+    // After the person's tap on Ask Codex: the question goes to Codex's own
+    // window. False where there is nothing to hand on.
+    Q_INVOKABLE bool askCodex();
 
     // Whether these words read as a question to answer, rather than a
     // Helper's name: three words or more, or a question mark.
@@ -72,15 +82,18 @@ public:
 Q_SIGNALS:
     void availableChanged();
     void changed();
+    void codexChanged();
 private Q_SLOTS:
     void said(uint id, const QString &text);
     void answered(uint id, const QVariantMap &result);
     void modelChanged(const QVariantMap &model);
+    void codexStateChanged(const QVariantMap &codex);
 
 private:
     void look();
     void send();
     void setState(const QString &state);
+    void lookAtCodex();
     QDBusConnection m_bus;
     QTimer m_pause;
     bool m_available = false;
@@ -93,6 +106,8 @@ private:
     QString m_query;
     double m_progress = 0;
     QString m_size;
+    bool m_codexReady = false;
+    bool m_handedToCodex = false;
     uint m_id = 0;
     // A question sent whose id hasn't come back yet.
     bool m_sending = false;

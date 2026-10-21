@@ -19,6 +19,9 @@ Rectangle {
     readonly property string phase: askClient ? askClient.state : "idle"
     readonly property bool needsModel: phase === "needsModel"
     readonly property bool downloading: phase === "downloading"
+    readonly property bool handedOn: phase === "answered" && !!askClient && askClient.handedToCodex
+    // Where Codex is signed in, an answer offers it after the Helpers.
+    readonly property bool codexOffered: phase === "answered" && !!askClient && askClient.codexReady && !handedOn
     readonly property bool shown: phase === "asking" ? askClient.text.length > 0
         : phase === "answered" ? askClient.text.length > 0
         : needsModel || downloading || phase === "off" || phase === "problem"
@@ -121,6 +124,7 @@ Rectangle {
                 ? answer.words.i18n("Downloading the model · %1% of %2",
                     Math.round(100 * (answer.askClient ? answer.askClient.progress : 0)),
                     answer.askClient ? answer.askClient.size : "")
+                : answer.handedOn ? answer.words.i18n("From this computer · Codex answers in its own window")
                 : answer.words.i18n("Answered on this computer · nothing changes until you open a Helper")
             color: answer.tone.secondaryText
             font.pixelSize: 12

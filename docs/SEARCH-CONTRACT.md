@@ -85,6 +85,15 @@ you open a Helper". The Helpers the answer names come first in its order,
 then those the words find; Install an app opens searching for the app the
 answer named. Ask changes nothing; only a Helper's row does, after a tap.
 
+Where Split Rock's Codex is signed in, an answer's list ends with an Ask Codex
+row, a row like a Helper's: "For a bigger fix, with your ChatGPT plan". Only a
+tap on it hands the question on, to Codex's own window, and Search closes as
+from a Helper's row; Codex speaks there under its own name. Where the person
+switched on "Hand bigger questions to Codex" in Settings, Ask hands a bigger
+question on itself: the answer says so, its line beneath reads "From this
+computer · Codex answers in its own window", and no Ask Codex row is offered.
+Signed out, no row is offered and the answer says where to sign in.
+
 Before the model is downloaded, the first question gets what Ask needs in the
 answer's place, with Download, the light pill, and Not now. Not now holds
 until the field is cleared. While it downloads, a 4 tall bar fills in the same

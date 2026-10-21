@@ -19,6 +19,9 @@ public:
     QStringList asked;
     QStringList cancelled;
     bool needsModel = false;
+    bool codexSignedIn = false;
+    bool handsToCodex = false;
+    QStringList toCodex;
     int downloads = 0;
     uint next = 0;
 public Q_SLOTS:
@@ -34,6 +37,13 @@ public Q_SLOTS:
                         { QStringLiteral("text"), QStringLiteral("Ask needs a one-time download.") } });
                 return;
             }
+            if (handsToCodex) {
+                Q_EMIT Answered(id,
+                    { { QStringLiteral("who"), QStringLiteral("computer") }, { QStringLiteral("handOff"), true },
+                        { QStringLiteral("handedToCodex"), true },
+                        { QStringLiteral("text"), QStringLiteral("Codex is taking it.") } });
+                return;
+            }
             Q_EMIT Said(id, QStringLiteral("Wi-Fi that drops "));
             Q_EMIT Said(id, QStringLiteral("often comes from power saving."));
             Q_EMIT Answered(id,
@@ -46,6 +56,20 @@ public Q_SLOTS:
         return id;
     }
     void Cancel(uint id) { cancelled.append(QString::number(id)); }
+    QVariantMap Codex() const
+    {
+        return { { QStringLiteral("installed"), true }, { QStringLiteral("signedIn"), codexSignedIn } };
+    }
+    bool OpenCodex(const QString &question)
+    {
+        toCodex.append(question);
+        return true;
+    }
+    void signIn(bool in)
+    {
+        codexSignedIn = in;
+        Q_EMIT CodexChanged(Codex());
+    }
     void DownloadModel()
     {
         ++downloads;
@@ -56,6 +80,7 @@ Q_SIGNALS:
     void Said(uint id, const QString &text);
     void Answered(uint id, const QVariantMap &result);
     void ModelChanged(const QVariantMap &model);
+    void CodexChanged(const QVariantMap &codex);
 };
 
 class AskClientTest : public QObject {
@@ -150,6 +175,44 @@ private Q_SLOTS:
         QCOMPARE(client.size(), QStringLiteral("about 2.5 GB"));
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask-2"));
+    }
+
+    // Codex is offered once it is signed in, and takes the question only on
+    // the person's tap; handed on by the switch, the answer says so.
+    void codexOnATap()
+    {
+        FakeAsk ask;
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-ask-3"));
+        QVERIFY(peer.registerObject(
+            QStringLiteral("/Ask"), &ask, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Ask")));
+
+        AskClient client(QDBusConnection::sessionBus());
+        client.setPause(50);
+        QTRY_VERIFY(client.available());
+        QVERIFY(!client.askCodex());
+        client.type(QStringLiteral("my wifi keeps dropping"));
+        QTRY_COMPARE(client.state(), QStringLiteral("answered"));
+        QTest::qWait(100);
+        QVERIFY(!client.codexReady());
+        QVERIFY(!client.askCodex());
+        ask.signIn(true);
+        QTRY_VERIFY(client.codexReady());
+        QVERIFY(ask.toCodex.isEmpty());
+        QVERIFY(client.askCodex());
+        QTRY_COMPARE(ask.toCodex, QStringList { QStringLiteral("my wifi keeps dropping") });
+        QVERIFY(!client.handedToCodex());
+
+        ask.handsToCodex = true;
+        client.type(QStringLiteral("set up my printer please"));
+        QTRY_VERIFY(client.handedToCodex());
+        QCOMPARE(client.text(), QStringLiteral("Codex is taking it."));
+        client.type(QString());
+        QVERIFY(!client.handedToCodex());
+        ask.signIn(false);
+        QTRY_VERIFY(!client.codexReady());
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask-3"));
     }
 };
 
