@@ -1,7 +1,7 @@
 # Changelog
 
-This file records product-level changes. Commit history carries implementation
-provenance.
+This file records changes a person using Tettegouche would notice. Commit
+history carries the implementation detail.
 
 ## Unreleased
 

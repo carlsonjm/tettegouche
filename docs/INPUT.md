@@ -15,7 +15,7 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click Apps or Files, under the search field | Opens that drawer. |
+| Tap or click Apps or Files, in the row of modes above the search field | Opens that drawer. |
 | Tap or click Notes, after Files | Opens the notes board in the same window. Typing goes into Find a note; a tap on it brings the on-screen keys. Notes is there only while Gooseberry is installed. |
 | Type, on the notes board | Finds the notes with those words; a folder they name is listed under the notes. |
 | Tap or click a filter, on the notes board | Everything, the current day's filter, On windows, a folder or Tucked away narrows the notes to it. |
@@ -35,10 +35,10 @@ than repeat it.
 | Tap or click Expand, at the right of the modes row, in Notes | Search fills the screen and the mode stays in it; again, Search returns to its size. The dot returns to Search at its size, and Apps or Files keeps the size chosen, as Notes does from them. |
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
-| Tap or click something used lately, below them | Opens it, an application or a file in its usual application, and Search closes. |
-| Tap or click Apps, Files or Notes in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
+| Tap or click something used lately, below the search field | Opens it, an application or a file in its usual application, and Search closes. |
+| Tap or click Apps, Files, Notes or Helpers in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
 | Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files, Notes or the Helpers while that mode shows. |
-| Tab, with nothing typed | Moves along the dot, Apps, Files and Notes, then what was used lately; Enter or Space opens the one focused. |
+| Tab, with nothing typed | Moves along the dot, Apps, Files, Notes and Helpers, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
@@ -62,7 +62,7 @@ than repeat it.
 | Input | What happens |
 | --- | --- |
 | Tap or click the dot | Opens Search, and the dot's middle clears until it is a ring, holding the mark of the mode Search shows: four squares for Apps, a folder for Files, a page for Notes, sparkles for the Helpers, and on Search's first screen a new small dot that grows in the middle. While an application Search opened is on its way, a quarter of the ring turns. Again closes it, and the ring fills back into the dot. Nothing takes the cursor, so on a touch screen no keys rise until the field is tapped. |
-| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files, Notes and Helpers, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen between the Context Bar and the dock; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it, and Helpers where Split Rock's Core is installed; Helpers opens at Search's size, as its pill does. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
+| Press the dot and slide toward the islands, right where the dot comes first and left where a host puts it last, by finger or mouse | Search's doors, Apps, Files, Notes and Helpers, line up beside the dot in place of Ambient's islands, and the one under the finger is chosen. Let go to open Search on it, filling the screen, below Shuffle's Context Bar and above its dock where Shuffle is installed; Expand brings it to Search's size. Sliding again moves straight to another door, whatever is open, and the dot in Search's top row leads to search. Notes is there as Search's first screen offers it, and Helpers where Split Rock's Core is installed; Helpers opens at Search's size, as its pill does. Slide back onto the dot and let go to open nothing. On a panel down a side of the screen, the dot has its tap alone. |
 | Touch and hold the dot, or press and hold it with the mouse | The doors line up as a slide brings them, to look before choosing; slide onto one and let go to open it. |
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
@@ -76,7 +76,7 @@ than repeat it.
 | Tap or click See all beside a section | Opens Apps or Files. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
-| Setting "Show the Helpers pill", off | The row of modes leaves out the Helpers pill, and a slide from the dot its Helpers door; Helpers still answer a search. |
+| Setting "Show the Helpers pill when Split Rock is installed", off | The row of modes leaves out the Helpers pill, and a slide from the dot its Helpers door; Helpers still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
 | Setting "Animate the launcher indicator", off | The dot turns into its ring at once, and its hover change is instant. |
@@ -183,8 +183,8 @@ than repeat it.
 | Paste or drop onto a name already taken | Asks: Replace, Skip, Keep both or Stop; a folder offers Merge instead of Replace. With several arriving, "Do the same for the rest" answers once for all. Esc stops. Nothing is replaced without Replace. |
 | Ctrl+A, or Select all | Selects everything in the folder. |
 | F2, or Rename | Shows a field to rename the one selected item, its name selected and its extension left. Enter or Rename renames it; Esc or Cancel leaves it. |
-| Delete, or Move to Trash | Asks first, naming the file or how many; Move to Trash moves them. Nothing is deleted permanently. |
-| Restore last trashed item | Brings back the last item Tettegouche moved to Trash. |
+| Delete, or Move to Trash | Asks first, naming the file or how many; Move to Trash moves them. Nothing is deleted permanently. In Trash, Delete asks instead whether to delete the chosen items for good. |
+| Restore last trashed item | Brings back the last item Files moved to Trash; again, the one before it. |
 | Tap or click New folder | Shows a name field. Enter or Create makes the folder; Esc or Cancel leaves it. |
 | Drag a file with the mouse, or touch and hold it and then drag | Carries the selection, labelled with the folder or place under it; dropped on a folder, a place or a mounted drive, it is copied there, and dropped on Trash it goes to Trash. Folders dropped on the places' empty room become places. Near the top or bottom edge the list scrolls. Dropped anywhere else inside Files, nothing happens. |
 | Carry files past the edge of Files | They leave Files and go on as the system's own drag, for any application, on this display or another. Dropped on one, it receives a copy; the originals stay. Dropped on nothing, nothing happens. |
@@ -192,7 +192,7 @@ than repeat it.
 | Tap or click a drive under the places | Opens it, mounted first if it is not; its row says Opening… meanwhile. A drive that cannot be opened says why. |
 | Tap or click ⏏ beside a plugged-in drive | Makes it safe to pull out: its row says Ejecting…, then Files says it can be unplugged, and a drive powered off leaves the list. While Files copies or moves to or from it, the row says Ejects when done, and it ejects after. |
 | Plug in or pull out a drive while Files is open | It appears under the places, or leaves them. A tab showing a drive that leaves or is ejected goes Home. |
-| Another application opens a folder or asks to show files, as it would a file manager: Plasma's Open with File Manager for a drive, or Show in folder in a browser's downloads | Once Files is the file manager, it opens at the folder, or with the files chosen in theirs, or with a file's Properties when those are asked for. A plugged-in phone opens in Files; Trash and network shares open in Dolphin. |
+| Another application opens a folder or asks to show files, as it would a file manager: Plasma's Open with File Manager for a drive, or Show in folder in a browser's downloads | Once Files is the file manager, it opens at the folder, or with the files chosen in theirs, or with a file's Properties when those are asked for. A plugged-in phone and Trash open in Files; network shares open in Dolphin. |
 | Pinch, Ctrl with + or −, or Ctrl and the scroll wheel | Makes the tiles larger or smaller, in four sizes. Ctrl+0 returns them to the usual size. The size is kept. |
 | Tap or click Pause, Resume or × on a running copy or move | Pauses, resumes or cancels that one alone. Other file actions stay available while it runs. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |

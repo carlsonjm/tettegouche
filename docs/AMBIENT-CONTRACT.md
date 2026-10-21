@@ -1,6 +1,6 @@
 # Ambient activity contract
 
-Ambient Tette shows what is happening now, such as media and transfers, in the
+Ambient shows what is happening now, such as media and transfers, in the
 panel beside the launcher dot. Temperance handles notifications and passing
 events. Beside them stands one door that is always there, the quick note's
 island (§ Quick note). Its inputs are in [INPUT.md](INPUT.md).
@@ -22,7 +22,7 @@ Current sources are:
 
 - MPRIS media sessions;
 - running or suspended jobs from Plasma's shared desktop-jobs model;
-- Tette-owned KIO copy/move operations through the launcher's activity bridge;
+- Tettegouche's own KIO copies and moves, through the launcher's activity bridge;
 - filesystem evidence for new direct children in the configured Downloads folder;
 - drives plugged in that nothing has mounted, from Solid (§ Drives);
 - a screen shared or recorded through Plasma's portal (§ Shared screen);
@@ -41,7 +41,7 @@ Gooseberry is removed or the widget's setting turns it off.
 Plasma's jobs model and window list come from Plasma's own libraries, which
 change between releases, so a build reads them only on the Plasma it was built
 for. On another, those two sources stay off, with a warning in the log, until a
-rebuild; every other source runs as before. A Plasma or build that names no
+rebuild; every other source runs as usual. A Plasma or build that names no
 version counts as a match.
 
 Static system status, completed work past its end's minute (§ Ends),
@@ -57,7 +57,7 @@ and Ambient keeps no history of finished work.
 - Paused resumable media stays three minutes, then leaves until it plays
   again, a phone's through KDE Connect included. A lost job leaves, and a stopped one
   leaves or gives its place to its end (§ Ends). A hidden
-  Tette launcher may remain alive to finish and publish an operation.
+  launcher may remain alive to finish and publish an operation.
 - Source fields and actions override filesystem enrichment. Filesystem evidence
   merges only on exact destination and current file identity; there is no suffix
   guessing.
@@ -214,7 +214,7 @@ default, shows it while "Show islands beside the launcher" is on; off, the
 island is gone, and folded notes show their dot over the window again. Without
 Gooseberry there is no island.
 
-### Tette operations
+### Tettegouche's own copies and moves
 
 `FileBrowser` and KIO own each operation. The launcher publishes revisioned snapshots
 of each copy or move, one for each change to its rows, and UUID-checked Cancel, Pause and Resume over its activity
@@ -247,8 +247,8 @@ by side in the order they arrived, the quick note's first, an end in its transfe
 the panel hands Ambient, or set against one end of it where the host asks
 (§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
-black, they take the Plasma style's ground, on a dark style the suite's black,
-`#141414`, the band's own, and melt into it. Their words and glyphs are the
+black, they take the Plasma style's ground, on a dark style the band's own
+black, `#141414`, and melt into it. Their words and glyphs are the
 style's text colour, Ghost White on a dark style.
 An island is 44 px tall in a 64 px band and shorter on a shorter panel. Each
 control reaches the island's full height and, where the panel allows, 44 px
@@ -348,4 +348,5 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 - With nothing to show, Ambient leaves the panel clean; the quick note's island
   is a door, not activity, and keeps only its own width.
 - Do not add a daemon, polling loop, persistent history, replacement task
-  manager, notification-derived progress, or cross-product activity owner.
+  manager, notification-derived progress, or an activity owner shared with
+  other applications.
