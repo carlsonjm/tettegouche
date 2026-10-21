@@ -5,6 +5,8 @@
 #include <notification.h>
 #include <server.h>
 #include <taskmanager/abstracttasksmodel.h>
+#include <KService>
+#include <KSycoca>
 #include <QTest>
 #include <QGuiApplication>
 #include <QDBusAbstractAdaptor>
@@ -60,10 +62,12 @@ class FakePlayerRoot : public QDBusAbstractAdaptor {
     Q_CLASSINFO("D-Bus Interface", "org.mpris.MediaPlayer2")
     Q_PROPERTY(bool CanRaise MEMBER canRaise)
     Q_PROPERTY(QString Identity MEMBER identity)
+    Q_PROPERTY(QString DesktopEntry MEMBER desktopEntry)
 public:
     explicit FakePlayerRoot(QObject *parent) : QDBusAbstractAdaptor(parent) {}
     bool canRaise = true;
     QString identity = QStringLiteral("Stand-in player");
+    QString desktopEntry;
     int raises = 0;
 public Q_SLOTS:
     void Raise() { ++raises; }
@@ -332,6 +336,60 @@ private Q_SLOTS:
         QCOMPARE(root->raises, 1);
         peer.unregisterService(name); peer.unregisterObject(path);
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-art-media"));
+    }
+
+    // A player's icon is its installed application's, found by the entry it
+    // names, by an application ID ending in that name, by the window class
+    // the application declares, or by the player's own name. A player nothing
+    // installed names shows the generic player icon, never a missing one.
+    void mprisPlayerIcon() {
+        const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/");
+        const auto install = [&](const QString &file, const QByteArray &extra) {
+            QFile entry(applications + file);
+            QVERIFY(entry.open(QIODevice::WriteOnly));
+            entry.write("[Desktop Entry]\nType=Application\nName=" + file.toUtf8() + "\nExec=true\n" + extra);
+        };
+        install(QStringLiteral("app.tune_maker.tune.desktop"), "Icon=tune-maker\n");
+        install(QStringLiteral("wave-browser.desktop"), "Icon=wave-browser-icon\nStartupWMClass=wave\n");
+        install(QStringLiteral("lantern.desktop"), "Icon=lantern-app\n");
+        QTRY_VERIFY_WITH_TIMEOUT((KSycoca::self()->ensureCacheValid(),
+            bool(KService::serviceByDesktopName(QStringLiteral("lantern")))), 5000);
+
+        const auto bus = QDBusConnection::sessionBus();
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-icon-media"));
+        const QString name = QStringLiteral("org.mpris.MediaPlayer2.AmbientIconTest");
+        const QString path = QStringLiteral("/org/mpris/MediaPlayer2");
+        FakePlayer player;
+        auto *root = new FakePlayerRoot(&player);
+        root->desktopEntry = QStringLiteral("lantern");
+        QVERIFY(peer.registerObject(path, &player, QDBusConnection::ExportAllProperties
+            | QDBusConnection::ExportAllSlots | QDBusConnection::ExportAdaptors));
+        QVERIFY(peer.registerService(name));
+        MprisActivityProvider provider(bus);
+        const auto shownIcon = [&] {
+            const auto rows = provider.activities();
+            return rows.isEmpty() ? QString() : rows.first().toMap().value(QStringLiteral("icon")).toString();
+        };
+        QTRY_COMPARE(shownIcon(), QStringLiteral("lantern-app"));
+        const auto rename = [&](const QString &entry, const QString &identity) {
+            auto signal = QDBusMessage::createSignal(path, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"));
+            signal.setArguments({QStringLiteral("org.mpris.MediaPlayer2"),
+                QVariantMap{{QStringLiteral("DesktopEntry"), entry}, {QStringLiteral("Identity"), identity}}, QStringList{}});
+            return peer.send(signal);
+        };
+        QVERIFY(rename(QStringLiteral("tune"), QStringLiteral("Tune")));
+        QTRY_COMPARE(shownIcon(), QStringLiteral("tune-maker"));
+        QVERIFY(rename(QStringLiteral("Wave"), QStringLiteral("Wave Browser")));
+        QTRY_COMPARE(shownIcon(), QStringLiteral("wave-browser-icon"));
+        QVERIFY(rename(QString(), QStringLiteral("Lantern")));
+        QTRY_COMPARE(shownIcon(), QStringLiteral("lantern-app"));
+        QVERIFY(rename(QStringLiteral("not-installed-anywhere"), QStringLiteral("Nobody")));
+        QTRY_COMPARE(shownIcon(), QStringLiteral("audio-x-generic-symbolic"));
+
+        peer.unregisterService(name); peer.unregisterObject(path);
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-icon-media"));
+        for (const auto &file : {"app.tune_maker.tune.desktop", "wave-browser.desktop", "lantern.desktop"})
+            QFile::remove(applications + QString::fromLatin1(file));
     }
 
     void filesystemEvents() {

@@ -1,7 +1,10 @@
 #include "MprisActivityProvider.h"
 #include "ActivityUtils.h"
 #include <algorithm>
+#include <utility>
+#include <KApplicationTrader>
 #include <KLocalizedString>
+#include <KService>
 #include <QFile>
 #include <QDBusConnectionInterface>
 #include <QDBusPendingCallWatcher>
@@ -9,6 +12,7 @@
 #include <QDBusServiceWatcher>
 #include <QDBusMessage>
 #include <QDBusObjectPath>
+#include <QIcon>
 #include <QUrl>
 
 namespace {
@@ -30,6 +34,37 @@ QString artUrl(const QVariant &value) {
     const QUrl url(text);
     return url.isValid() && (url.isLocalFile() || url.scheme() == QLatin1String("https")
         || url.scheme() == QLatin1String("http")) ? url.toString() : QString();
+}
+
+// MPRIS names the player's desktop entry, not its icon, and the two often
+// differ: a browser can name its entry `zen` while its icon is `zen-browser`,
+// and a Flatpak's entry is its whole application ID. The icon is read from
+// the installed entry, found by its name, by an application ID ending in that
+// name, or by the window class it declares, and then by the player's own name.
+// An entry nothing installed names is used as an icon only where the theme
+// has one; otherwise a generic player icon stands in.
+QString playerIcon(const QString &entry, const QString &identity) {
+    static const QString generic = QStringLiteral("audio-x-generic-symbolic");
+    QStringList names;
+    for (const auto &name : {entry.trimmed(), identity.trimmed()}) {
+        if (name.isEmpty()) continue;
+        const QString bare = name.endsWith(QLatin1String(".desktop")) ? name.chopped(8) : name;
+        if (!names.contains(bare, Qt::CaseInsensitive)) names.append(bare);
+    }
+    for (const auto &name : names) {
+        KService::Ptr service = KService::serviceByDesktopName(name.toLower());
+        if (!service) service = KService::serviceByStorageId(name + QStringLiteral(".desktop"));
+        if (!service) {
+            const QString suffix = QLatin1Char('.') + name.toLower();
+            const auto found = KApplicationTrader::query([&](const KService::Ptr &candidate) {
+                return candidate->desktopEntryName().endsWith(suffix)
+                    || candidate->property<QString>(QStringLiteral("StartupWMClass")).compare(name, Qt::CaseInsensitive) == 0;
+            });
+            if (!found.isEmpty()) service = found.first();
+        }
+        if (service && !service->icon().isEmpty()) return service->icon();
+    }
+    return !entry.isEmpty() && QIcon::hasThemeIcon(entry) ? entry : generic;
 }
 
 QString trackId(const QVariant &value) {
@@ -57,7 +92,7 @@ public:
         QVariantMap row{{QStringLiteral("id"), name}, {QStringLiteral("generation"), generation}, {QStringLiteral("kind"), QStringLiteral("media")},
             {QStringLiteral("state"), status == QLatin1String("Playing") ? QStringLiteral("playing") : QStringLiteral("paused")},
             {QStringLiteral("source"), root.value(QStringLiteral("Identity"), i18n("Media"))},
-            {QStringLiteral("icon"), root.value(QStringLiteral("DesktopEntry"), QStringLiteral("audio-x-generic-symbolic"))},
+            {QStringLiteral("icon"), icon()},
             {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("play"), control && player.value(QStringLiteral("CanPlay")).toBool()},
                 {QStringLiteral("pause"), control && player.value(QStringLiteral("CanPause")).toBool()},
                 {QStringLiteral("previous"), control && player.value(QStringLiteral("CanGoPrevious")).toBool()},
@@ -150,6 +185,16 @@ private Q_SLOTS:
         setPosition(value); Q_EMIT changed();
     }
 private:
+    // Looked up once per entry and name the player gives, not on every
+    // position or status change.
+    QString icon() const {
+        const QString entry = root.value(QStringLiteral("DesktopEntry")).toString();
+        const QString identity = root.value(QStringLiteral("Identity")).toString();
+        if (iconKey != std::pair(entry, identity) || iconName.isEmpty()) {
+            iconKey = {entry, identity}; iconName = playerIcon(entry, identity);
+        }
+        return iconName;
+    }
     void setPosition(qint64 value) { position = qMax(qint64(0),value); sampleTime = Ambient::nowUs(); positionKnown = true; }
     qint64 currentPosition() const {
         if (player.value(QStringLiteral("PlaybackStatus")) != QLatin1String("Playing")) return position;
@@ -188,6 +233,8 @@ private:
     quint64 revision = 0;
     qint64 position = 0, sampleTime = 0;
     bool positionKnown = false;
+    mutable std::pair<QString, QString> iconKey;
+    mutable QString iconName;
 };
 
 MprisActivityProvider::MprisActivityProvider(const QDBusConnection &bus, QObject *parent)

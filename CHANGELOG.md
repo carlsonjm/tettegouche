@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Playing media shows the icon of the application playing it, such as a
+  browser that names itself differently from its icon or one installed as a
+  Flatpak, and a generic player icon where no application can be found,
+  rather than a missing-icon mark.
 - Search opens where it rests and at its size from its first frame on a
   stock Plasma desktop too: KWin's window animation no longer zooms it in
   from smaller, faded and blurred, or out again as it closes.

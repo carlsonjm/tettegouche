@@ -80,7 +80,10 @@ events. A title, artist, album, artwork, duration or capability the player does
 not give stays empty. Artwork is shown from a local file, the web, or an image the player
 carries inline (`data:image/…`), which is how a player such as Elisa hands over
 a cover embedded in the track; anything else leaves the player's icon in its
-place. The shown
+place. The player's icon is its installed application's icon, found by the
+desktop entry the player names, by an application ID ending in that name (a
+Flatpak's), by the window class the application declares, or by the player's
+own name; a player none of these finds shows a generic player icon. The shown
 position advances from the player's own position and rate, and stops on pause.
 A control shows only while the player supports it, and its owner is checked
 before it acts. A jump to a point names the
