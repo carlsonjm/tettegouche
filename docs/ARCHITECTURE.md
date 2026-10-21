@@ -3,8 +3,10 @@
 Tettegouche 1.1.0 has two lifetimes: a persistent Plasma panel applet and an
 on-demand launcher process. The applet owns the panel's launcher dot and the
 Ambient island. The launcher owns search, Apps, local Files state
-and the temporary layer-shell surface. It stays fully useful without Kadunce,
-the optional related-setting tools, Bluetooth hardware or any Ambient source.
+and the temporary layer-shell surface. It is fully functional without Shuffle
+and its dock, Kadunce, Gooseberry, Split Rock, the optional related-setting
+tools, Bluetooth hardware or any Ambient source; each adds to it where present,
+and an installation without them is a supported setup, not a reduced one.
 Every input is listed in [INPUT.md](INPUT.md).
 
 ## Process and surface model
@@ -54,10 +56,12 @@ The widget declares itself Plasma's application launcher
 (`org.kde.plasma.launchermenu`), so Plasma's launcher key reaches it as it
 reaches Kickoff.
 
-Where Shuffle is installed, Tettegouche names itself Search: in its tooltip,
-its widget title, its launcher window and its Shortcuts entry. Each process
-looks for Shuffle's bottom surface when it starts. Identifiers, D-Bus names and
-settings keys keep the Tettegouche name.
+Where Shuffle, a desktop built on Plasma that bundles Tettegouche, is
+installed, Tettegouche names itself Search: in its tooltip, its widget title,
+its launcher window and its Shortcuts entry (`src/ProductName.h`). Shuffle
+counts as installed where its Bottom Surface widget is, and each process
+looks for it when it starts. Identifiers, D-Bus
+names and settings keys keep the Tettegouche name.
 
 A folder KDE opens in Files starts the launcher with `--folder`. The launcher
 answers `org.freedesktop.FileManager1` only when D-Bus starts it for that name,
@@ -67,9 +71,9 @@ If a launcher already runs, the process D-Bus starts forwards each request to it
 and leaves after three idle seconds.
 
 The launcher is a top-layer surface, not an overlay one. KWin keeps the
-on-screen keyboard in the overlay layer, and an overlay launcher mapped after it
-stacked above the keys, so its full-screen backdrop took every touch meant for
-them and closed the search. The keys now stack above the launcher, and a whole
+on-screen keyboard in the overlay layer; an overlay launcher mapped after it
+would stack above the keys, and its full-screen backdrop would take every touch
+meant for them. As a top-layer surface it stays under the keys, so a whole
 search can be typed on them. Opening activates the launcher, which keeps a
 full-screen window from covering it. Notification banners draw over it.
 
@@ -81,7 +85,7 @@ rests and at its size from the first frame.
 
 Tettegouche adds no daemon or polling loop and keeps no activity history. It
 does not take over the compositor or the task manager, or hold state for other
-products.
+applications.
 
 ## Ownership boundaries
 
@@ -117,35 +121,40 @@ display. Context
 refreshes on Kadunce change signals and before window selection; there is no
 timer or heartbeat.
 
-Open application matches carry a live window identifier. Tettegouche asks Kadunce
-to activate that exact window. Where Kadunce does not answer, what is open
-comes from Plasma's own window list instead, through the task manager's QML
-module (`org.kde.taskmanager`, so no private library is linked), read the
-first time Kadunce is found absent: OPEN, Recent's exclusions and bringing an
-open application forward work the same, and the list activates the window. The
+Open application matches carry a live window identifier. Tettegouche asks
+Kadunce to activate that exact window. Where Kadunce does not answer, what is
+open comes from Plasma's own window list instead, through the task manager's QML
+module (`org.kde.taskmanager`, so no private library is linked), read the first
+time Kadunce is found absent: OPEN, Recent's exclusions and bringing an open
+application forward work the same, and the list activates the window. The
 launcher's desktop entry asks KWin for the window-management interface this
 needs. A tap uses what was read as Search opened and at each change, and waits
-for Kadunce only while that reading has not answered. New launches use Plasma's normal application job
-and may hold the guest until Kadunce sees a matching window; a bounded timeout
-returns to search. Horizontal guest drag sends only motion deltas, leaving
-commit/cancel and real-card selection to Kadunce. Expanded Apps and Files
-drawers request the negotiated presentation capability and otherwise use
-standalone expansion. The expanded drawer has one treatment, fitted to the
-tablet's Active card or the screen's work area. Floating, the launcher reads
-the work area as the screen reports it, less the band Shuffle's dock reserves
-there: on Wayland the screen reports itself whole. The band comes from the
-Bottom Surface's `dockExtent` (version 1) as the launcher opens and as it
-changes; the one Bottom Surface on the bus answers for the display it presents,
-and a display it does not answer for takes the same band. A display it answers
-for as not presenting has no band, so expanded Search fills it. With no Bottom
-Surface, the work area is the screen's report. Every drawer and mode opens from Search's
-pills at Search's size, a card in Spread, and from `openDrawer` (the dot's slide,
-Meta+G, Meta+E) filling the screen; Expand, in the corner they all share, fills the screen and
-brings it back, and moving between Apps and Files keeps the size chosen.
+for Kadunce only while that reading has not answered. New launches use Plasma's
+normal application job and may hold the guest until Kadunce sees a matching
+window; a bounded timeout returns to search. Horizontal guest drag sends only
+motion deltas, leaving commit/cancel and real-card selection to Kadunce.
+Expanded Apps and Files drawers request the negotiated presentation capability
+and otherwise use standalone expansion. The expanded drawer has one treatment,
+fitted to Kadunce's Active card, the card in use, or the screen's work area.
+Floating, the launcher reads the work area as the screen reports it, less the
+band Shuffle's dock reserves there: on Wayland the screen reports itself whole.
+The band comes from Shuffle's Bottom Surface, the widget that holds its dock,
+through `dockExtent` (version 1) as the launcher opens and as it changes; the
+one Bottom Surface on the bus answers for the display it presents, and a display
+it does not answer for takes the same band. A display it answers for as not
+presenting has no band, so expanded Search fills it. With no Bottom Surface, the
+work area is the screen's report. In the same way, a full Search stops below
+Shuffle's Context Bar, the bar along the top of a display, whose height
+`co.goodinput.ContextBar` gives per display through `clockExtent`; a display
+with no bar, or no bar on the bus, takes none. Every drawer and mode opens from
+Search's pills at Search's size, a card in Spread, and from `openDrawer` (the
+dot's slide, Meta+G, Meta+E) filling the screen; Expand, in the corner they all
+share, fills the screen and brings it back, and moving between Apps and Files
+keeps the size chosen.
 
 ## Search and catalogue
 
-The compact search model combines an allowlisted set of KRunner providers and a
+The compact search model combines an allowlisted set of KRunner providers with
 Tettegouche's own confidence policy, described in
 [SEARCH-CONTRACT.md](SEARCH-CONTRACT.md).
 
@@ -215,7 +224,7 @@ the launcher for Search's Notes through the applet's `openDrawer`.
 
 The panel shows Ambient as one island per kind of activity
 (`AmbientSurface.qml`), clear over the panel and in the Plasma style's own
-ground, the suite's black on a dark style, while the containment sets Plasma's
+ground, black on a dark style, while the containment sets Plasma's
 `ContainmentPrefersOpaqueBackground` hint.
 `IslandRoom.js` decides, from each island's measured pieces, what each shows in
 the width it has; the surface draws that and animates the change.
@@ -269,7 +278,7 @@ counts follow the language.
   the dot's either way ([AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) § Host
   settings).
 - Search, Files and Ambient follow the Plasma style's colours where the
-  style brings its own, and the window's colour scheme where it doesn't. On a dark one Search and Files keep the suite's dark
+  style brings its own, and the window's colour scheme where it doesn't. On a dark one Search and Files keep their own dark
   values, each leaning toward the scheme's ground as far as that ground leans
   from grey, so a tinted scheme tints them and a plain one leaves them as
   they are; Ambient keeps them exactly. On a light one their ground and text
@@ -284,11 +293,11 @@ counts follow the language.
 - Menus and questions are drawn inside the sheet they open in, never past its
   edge, in the sheet's colours with lines a finger can hit; a question names
   its action ("Move to Trash") and darkens only the sheet. Pressed controls
-  are the suite's grey pill or, for a glyph alone, a circle.
+  are a grey pill or, for a glyph alone, a circle.
 - A pill-shaped control acts; a rounded box holds information. Corners follow
-  the suite's three tiers: 8 px for the launcher's sheet and all laid in it,
-  12 px for menus and the open island, which float above and close, and pills
-  for what is pressed.
+  three tiers: 10 px for all that is laid in the launcher's sheet, and for the
+  sheet itself as a card in Spread; 12 px for the floating sheet, menus and the
+  open island, which float above and close; and pills for what is pressed.
 - Labels use sentence case, and OPEN is the one all-caps tag.
 - Motion explains a change of state or place, can be interrupted, and never
   shows progress or success a source has not reported.

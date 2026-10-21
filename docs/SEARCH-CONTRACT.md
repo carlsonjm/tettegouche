@@ -1,17 +1,18 @@
 # Search contract
 
 Search shows destinations a person recognizes, not whatever happens to contain
-the typed letters. A fix prompted by one screenshot becomes a general rule,
-tested against unrelated examples, before it lands. Its inputs are in [INPUT.md](INPUT.md).
+the typed letters. Every ranking rule is general, tested against unrelated
+examples rather than tuned to one query. Its inputs are in [INPUT.md](INPUT.md).
 
 ## First screen
 
 Search's modes run along its top on every screen, one row above the field: the
-dot for this first screen, then Apps, Files, where Gooseberry is installed
-Notes, and where Split Rock's Core lists its Helpers, Helpers. The grey pill marks the mode shown, and a tap moves straight to another;
-the dot comes back here with what was typed. The window's own buttons end
-that row: Expand while Apps or Files is open, Pop out in Files, and Close,
-last; at rest, Close alone. The field is the same on every screen: a pill
+dot for this first screen, then Apps and Files, then Notes where Gooseberry is
+installed, and Helpers where Split Rock's Core lists them. The grey pill marks
+the mode shown, and a tap moves straight to another; the dot comes back here
+with what was typed. The window's own buttons end that row: Expand while Apps,
+Files or Notes is open, Pop out in Files and Notes, and Close, last; at rest,
+Close alone. The field is the same on every screen: a pill
 44 tall on the row's own edges, the dot's pill starting where it starts and
 Close ending where it ends, 16 below the row, with 24 between everything and
 the sheet's edge, so only what is under it changes. Every search is that
@@ -31,7 +32,7 @@ sheet holds the modes and the field alone, and is only as wide as the field
 needs; with one, it is as tall as that
 section; with both, it is its full height. Floating, Search is one size
 on every display, 840 wide and at most as tall as both sections, so a large
-desktop screen shows it no bigger than the tablet does; only a smaller screen
+desktop screen shows it no bigger than a tablet does; only a smaller screen
 trims it. It is centred on the screen at every height, above the keys
 while they are up: typing, a drawer or a mode grows it to its full height,
 evenly up and down, with the field moving in step. It opens at its resting
@@ -58,8 +59,8 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 
 ### Helpers
 
-The Helpers chip is this first screen with only Split Rock's Helpers on it, so
-nobody has to remember a Helper's name to find it. Under the field, labelled
+The Helpers pill opens this first screen with only Split Rock's Helpers on it,
+so nobody has to remember a Helper's name to find it. Under the field, labelled
 Helpers, every upkeep card Core lists is a tile in Core's own order: its icon
 and its name on the subtle paper, 96 by 88 and 12 apart, narrower only when
 more than fit in one row. The field reads "Look over the computer, free up
@@ -68,8 +69,8 @@ on the first screen, best first, and never searches the web. A tap or Enter
 opens a Helper on its own, as its row does, and Search closes; Enter with
 nothing typed opens the first. Escape or the dot comes back to the first
 screen, and any other mode closes the Helpers. Without Core, or while Core
-lists none, there is no chip. The Helpers still show among the first screen's
-results as before.
+lists none, there is no pill. Helpers still answer a search from the first
+screen.
 
 ### Notes
 
@@ -161,7 +162,8 @@ Notes had when the note left. A
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
   pill, and the dot's Notes door with it; notes still answer a search.
-- "Show the Helpers pill", on by default, hides the first screen's Helpers
+- "Show the Helpers pill when Split Rock is installed", on by default, hides
+  the first screen's Helpers
   pill and the dot's Helpers door; Helpers still answer a search. The door is
   offered where Split Rock's Core is running or ready to start.
 
