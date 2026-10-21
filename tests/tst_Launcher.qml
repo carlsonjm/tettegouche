@@ -1235,6 +1235,47 @@ TestCase {
         tryCompare(launcher,"drawerProgress",0)
         controller.availableArea=original
     }
+    // Expand moves only the sheet's edge: what it holds is laid out at the
+    // size it is going to from the first frame, so the applications are
+    // laid out once each way rather than on every frame of the motion.
+    SignalSpy { id: gridColumns; signalName: "columnsChanged" }
+    function test_expandLaysOutOnce() {
+        const sheet = findChild(launcher, "launcher-sheet")
+        const content = findChild(launcher, "launcher-content")
+        const grid = findChild(launcher, "application-grid")
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        waitForOpen()
+        compare(content.width, 840 - 48)
+        gridColumns.target = grid
+        gridColumns.clear()
+        controller.setDrawerExpanded(true, true)
+        tryVerify(function() { return launcher.sheetResizing }, 1000)
+        verify(sheet.width < 980)
+        compare(content.width, 980 - 48)
+        compare(content.height, 720 - 48 - launcher.modeRowReach)
+        compare(gridColumns.count, 1)
+        // The field alone spans what shows of the sheet, so its ends stay
+        // in view.
+        const field = findChild(launcher, "search-field")
+        verify(field.width <= sheet.width - 48 + 0.5)
+        compare(field.x, 0)
+        tryCompare(sheet, "width", 980)
+        compare(field.width, 980 - 48)
+        tryCompare(sheet, "height", 720)
+        waitForOpen()
+        compare(gridColumns.count, 1)
+        controller.setDrawerExpanded(false, true)
+        tryVerify(function() { return launcher.sheetResizing }, 1000)
+        verify(sheet.width > 840)
+        compare(content.width, 840 - 48)
+        tryCompare(sheet, "width", 840)
+        waitForOpen()
+        compare(gridColumns.count, 2)
+        gridColumns.target = null
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+    }
     // Before anything is typed, the applications and the files used lately
     // sit under search in two labelled sections, eight of each: the
     // applications in a row, the files as cards in two rows of four. Search
@@ -4188,24 +4229,24 @@ TestCase {
         tryCompare(newNote, "opacity", 1)
         launcher.goBack()
         tryCompare(launcher, "notesProgress", 0)
-        // From the dot's slide it fills the screen: the sheet grows, and New
-        // note waits for it.
+        // From the dot's slide it fills the screen: the sheet's edge grows
+        // over Notes already laid out at that size, so New note keeps its
+        // place, and shows only once the edge holds still.
         controller.drawerRequested("notes")
         tryVerify(() => launcher.notesOpen)
         const start = at()
-        let moving = 0
-        let lastY = newNote.mapToItem(sheet, 0, 0).y
+        const newNoteAt = newNote.mapToItem(sheet, 0, 0).y
+        let growing = 0
         while (launcher.notesProgress < 1 || sheet.height !== sheet.restHeight) {
             compare(at(), start)
-            const y = newNote.mapToItem(sheet, 0, 0).y
-            if (y !== lastY) {
-                moving++
+            compare(newNote.mapToItem(sheet, 0, 0).y, newNoteAt)
+            if (launcher.sheetResizing) {
+                growing++
                 compare(newNote.opacity, 0)
-                lastY = y
             }
             wait(16)
         }
-        verify(moving > 0)
+        verify(growing > 0)
         tryCompare(newNote, "opacity", 1)
         controller.drawerExpanded = false
         launcher.quickNote = null

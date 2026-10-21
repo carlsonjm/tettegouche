@@ -43,7 +43,7 @@ Rectangle {
     // Helpers' row sits under it, so it stays at the top for them.
     readonly property real restY: idle && !firstRow.fits && !launcher.helpersShown
         ? Math.max(0, Math.round((parent.height - height) / 2)) : 0
-    x: Math.round((parent.width - width) / 2)
+    x: 0
     y: Math.round(restY * (1 - launcher.drawerProgress) * (1 - launcher.modeProgress))
     Behavior on y {
         enabled: (launcher.drawerProgress <= 0 || launcher.drawerProgress >= 1)
@@ -52,7 +52,9 @@ Rectangle {
         // the field travels on screen in one even motion.
         NumberAnimation { duration: launcher.ms(220); easing.type: Easing.OutCubic }
     }
-    width: parent.width
+    // As the sheet grows or shrinks the field spans what shows of it, so its
+    // ends stay in view; only the field moves with the sheet's edge.
+    width: Math.min(parent.width, launcher.sheetInnerWidth)
     height: launcher.fieldHeight
     radius: height / 2
     color: launcher.controlColor

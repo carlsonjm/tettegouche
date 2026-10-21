@@ -255,6 +255,8 @@ Item {
     // While the sheet grows or shrinks, what it holds waits to settle until
     // it has its size, rather than laying itself out again on every frame.
     readonly property bool sheetResizing: sheetResize.running || sheetWiden.running
+    // How wide the inside of the sheet shows at this frame of its motion.
+    readonly property real sheetInnerWidth: Math.max(0, sheet.width - 2 * contentInset)
     // How far up from the window's bottom the sheet must keep clear, eased as
     // the keys come and go.
     property real keysReach: keysUp ? height - keysRect.y + 10 : 0
@@ -1071,12 +1073,15 @@ Item {
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
                     : Math.max(0, Math.min(Math.round((room - height) / 2), room - height - 10)))))
-        width: root.launcherController.guestMode
+        // The size it is going to, which what it holds is laid out at.
+        readonly property real targetWidth: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
-        height: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        readonly property real targetHeight: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        width: targetWidth
+        height: targetHeight
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Centred on its height as that moves, so it grows up and down
         // evenly with no motion of its own.
@@ -1134,11 +1139,17 @@ Item {
             onTapped: event => event.accepted = true
         }
 
+        // What the sheet holds is laid out once, at the size the sheet is
+        // going to, and the sheet's edge moves over it: growing uncovers it,
+        // shrinking closes in on it. Nothing inside lays itself out again on
+        // each frame of the motion, so Expand moves as evenly as opening.
         Item {
             id: content
-            anchors.fill: parent
-            anchors.margins: root.contentInset
-            anchors.topMargin: root.contentInset + root.modeRowReach
+            objectName: "launcher-content"
+            x: root.contentInset
+            y: root.contentInset + root.modeRowReach
+            width: Math.max(0, sheet.targetWidth - 2 * root.contentInset)
+            height: Math.max(0, sheet.targetHeight - 2 * root.contentInset - root.modeRowReach)
 
             SearchField {
                 id: searchField

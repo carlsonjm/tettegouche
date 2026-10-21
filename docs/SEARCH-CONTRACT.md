@@ -35,7 +35,10 @@ on every display, 840 wide and at most as tall as both sections, so a large
 desktop screen shows it no bigger than a tablet does; only a smaller screen
 trims it. It is centred on the screen at every height, above the keys
 while they are up: typing, a drawer or a mode grows it to its full height,
-evenly up and down, with the field moving in step. It opens at its resting
+evenly up and down, with the field moving in step. Growing, shrinking or
+Expand moves only the sheet's edge: what it holds is laid out once at the
+size the sheet is going to, which growing uncovers and shrinking closes in
+on, so nothing inside lays itself out again on each frame. It opens at its resting
 size in one motion: the whole sheet, already as it will rest, fades in as it
 rises the last 12 pixels into place over 180 ms, and nothing inside it
 arrives on its own. Apps, Files and Notes fade in where they stand. Inside Spread,
