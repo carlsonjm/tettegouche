@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> · <a href="#controls">Controls</a> · <a href="docs/README.md">Docs</a> · <a href="https://shuffleplasma.com">Part of Shuffle</a>
+  <a href="#install">Install</a> · <a href="#controls">Controls</a> · <a href="docs/README.md">Docs</a> · <a href="#used-by-shuffle">Used by Shuffle</a>
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ islands beside it show what is happening now. Search stays on this computer.
 <tr>
 <td width="33%" valign="top"><b>Live activity</b><br>Islands in the panel for music, transfers, new downloads, drives, a shared screen and an application waiting on you.</td>
 <td width="33%" valign="top"><b>Any input</b><br>Works with touch, a pointer or a keyboard, and follows your light or dark colour scheme.</td>
-<td width="33%" valign="top"><b>Works on its own</b><br>Works fully without the Shuffle dock or any other part of the suite. Kadunce, Gooseberry or Split Rock add to it where they are installed.</td>
+<td width="33%" valign="top"><b>Works on its own</b><br>Fully functional on a plain Plasma desktop, without Shuffle or its dock. Kadunce, Gooseberry or Split Rock add to it where they are installed.</td>
 </tr>
 </table>
 
@@ -65,11 +65,12 @@ Kickoff is.
 ## Search
 
 Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
-and Files, Notes where Gooseberry is installed, and below them what you used
-lately: files, and applications that are not already open or pinned in the
-dock. To go straight to Apps, Files or Notes, press the dot and slide toward
-the islands. Search stays ready after you close it, so it opens at once next
-time, and Tettegouche adds no background service to do it.
+and Files, Notes where Gooseberry is installed, Helpers where Split Rock is
+installed, and below them what you used lately: files, and applications that
+are not already open or pinned in the dock. To go straight to one of them,
+press the dot and slide toward the islands. Search stays ready after you close
+it, so it opens at once next time, and Tettegouche adds no background service
+to do it.
 
 Search stays on this computer. Files come from Baloo, KDE's built-in file
 index that Dolphin also uses, so Tettegouche keeps no index of its own. Only
@@ -118,9 +119,10 @@ It can pop out into a window of its own.
 
 You can open, copy, move, rename, and delete files; create folders; drag files
 between folders and to or from other applications; open drives and phones, and
-eject drives; and recover the last item Tettegouche sent to Trash. A running
-file operation carries on safely if you close Search or the panel restarts.
-Files works with local files for now.
+eject drives; and open Trash to restore items or delete them for good. A
+running file operation carries on safely if you close Search or the panel
+restarts. Files browses local folders, drives and phones; network shares open
+in Dolphin.
 
 </details>
 
@@ -167,17 +169,18 @@ yourself.
 </details>
 
 <details>
-<summary>With Kadunce, and without it</summary>
+<summary>On its own, or with Kadunce and Shuffle</summary>
 
 Tettegouche works on its own. Choosing an application that is already open
 brings its window forward instead of opening another: through Kadunce, which
-opens its existing Card, or through Plasma's own window list where Kadunce is
-not running. Expanded Apps and Files views can also use the space Kadunce
-provides.
+shows the card that holds it, or through Plasma's own window list where
+Kadunce is not running. Expanded Apps and Files views can also use the space
+Kadunce provides.
 
 Without Kadunce, or with a version it cannot use, Tettegouche opens in its own
-window. It also works fully without the Shuffle dock; Pin to dock appears only
-where the dock is installed.
+window. Without Shuffle and its dock it is fully functional: that is a
+supported setup, not a reduced one. Pin to dock, and the room Search leaves for
+Shuffle's bars, appear only where Shuffle is installed.
 
 </details>
 
@@ -237,7 +240,7 @@ tests/        native, QML, private-session, packaging, and source checks
 docs/         current contracts and architecture
 ```
 
-Run the repository checks before proposing a build:
+Run the repository checks before opening a pull request:
 
 ```bash
 ./verify.sh
@@ -248,15 +251,15 @@ Qt and KDE packages Arch Linux ships at the time.
 
 </details>
 
-## Part of Shuffle
+## Used by Shuffle
 
-Tettegouche is one of the open-source pieces of Shuffle, a touch-first desktop
-for KDE Plasma, where it is called Search. The others are
+Tettegouche is a project of its own. [Shuffle](https://shuffleplasma.com), a
+touch-first desktop built on KDE Plasma, includes it, and there it is called
+Search. Shuffle also includes these related projects, each usable on its own:
 [Kadunce](https://github.com/carlsonjm/kadunce),
 [Temperance](https://github.com/carlsonjm/temperance),
 [Gooseberry](https://github.com/carlsonjm/gooseberry) and
-[Split Rock](https://github.com/carlsonjm/split-rock). Get the whole thing at
-[shuffleplasma.com](https://shuffleplasma.com).
+[Split Rock](https://github.com/carlsonjm/split-rock).
 
 ## License
 

@@ -4,8 +4,8 @@
 | --- | --- |
 | [`AGENTS.md`](../AGENTS.md) | Startup set and working rules |
 | [`CLAUDE.md`](../CLAUDE.md) | Claude Code entry point |
-| [`README.md`](../README.md) | Product and build overview |
-| [`CHANGELOG.md`](../CHANGELOG.md) | Product-level release summary |
+| [`README.md`](../README.md) | What Tettegouche does, and how to build and install it |
+| [`CHANGELOG.md`](../CHANGELOG.md) | User-visible changes, release by release |
 | [`TRADEMARKS.md`](../TRADEMARKS.md) | Names and marks outside the code licence |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | Processes, ownership, integration, look and known issues, as they are now |
 | [`INPUT.md`](INPUT.md) | Every touch, mouse and keyboard input |

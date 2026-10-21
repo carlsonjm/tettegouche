@@ -1,6 +1,6 @@
 # Third-party icon assets
 
-The suite-owned action glyphs in `lucide/` are a pinned subset of Lucide
+The action glyphs in `lucide/` are a pinned subset of Lucide
 `lucide-static` version 1.46.0. Lucide is licensed under ISC; inherited Feather
 icons retain their MIT notice. The complete upstream notice is in
 `lucide/LICENSE`. No provider, application, file, or MIME identity icons are
