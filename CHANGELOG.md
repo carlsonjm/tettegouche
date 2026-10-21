@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Expand, and Search growing or shrinking between its sizes, moves as
+  evenly as Search opening: the applications, files or notes inside are laid
+  out once at the size Search is going to, and its edge moves over them,
+  rather than everything inside rearranging on every frame.
 - Playing media shows the icon of the application playing it, such as a
   browser that names itself differently from its icon or one installed as a
   Flatpak, and a generic player icon where no application can be found,
