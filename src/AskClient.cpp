@@ -103,8 +103,7 @@ void AskClient::askNow()
 void AskClient::send()
 {
     if (m_typed.isEmpty()) return;
-    if (m_id != 0)
-        m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Cancel")) << m_id);
+    stop();
     m_question = m_typed;
     m_text.clear();
     m_who.clear();
@@ -125,7 +124,12 @@ void AskClient::send()
     connect(call, &QDBusPendingCallWatcher::finished, this, [this, call, asked] {
         const QDBusPendingReply<uint> reply = *call;
         call->deleteLater();
-        if (asked != m_question) return;
+        // A question typed over before its id came back: Ask stops it on the
+        // next one, and its end is not this one's.
+        if (asked != m_question) {
+            if (!reply.isError()) m_stopped.append(reply.value());
+            return;
+        }
         m_sending = false;
         if (reply.isError()) {
             setState(QStringLiteral("problem"));
@@ -135,11 +139,18 @@ void AskClient::send()
     });
 }
 
+void AskClient::stop()
+{
+    if (m_id == 0) return;
+    m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Cancel")) << m_id);
+    m_stopped.append(m_id);
+    while (m_stopped.size() > 16) m_stopped.removeFirst();
+}
+
 void AskClient::clear()
 {
     m_pause.stop();
-    if (m_id != 0)
-        m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Cancel")) << m_id);
+    stop();
     m_id = 0;
     m_sending = false;
     m_question.clear();
@@ -168,7 +179,7 @@ void AskClient::notNow()
 void AskClient::said(uint id, const QString &text)
 {
     // Words for a question this Search sent; the id may not have come back yet.
-    if (id != m_id && !(m_sending && m_id == 0)) return;
+    if (m_stopped.contains(id) || (id != m_id && !(m_sending && m_id == 0))) return;
     if (m_id == 0) m_id = id;
     m_text += text;
     if (m_state != QLatin1String("downloading")) m_state = QStringLiteral("asking");
@@ -177,10 +188,16 @@ void AskClient::said(uint id, const QString &text)
 
 void AskClient::answered(uint id, const QVariantMap &result)
 {
-    if (id != m_id && !(m_sending && m_id == 0)) return;
+    if (m_stopped.contains(id) || (id != m_id && !(m_sending && m_id == 0))) return;
     m_id = 0;
     m_sending = false;
-    if (result.value(QStringLiteral("cancelled")).toBool()) return;
+    // Stopped by another question to Ask, not by this Search: it says so,
+    // rather than leaving the box empty.
+    if (result.value(QStringLiteral("cancelled")).toBool()) {
+        m_text.clear();
+        setState(QStringLiteral("problem"));
+        return;
+    }
     m_text = result.value(QStringLiteral("text")).toString();
     m_who = result.value(QStringLiteral("who")).toString();
     m_helpers = result.value(QStringLiteral("helpers")).toStringList();

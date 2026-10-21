@@ -4062,6 +4062,12 @@ TestCase {
         const answer = findChild(launcher, "ask-answer")
         const top = item => item.mapToItem(answer, 0, 0).y
         verify(!answer.visible)
+        // While the model thinks, the box says so, and the web waits.
+        askStub.state = "asking"
+        tryCompare(answer, "visible", true)
+        compare(findChild(launcher, "ask-answer-text").text, "Looking into it…")
+        compare(findChild(launcher, "ask-answer-who").text, "On this computer · an answer can take up to a minute")
+        verify(!findChild(launcher, "web-fallback").visible)
         // The answer, who gave it, and the Helpers it names first.
         askStub.text = "Wi-Fi that drops often comes from power saving."
         askStub.who = "computer"

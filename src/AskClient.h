@@ -92,6 +92,8 @@ private Q_SLOTS:
 private:
     void look();
     void send();
+    // Stops the question asked, whose end is then ignored.
+    void stop();
     void setState(const QString &state);
     void lookAtCodex();
     QDBusConnection m_bus;
@@ -111,6 +113,8 @@ private:
     uint m_id = 0;
     // A question sent whose id hasn't come back yet.
     bool m_sending = false;
+    // Questions this Search stopped itself, whose last words are not its own.
+    QList<uint> m_stopped;
     // Not now: no download is offered again until the typing is cleared.
     bool m_declined = false;
 };

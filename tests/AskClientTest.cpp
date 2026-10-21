@@ -21,6 +21,9 @@ public:
     bool needsModel = false;
     bool codexSignedIn = false;
     bool handsToCodex = false;
+    // Questions are left unanswered, as while the model thinks.
+    bool slow = false;
+    uint pending = 0;
     QStringList toCodex;
     int downloads = 0;
     uint next = 0;
@@ -30,6 +33,13 @@ public Q_SLOTS:
     {
         asked.append(question);
         const uint id = ++next;
+        // As Ask does: a new question stops the one before it.
+        if (pending != 0)
+            Q_EMIT Answered(std::exchange(pending, 0), { { QStringLiteral("cancelled"), true } });
+        if (slow) {
+            pending = id;
+            return id;
+        }
         QTimer::singleShot(10, this, [this, id, question] {
             if (needsModel) {
                 Q_EMIT Answered(id,
@@ -56,6 +66,12 @@ public Q_SLOTS:
         return id;
     }
     void Cancel(uint id) { cancelled.append(QString::number(id)); }
+    // Another surface's question stops this one.
+    void stopElsewhere()
+    {
+        if (pending != 0)
+            Q_EMIT Answered(std::exchange(pending, 0), { { QStringLiteral("cancelled"), true } });
+    }
     QVariantMap Codex() const
     {
         return { { QStringLiteral("installed"), true }, { QStringLiteral("signedIn"), codexSignedIn } };
@@ -136,6 +152,34 @@ private Q_SLOTS:
         client.type(QString());
         QCOMPARE(client.state(), QStringLiteral("idle"));
         QVERIFY(client.text().isEmpty());
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask"));
+    }
+
+    // A question stopped by another one to Ask, not by this Search, says
+    // Ask couldn't answer rather than leaving the box empty; the one this
+    // Search typed over is not mistaken for it.
+    void stoppedElsewhereSaysSo()
+    {
+        FakeAsk ask;
+        ask.slow = true;
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-ask"));
+        QVERIFY(peer.registerObject(
+            QStringLiteral("/Ask"), &ask, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Ask")));
+        AskClient client(QDBusConnection::sessionBus());
+        client.setPause(50);
+        QTRY_VERIFY(client.available());
+        client.type(QStringLiteral("my wifi keeps dropping"));
+        client.askNow();
+        QTRY_COMPARE(ask.asked.size(), 1);
+        client.type(QStringLiteral("my sound keeps dropping"));
+        client.askNow();
+        QTRY_COMPARE(ask.asked.size(), 2);
+        QTest::qWait(100);
+        QCOMPARE(client.state(), QStringLiteral("asking"));
+        ask.stopElsewhere();
+        QTRY_COMPARE(client.state(), QStringLiteral("problem"));
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask"));
     }

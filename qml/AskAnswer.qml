@@ -22,7 +22,10 @@ Rectangle {
     readonly property bool handedOn: phase === "answered" && !!askClient && askClient.handedToCodex
     // Where Codex is signed in, an answer offers it after the Helpers.
     readonly property bool codexOffered: phase === "answered" && !!askClient && askClient.codexReady && !handedOn
-    readonly property bool shown: phase === "asking" ? askClient.text.length > 0
+    // While the model on this computer thinks, which can take most of a
+    // minute, the box says so rather than leaving only the web below.
+    readonly property bool thinking: phase === "asking" && !!askClient && askClient.text.length === 0
+    readonly property bool shown: phase === "asking" ? true
         : phase === "answered" ? askClient.text.length > 0
         : needsModel || downloading || phase === "off" || phase === "problem"
 
@@ -48,6 +51,7 @@ Rectangle {
             visible: !answer.downloading || text.length > 0
             text: !answer.askClient || answer.downloading ? ""
                 : answer.askClient.text.length > 0 ? answer.askClient.text
+                : answer.thinking ? answer.words.i18n("Looking into it…")
                 : answer.phase === "off" ? answer.words.i18n("Ask is switched off in Settings.")
                 : answer.phase === "problem" ? answer.words.i18n("Ask couldn't answer this time. The Helpers below still can.")
                 : ""
@@ -125,6 +129,7 @@ Rectangle {
                     Math.round(100 * (answer.askClient ? answer.askClient.progress : 0)),
                     answer.askClient ? answer.askClient.size : "")
                 : answer.handedOn ? answer.words.i18n("From this computer · Codex answers in its own window")
+                : answer.thinking ? answer.words.i18n("On this computer · an answer can take up to a minute")
                 : answer.words.i18n("Answered on this computer · nothing changes until you open a Helper")
             color: answer.tone.secondaryText
             font.pixelSize: 12

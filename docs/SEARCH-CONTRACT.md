@@ -84,7 +84,12 @@ paper, 8 round, 12 by 16 inside, its words at 15 as they are written, and
 beneath at 12 who gave it: "Answered on this computer · nothing changes until
 you open a Helper". The Helpers the answer names come first in its order,
 then those the words find; Install an app opens searching for the app the
-answer named. Ask changes nothing; only a Helper's row does, after a tap.
+answer named. Ask changes nothing; only a Helper's row does, after a tap. Until
+the first words come, which on a computer without a fast graphics chip can
+take most of a minute, the box reads "Looking into it…", and beneath, "On this
+computer · an answer can take up to a minute", so the web search never stands
+alone. A question Ask stops for another surface's says Ask couldn't answer
+this time; one this Search typed over is simply replaced.
 
 Where Split Rock's Codex is signed in, an answer's list ends with an Ask Codex
 row, a row like a Helper's: "For a bigger fix, with your ChatGPT plan". Only a
