@@ -5,6 +5,12 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- The highlighted result shows its actions under it: an application's own,
+  such as New Window or New Private Window, and for a file Open With…, Show
+  in Folder, Copy Path and Move to Trash, which go on in Files with the file
+  chosen. They follow the highlight, and every other row stays one line.
+- "Search the web for …" is the last line after the results too, so the web
+  is a tap away whatever was found; Enter still opens the highlighted result.
 - A web search brings the browser to the front with its new tab, also when
   the browser was already open behind other windows.
 - Search answers the time in another zone, such as "time in London", and
