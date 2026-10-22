@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- A web search brings the browser to the front with its new tab, also when
+  the browser was already open behind other windows.
+- Search answers the time in another zone, such as "time in London", and
+  Enter copies it, as with a sum.
 - Search lists a document whose words are only inside it, such as an
   itinerary that mentions a place its name does not, once three letters are
   typed. It comes after every file or folder named for the words, wherever

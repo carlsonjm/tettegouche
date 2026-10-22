@@ -266,6 +266,7 @@ inline int searchTier(const QString &id)
         || id == QStringLiteral("krunner_recentdocuments")) return 1;
     if (id == QStringLiteral("krunner_systemsettings") || id == QStringLiteral("systemsettings")
         || id == QStringLiteral("calculator") || id == QStringLiteral("unitconverter")
+        || id == QStringLiteral("org.kde.datetime")
         || id == QLatin1String(NotesRunner::Id) || id == QLatin1String(CoreRunner::Id)) return 2;
     return 3;
 }
@@ -313,7 +314,8 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
     if (tier == 1 && evidence.confidence == SearchPolicy::NamedIntent)
         evidence.confidence = SearchPolicy::Prefix;
     if (match.runner() && (match.runner()->id() == QStringLiteral("calculator")
-        || match.runner()->id() == QStringLiteral("unitconverter"))) evidence = {SearchPolicy::Exact, 0};
+        || match.runner()->id() == QStringLiteral("unitconverter")
+        || match.runner()->id() == QStringLiteral("org.kde.datetime"))) evidence = {SearchPolicy::Exact, 0};
     const int ranked = SearchPolicy::priority(evidence, tier);
     // Files and folders follow every app, setting, Helper, note and sum the
     // words found, whatever their own confidence: a folder called settings
@@ -358,6 +360,11 @@ public:
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override {
         if (role == KRunner::ResultsModel::QueryMatchRole)
             return QVariant::fromValue(getQueryMatch(index));
+        // A time zone conversion breaks its two times over lines; a result
+        // row holds them on one.
+        if (role == Qt::DisplayRole)
+            return KRunner::ResultsModel::data(index, role).toString()
+                .replace(QStringLiteral("<br>"), QStringLiteral(" · "));
         return KRunner::ResultsModel::data(index, role);
     }
 };

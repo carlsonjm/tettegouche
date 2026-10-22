@@ -239,6 +239,15 @@ int main(int argc, char **argv)
     for (const auto &id : {"krunner_shell", "krunner_kill", "krunner_powerdevil", "krunner_webshortcuts"})
         if (searchTier(QString::fromLatin1(id)) != 3) return 2;
     {
+        // A time in another zone answers as a sum does, whatever its words.
+        Runner clock(QStringLiteral("org.kde.datetime"));
+        if (searchTier(QStringLiteral("org.kde.datetime")) != 2) return 115;
+        KRunner::QueryMatch london(&clock);
+        london.setText(QStringLiteral("London: 21:00 (5 hours later)"));
+        if (resultPriority(london, QStringLiteral("time in london"))
+            != SearchPolicy::priority({SearchPolicy::Exact, 0}, 2)) return 116;
+    }
+    {
         // Notes as Gooseberry answers Find: each listed with its folder or
         // window, a note whose title starts with the words first.
         Results notes;

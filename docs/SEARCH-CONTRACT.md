@@ -244,7 +244,7 @@ Notes had when the note left. A
 ## Providers and execution
 
 Allowed local sources are applications/services, Baloo and recent documents,
-KDE settings, calculator, unit conversion, notes from a running
+KDE settings, calculator, unit conversion, times in other zones, notes from a running
 Gooseberry, and, where Split Rock is installed, its Core's facts and Helpers.
 Core's facts ("Storage · 91% full") and its Helpers (Check for updates,
 Free up space, Install an app, Health check, What changed, Restore points,

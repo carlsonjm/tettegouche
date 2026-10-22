@@ -16,6 +16,7 @@
 #include "RunnerIdentity.h"
 
 #include <KIO/ApplicationLauncherJob>
+#include <KIO/CommandLauncherJob>
 #include <KLocalizedString>
 #include <KConfigGroup>
 #include <KRunner/ResultsModel>
@@ -46,7 +47,6 @@
 #include <QJsonObject>
 #include <QMimeData>
 #include <QMimeDatabase>
-#include <QProcess>
 #include <QQuickView>
 #include <QRegion>
 #include <QScreen>
@@ -869,7 +869,16 @@ bool LauncherController::searchWeb(const QString &query)
                 || name == QStringLiteral("librewolf") || name == QStringLiteral("floorp")) {
                 args.removeIf([](const QString &arg) { return arg.startsWith(QLatin1Char('%')); });
                 args << QStringLiteral("--new-tab") << url.toString(QUrl::FullyEncoded);
-                opened = QProcess::startDetached(program, args);
+                // Launched as a job, the browser gets an activation token from
+                // Search's window, so a running browser that takes the tab
+                // comes to the front with it rather than staying behind.
+                auto *job = new KIO::CommandLauncherJob(program, args, this);
+                job->setDesktopName(browser->desktopEntryName());
+                connect(job, &KJob::result, this, [url](KJob *done) {
+                    if (done->error()) QDesktopServices::openUrl(url);
+                });
+                job->start();
+                opened = true;
             }
         }
     }
