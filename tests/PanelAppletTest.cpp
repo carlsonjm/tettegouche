@@ -117,6 +117,9 @@ private Q_SLOTS:
         m_face->setSize(QSizeF(44, 42));
         m_window->show();
         QTest::qWait(100);
+        // With no launcher running as the panel starts, the widget starts one
+        // hidden, once, so the first touch finds Search ready.
+        QTRY_COMPARE_WITH_TIMEOUT(launches(), QStringList{QStringLiteral("--ready")}, 10000);
     }
 
     void visiblePanelControl_data()

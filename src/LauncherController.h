@@ -144,6 +144,9 @@ public:
     // A launcher started only to answer as the file manager leaves if no
     // request has shown it.
     void leaveIfUnused();
+    // Started hidden, as Plasma starts: reads what the first screen shows,
+    // and waits for the first touch.
+    void warmUp();
 
     Q_INVOKABLE void updateGuestDrag(double horizontalDelta);
     Q_INVOKABLE bool finishGuestDrag(double horizontalDelta);

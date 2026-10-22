@@ -102,6 +102,8 @@ private:
     void forward(const Request &request);
     // Starts a launcher for the request.
     void start(const Request &request);
+    // Starts a launcher that stays hidden, ready for the first touch.
+    void warmLauncher();
     void setLauncherRunning(bool running);
 
     // Whether the launcher's name is on the bus.

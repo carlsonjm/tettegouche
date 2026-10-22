@@ -253,6 +253,8 @@ int main(int argc, char **argv)
     const bool toType = arguments.contains(QStringLiteral("--type"));
     // Started by D-Bus to answer as the file manager.
     const bool fileManager = arguments.contains(QStringLiteral("--file-manager"));
+    // Started as Plasma starts, to wait hidden for the first touch.
+    const bool ready = arguments.contains(QStringLiteral("--ready"));
 
     const QByteArray runtime = qgetenv("XDG_RUNTIME_DIR");
     QLockFile instanceLock(QString::fromLocal8Bit(runtime)
@@ -260,6 +262,8 @@ int main(int argc, char **argv)
     instanceLock.setStaleLockTime(0);
     if (!instanceLock.tryLock()) {
         if (fileManager) return answerForRunningLauncher(application);
+        // One already runs, or is on its way: it is the one kept ready.
+        if (ready) return 0;
         QString method = toType ? QStringLiteral("toggleToType") : QStringLiteral("toggle");
         QVariantList request;
         if (!showFile.isEmpty()) { method = QStringLiteral("showFile"); request = {showFile}; }
@@ -465,7 +469,7 @@ int main(int argc, char **argv)
         QTimer::singleShot(5000, &controller, &LauncherController::leaveIfUnused);
     }
 
-    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager, toType] {
+    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager, toType, ready] {
         if (!showFile.isEmpty()) controller.showFile(showFile);
         else if (!folder.isEmpty()) controller.showFolder(folder);
         else if (!drive.isEmpty()) controller.showDrive(drive);
@@ -473,6 +477,7 @@ int main(int argc, char **argv)
         else if (!properties.isEmpty()) controller.showItemProperties({properties});
         else if (!drawer.isEmpty()) controller.openDrawer(drawer);
         else if (toType) controller.toggleToType();
+        else if (ready) controller.warmUp();
         else if (!fileManager) controller.open();
     });
     const int result = application.exec();
