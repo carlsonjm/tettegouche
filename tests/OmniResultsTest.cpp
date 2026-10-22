@@ -239,6 +239,15 @@ int main(int argc, char **argv)
     for (const auto &id : {"krunner_shell", "krunner_kill", "krunner_powerdevil", "krunner_webshortcuts"})
         if (searchTier(QString::fromLatin1(id)) != 3) return 2;
     {
+        // A time in another zone answers as a sum does, whatever its words.
+        Runner clock(QStringLiteral("org.kde.datetime"));
+        if (searchTier(QStringLiteral("org.kde.datetime")) != 2) return 115;
+        KRunner::QueryMatch london(&clock);
+        london.setText(QStringLiteral("London: 21:00 (5 hours later)"));
+        if (resultPriority(london, QStringLiteral("time in london"))
+            != SearchPolicy::priority({SearchPolicy::Exact, 0}, 2)) return 116;
+    }
+    {
         // Notes as Gooseberry answers Find: each listed with its folder or
         // window, a note whose title starts with the words first.
         Results notes;
@@ -401,6 +410,40 @@ int main(int argc, char **argv)
         windows.showWindowsWords(windows.testQuery);
         if (windows.rowCount() != 0) return 106;
         windows.clear();
+    }
+    {
+        // A document KDE's file index found by the words inside it is listed
+        // after every file named for them. Everyday leaves out a source file
+        // and a cache found that way; a recent document its name does not
+        // answer and a two-letter query list nothing inside.
+        Runner recent(QStringLiteral("recentdocuments"));
+        Results inside;
+        inside.testQuery = QStringLiteral("shovel");
+        Stream stream;
+        inside.setSourceModel(&stream);
+        auto file = [](Runner *runner, const QString &path) {
+            KRunner::QueryMatch match(runner);
+            match.setId(path);
+            match.setText(QFileInfo(path).fileName());
+            match.setData(QUrl::fromLocalFile(path));
+            return match;
+        };
+        const auto itinerary = file(&files, QStringLiteral("/home/test/Documents/North-Shore-itinerary.docx"));
+        const auto photo = file(&files, QStringLiteral("/home/test/Pictures/Shovel Point.jpg"));
+        stream.add({itinerary, photo,
+                    file(&files, QStringLiteral("/home/test/Documents/trail/map.cpp")),
+                    file(&files, QStringLiteral("/home/test/.cache/thumbnails/trip.png")),
+                    file(&recent, QStringLiteral("/home/test/Documents/packing.odt"))});
+        inside.invalidate();
+        if (resultPriority(itinerary, inside.testQuery) <= resultPriority(photo, inside.testQuery)) return 110;
+        if (inside.rowCount() != 2) return 111;
+        if (destinationKey(inside.getQueryMatch(inside.index(0, 0))) != destinationKey(photo)
+            || destinationKey(inside.getQueryMatch(inside.index(1, 0))) != destinationKey(itinerary)) return 112;
+        inside.setAllFiles(true);
+        if (inside.rowCount() != 4) return 113;
+        inside.testQuery = QStringLiteral("ov");
+        inside.invalidate();
+        if (inside.rowCount() != 1) return 114;
     }
     {
         // Three thousand files arriving a hundred batches at a time, as a

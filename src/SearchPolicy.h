@@ -52,7 +52,7 @@ inline Evidence evaluate(const QString &title, const QStringList &aliases,
     return best;
 }
 
-inline int priority(Evidence evidence, int kind) {
+constexpr int priority(Evidence evidence, int kind) {
     // Confidence first; apps/files/aids resolve comparable evidence. Shorter
     // completions only break ties within the same confidence and kind.
     return int(evidence.confidence) * 1000 + kind * 100 + evidence.completion;

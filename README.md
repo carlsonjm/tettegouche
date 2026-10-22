@@ -80,11 +80,13 @@ index that Dolphin also uses, so Tettegouche keeps no index of its own. Only
 <summary>What Search finds</summary>
 
 - Installed applications
-- Files from KDE's file index, and recent documents
+- Files from KDE's file index, and recent documents. A file named for what
+  you type comes first; one that only holds the words inside follows.
 - Notes, while Gooseberry is running
 - KDE settings
 - Calculator results
 - Unit conversions
+- The time in another zone, such as "time in London"
 - Split Rock's upkeep cards and facts, such as "update" or "storage", where
   Split Rock is installed
 
@@ -208,7 +210,9 @@ Build again after each Plasma update: until then, Ambient leaves out waiting
 applications and Plasma's own transfers.
 
 Bluetooth hardware and Kadunce are optional. Some related-setting results come
-from optional system tools and appear only when the tool is installed.
+from optional system tools and appear only when the tool is installed. Sums,
+unit conversions and times in other zones come from KDE's Plasma add-ons
+(`kdeplasma-addons`) and answer only where it is installed.
 
 </details>
 
