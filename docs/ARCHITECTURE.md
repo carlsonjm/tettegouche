@@ -25,7 +25,11 @@ until it answers, and one that finds it already leaving takes its place.
 The applet starts the launcher as a command in a scope of its own
 (`KIO::CommandLauncherJob`), not as its child, so restarting or removing the
 panel leaves the launcher, Files' window and any copy running. The applet knows
-the launcher by its name on the bus, whoever started it. Before it forwards a
+the launcher by its name on the bus, whoever started it. Where none runs as
+Plasma starts, the first widget with the dot starts one hidden (`--ready`), a
+moment after the panel, with that widget's settings, so the first touch shows
+Search at once rather than starting it; a launcher set to leave when hidden is
+not started early. Before it forwards a
 request it asks the launcher to leave for the widget's current settings
 (`leaveFor`); one started with others leaves when hidden and idle, and the
 request goes to the launcher started in its place.

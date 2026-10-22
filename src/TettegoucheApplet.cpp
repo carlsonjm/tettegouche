@@ -10,6 +10,7 @@
 
 #include <KConfigGroup>
 #include <KConfigLoader>
+#include <KSharedConfig>
 #include <KPluginFactory>
 #include <KIO/CommandLauncherJob>
 #include <KService>
@@ -40,6 +41,12 @@ const QString LauncherService = QStringLiteral("io.github.carlsonjm.Tettegouche"
 // How long a launcher just started is taken to be on its way, until its name
 // is on the bus.
 constexpr int StartingMs = 5000;
+// How long after the panel starts a launcher is warmed, so it does not
+// compete with the desktop's own first frames.
+constexpr int WarmAfterMs = 1500;
+// One launcher serves every widget in a Plasma process; the first widget with
+// a dot warms it.
+bool warmed = false;
 }
 
 TettegoucheApplet::TettegoucheApplet(QObject *parent,
@@ -68,7 +75,11 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
             watcher->deleteLater();
             const QDBusPendingReply<bool> reply = *watcher;
-            if (!reply.isError() && reply.value()) setLauncherRunning(true);
+            if (reply.isError()) return;
+            if (reply.value()) setLauncherRunning(true);
+            // None running as Plasma starts: one is started hidden, so the
+            // first touch finds Search ready rather than starting it.
+            else QTimer::singleShot(WarmAfterMs, this, &TettegoucheApplet::warmLauncher);
         });
     }
     m_starting.setSingleShot(true);
@@ -392,6 +403,31 @@ void TettegoucheApplet::startLauncher(bool useKadunce, const QString &showFile, 
     flags.removeAll(QStringLiteral("--standalone"));
     if (!useKadunce) flags.prepend(QStringLiteral("--standalone"));
     request({flags, showFile, drawer, drive, toType});
+}
+
+void TettegoucheApplet::warmLauncher()
+{
+    if (warmed || m_launcherRunning || m_starting.isActive() || m_leaving) return;
+    // A widget without the dot only shows islands; the one with it starts
+    // Search, and with its settings, so the launcher is not asked to leave
+    // for them at the first touch.
+    if (KConfigLoader *scheme = configScheme()) {
+        if (KConfigSkeletonItem *item = static_cast<KCoreConfigSkeleton *>(scheme)->findItem(QStringLiteral("launcherPlacement"))) {
+            if (item->property().toString() == QLatin1String("none")) return;
+        }
+    }
+    // A launcher that leaves as it hides would only start and stay.
+    if (qEnvironmentVariableIsSet("TETTEGOUCHE_QUIT_ON_CLOSE")
+        || !KSharedConfig::openConfig(QStringLiteral("tettegoucherc"))->group(QStringLiteral("Launcher"))
+                .readEntry("StayReady", true))
+        return;
+    const QString executable = QStandardPaths::findExecutable(QStringLiteral("tettegouche"));
+    if (executable.isEmpty()) return;
+    warmed = true;
+    QStringList flags = launchFlags();
+    flags.removeAll(QStringLiteral("--standalone"));
+    if (!setting(QStringLiteral("useKadunce"), true)) flags.prepend(QStringLiteral("--standalone"));
+    (new KIO::CommandLauncherJob(executable, flags << QStringLiteral("--ready"), this))->start();
 }
 
 void TettegoucheApplet::request(const Request &request)

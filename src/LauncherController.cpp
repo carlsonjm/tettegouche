@@ -656,6 +656,13 @@ void LauncherController::finishLaunch()
     });
 }
 
+void LauncherController::warmUp()
+{
+    if (openOrOpening()) return;
+    if (m_recent) m_recent->refresh();
+    if (m_notes) m_notes->refresh();
+}
+
 void LauncherController::leaveIfUnused()
 {
     if (!openOrOpening()) finishOrDeferQuit(false);
