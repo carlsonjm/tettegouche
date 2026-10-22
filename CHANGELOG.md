@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Search lists a document whose words are only inside it, such as an
+  itinerary that mentions a place its name does not, once three letters are
+  typed. It comes after every file or folder named for the words, wherever
+  KDE's file index reads the text inside files.
 - Expand, and Search growing or shrinking between its sizes, moves as
   evenly as Search opening: the applications, files or notes inside are laid
   out once at the size Search is going to, and its edge moves over them,

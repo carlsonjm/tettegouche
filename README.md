@@ -80,7 +80,8 @@ index that Dolphin also uses, so Tettegouche keeps no index of its own. Only
 <summary>What Search finds</summary>
 
 - Installed applications
-- Files from KDE's file index, and recent documents
+- Files from KDE's file index, and recent documents. A file named for what
+  you type comes first; one that only holds the words inside follows.
 - Notes, while Gooseberry is running
 - KDE settings
 - Calculator results

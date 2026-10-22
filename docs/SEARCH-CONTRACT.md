@@ -217,7 +217,10 @@ Notes had when the note left. A
    Files and folders are the exception: they follow every app, setting, Helper,
    note and sum the words found, so a folder called settings never comes
    before Settings. A file whose whole name is typed with its extension keeps
-   its place by confidence.
+   its place by confidence. A file Baloo found by the words inside it, its name
+   holding none of them, follows every file and folder named for them. It is
+   listed from three characters, and Everyday leaves out a technical or
+   internal one, as it does for names.
 3. A note Gooseberry found ranks by its first words like any name; found
    only inside, it ranks as descriptive context. Notes sit with system aids.
 4. Apps and system aids break ties only within comparable confidence. A

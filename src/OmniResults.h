@@ -206,7 +206,10 @@ inline int nameMatchQuality(QString name, QString query)
     return 2;
 }
 
-inline bool usefulFile(const QString &path, const QString &query)
+// Where a file sits and what kind it is, whatever its name: build output,
+// caches, packages and source or configuration files are left out unless the
+// query names that kind of file by its extension.
+inline bool ordinaryFile(const QString &path, const QString &query)
 {
     const QString normalized = QLatin1Char('/') + path + QLatin1Char('/');
     for (const auto &part : {"/.cache/", "/.git/", "/node_modules/", "/go/pkg/mod/",
@@ -238,7 +241,12 @@ inline bool usefulFile(const QString &path, const QString &query)
     // query that happens to match a source identifier. Never widen KDE's index.
     if (technical.contains(suffix)
         && !query.trimmed().endsWith(QLatin1Char('.') + suffix, Qt::CaseInsensitive)) return false;
-    return !path.isEmpty() && nameMatchQuality(file.fileName(), query) < 3;
+    return !path.isEmpty();
+}
+
+inline bool usefulFile(const QString &path, const QString &query)
+{
+    return ordinaryFile(path, query) && nameMatchQuality(QFileInfo(path).fileName(), query) < 3;
 }
 
 inline QString matchFilePath(const KRunner::QueryMatch &match)
@@ -269,6 +277,16 @@ inline int searchTier(const KRunner::QueryMatch &match)
 
 // Above every confidence an app, setting, Helper or note can hold.
 constexpr int FilesAfterAids = 6000;
+// After every file or folder whose name holds the words: one KDE's file index
+// found by the words inside it, its name holding none of them.
+constexpr int FilesFoundInside = FilesAfterAids
+    + SearchPolicy::priority({SearchPolicy::Unrelated, 99}, 1);
+
+inline bool foundInside(const KRunner::QueryMatch &match, const QString &query)
+{
+    return match.runner() && match.runner()->id() == QStringLiteral("baloosearch")
+        && SearchPolicy::compact(query).size() >= 3;
+}
 
 inline int resultPriority(const KRunner::QueryMatch &match, const QString &query) {
     const int tier = searchTier(match);
@@ -305,6 +323,8 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
         && !QFileInfo(query.trimmed()).suffix().isEmpty();
     if (tier == 1 && !namedFile && evidence.confidence != SearchPolicy::Unrelated)
         return ranked + FilesAfterAids;
+    if (tier == 1 && evidence.confidence == SearchPolicy::Unrelated && foundInside(match, query))
+        return FilesFoundInside;
     return ranked;
 }
 
@@ -821,8 +841,9 @@ protected:
         }
         if (searchTier(match) != 1) return true;
         const auto path = matchFilePath(match);
+        const bool inside = priority == FilesFoundInside;
         if (m_allFiles) return !path.isEmpty()
-            && nameMatchQuality(QFileInfo(path).fileName(), queryString()) < 3;
+            && (inside || nameMatchQuality(QFileInfo(path).fileName(), queryString()) < 3);
         if (queryString().trimmed().size() < 3 || bundledFile(path)
             || withinQuietFolder(path, quietFolders().split(QLatin1Char('\n')))) return false;
         const auto directory = QFileInfo(path).absolutePath();
@@ -835,9 +856,11 @@ protected:
             m_repoDirectories.insert(directory, repository);
         }
         // A file the words found sits past FilesAfterAids; one they did not
-        // find stays below it, unrelated.
-        return !m_repoDirectories.value(directory) && usefulFile(path, queryString())
-            && (priority < 5000 || priority >= FilesAfterAids);
+        // find stays below it, unrelated. One found by the words inside it is
+        // an ordinary file whatever its name.
+        if (m_repoDirectories.value(directory)) return false;
+        if (inside) return ordinaryFile(path, queryString());
+        return usefulFile(path, queryString()) && (priority < 5000 || priority >= FilesAfterAids);
     }
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
     {
