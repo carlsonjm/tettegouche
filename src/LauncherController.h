@@ -89,6 +89,14 @@ public:
     Q_INVOKABLE void pinCatalog(int row, bool pin);
     Q_INVOKABLE QString relatedOptionLabel(int row);
     Q_INVOKABLE QVariantList relatedItems(int row);
+    // What a found application or file offers under its row while it is
+    // highlighted: an application's own actions, or a file's Open With,
+    // Show in Folder, Copy Path and Move to Trash. Each is {label, action}.
+    Q_INVOKABLE QVariantList resultActions(int row) const;
+    // 1 when Search's part is done and it closes; 0 when it stays open on
+    // Files, which Show in Folder, Open With and Move to Trash bring up with
+    // the file chosen; -1 when the action is no longer there.
+    Q_INVOKABLE int runResultAction(int row, const QString &action);
     bool guestMode() const { return m_guestMode; }
     bool drawerExpanded() const { return m_drawerExpanded; }
     bool tabletSurface() const;
@@ -175,7 +183,8 @@ public:
     Q_INVOKABLE bool beginGuestFilesLaunch();
 
     Q_INVOKABLE void showInputMethod();
-    Q_INVOKABLE bool searchWeb(const QString &query);
+    // Without chosen, only while nothing local is listed.
+    Q_INVOKABLE bool searchWeb(const QString &query, bool chosen = false);
     Q_INVOKABLE bool beginGuestWebLaunch();
     Q_INVOKABLE void completeGuestHandoff();
 
@@ -270,7 +279,7 @@ private:
     // Kadunce brings the window forward as it would any card; without it,
     // Plasma does, and failing both the window asks for itself.
     void raiseFilesWindow();
-    void reveal(const QStringList &locations, bool properties);
+    void reveal(const QStringList &locations, bool properties, const QString &action = {});
     // Places Files does not browse open in Dolphin, KDE's file manager.
     void handOn(const QList<QUrl> &urls);
     // An application's open window brought forward: 1 when it came, -1 when

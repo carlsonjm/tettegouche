@@ -272,7 +272,9 @@ Firefox-family handlers are verified.
   shortcut may collapse with the same KDE module; the canonical module wins so
   related children remain attached.
 - Context children sit under their parent destination and are not ranked as
-  results of their own. Selecting one opens the parent settings page after revalidating that
+  results of their own. An application's or a file's actions are children
+  of the highlighted row only, shown while it is highlighted; another row's
+  stay hidden, so every other row is one line. Selecting one opens the parent settings page after revalidating that
   the child is still present.
 - Independent tools with similar names stay separate destinations.
 
