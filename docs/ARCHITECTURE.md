@@ -288,7 +288,11 @@ counts follow the language.
   they are; Ambient keeps them exactly. On a light one their ground and text
   are the theme's, and every wash, control and line is that text laid over
   the ground (`qml/SearchColors.qml`,
-  `applet/AmbientColors.qml`). Colours come from the theme alone. The Tette
+  `applet/AmbientColors.qml`). Colours come from the theme alone. The
+  launcher process names the style's `colors` file as its colour scheme, which
+  Plasma's palette call (`KGlobalSettings.notifyChange`) passes by, so on that
+  call it sends itself a palette change: the style rereads the file and
+  Search and Files repaint in a new colour at once. The Tette
   Dot, a note's paper and a recording's red dot keep their own colours.
 - Action glyphs come from a pinned, vendored Lucide subset
   ([THIRD_PARTY.md](../assets/icons/THIRD_PARTY.md)), drawn in Ghost White and

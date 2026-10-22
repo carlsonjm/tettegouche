@@ -124,6 +124,35 @@ private:
     Answer m_answer;
 };
 
+// The palette call Plasma makes when a look or its colour changes passes by a
+// program that names its own scheme, as Search does with the Plasma style's
+// colours, so a new colour would show only once Search started again. On that
+// call Search hands the change on itself: the Plasma style rereads its colours
+// and says so, and the palette that follows it is set again.
+class StyleColours final : public QObject
+{
+    Q_OBJECT
+public:
+    explicit StyleColours(QObject *parent)
+        : QObject(parent)
+    {
+        QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KGlobalSettings"), QStringLiteral("org.kde.KGlobalSettings"),
+                                              QStringLiteral("notifyChange"), this, SLOT(notifyChange(int, int)));
+    }
+
+public Q_SLOTS:
+    void notifyChange(int type, int)
+    {
+        // KGlobalSettings' PaletteChanged; a program that names no scheme of
+        // its own has already been told.
+        if (type != 0 || qApp->property("KDE_COLOR_SCHEME_PATH").toString().isEmpty()) {
+            return;
+        }
+        QEvent change(QEvent::ApplicationPaletteChange);
+        QCoreApplication::sendEvent(qApp, &change);
+    }
+};
+
 namespace
 {
 // Asks the running launcher; false when it did not answer.
@@ -233,6 +262,7 @@ int main(int argc, char **argv)
     };
     followSurfaces();
     QObject::connect(&surfaces, &Plasma::Theme::themeChanged, &application, followSurfaces);
+    new StyleColours(&application);
     const QStringList arguments = application.arguments();
     const auto valueAfter = [&arguments](const QString &flag) {
         const int index = arguments.indexOf(flag);
