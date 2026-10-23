@@ -14,7 +14,8 @@ history carries the implementation detail.
   except when every result is only a document with the words somewhere
   inside: then Enter searches the web.
 - A web search brings the browser to the front with its new tab, also when
-  the browser was already open behind other windows.
+  the browser was already open behind other windows, and whatever browser is
+  the default, including one installed by hand.
 - Search answers the time in another zone, such as "time in London", and
   Enter copies it, as with a sum.
 - Search lists a document whose words are only inside it, such as an

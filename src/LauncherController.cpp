@@ -931,9 +931,12 @@ bool LauncherController::searchWeb(const QString &query, bool chosen)
         auto args = KShell::splitArgs(browser->exec());
         if (!args.isEmpty()) {
             const QString program = args.takeFirst();
-            const QString name = QFileInfo(program).fileName().toLower();
-            if (name == QStringLiteral("zen") || name == QStringLiteral("firefox")
-                || name == QStringLiteral("librewolf") || name == QStringLiteral("floorp")) {
+            // A browser installed by hand runs as zen-bin or firefox-bin.
+            QString name = QFileInfo(program).fileName().toLower();
+            if (name.endsWith(QStringLiteral("-bin"))) name.chop(4);
+            if (name == QStringLiteral("zen") || name == QStringLiteral("zen-browser")
+                || name == QStringLiteral("firefox") || name == QStringLiteral("librewolf")
+                || name == QStringLiteral("floorp")) {
                 args.removeIf([](const QString &arg) { return arg.startsWith(QLatin1Char('%')); });
                 args << QStringLiteral("--new-tab") << url.toString(QUrl::FullyEncoded);
                 // Launched as a job, the browser gets an activation token from
@@ -947,6 +950,17 @@ bool LauncherController::searchWeb(const QString &query, bool chosen)
                 job->start();
                 opened = true;
             }
+        }
+        if (!opened) {
+            // Any other browser is started as its own entry with the address,
+            // so it too carries Search's activation token and comes forward.
+            auto *job = new KIO::ApplicationLauncherJob(browser, this);
+            job->setUrls({url});
+            connect(job, &KJob::result, this, [url](KJob *done) {
+                if (done->error()) QDesktopServices::openUrl(url);
+            });
+            job->start();
+            opened = true;
         }
     }
     if (!opened) opened = QDesktopServices::openUrl(url);
