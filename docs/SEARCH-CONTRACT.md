@@ -214,16 +214,19 @@ Notes had when the note left. A
    KDE indexing or scan content.
 2. Confidence precedes provider preference: exact name, named intent, prefix,
    query words, descriptive context, then unrelated. Unrelated rows are omitted.
-   Files and folders are the exception: they follow every app, setting, Helper,
-   note and sum the words found, so a folder called settings never comes
+   Files and folders are the exception: they follow every app, setting, Helper
+   and sum the words found, so a folder called settings never comes
    before Settings. A file whose whole name is typed with its extension keeps
    its place by confidence. A file Baloo found by the words inside it, its name
    holding none of them, follows every file and folder named for them. It is
    listed from three characters, and Everyday lists only a document someone
    wrote that way (PDF, Word, LibreOffice, RTF, EPUB), outside hidden folders;
    a word list, a log or a data file found by its words is left out.
-3. A note Gooseberry found ranks by its first words like any name; found
-   only inside, it ranks as descriptive context. Notes sit with system aids.
+3. Notes come last, after every file and folder, those found by the words
+   inside them too: Notes has its own search. Among themselves, a note
+   Gooseberry found ranks by its first words like any name; found only
+   inside, it ranks as descriptive context. A note listed after documents
+   found only inside does not keep Enter from the web.
 4. Apps and system aids break ties only within comparable confidence. A
    precise setting may beat an incidental app; an explicit filename stays strong.
 5. Aliases describe destinations. Two-letter aliases remain ambiguous; longer

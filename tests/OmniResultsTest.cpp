@@ -439,6 +439,12 @@ int main(int argc, char **argv)
                     file(&files, QStringLiteral("/home/test/Documents/.drafts/trip.docx"))});
         inside.invalidate();
         if (resultPriority(itinerary, inside.testQuery) <= resultPriority(photo, inside.testQuery)) return 110;
+        // A note follows them both, even one named for the words: Notes has
+        // its own search.
+        NotesRunner notesRunner;
+        KRunner::QueryMatch note(&notesRunner);
+        note.setText(QStringLiteral("Shovel Point trail"));
+        if (resultPriority(note, inside.testQuery) <= resultPriority(itinerary, inside.testQuery)) return 131;
         if (inside.rowCount() != 2) return 111;
         if (destinationKey(inside.getQueryMatch(inside.index(0, 0))) != destinationKey(photo)
             || destinationKey(inside.getQueryMatch(inside.index(1, 0))) != destinationKey(itinerary)) return 112;

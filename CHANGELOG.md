@@ -19,6 +19,8 @@ history carries the implementation detail.
   Enter or tap, also when the browser was already open behind other windows,
   with no second tap on the island, and whatever browser is the default,
   including one installed by hand.
+- Notes come last in Search's results, after every file and folder, since
+  Notes has its own search: a stuck note no longer tops a page the words name.
 - Search answers the time in another zone, such as "time in London", and
   Enter copies it, as with a sum.
 - Search lists a document whose words are only inside it, such as an
