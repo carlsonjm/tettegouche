@@ -141,9 +141,10 @@ Item {
     }
     onBrowserChanged: syncOperations()
     Component.onCompleted: syncOperations()
-    // A tap that lands just after a folder opened belongs to the tap that
-    // opened it, not to whatever now sits under the finger.
-    property double navigatedAt: 0
+    // A tap that lands just after a file or folder opened belongs to the tap
+    // that opened it: a double tap opens a file once, and after a folder it
+    // leaves whatever now sits under the finger alone.
+    property double openedAt: 0
     Timer {
         id: successHold
         interval: 800
@@ -1632,9 +1633,9 @@ Item {
                         onTapped: {
                             if(held)return
                             if(pane.browser.selecting) { pane.browser.toggleSelected(modelData.path); return }
-                            if(Date.now()-pane.navigatedAt<Qt.styleHints.mouseDoubleClickInterval)return
+                            if(Date.now()-pane.openedAt<Qt.styleHints.mouseDoubleClickInterval)return
                             pane.browser.selectedPath=modelData.path
-                            if(modelData.directory)pane.navigatedAt=Date.now()
+                            pane.openedAt=Date.now()
                             pane.browser.openSelected()
                         }
                         onLongPressed: {

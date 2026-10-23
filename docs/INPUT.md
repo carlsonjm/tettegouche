@@ -152,7 +152,7 @@ than repeat it.
 | The places' button, which says Fold while they are open | Folds the places to the rail or opens them as wide as their longest name, up to 240, so no name is cut short. Open, they stay open until this button or their edge folds them; a touch on the folder leaves them as they are. |
 | Tap or click Pop out, beside Expand | Files opens in a window of its own, with its tabs and folder as they were, and Search closes. Each Pop out opens another window. Inside Kadunce's Spread the window takes Search's card; after that it is an ordinary window, resized, moved and closed as any is. |
 | With a Files window open: `Meta+E`, a folder another application opens, or a drive or arrival from Ambient | Brings the window last used forward, back from minimized, and shows what was asked there. Files in Search still opens Files in Search. |
-| In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; the row of modes and its buttons give way to the window's own title bar. Typing goes into search; Esc clears it. |
+| In Files' own window | The header keeps search with its eye, and the sort button stays after New folder; the row of modes and its buttons give way to the window's own title bar. Typing goes into search; Esc clears it, and with nothing typed, nothing chosen and nothing carried, closes the window. |
 | Click a file | Selects it. |
 | Double-click a file | Opens it in its usual application and closes Search. A folder opens in place. |
 | Ctrl+click a file | Adds it to the selection, or removes it. |
@@ -160,7 +160,7 @@ than repeat it.
 | Ctrl+Shift+click a file | Adds that range to the selection. |
 | Click empty space | Clears the selection. |
 | Drag across empty space with the mouse | Draws a box that selects what it touches. With Ctrl it flips those files; with Shift it adds them. |
-| Tap a file | Opens it in its usual application and closes Search; a folder opens in place. A file no application claims offers Open with instead. While choosing several, adds or removes it. |
+| Tap a file | Opens it in its usual application and closes Search; a folder opens in place. A second tap straight after, as in a double tap, opens nothing more. A file no application claims offers Open with instead. While choosing several, adds or removes it. |
 | Touch and hold a file | Selects it and starts choosing several, with a circle on each file. The bar above the files offers what to do with them. |
 | Tap empty space | Clears the selection. |
 | Touch and hold empty space | Opens the folder's action menu beside the finger. |
