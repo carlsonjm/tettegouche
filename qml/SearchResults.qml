@@ -165,10 +165,11 @@ Item {
         // a Helper's row.
         footer: Item {
             width: resultList.width
-            height: askAnswer.visible && askAnswer.codexOffered ? resultsArea.rowGap + resultsArea.rowHeight : 0
-            visible: height > 0
+            readonly property real codexHeight: askAnswer.visible && askAnswer.codexOffered ? resultsArea.rowGap + resultsArea.rowHeight : 0
+            height: codexHeight + webLine.height
             Rectangle {
                 id: codexRow
+                visible: parent.codexHeight > 0
                 objectName: "ask-codex"
                 y: resultsArea.rowGap
                 width: parent.width
@@ -218,6 +219,33 @@ Item {
                 HoverHandler { id: codexHover }
                 TapHandler { onTapped: codexRow.activate() }
             }
+            // After what was found, the same words on the web: a quiet line,
+            // never a result, so Enter keeps to the highlighted row.
+            Text {
+                id: webLine
+                objectName: "web-after-results"
+                y: parent.codexHeight
+                width: resultList.width
+                readonly property bool shown: resultList.count > 0 && query.text.trim().length > 0
+                    && !askAnswer.visible && !launcher.askShown && !launcher.helpersShown
+                height: shown ? 44 + resultsArea.rowGap : 0
+                visible: shown
+                topPadding: resultsArea.rowGap
+                text: words.i18n("Search the web for “%1”", query.text.trim())
+                color: webHover.hovered ? launcher.primaryText : launcher.secondaryText
+                font.pixelSize: 15
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+                Accessible.role: Accessible.Button
+                Accessible.name: text
+                Accessible.onPressAction: launcher.searchTheWeb(true)
+                HoverHandler { id: webHover }
+                TapHandler {
+                    enabled: !launcher.guestDragged && !launcher.applicationLaunchPending
+                    onTapped: launcher.searchTheWeb(true)
+                }
+            }
         }
 
         delegate: Rectangle {
@@ -234,6 +262,11 @@ Item {
                 const revision = launcher.launcherController.relatedRevision
                 return launcher.launcherController.relatedItems(index)
             }
+            // An application's or a file's own actions, only while its row
+            // is the highlighted one, so other rows stay one line.
+            readonly property var resultActions: ListView.isCurrentItem
+                ? launcher.launcherController.resultActions(index) : []
+            readonly property var childRows: connectedDevices.concat(resultActions)
             readonly property bool alreadyOpen:
                 launcher.launcherController.contextAvailable
                 && launcher.launcherController.resultIsOpen(index)
@@ -313,13 +346,14 @@ Item {
                 width: parent.width - x - 12
                 spacing: 4
                 Repeater {
-                    model: resultDelegate.connectedDevices
+                    model: resultDelegate.childRows
                     delegate: Rectangle {
                         id: childRow
                         required property var modelData
                         required property int index
                         objectName: "child-" + resultDelegate.index + "-" + index
                         Accessible.role: Accessible.Button
+                        readonly property bool action: !!modelData.action
                         Accessible.name: modelData.status ? words.i18nc("a setting, then its state", "%1 · %2", modelData.label, modelData.status) : modelData.label
                         width: deviceChildren.width
                         height: 40
@@ -330,10 +364,12 @@ Item {
                         Text {
                             x: 27; width: parent.width - x - 12; height: parent.height
                             text: launcher.childLaunchFailed && launcher.selectedChildKey === launcher.childKey(childRow.modelData)
-                                ? words.i18nc("a setting, then why it did not open", "%1 · Couldn't open settings—try again", childRow.modelData.label)
+                                ? (childRow.action ? words.i18nc("an action, then why it did not happen", "%1 · Couldn't do that—try again", childRow.modelData.label)
+                                    : words.i18nc("a setting, then why it did not open", "%1 · Couldn't open settings—try again", childRow.modelData.label))
                                 : childRow.modelData.status ? words.i18nc("a setting, then its state", "%1 · %2", childRow.modelData.label, childRow.modelData.status)
                                 : childRow.modelData.label
-                            font.pixelSize: 12; color: launcher.secondaryText
+                            font.pixelSize: childRow.action ? 15 : 12
+                            color: childRow.action ? launcher.primaryText : launcher.secondaryText
                             verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight
                         }
                         HoverHandler { id: childHover }

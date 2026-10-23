@@ -5,6 +5,14 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- The highlighted result shows its actions under it: an application's own,
+  such as New Window or New Private Window, and for a file Open With…, Show
+  in Folder, Copy Path and Move to Trash, which go on in Files with the file
+  chosen. They follow the highlight, and every other row stays one line.
+- "Search the web for …" is the last line after the results too, so the web
+  is a tap away whatever was found. Enter still opens the highlighted result,
+  except when every result is only a document with the words somewhere
+  inside: then Enter searches the web.
 - A web search brings the browser to the front with its new tab, also when
   the browser was already open behind other windows.
 - Search answers the time in another zone, such as "time in London", and
@@ -12,7 +20,9 @@ history carries the implementation detail.
 - Search lists a document whose words are only inside it, such as an
   itinerary that mentions a place its name does not, once three letters are
   typed. It comes after every file or folder named for the words, wherever
-  KDE's file index reads the text inside files.
+  KDE's file index reads the text inside files. Everyday lists documents
+  found this way (PDF, Word, LibreOffice, RTF, EPUB), never a word list, log
+  or data file, nor anything in a hidden folder.
 - Expand, and Search growing or shrinking between its sizes, moves as
   evenly as Search opening: the applications, files or notes inside are laid
   out once at the size Search is going to, and its edge moves over them,

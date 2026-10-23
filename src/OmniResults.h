@@ -249,6 +249,21 @@ inline bool usefulFile(const QString &path, const QString &query)
     return ordinaryFile(path, query) && nameMatchQuality(QFileInfo(path).fileName(), query) < 3;
 }
 
+// Found only by the words inside it, a file is listed when it is a document
+// someone wrote: a word list, a log or a data file holds every word.
+inline bool writtenDocument(const QString &path)
+{
+    static const QSet<QString> documents = {
+        QStringLiteral("pdf"), QStringLiteral("doc"), QStringLiteral("docx"),
+        QStringLiteral("odt"), QStringLiteral("ott"), QStringLiteral("rtf"),
+        QStringLiteral("xls"), QStringLiteral("xlsx"), QStringLiteral("ods"),
+        QStringLiteral("ppt"), QStringLiteral("pptx"), QStringLiteral("odp"),
+        QStringLiteral("epub")};
+    if (!documents.contains(QFileInfo(path).suffix().toLower())) return false;
+    static const QRegularExpression hidden(QStringLiteral("/\\.[^/]+/"));
+    return !hidden.match(path).hasMatch();
+}
+
 inline QString matchFilePath(const KRunner::QueryMatch &match)
 {
     for (const auto &url : match.urls()) if (url.isLocalFile()) return url.toLocalFile();
@@ -441,6 +456,14 @@ public:
         }
         m_selectedDestination = destinationKey(getQueryMatch(index(row, 0)));
         Q_EMIT selectionChanged();
+    }
+    // Every row listed was found only by the words inside it: nothing here
+    // is named for what was typed, so Enter takes the words to the web.
+    Q_INVOKABLE bool onlyFoundInside() const {
+        if (rowCount() == 0) return false;
+        for (int i = 0; i < rowCount(); ++i)
+            if (verdict(mapToSource(index(i, 0))).priority != FilesFoundInside) return false;
+        return true;
     }
     Q_INVOKABLE bool selectionPinned() const { return !m_selectedDestination.isEmpty(); }
     Q_INVOKABLE int selectedRow() const {
@@ -866,7 +889,7 @@ protected:
         // find stays below it, unrelated. One found by the words inside it is
         // an ordinary file whatever its name.
         if (m_repoDirectories.value(directory)) return false;
-        if (inside) return ordinaryFile(path, queryString());
+        if (inside) return writtenDocument(path) && ordinaryFile(path, queryString());
         return usefulFile(path, queryString()) && (priority < 5000 || priority >= FilesAfterAids);
     }
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override
