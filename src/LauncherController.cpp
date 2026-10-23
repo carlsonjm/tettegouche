@@ -936,36 +936,40 @@ bool LauncherController::searchWeb(const QString &query, bool chosen)
     bool opened = false;
     if (browser) {
         auto args = KShell::splitArgs(browser->exec());
+        // A browser installed by hand runs as zen-bin or firefox-bin.
+        QString name = args.isEmpty() ? QString() : QFileInfo(args.first()).fileName().toLower();
+        if (name.endsWith(QStringLiteral("-bin"))) name.chop(4);
+        const QStringList identities{browser->storageId(),
+                                     browser->property<QString>(QStringLiteral("StartupWMClass")), name};
+        // A running browser asked by a token KWin does not grant takes the
+        // tab behind, and the island offers it; once it is started, it is
+        // brought forward by name as an open card is.
+        const auto raise = [this, url, identities](KJob *done) {
+            if (done->error()) QDesktopServices::openUrl(url);
+            else raiseBrowser(identities);
+        };
         if (!args.isEmpty()) {
             const QString program = args.takeFirst();
-            // A browser installed by hand runs as zen-bin or firefox-bin.
-            QString name = QFileInfo(program).fileName().toLower();
-            if (name.endsWith(QStringLiteral("-bin"))) name.chop(4);
             if (name == QStringLiteral("zen") || name == QStringLiteral("zen-browser")
                 || name == QStringLiteral("firefox") || name == QStringLiteral("librewolf")
                 || name == QStringLiteral("floorp")) {
                 args.removeIf([](const QString &arg) { return arg.startsWith(QLatin1Char('%')); });
                 args << QStringLiteral("--new-tab") << url.toString(QUrl::FullyEncoded);
-                // Launched as a job, the browser gets an activation token from
-                // Search's window, so a running browser that takes the tab
-                // comes to the front with it rather than staying behind.
+                // Launched as a job, the browser carries an activation token
+                // from Search's window where KWin grants one.
                 auto *job = new KIO::CommandLauncherJob(program, args, this);
                 job->setDesktopName(browser->desktopEntryName());
-                connect(job, &KJob::result, this, [url](KJob *done) {
-                    if (done->error()) QDesktopServices::openUrl(url);
-                });
+                connect(job, &KJob::result, this, raise);
                 job->start();
                 opened = true;
             }
         }
         if (!opened) {
             // Any other browser is started as its own entry with the address,
-            // so it too carries Search's activation token and comes forward.
+            // so it too carries Search's activation token.
             auto *job = new KIO::ApplicationLauncherJob(browser, this);
             job->setUrls({url});
-            connect(job, &KJob::result, this, [url](KJob *done) {
-                if (done->error()) QDesktopServices::openUrl(url);
-            });
+            connect(job, &KJob::result, this, raise);
             job->start();
             opened = true;
         }
@@ -974,6 +978,18 @@ bool LauncherController::searchWeb(const QString &query, bool chosen)
     if (!opened) return false;
     if (m_launchToken.isEmpty()) finishLaunch();
     return true;
+}
+
+void LauncherController::raiseBrowser(const QStringList &identities)
+{
+    // Only a browser already open is raised; one starting fresh arrives as
+    // a new card and comes forward with it.
+    if (m_contextPending) refreshContextBlocking();
+    for (const auto &identity : identities) {
+        if (m_context.windowIdForApplication(identity, QString()).isEmpty()) continue;
+        bringForward(identity, QString());
+        return;
+    }
 }
 
 bool LauncherController::beginGuestWebLaunch()

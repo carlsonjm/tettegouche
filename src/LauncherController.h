@@ -289,6 +289,7 @@ private:
     // An application's open window brought forward: 1 when it came, -1 when
     // it is open but did not come, 0 when none is open.
     int bringForward(const QString &applicationId, const QString &name);
+    void raiseBrowser(const QStringList &identities);
     // A launcher never shown, started only as the file manager, is not kept.
     void finishOrDeferQuit(bool keepReady = true);
     bool stayReady() const;

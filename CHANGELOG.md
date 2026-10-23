@@ -15,9 +15,10 @@ history carries the implementation detail.
   is a tap away whatever was found. Enter still opens the highlighted result,
   except when every result is only a document with the words somewhere
   inside: then Enter searches the web.
-- A web search brings the browser to the front with its new tab, also when
-  the browser was already open behind other windows, and whatever browser is
-  the default, including one installed by hand.
+- A web search brings the browser to the front with its new tab on the one
+  Enter or tap, also when the browser was already open behind other windows,
+  with no second tap on the island, and whatever browser is the default,
+  including one installed by hand.
 - Search answers the time in another zone, such as "time in London", and
   Enter copies it, as with a sum.
 - Search lists a document whose words are only inside it, such as an
