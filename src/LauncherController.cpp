@@ -48,6 +48,7 @@
 #include <QJsonObject>
 #include <QMimeData>
 #include <QMimeDatabase>
+#include <QQuickItem>
 #include <QQuickView>
 #include <QRegion>
 #include <QScreen>
@@ -875,6 +876,7 @@ bool LauncherController::popOutFilesWindow()
         });
         view->setSource(QUrl(QStringLiteral("qrc:/qml/FilesWindow.qml")));
         if (view->status() == QQuickView::Error) return false;
+        connect(view->rootObject(), SIGNAL(dismissed()), view, SLOT(close()));
         connect(view, &QWindow::visibleChanged, this, [this](bool visible) {
             if (!visible && !filesWindowOpen()) QGuiApplication::setDesktopFileName(m_launcherApplicationId);
             Q_EMIT filesWindowChanged();

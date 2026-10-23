@@ -899,6 +899,7 @@ Item {
         if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
                 && event.key !== Qt.Key_Tab && event.key !== Qt.Key_Backtab
                 && !query.activeFocus && !root.modeOpen && event.text.length > 0
+                && event.text.charCodeAt(0) >= 32 && event.text !== "\x7f"
                 && !(event.modifiers & (Qt.ControlModifier
                     | Qt.AltModifier | Qt.MetaModifier))) {
             root.searchEngaged = true
