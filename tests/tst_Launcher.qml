@@ -2025,6 +2025,12 @@ TestCase {
         compare(filesMock.selectedPath,"/home/test/Notes.txt")
         compare(filesMock.openCalls,before+2)
         verify(!menu.visible)
+        // A double tap on a file opens it once.
+        wait(50)
+        touch.press(0,file,file.width/2,40).commit()
+        wait(30)
+        touch.release(0,file,file.width/2,40).commit()
+        compare(filesMock.openCalls,before+2)
         // A touch and hold starts choosing several, with no menu; the action
         // bar offers what to do.
         wait(600)
@@ -3168,8 +3174,21 @@ TestCase {
         keyClick("r")
         keyClick("e")
         compare(filesMock.filter, "re")
+        let dismissals = 0
+        window.dismissed.connect(() => dismissals++)
         keyClick(Qt.Key_Escape)
         compare(filesMock.filter, "")
+        compare(dismissals, 0)
+        // With nothing typed, Esc closes the window, and neither it nor
+        // another key that writes no character goes into search.
+        window.forceActiveFocus()
+        keyClick(Qt.Key_Backspace)
+        keyClick(Qt.Key_Delete)
+        compare(filesMock.filter, "")
+        compare(findChild(window, "files-window-query").text, "")
+        keyClick(Qt.Key_Escape)
+        compare(dismissals, 1)
+        compare(findChild(window, "files-window-query").text, "")
     }
 
     function test_filesMenusAndEmptyTrash() {

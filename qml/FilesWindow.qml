@@ -14,6 +14,9 @@ Rectangle {
     id: window
     required property var fileBrowser
     required property var launcherController
+    // Esc with nothing left to clear; the window closes, as its title bar's
+    // close does.
+    signal dismissed()
     // A duration at Plasma's animation speed: 1 ms when it is instant.
     function ms(base) { return Math.max(1, Math.round(base * Math.max(0, Kirigami.Units.longDuration) / 200)) }
     readonly property int contentInset: 22
@@ -39,16 +42,18 @@ Rectangle {
         function onFilterCleared() { filter.text = "" }
     }
 
-    // Anything typed that nothing else takes goes into search.
+    // Anything typed that nothing else takes goes into search. Esc clears
+    // search, and with nothing typed closes the window, as it closes Files in
+    // Search; a key that writes no character never goes in.
     Keys.onPressed: event => {
-        if (event.key === Qt.Key_Escape && filter.text.length > 0) {
-            filter.text = ""
+        if (event.key === Qt.Key_Escape) {
+            if (filter.text.length > 0) filter.text = ""
+            else window.dismissed()
             event.accepted = true
             return
         }
-        if (event.key !== Qt.Key_Return && event.key !== Qt.Key_Enter
-                && event.key !== Qt.Key_Tab && event.key !== Qt.Key_Backtab
-                && !filter.activeFocus && event.text.length > 0
+        if (!filter.activeFocus && event.text.length > 0
+                && event.text.charCodeAt(0) >= 32 && event.text !== "\x7f"
                 && !(event.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))) {
             filter.forceActiveFocus()
             filter.insert(filter.cursorPosition, event.text)
