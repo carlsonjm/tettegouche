@@ -219,8 +219,9 @@ Notes had when the note left. A
    before Settings. A file whose whole name is typed with its extension keeps
    its place by confidence. A file Baloo found by the words inside it, its name
    holding none of them, follows every file and folder named for them. It is
-   listed from three characters, and Everyday leaves out a technical or
-   internal one, as it does for names.
+   listed from three characters, and Everyday lists only a document someone
+   wrote that way (PDF, Word, LibreOffice, RTF, EPUB), outside hidden folders;
+   a word list, a log or a data file found by its words is left out.
 3. A note Gooseberry found ranks by its first words like any name; found
    only inside, it ranks as descriptive context. Notes sit with system aids.
 4. Apps and system aids break ties only within comparable confidence. A
@@ -237,7 +238,9 @@ Notes had when the note left. A
 6. Matching ignores punctuation and case and uses word boundaries rather than
    arbitrary scattered letters.
 7. Typing alone never opens the browser or changes a setting. The web fallback
-   appears only when the person submits a search with no eligible result.
+   appears only when the person submits a search with no eligible result, or
+   with only documents found by the words inside them and no row chosen; the
+   line after the results offers it whatever was found.
 8. Ranking does not need to learn from use, and history never outranks
    relevance.
 

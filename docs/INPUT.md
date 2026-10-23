@@ -44,7 +44,7 @@ than repeat it.
 | Touch the on-screen keys | Types into the search. It never closes Search. |
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
 | Down or Up | Moves the highlight through the results, passing through a setting's detail rows and the highlighted result's actions on the way. |
-| Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, it searches the web in the browser. Under the Ask chip, with nothing listed, it sends the question to Ask at once, and never searches the web. |
+| Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, or only documents found by the words inside them and none chosen, it searches the web in the browser. Under the Ask chip, with nothing listed, it sends the question to Ask at once, and never searches the web. |
 | Type a question under the Ask chip, where Split Rock's Ask is installed | Once typing pauses, Ask's answer comes above the Helpers it names. Nothing changes until a Helper is opened. Before the model is downloaded, the answer's place offers Download and Not now. |
 | Tap Ask Codex after an answer, where Codex is signed in | The question goes on to Codex's own window and Search closes. Codex runs only from this tap, or from the person's own Settings switch. |
 | Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its Helpers, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
@@ -54,7 +54,7 @@ than repeat it.
 | Tap or click Copy Path, or Enter on it | Copies the file's full path and Search closes. |
 | Tap or click Show in Folder, Open With… or Move to Trash, or Enter on one | Search moves to Files on the file's folder with the file chosen. Open With… then offers its applications, and Move to Trash asks first, as in Files. |
 | Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
-| Tap or click "Search the web for …", in the middle with nothing found or as the last line after the results | Searches the web in the browser, which comes forward with the new tab. Enter never reaches that last line; it opens the highlighted result. |
+| Tap or click "Search the web for …", in the middle with nothing found or as the last line after the results | Searches the web in the browser, which comes forward with the new tab. Enter reaches that last line only when every result is a document found by the words inside it; otherwise it opens the highlighted result. |
 | Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
 | Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
 | Esc | Closes an open menu, then an open drawer, then Search. |

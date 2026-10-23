@@ -146,6 +146,8 @@ TestCase {
         function pinSelection(row) { pinnedRow = row; hasPinnedSelection = true; selectionChanged() }
         function selectionPinned() { return hasPinnedSelection }
         function selectedRow() { return pinnedRow }
+        property bool insideOnly: false
+        function onlyFoundInside() { return insideOnly && count > 0 }
         signal selectionChanged()
         onQueryStringChanged: { pinnedRow = -1; hasPinnedSelection = false }
         // Split Rock's Core's upkeep cards, as the Helpers chip shows them.
@@ -1134,6 +1136,31 @@ TestCase {
         controller.activationResult = 1
         results.clear()
         tryCompare(line, "visible", false)
+        query.text = ""
+    }
+    // Only documents with the words somewhere inside them: Enter searches
+    // the web, unless a row was chosen first.
+    function test_enterGoesToWebPastInsideMatches() {
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        const query = findChild(launcher, "search-query")
+        query.text = "timberwolves schedule"
+        results.append({display: "season-notes.pdf", decoration: "application-pdf", subtext: "Documents"})
+        results.insideOnly = true
+        controller.webSearches = 0
+        controller.webChosen = []
+        results.launches = 0
+        launcher.submit()
+        compare(controller.webSearches, 1)
+        compare(controller.webChosen, [true])
+        compare(results.launches, 0)
+        results.insideOnly = false
+        controller.activationResult = 0
+        launcher.submit()
+        compare(controller.webSearches, 1)
+        compare(results.launches, 1)
+        controller.activationResult = 1
+        results.clear()
         query.text = ""
     }
     function test_webFallbackWaitsForLocalSearch() {

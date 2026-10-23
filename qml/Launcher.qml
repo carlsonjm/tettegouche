@@ -803,6 +803,13 @@ Item {
             // A vanished destination must not silently turn Enter into a
             // different app launch (or a web search).
             runResult(root.searchResults.selectedRow())
+        } else if (resultList.count > 0 && !root.drawerOpen && !root.helpersShown
+                   && resultList.currentIndex <= 0 && query.text.trim().length > 0
+                   && typeof root.searchResults.onlyFoundInside === "function"
+                   && root.searchResults.onlyFoundInside()) {
+            // Only documents with the words somewhere inside: what was typed
+            // names nothing here, so Enter is the web line's.
+            root.searchTheWeb(true)
         } else if (resultList.count > 0) {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
@@ -815,8 +822,9 @@ Item {
         }
     }
 
-    // The typed words on the web: on Enter only with nothing found here;
-    // chosen from the line after the results, whatever was found.
+    // The typed words on the web: on Enter only with nothing found here, or
+    // only documents found by the words inside them; chosen from the line
+    // after the results, whatever was found.
     function searchTheWeb(chosen) {
         const waiting = root.launcherController.beginGuestWebLaunch()
         if (waiting) {
