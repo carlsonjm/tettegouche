@@ -273,6 +273,9 @@ int main(int argc, char **argv)
     // A folder another application asks to open, and the items it asks to
     // show, all given after --reveal, or whose Properties it asks for.
     const QString folder = valueAfter(QStringLiteral("--folder"));
+    // Files' own entry with no folder given, as a pinned Files on the dock
+    // starts it: Files in its own window rather than Search.
+    const bool filesWindow = arguments.contains(QStringLiteral("--folder")) && folder.isEmpty();
     // A drive by its device identifier, to open in Files.
     const QString drive = valueAfter(QStringLiteral("--drive"));
     const QString properties = valueAfter(QStringLiteral("--properties"));
@@ -298,6 +301,7 @@ int main(int argc, char **argv)
         QVariantList request;
         if (!showFile.isEmpty()) { method = QStringLiteral("showFile"); request = {showFile}; }
         else if (!folder.isEmpty()) { method = QStringLiteral("showFolder"); request = {folder}; }
+        else if (filesWindow) method = QStringLiteral("openFilesWindow");
         else if (!drive.isEmpty()) { method = QStringLiteral("showDrive"); request = {drive}; }
         else if (!reveal.isEmpty()) { method = QStringLiteral("revealItems"); request = {reveal}; }
         else if (!properties.isEmpty()) { method = QStringLiteral("showItemProperties"); request = {QStringList{properties}}; }
@@ -499,9 +503,10 @@ int main(int argc, char **argv)
         QTimer::singleShot(5000, &controller, &LauncherController::leaveIfUnused);
     }
 
-    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, drive, reveal, properties, fileManager, toType, ready] {
+    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, filesWindow, drive, reveal, properties, fileManager, toType, ready] {
         if (!showFile.isEmpty()) controller.showFile(showFile);
         else if (!folder.isEmpty()) controller.showFolder(folder);
+        else if (filesWindow) controller.openFilesWindow();
         else if (!drive.isEmpty()) controller.showDrive(drive);
         else if (!reveal.isEmpty()) controller.revealItems(reveal);
         else if (!properties.isEmpty()) controller.showItemProperties({properties});

@@ -506,6 +506,13 @@ void LauncherController::showFolders(const QStringList &locations)
     });
 }
 
+void LauncherController::openFilesWindow()
+{
+    if (!m_fileBrowser) { open(); return; }
+    if (openOrOpening()) close();
+    showFilesWindow();
+}
+
 void LauncherController::revealItems(const QStringList &locations)
 {
     reveal(locations, false);

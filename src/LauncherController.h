@@ -220,6 +220,10 @@ public Q_SLOTS:
     // does when nothing else was asked for; places Files does not browse, such
     // as Trash or a network share, go on to Dolphin.
     Q_SCRIPTABLE void showFolders(const QStringList &locations);
+    // Files started as an application, from its own entry with no folder
+    // given, as a pinned Files on the dock does: its own window, brought
+    // forward where one is open.
+    Q_SCRIPTABLE void openFilesWindow();
     // Items shown chosen in their folder, as "Show in folder" asks; any outside
     // the first one's folder are left out.
     Q_SCRIPTABLE void revealItems(const QStringList &locations);

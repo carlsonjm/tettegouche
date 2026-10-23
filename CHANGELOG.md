@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Files pinned on the dock opens Files in its own window, as a card, rather
+  than Search.
 - The highlighted result shows its actions under it: an application's own,
   such as New Window or New Private Window, and for a file Open With…, Show
   in Folder, Copy Path and Move to Trash, which go on in Files with the file
