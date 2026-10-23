@@ -28,6 +28,7 @@
 #include <KUrlMimeData>
 #include <LayerShellQt/Window>
 
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QDBusConnection>
 #include <QDBusError>
@@ -184,6 +185,72 @@ QVariantList LauncherController::relatedItems(int row)
         return m_related.items(QStringLiteral("connect"));
     if (!match.runner() || !match.runner()->id().contains(QStringLiteral("systemsettings"))) return {};
     return m_related.items(RelatedInfo::keyForSetting(match.id()));
+}
+
+// An application's own actions as its entry lists them, separators and
+// hidden ones left out, at most four.
+static QList<int> shownServiceActions(const KService::Ptr &service)
+{
+    QList<int> shown;
+    if (!service) return shown;
+    const auto own = service->actions();
+    for (int i = 0; i < own.size() && shown.size() < 4; ++i)
+        if (!own.at(i).isSeparator() && !own.at(i).noDisplay() && !own.at(i).text().trimmed().isEmpty()) shown.append(i);
+    return shown;
+}
+
+QVariantList LauncherController::resultActions(int row) const
+{
+    const QModelIndex index = m_results->index(row, 0);
+    if (!index.isValid()) return {};
+    const auto match = m_results->getQueryMatch(index);
+    QVariantList actions;
+    auto add = [&actions](const QString &label, const QString &action) {
+        actions.append(QVariantMap{{QStringLiteral("label"), label}, {QStringLiteral("action"), action}});
+    };
+    if (searchTier(match) == 0) {
+        const auto service = KService::serviceByStorageId(resultApplicationId(row));
+        for (const int i : shownServiceActions(service))
+            add(service->actions().at(i).text().trimmed(), QStringLiteral("app:%1").arg(i));
+        return actions;
+    }
+    if (searchTier(match) != 1) return {};
+    const QFileInfo file(matchFilePath(match));
+    if (!file.isAbsolute() || !file.exists()) return {};
+    if (file.isFile()) add(i18n("Open With…"), QStringLiteral("open-with"));
+    if (m_fileBrowser) add(i18n("Show in Folder"), QStringLiteral("show-in-folder"));
+    add(i18n("Copy Path"), QStringLiteral("copy-path"));
+    if (m_fileBrowser) add(i18n("Move to Trash"), QStringLiteral("trash"));
+    return actions;
+}
+
+int LauncherController::runResultAction(int row, const QString &action)
+{
+    const QModelIndex index = m_results->index(row, 0);
+    if (!index.isValid()) return -1;
+    const auto match = m_results->getQueryMatch(index);
+    if (action.startsWith(QStringLiteral("app:"))) {
+        const auto service = KService::serviceByStorageId(resultApplicationId(row));
+        bool known = false;
+        const int i = action.mid(4).toInt(&known);
+        if (!known || !shownServiceActions(service).contains(i)) return -1;
+        // A fresh start, never the open window brought forward.
+        (new KIO::ApplicationLauncherJob(service->actions().at(i), this))->start();
+        return 1;
+    }
+    if (searchTier(match) != 1) return -1;
+    const auto path = QDir::cleanPath(QFileInfo(matchFilePath(match)).absoluteFilePath());
+    if (!QFileInfo::exists(path)) return -1;
+    if (action == QStringLiteral("copy-path")) {
+        QGuiApplication::clipboard()->setText(path);
+        return 1;
+    }
+    if (!m_fileBrowser) return -1;
+    if (action == QStringLiteral("show-in-folder")) reveal({path}, false);
+    else if ((action == QStringLiteral("open-with") && QFileInfo(path).isFile())
+             || action == QStringLiteral("trash")) reveal({path}, false, action);
+    else return -1;
+    return 0;
 }
 
 bool LauncherController::tabletSurface() const
@@ -438,6 +505,13 @@ void LauncherController::showFolders(const QStringList &locations)
         }
         if (folders.isEmpty() && !recent) files->openDrive(phones.first());
     });
+}
+
+void LauncherController::openFilesWindow()
+{
+    if (!m_fileBrowser) { open(); return; }
+    if (openOrOpening()) close();
+    showFilesWindow();
 }
 
 void LauncherController::revealItems(const QStringList &locations)
@@ -851,10 +925,10 @@ void LauncherController::showInputMethod()
     }
 }
 
-bool LauncherController::searchWeb(const QString &query)
+bool LauncherController::searchWeb(const QString &query, bool chosen)
 {
-    if (query.trimmed().isEmpty() || m_results->querying()
-        || m_results->rowCount() != 0) return false;
+    if (query.trimmed().isEmpty()) return false;
+    if (!chosen && (m_results->querying() || m_results->rowCount() != 0)) return false;
     QUrl url(QStringLiteral("https://duckduckgo.com/"));
     QUrlQuery parameters;
     parameters.addQueryItem(QStringLiteral("q"), query.trimmed());
@@ -864,30 +938,60 @@ bool LauncherController::searchWeb(const QString &query)
     bool opened = false;
     if (browser) {
         auto args = KShell::splitArgs(browser->exec());
+        // A browser installed by hand runs as zen-bin or firefox-bin.
+        QString name = args.isEmpty() ? QString() : QFileInfo(args.first()).fileName().toLower();
+        if (name.endsWith(QStringLiteral("-bin"))) name.chop(4);
+        const QStringList identities{browser->storageId(),
+                                     browser->property<QString>(QStringLiteral("StartupWMClass")), name};
+        // A running browser asked by a token KWin does not grant takes the
+        // tab behind, and the island offers it; once it is started, it is
+        // brought forward by name as an open card is.
+        const auto raise = [this, url, identities](KJob *done) {
+            if (done->error()) QDesktopServices::openUrl(url);
+            else raiseBrowser(identities);
+        };
         if (!args.isEmpty()) {
             const QString program = args.takeFirst();
-            const QString name = QFileInfo(program).fileName().toLower();
-            if (name == QStringLiteral("zen") || name == QStringLiteral("firefox")
-                || name == QStringLiteral("librewolf") || name == QStringLiteral("floorp")) {
+            if (name == QStringLiteral("zen") || name == QStringLiteral("zen-browser")
+                || name == QStringLiteral("firefox") || name == QStringLiteral("librewolf")
+                || name == QStringLiteral("floorp")) {
                 args.removeIf([](const QString &arg) { return arg.startsWith(QLatin1Char('%')); });
                 args << QStringLiteral("--new-tab") << url.toString(QUrl::FullyEncoded);
-                // Launched as a job, the browser gets an activation token from
-                // Search's window, so a running browser that takes the tab
-                // comes to the front with it rather than staying behind.
+                // Launched as a job, the browser carries an activation token
+                // from Search's window where KWin grants one.
                 auto *job = new KIO::CommandLauncherJob(program, args, this);
                 job->setDesktopName(browser->desktopEntryName());
-                connect(job, &KJob::result, this, [url](KJob *done) {
-                    if (done->error()) QDesktopServices::openUrl(url);
-                });
+                connect(job, &KJob::result, this, raise);
                 job->start();
                 opened = true;
             }
+        }
+        if (!opened) {
+            // Any other browser is started as its own entry with the address,
+            // so it too carries Search's activation token.
+            auto *job = new KIO::ApplicationLauncherJob(browser, this);
+            job->setUrls({url});
+            connect(job, &KJob::result, this, raise);
+            job->start();
+            opened = true;
         }
     }
     if (!opened) opened = QDesktopServices::openUrl(url);
     if (!opened) return false;
     if (m_launchToken.isEmpty()) finishLaunch();
     return true;
+}
+
+void LauncherController::raiseBrowser(const QStringList &identities)
+{
+    // Only a browser already open is raised; one starting fresh arrives as
+    // a new card and comes forward with it.
+    if (m_contextPending) refreshContextBlocking();
+    for (const auto &identity : identities) {
+        if (m_context.windowIdForApplication(identity, QString()).isEmpty()) continue;
+        bringForward(identity, QString());
+        return;
+    }
 }
 
 bool LauncherController::beginGuestWebLaunch()
@@ -1032,7 +1136,7 @@ void LauncherController::raiseFilesWindow()
     window->view->requestActivate();
 }
 
-void LauncherController::reveal(const QStringList &locations, bool properties)
+void LauncherController::reveal(const QStringList &locations, bool properties, const QString &action)
 {
     QStringList paths;
     QList<QUrl> elsewhere;
@@ -1044,7 +1148,7 @@ void LauncherController::reveal(const QStringList &locations, bool properties)
     if (!elsewhere.isEmpty()) handOn(elsewhere);
     if (paths.isEmpty() || !m_fileBrowser) return;
     showFiles();
-    whenShown([this, paths, properties] { filesTarget()->reveal(paths, properties); });
+    whenShown([this, paths, properties, action] { filesTarget()->reveal(paths, properties, action); });
 }
 
 void LauncherController::handOn(const QList<QUrl> &urls)

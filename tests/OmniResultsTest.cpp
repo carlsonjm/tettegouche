@@ -433,17 +433,51 @@ int main(int argc, char **argv)
         stream.add({itinerary, photo,
                     file(&files, QStringLiteral("/home/test/Documents/trail/map.cpp")),
                     file(&files, QStringLiteral("/home/test/.cache/thumbnails/trip.png")),
-                    file(&recent, QStringLiteral("/home/test/Documents/packing.odt"))});
+                    file(&recent, QStringLiteral("/home/test/Documents/packing.odt")),
+                    file(&files, QStringLiteral("/home/test/Documents/work/ZxcvbnData/3/english_wikipedia.txt")),
+                    file(&files, QStringLiteral("/home/test/Documents/work/sessions/rollout-2026-09-02.jsonl")),
+                    file(&files, QStringLiteral("/home/test/Documents/.drafts/trip.docx"))});
         inside.invalidate();
         if (resultPriority(itinerary, inside.testQuery) <= resultPriority(photo, inside.testQuery)) return 110;
+        // A note follows them both, even one named for the words: Notes has
+        // its own search.
+        NotesRunner notesRunner;
+        KRunner::QueryMatch note(&notesRunner);
+        note.setText(QStringLiteral("Shovel Point trail"));
+        if (resultPriority(note, inside.testQuery) <= resultPriority(itinerary, inside.testQuery)) return 131;
         if (inside.rowCount() != 2) return 111;
         if (destinationKey(inside.getQueryMatch(inside.index(0, 0))) != destinationKey(photo)
             || destinationKey(inside.getQueryMatch(inside.index(1, 0))) != destinationKey(itinerary)) return 112;
         inside.setAllFiles(true);
-        if (inside.rowCount() != 4) return 113;
+        if (inside.rowCount() != 7) return 113;
         inside.testQuery = QStringLiteral("ov");
         inside.invalidate();
         if (inside.rowCount() != 1) return 114;
+    }
+    {
+        // Found only by the words inside them, a word list and a log are left
+        // out of Everyday; with nothing named for the words, Enter is the web's.
+        Results inside;
+        inside.testQuery = QStringLiteral("timberwolves schedule");
+        Stream stream;
+        inside.setSourceModel(&stream);
+        auto file = [&files](const QString &path) {
+            KRunner::QueryMatch match(&files);
+            match.setId(path);
+            match.setText(QFileInfo(path).fileName());
+            match.setData(QUrl::fromLocalFile(path));
+            return match;
+        };
+        stream.add({file(QStringLiteral("/home/test/Documents/work/ZxcvbnData/3/english_wikipedia.txt")),
+                    file(QStringLiteral("/home/test/Documents/work/sessions/rollout-2026-09-02.jsonl"))});
+        inside.invalidate();
+        if (inside.rowCount() != 0 || inside.onlyFoundInside()) return 128;
+        stream.add({file(QStringLiteral("/home/test/Documents/season.pdf"))});
+        inside.invalidate();
+        if (inside.rowCount() != 1 || !inside.onlyFoundInside()) return 129;
+        stream.add({file(QStringLiteral("/home/test/Pictures/timberwolves schedule.png"))});
+        inside.invalidate();
+        if (inside.rowCount() != 2 || inside.onlyFoundInside()) return 130;
     }
     {
         // Three thousand files arriving a hundred batches at a time, as a

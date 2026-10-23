@@ -1760,6 +1760,12 @@ Item {
                 if(index>=0) {
                     files.positionViewAtIndex(index,GridView.Contain); pane.browser.revealPath=""
                     if(pane.browser.revealProperties) { pane.browser.revealProperties=false; pane.showProperties(reveal) }
+                    const then=pane.browser.revealAction || ""
+                    if(then.length) {
+                        pane.browser.revealAction=""
+                        if(then==="open-with") pane.showOpenWith(reveal)
+                        else if(then==="trash") trashConfirm.open()
+                    }
                 }
                 else files.contentY=Math.min(pane.browser.scroll,Math.max(0,files.contentHeight-files.height))
             })

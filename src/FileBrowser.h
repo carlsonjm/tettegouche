@@ -105,6 +105,9 @@ class FileBrowser : public QObject
     Q_PROPERTY(int tileSize READ tileSize WRITE setTileSize NOTIFY tileSizeChanged)
     Q_PROPERTY(QString revealPath READ revealPath WRITE setRevealPath NOTIFY revealPathChanged)
     Q_PROPERTY(bool revealProperties READ revealProperties WRITE setRevealProperties NOTIFY revealPathChanged)
+    // What Files offers for the revealed item once it is in view: "open-with"
+    // or "trash", each through its own sheet; empty for nothing.
+    Q_PROPERTY(QString revealAction READ revealAction WRITE setRevealAction NOTIFY revealPathChanged)
     Q_PROPERTY(QVariantMap details READ details NOTIFY detailsChanged)
     Q_PROPERTY(QVariantMap question READ question NOTIFY questionChanged)
     Q_PROPERTY(bool canCompress READ canCompress NOTIFY selectionChanged)
@@ -453,9 +456,11 @@ public:
     // application's request for them asks.
     bool revealProperties() const { return m_revealProperties; }
     void setRevealProperties(bool v) { if (v == m_revealProperties) return; m_revealProperties = v; Q_EMIT revealPathChanged(); }
+    QString revealAction() const { return m_revealAction; }
+    void setRevealAction(const QString &v) { if (v == m_revealAction) return; m_revealAction = v; Q_EMIT revealPathChanged(); }
     // Items shown chosen in their folder, as another application's "Show in
     // folder" asks; any outside the first one's folder are left out.
-    void reveal(const QStringList &paths, bool properties = false) {
+    void reveal(const QStringList &paths, bool properties = false, const QString &action = {}) {
         if (paths.isEmpty() || !QDir::isAbsolutePath(paths.first())) return;
         const auto folder = QFileInfo(paths.first()).absolutePath();
         const bool shown = folder == path();
@@ -469,6 +474,7 @@ public:
         Q_EMIT selectionChanged();
         setRevealPath(paths.first());
         setRevealProperties(properties);
+        setRevealAction(action);
         // A folder already shown lists nothing new, so nothing else would say
         // there is a file to bring into view.
         if (shown) Q_EMIT changed();
@@ -1362,6 +1368,7 @@ private:
     int m_tileSize=1;
     QString m_revealPath;
     bool m_revealProperties=false;
+    QString m_revealAction;
     QString m_operationStatus;
     QString m_filter, m_error;
     bool m_listingFailed=false;

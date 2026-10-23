@@ -123,7 +123,13 @@ TestCase {
         function cancelGuestApplicationLaunch() { launchCancels++ }
         property int handoffs: 0
         function completeGuestHandoff() { handoffs++ }
-        function searchWeb(text) { webSearches++; return true }
+        property var webChosen: []
+        function searchWeb(text, chosen) { webSearches++; webChosen = webChosen.concat([!!chosen]); return true }
+        property var actionsByRow: ({})
+        function resultActions(row) { return actionsByRow[row] || [] }
+        property var actionRuns: []
+        property int actionResult: 1
+        function runResultAction(row, action) { actionRuns = actionRuns.concat([row + ":" + action]); return actionResult }
         function resultApplicationId(row) { return row >= 0 && row < results.count ? (results.get(row).applicationId || "") : "" }
     }
     ListModel {
@@ -140,6 +146,8 @@ TestCase {
         function pinSelection(row) { pinnedRow = row; hasPinnedSelection = true; selectionChanged() }
         function selectionPinned() { return hasPinnedSelection }
         function selectedRow() { return pinnedRow }
+        property bool insideOnly: false
+        function onlyFoundInside() { return insideOnly && count > 0 }
         signal selectionChanged()
         onQueryStringChanged: { pinnedRow = -1; hasPinnedSelection = false }
         // Split Rock's Core's upkeep cards, as the Helpers chip shows them.
@@ -1050,6 +1058,108 @@ TestCase {
         list.positionViewAtIndex(5, ListView.Beginning)
         query.text = "wi"
         tryVerify(function() { return Math.abs(list.contentY - list.originY) < 0.5 })
+        results.clear()
+        query.text = ""
+    }
+    // An application's or a file's actions show under its row only while it
+    // is highlighted, follow the highlight, and run from the keys or a tap.
+    function test_actionsFollowHighlight() {
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        const query = findChild(launcher, "search-query")
+        query.text = "fire"
+        controller.actionsByRow = {
+            0: [{label: "New Window", action: "app:0"}, {label: "New Private Window", action: "app:1"}],
+            1: [{label: "Open With…", action: "open-with"}, {label: "Show in Folder", action: "show-in-folder"},
+                {label: "Copy Path", action: "copy-path"}, {label: "Move to Trash", action: "trash"}]
+        }
+        results.append({display: "Firefox", decoration: "firefox", subtext: "Web browser"})
+        results.append({display: "fireplace-plan.pdf", decoration: "application-pdf", subtext: "Documents"})
+        const list = findChild(launcher, "search-result-list")
+        list.currentIndex = 0
+        launcher.selectedChildKey = ""
+        tryCompare(findChild(launcher, "result-0"), "height", 56 + 2 * 40 + 4)
+        compare(findChild(launcher, "result-1").height, 56)
+        // Down goes through the highlighted row's actions, then on to the
+        // next row, whose actions take their place.
+        launcher.moveResultSelection(1)
+        compare(launcher.selectedChildKey, launcher.childKey(controller.actionsByRow[0][0]))
+        controller.actionRuns = []
+        controller.closes = 0
+        launcher.submit()
+        compare(controller.actionRuns, ["0:app:0"])
+        compare(controller.closes, 1)
+        launcher.moveResultSelection(1)
+        launcher.moveResultSelection(1)
+        compare(list.currentIndex, 1)
+        compare(launcher.selectedChildKey, "")
+        tryCompare(findChild(launcher, "result-0"), "height", 56)
+        tryCompare(findChild(launcher, "result-1"), "height", 56 + 4 * 40 + 3 * 4)
+        // Show in Folder goes on in Files: Search stays and nothing failed.
+        controller.actionResult = 0
+        list.positionViewAtIndex(1, ListView.End)
+        const show = findChild(launcher, "child-1-1")
+        mouseClick(show, show.width / 2, show.height / 2)
+        compare(controller.actionRuns, ["0:app:0", "1:show-in-folder"])
+        compare(controller.closes, 1)
+        compare(launcher.childLaunchFailed, false)
+        // An action no longer there says so on its row.
+        controller.actionResult = -1
+        launcher.selectedChildKey = launcher.childKey(controller.actionsByRow[1][2])
+        launcher.submit()
+        compare(launcher.childLaunchFailed, true)
+        controller.actionResult = 1
+        controller.actionsByRow = ({})
+        results.clear()
+        query.text = ""
+    }
+    // After what was found, the web line searches the web on a tap; Enter
+    // still opens the highlighted row.
+    function test_webLineAfterResults() {
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        const query = findChild(launcher, "search-query")
+        query.text = "shovel"
+        results.append({display: "Shovel Point.jpg", decoration: "image-jpeg", subtext: "Pictures"})
+        const line = findChild(launcher, "web-after-results")
+        tryCompare(line, "visible", true)
+        controller.webSearches = 0
+        controller.webChosen = []
+        mouseClick(line, line.width / 2, line.height / 2)
+        compare(controller.webSearches, 1)
+        compare(controller.webChosen, [true])
+        results.launches = 0
+        controller.activationResult = 0
+        launcher.submit()
+        compare(controller.webSearches, 1)
+        compare(results.launches, 1)
+        controller.activationResult = 1
+        results.clear()
+        tryCompare(line, "visible", false)
+        query.text = ""
+    }
+    // Only documents with the words somewhere inside them: Enter searches
+    // the web, unless a row was chosen first.
+    function test_enterGoesToWebPastInsideMatches() {
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        const query = findChild(launcher, "search-query")
+        query.text = "timberwolves schedule"
+        results.append({display: "season-notes.pdf", decoration: "application-pdf", subtext: "Documents"})
+        results.insideOnly = true
+        controller.webSearches = 0
+        controller.webChosen = []
+        results.launches = 0
+        launcher.submit()
+        compare(controller.webSearches, 1)
+        compare(controller.webChosen, [true])
+        compare(results.launches, 0)
+        results.insideOnly = false
+        controller.activationResult = 0
+        launcher.submit()
+        compare(controller.webSearches, 1)
+        compare(results.launches, 1)
+        controller.activationResult = 1
         results.clear()
         query.text = ""
     }

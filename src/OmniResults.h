@@ -249,6 +249,21 @@ inline bool usefulFile(const QString &path, const QString &query)
     return ordinaryFile(path, query) && nameMatchQuality(QFileInfo(path).fileName(), query) < 3;
 }
 
+// Found only by the words inside it, a file is listed when it is a document
+// someone wrote: a word list, a log or a data file holds every word.
+inline bool writtenDocument(const QString &path)
+{
+    static const QSet<QString> documents = {
+        QStringLiteral("pdf"), QStringLiteral("doc"), QStringLiteral("docx"),
+        QStringLiteral("odt"), QStringLiteral("ott"), QStringLiteral("rtf"),
+        QStringLiteral("xls"), QStringLiteral("xlsx"), QStringLiteral("ods"),
+        QStringLiteral("ppt"), QStringLiteral("pptx"), QStringLiteral("odp"),
+        QStringLiteral("epub")};
+    if (!documents.contains(QFileInfo(path).suffix().toLower())) return false;
+    static const QRegularExpression hidden(QStringLiteral("/\\.[^/]+/"));
+    return !hidden.match(path).hasMatch();
+}
+
 inline QString matchFilePath(const KRunner::QueryMatch &match)
 {
     for (const auto &url : match.urls()) if (url.isLocalFile()) return url.toLocalFile();
@@ -276,12 +291,16 @@ inline int searchTier(const KRunner::QueryMatch &match)
     return match.runner() ? searchTier(match.runner()->id()) : 3;
 }
 
-// Above every confidence an app, setting, Helper or note can hold.
+// Above every confidence an app, setting or Helper can hold.
 constexpr int FilesAfterAids = 6000;
 // After every file or folder whose name holds the words: one KDE's file index
 // found by the words inside it, its name holding none of them.
 constexpr int FilesFoundInside = FilesAfterAids
     + SearchPolicy::priority({SearchPolicy::Unrelated, 99}, 1);
+
+// Last, after every file and folder: a note, which Notes' own search finds
+// first, never stands before what the words name elsewhere.
+constexpr int NotesAfterFiles = FilesFoundInside + 1;
 
 inline bool foundInside(const KRunner::QueryMatch &match, const QString &query)
 {
@@ -301,7 +320,7 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
         // a title that matches ranks as any name does.
         auto evidence = SearchPolicy::name(match.text(), query);
         if (evidence.confidence == SearchPolicy::Unrelated) evidence = {SearchPolicy::Context, 0};
-        return SearchPolicy::priority(evidence, tier);
+        return NotesAfterFiles + SearchPolicy::priority(evidence, tier);
     }
     const bool setting = match.runner() && match.runner()->id().contains(QStringLiteral("systemsettings"));
     auto aliases = setting ? settingAliases(match.id()) : QStringList();
@@ -317,7 +336,7 @@ inline int resultPriority(const KRunner::QueryMatch &match, const QString &query
         || match.runner()->id() == QStringLiteral("unitconverter")
         || match.runner()->id() == QStringLiteral("org.kde.datetime"))) evidence = {SearchPolicy::Exact, 0};
     const int ranked = SearchPolicy::priority(evidence, tier);
-    // Files and folders follow every app, setting, Helper, note and sum the
+    // Files and folders follow every app, setting, Helper and sum the
     // words found, whatever their own confidence: a folder called settings
     // never pushes Settings down. A file whose whole name was typed with its
     // extension ("sound.png") is asked for by name and keeps its place.
@@ -441,6 +460,18 @@ public:
         }
         m_selectedDestination = destinationKey(getQueryMatch(index(row, 0)));
         Q_EMIT selectionChanged();
+    }
+    // Every file listed was found only by the words inside it, and any note
+    // after them: nothing here is named for what was typed, so Enter takes
+    // the words to the web.
+    Q_INVOKABLE bool onlyFoundInside() const {
+        bool found = false;
+        for (int i = 0; i < rowCount(); ++i) {
+            if (noteMatch(getQueryMatch(index(i, 0)))) continue;
+            if (verdict(mapToSource(index(i, 0))).priority != FilesFoundInside) return false;
+            found = true;
+        }
+        return found;
     }
     Q_INVOKABLE bool selectionPinned() const { return !m_selectedDestination.isEmpty(); }
     Q_INVOKABLE int selectedRow() const {
@@ -837,7 +868,7 @@ protected:
     // judgement for each.
     mutable int m_verdictChecks = 0;
     bool candidateEligible(const KRunner::QueryMatch &match, int priority) const {
-        if (searchTier(match) != 1 && priority >= 5000) return false;
+        if (searchTier(match) != 1 && !noteMatch(match) && priority >= 5000) return false;
         if (match.runner() && match.runner() != &m_aliasRunner
             && match.runner()->id().contains(QStringLiteral("systemsettings"))) {
             for (int i = 0; i < m_aliases.rowCount(); ++i) {
@@ -866,7 +897,7 @@ protected:
         // find stays below it, unrelated. One found by the words inside it is
         // an ordinary file whatever its name.
         if (m_repoDirectories.value(directory)) return false;
-        if (inside) return ordinaryFile(path, queryString());
+        if (inside) return writtenDocument(path) && ordinaryFile(path, queryString());
         return usefulFile(path, queryString()) && (priority < 5000 || priority >= FilesAfterAids);
     }
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override

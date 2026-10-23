@@ -181,11 +181,12 @@ Item {
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
 
-    function childKey(child) { return JSON.stringify([child.label, child.status || ""]) }
+    function childKey(child) { return JSON.stringify([child.label, child.status || "", child.action || ""]) }
     function currentChildren() {
         const row = root.searchResults.selectionPinned()
             ? root.searchResults.selectedRow() : resultList.currentIndex
         return row < 0 ? [] : root.launcherController.relatedItems(row)
+            .concat(root.launcherController.resultActions(row))
     }
     function moveResultSelection(direction) {
         const children = currentChildren()
@@ -211,7 +212,16 @@ Item {
         const child = currentChildren().find(function(item) { return root.childKey(item) === root.selectedChildKey })
         if (!child) return
         const row = root.searchResults.selectedRow()
-        root.childLaunchFailed = !root.runResult(row)
+        if (!child.action) {
+            root.childLaunchFailed = !root.runResult(row)
+            return
+        }
+        // Copy Path and an application's action finish here; Show in Folder,
+        // Open With and Move to Trash go on in Files, with the file chosen.
+        const done = root.launcherController.runResultAction(row, child.action)
+        root.childLaunchFailed = done < 0
+        if (done > 0) root.launcherController.finishLaunch()
+        else if (done === 0) root.selectedChildKey = ""
     }
     property bool applicationLaunchPending: false
     property string launchingApplication: ""
@@ -793,6 +803,13 @@ Item {
             // A vanished destination must not silently turn Enter into a
             // different app launch (or a web search).
             runResult(root.searchResults.selectedRow())
+        } else if (resultList.count > 0 && !root.drawerOpen && !root.helpersShown
+                   && resultList.currentIndex <= 0 && query.text.trim().length > 0
+                   && typeof root.searchResults.onlyFoundInside === "function"
+                   && root.searchResults.onlyFoundInside()) {
+            // Only documents with the words somewhere inside: what was typed
+            // names nothing here, so Enter is the web line's.
+            root.searchTheWeb(true)
         } else if (resultList.count > 0) {
             runResult(Math.max(0, resultList.currentIndex))
         } else if (root.searchResults.querying) {
@@ -801,17 +818,24 @@ Item {
             // Nothing listed yet: the question goes to Ask without waiting.
             root.askClient.askNow()
         } else if (!root.drawerOpen && !root.helpersShown && query.text.trim().length > 0) {
-            const waiting = root.launcherController.beginGuestWebLaunch()
-            if (waiting) {
-                root.applicationLaunchPending = true
-                root.launchingApplication = words.i18n("Web search")
-                launchTimeout.restart()
-            }
-            if (!root.launcherController.searchWeb(query.text) && waiting) {
-                root.launcherController.cancelGuestApplicationLaunch()
-                launchTimeout.stop()
-                root.applicationLaunchPending = false
-            }
+            root.searchTheWeb(false)
+        }
+    }
+
+    // The typed words on the web: on Enter only with nothing found here, or
+    // only documents found by the words inside them; chosen from the line
+    // after the results, whatever was found.
+    function searchTheWeb(chosen) {
+        const waiting = root.launcherController.beginGuestWebLaunch()
+        if (waiting) {
+            root.applicationLaunchPending = true
+            root.launchingApplication = words.i18n("Web search")
+            launchTimeout.restart()
+        }
+        if (!root.launcherController.searchWeb(query.text, chosen) && waiting) {
+            root.launcherController.cancelGuestApplicationLaunch()
+            launchTimeout.stop()
+            root.applicationLaunchPending = false
         }
     }
 
