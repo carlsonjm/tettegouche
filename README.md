@@ -22,7 +22,7 @@ in the panel opens search, applications and files in one place, and small
 islands beside it show what is happening now. Search stays on this computer.
 </p>
 
-<p align="center"><img src="assets/readme/showcase.webp" alt="Opening Search and typing a few letters; apps and files appear as you type" width="100%"></p>
+<p align="center"><img src="assets/readme/showcase.webp" alt="Search open with a few letters typed: apps, settings and notes appear as you type" width="100%"></p>
 <p align="center"><sub>Search: just type.</sub></p>
 
 ## What you get
