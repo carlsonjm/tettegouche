@@ -22,8 +22,8 @@ in the panel opens search, applications and files in one place, and small
 islands beside it show what is happening now. Search stays on this computer.
 </p>
 
-<p align="center"><img src="assets/readme/showcase.webp" alt="Tettegouche's Search open over the desktop, with the media island in the panel below it" width="100%"></p>
-<p align="center"><sub>Search open over the desktop, with music playing on the island below.</sub></p>
+<p align="center"><img src="assets/readme/showcase.webp" alt="Opening Search and typing a few letters; apps and files appear as you type" width="100%"></p>
+<p align="center"><sub>Search: just type.</sub></p>
 
 ## What you get
 
