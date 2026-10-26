@@ -22,6 +22,12 @@ in the panel opens search, applications and files in one place, and small
 islands beside it show what is happening now. Search stays on this computer.
 </p>
 
+
+
+https://github.com/user-attachments/assets/bf570089-f795-42d4-8333-f2e6c63039b6
+
+
+
 ## What you get
 
 <table>
