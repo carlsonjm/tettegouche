@@ -152,8 +152,8 @@ Each island's controls come from the application or service behind it. When
 that source goes away, Tettegouche removes the item without guessing whether it
 succeeded.
 
-Each kind of activity is its own island, side by side and centred in the room
-the panel gives them, clear so the panel shows through. When they share the
+Each kind of activity is its own island, side by side beside the dot, taking
+only the room it needs, clear so the panel shows through. When they share the
 room, each gives up names first and keeps its buttons at its end. A tap opens
 an island in place, larger, with the media's art, position and controls or each
 transfer's own actions; a sideways flick sets one aside. The widget's setting

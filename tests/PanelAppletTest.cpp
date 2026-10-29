@@ -347,6 +347,23 @@ private Q_SLOTS:
         QTRY_COMPARE(ambient->property("gap").toReal(), 8.0);
     }
 
+    // Unset, as on an ordinary panel, the islands gather against the dot,
+    // on its side; a host's setting places them as it says.
+    void islandsGatherBesideTheDot()
+    {
+        m_panel->setFormFactor(Plasma::Types::Horizontal);
+        auto *ambient = m_face->findChild<QQuickItem *>(QStringLiteral("tettegouche-ambient-surface"));
+        QVERIFY(ambient);
+        QCOMPARE(ambient->property("align").toString(), QStringLiteral("start"));
+        configure(QStringLiteral("launcherPlacement"), QStringLiteral("end"));
+        QTRY_COMPARE(ambient->property("align").toString(), QStringLiteral("end"));
+        configure(QStringLiteral("launcherPlacement"), QStringLiteral("start"));
+        configure(QStringLiteral("ambientAlign"), QStringLiteral("center"));
+        QTRY_COMPARE(ambient->property("align").toString(), QStringLiteral("center"));
+        configure(QStringLiteral("ambientAlign"), QString());
+        QTRY_COMPARE(ambient->property("align").toString(), QStringLiteral("start"));
+    }
+
     void configuredActivation()
     {
         configure(QStringLiteral("useKadunce"), false);

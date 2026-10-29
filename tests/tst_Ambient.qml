@@ -344,6 +344,29 @@ TestCase {
         fuzzyCompare(rightOf(surface, second), surface.width, 1);
     }
 
+    // With room to spare the islands stand whole, and that is their natural
+    // width: a band given exactly it sheds nothing. What they occupy follows
+    // them as they come and go, and with nothing going on both are nothing.
+    function test_the_islands_natural_width_is_what_they_use_whole() {
+        const surface = createSurface(2000, [transfer, media]);
+        surface.align = "start";
+        settle();
+        const first = island(surface, "transfer"), second = island(surface, "media");
+        fuzzyCompare(leftOf(surface, first), 0, 1);
+        fuzzyCompare(surface.naturalWidth, rightOf(surface, second), 2);
+        fuzzyCompare(surface.occupiedWidth, surface.naturalWidth, 2);
+        const whole = shown(surface, "media").length;
+        surface.width = surface.naturalWidth;
+        settle();
+        compare(shown(surface, "media").length, whole);
+        fuzzyCompare(rightOf(surface, second), surface.width, 2);
+        surface.activities = [];
+        compare(surface.naturalWidth, 0);
+        verify(surface.occupiedWidth > 0);
+        settle();
+        compare(surface.occupiedWidth, 0);
+    }
+
     // Unset, each look keeps its own room. A host's spacing is the room in
     // both, and the margin without an outline, held to 4 to 32 px, and it
     // takes effect as it changes.

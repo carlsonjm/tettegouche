@@ -42,6 +42,12 @@ PlasmoidItem {
         if (ambientShows === "others") return activity.kind !== "media";
         return true;
     }
+    // Where the host sets nothing, as on an ordinary panel, the islands
+    // gather against the dot and the widget is the dot and its islands, so
+    // whatever stands next on the panel follows straight after them.
+    readonly property string hostAlign: Plasmoid.configuration.ambientAlign || ""
+    readonly property bool besideDot: hostAlign === ""
+    readonly property string ambientAlign: hostAlign || (launcherAtEnd ? "end" : "start")
     // With Ambient off the widget is the launcher's dot alone.
     readonly property bool showAmbient: Plasmoid.configuration.showAmbient !== false
     readonly property int ambientCoreWidth: showAmbient ? ambient.minimumUsefulWidth : 0
@@ -101,8 +107,16 @@ PlasmoidItem {
             responsiveMeasuredWidth = endpointWidth;
             return;
         }
-        Plasmoid.watchPanelGeometry(root);
         const minimum = endpointWidth + ambientCoreWidth;
+        if (besideDot) {
+            // The islands whole, or the room they still hold while one
+            // leaves; the panel gives less where it has less, and they shed
+            // pieces to fit.
+            const islands = Math.ceil(Math.max(ambient.naturalWidth, ambient.occupiedWidth));
+            responsiveMeasuredWidth = Math.max(minimum, endpointWidth + islands);
+            return;
+        }
+        Plasmoid.watchPanelGeometry(root);
         const measured = Plasmoid.availablePanelWidth(root, minimum, 6);
         if (Math.abs(measured - responsiveMeasuredWidth) > 1)
             responsiveMeasuredWidth = measured;
@@ -110,6 +124,7 @@ PlasmoidItem {
 
     onVerticalChanged: Qt.callLater(refreshResponsiveWidth)
     onAmbientCoreWidthChanged: Qt.callLater(refreshResponsiveWidth)
+    onBesideDotChanged: Qt.callLater(refreshResponsiveWidth)
     onVisibleChanged: Qt.callLater(refreshResponsiveWidth)
     onShowAmbientChanged: {
         if (!showAmbient && island) island.dismiss();
@@ -142,7 +157,9 @@ PlasmoidItem {
             NumberAnimation { duration: root.ms(140); easing.type: Easing.OutCubic }
         }
         activities: Plasmoid.ambientActivities.filter(activity => root.shows(activity))
-        align: Plasmoid.configuration.ambientAlign || "center"
+        align: root.ambientAlign
+        onNaturalWidthChanged: if (root.besideDot) Qt.callLater(root.refreshResponsiveWidth)
+        onOccupiedWidthChanged: if (root.besideDot) Qt.callLater(root.refreshResponsiveWidth)
         outlined: Plasmoid.configuration.islandOutline !== false
         spacing: Plasmoid.configuration.islandSpacing || 0
         opaque: root.bandOpaque

@@ -5,6 +5,9 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- On an ordinary Plasma panel the islands sit right beside the launcher dot
+  and take only the room they need, so the task icons and other widgets
+  follow straight after them instead of being pushed toward the middle.
 - Files pinned on the dock opens Files in its own window, as a card, rather
   than Search.
 - The highlighted result shows its actions under it: an application's own,

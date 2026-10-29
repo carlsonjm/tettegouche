@@ -50,8 +50,8 @@
       <default>all</default>
     </entry>
     <entry name="ambientAlign" type="String">
-      <label>Where the islands gather in the widget's width: center, start or end</label>
-      <default>center</default>
+      <label>Where the islands gather in the widget's width: center, start or end; unset, against the launcher's dot, the widget then as wide as its islands</label>
+      <default></default>
     </entry>
     <entry name="islandOutline" type="Bool">
       <label>Draw each island as a faint pill; off, the islands are words and glyphs on the panel alone</label>

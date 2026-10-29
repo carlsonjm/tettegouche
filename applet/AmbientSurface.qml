@@ -7,7 +7,7 @@ import org.kde.kirigami as Kirigami
 import "IslandRoom.js" as IslandRoom
 
 // Ambient's band: what is going on now, one island for each kind of it,
-// centred in the width the panel hands it. The islands share the band by
+// centred in the width the panel hands it or gathered against one end. The islands share the band by
 // turns (IslandRoom.js), and what cannot keep even its first piece folds into
 // a round bubble that counts what it holds. Music alone keeps its controls in
 // the middle; beside a neighbour, each island reads what it is, then its
@@ -138,6 +138,17 @@ Item {
     readonly property int minimumUsefulWidth: {
         const least = IslandRoom.minimumWidth(bandKinds, measure, available, gap);
         return least > 0 ? least + margin : 0;
+    }
+    // The most the band uses: every island whole, as with room to spare.
+    readonly property int naturalWidth: {
+        const whole = IslandRoom.layout(bandKinds, room, 1000000, measure, available, gap, pillHeight).used;
+        return whole > 0 ? Math.ceil(whole + margin) : 0;
+    }
+    // What the islands take as they stand, one coming or going by its share,
+    // so a widget sized to its islands closes their room only once they leave.
+    readonly property real occupiedWidth: {
+        const total = lineUp("").total;
+        return total > 0 ? total + margin : 0;
     }
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
         || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
@@ -549,10 +560,10 @@ Item {
             : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland
             : kind === "core" ? coreIsland : kind === "note" ? noteIsland : null;
     }
-    // Islands sit in the order they arrived, the fold last, the whole group
-    // centred; each takes its share as it comes and goes, so its neighbours
-    // move over as it does.
-    function slotX(kind) {
+    // Islands sit in the order they arrived, the fold last; each takes its
+    // share as it comes and goes, so its neighbours move over as it does.
+    // Where `kind` starts in the group, and the group's whole length.
+    function lineUp(kind) {
         const order = Object.keys(places).sort((a, b) => places[a] - places[b])
             .map(islandOf).filter(island => island !== null);
         let total = 0, at = 0, before = 0;
@@ -566,8 +577,14 @@ Item {
         const space = gap * Math.min(before, bubble.presence);
         if (kind === "fold") at = total + space;
         total += space + bubble.slotWidth;
-        const start = align === "start" ? margin : align === "end" ? width - margin - total : (width - total) / 2;
-        return Math.round(start) + at;
+        return { at: at, total: total };
+    }
+    // The group centred, or against the end the host asks for.
+    function slotX(kind) {
+        const line = lineUp(kind);
+        const start = align === "start" ? margin : align === "end" ? width - margin - line.total
+            : (width - line.total) / 2;
+        return Math.round(start) + line.at;
     }
 
     // The open island shows music, or every transfer, the ended ones included.

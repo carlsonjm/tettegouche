@@ -246,8 +246,8 @@ Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
 screen (§ Shared screen), applications waiting (§ Waiting applications),
 Core's facts (§ Core) and the quick note (§ Quick note). The islands sit side
-by side in the order they arrived, the quick note's first, an end in its transfer's place, the group centred in the width
-the panel hands Ambient, or set against one end of it where the host asks
+by side in the order they arrived, the quick note's first, an end in its transfer's place, the group against the
+launcher dot, or placed in the width the host hands Ambient as it asks
 (§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
 black, they take the Plasma style's ground, on a dark style the band's own
@@ -296,11 +296,17 @@ players, and a button that brings the player forward when the player can be
 raised. For transfers, ended ones included, it lists each one with its own
 progress, Pause or Resume, Cancel and Show in Files, as its source supports.
 
-The panel decides the width. On an ordinary panel Ambient measures from the
+The panel decides the width. On an ordinary panel the widget is the launcher
+dot and its islands whole, so whatever stands next on the panel follows
+straight after them, with any spare room beyond it; with nothing going on it
+is the dot alone. An island arriving opens its room before it shows, and one
+leaving closes its room as it goes. Where the panel has less, it gives the
+widget less, down to each island's first piece, and the islands share what it
+gives. Where a host sets `ambientAlign`, Ambient instead measures from the
 launcher dot to the next visible widget on its right in the same panel,
-ignoring spacers; with no widget there, it keeps only the island's core.
-Shuffle's band instead hands Ambient the whole of its side of the dock, so the
-islands never plan for room they will not get. It never pushes a centred dock off
+ignoring spacers, and places the islands in that width; with no widget there,
+it keeps only the island's core. Shuffle's band hands Ambient the whole of its
+side of the dock, so the islands never plan for room they will not get. It never pushes a centred dock off
 the display's centre. On a vertical panel only the launcher dot shows.
 
 ### Host settings
@@ -314,7 +320,7 @@ is on an ordinary panel.
 | --- | --- | --- |
 | `launcherPlacement` | `start`, the dot before the islands; `end`, after them; `none`, no dot, for a widget that shows islands alone | `start` |
 | `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media, the quick note's among them | `all` |
-| `ambientAlign` | `center`, `start` or `end` of the width the islands have | `center` |
+| `ambientAlign` | `center`, `start` or `end` of the width the islands have | unset: against the dot, the widget as wide as its islands |
 | `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
 | `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
 | `pearlLook` | `pearl`, the Tette Dot; `magnifier`, a magnifying-glass mark in the dot's Ghost White, at its size and place, with nothing drawn behind or round it | `pearl` |
