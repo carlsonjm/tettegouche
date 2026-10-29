@@ -582,10 +582,11 @@ public:
         }
         return listed;
     }
-    // Asks Core to open one on its own, as Enter on its row does.
-    Q_INVOKABLE bool openHelper(const QString &id) {
+    // Asks Core to open one on its own, as Enter on its row does; query goes
+    // only to Install an app, which searches for it.
+    Q_INVOKABLE bool openHelper(const QString &id, const QString &query = QString()) {
         if (!m_openCoreAction || id.isEmpty()) return false;
-        m_openCoreAction(id, QString());
+        m_openCoreAction(id, query);
         return true;
     }
     QStringList askedHelpers() const { return m_askedHelpers; }

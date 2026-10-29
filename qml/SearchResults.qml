@@ -115,6 +115,10 @@ Item {
         tone: resultsArea.tone
         words: resultsArea.words
         visible: launcher.askShown && shown
+        // Install an app opens at llama.cpp, and Search closes, as from a
+        // Helper's row; Ask Codex the same.
+        onInstallEngine: if (launcher.searchResults.openHelper("install", "llama.cpp")) launcher.launcherController.finishLaunch()
+        onAskCodex: if (launcher.askClient.askCodex()) launcher.launcherController.finishLaunch()
     }
 
     ListView {
