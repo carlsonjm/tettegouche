@@ -290,17 +290,14 @@ applications and Plasma's own transfers.
 
 ### 7. Uninstall
 
-1. Put Plasma's launcher back first: right-click the panel, choose **Add
-   Widgets…**, and drag **Application Launcher** onto it.
-2. Right-click the Tettegouche dot and choose **Remove**.
-3. In Konsole:
+```bash
+cd ~/tettegouche
+./uninstall.sh
+```
 
-   ```bash
-   cd ~/tettegouche
-   ./uninstall.sh
-   ```
-
-   It asks for your password and ends with **Tettegouche removed**.
+It asks for your password, takes the dot off the panel and puts Plasma's own
+**Application Launcher** back where the dot was, and ends with **Tettegouche
+removed**. The panel blinks out for a moment; your windows stay open.
 
 To delete the download too, run `rm -rf ~/tettegouche`.
 
