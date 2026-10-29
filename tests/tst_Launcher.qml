@@ -4304,8 +4304,13 @@ TestCase {
         tryCompare(findChild(launcher, "ask-answer-heading"), "text", "Ask needs llama.cpp before it can answer here")
         tryVerify(() => findChild(launcher, "ask-install-engine") !== null && findChild(launcher, "ask-install-engine").visible)
         askStub.needsEngine = false
-        tryVerify(() => findChild(launcher, "ask-download") !== null)
-        download = findChild(launcher, "ask-download")
+        // The pills are made again; tap the new Download once the row has
+        // placed it.
+        tryVerify(() => (download = findChild(launcher, "ask-download")) !== null && download.parent !== null
+            && download.visible && download.width > 36
+            && top(download) > top(findChild(launcher, "ask-answer-text"))
+            && top(download) + download.height <= answer.height)
+        waitForRendering(answer)
         mouseClick(download, download.width / 2, download.height / 2)
         compare(askStub.downloads, 1)
         askStub.progress = 0.44
