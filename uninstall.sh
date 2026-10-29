@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+manifest="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/build/install_manifest.txt"
+
 # Tettegouche takes the launcher's place, so a panel left without it would
 # have no launcher. While the panel still runs, each panel that holds the dot
 # gets Plasma's own Application Launcher back where the dot was, unless it
@@ -50,9 +52,43 @@ if [[ -x "${install_key}" ]] \
         && sudo -n -l "${install_key}" tettegouche remove >/dev/null 2>&1; then
     sudo -n "${install_key}" tettegouche remove
 else
-    sudo rm -f /usr/bin/tettegouche
-    sudo rm -f /usr/share/applications/io.github.carlsonjm.Tettegouche.desktop
-    sudo rm -f /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
+    # Every file install.sh puts in place, as CMakeLists.txt installs them.
+    # A copy left behind would keep a launcher entry, and would stop Shuffle's
+    # own package from installing over it.
+    installed=(
+        /usr/bin/tettegouche
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.desktop
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.Files.desktop
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.Apps.desktop
+        /usr/share/tettegouche/org.freedesktop.FileManager1.service
+        /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche.png
+        /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche-logo.png
+        /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche-apps.svg
+        /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche.svg
+        /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
+    )
+    shopt -s nullglob
+    installed+=(/usr/share/locale/*/LC_MESSAGES/tettegouche.mo
+        /usr/share/locale/*/LC_MESSAGES/plasma_applet_co.goodinput.tettegouche.mo)
+    shopt -u nullglob
+    # And whatever the build folder's list adds, from a build newer than this
+    # list. A file a package owns is the package's to remove, never this one's.
+    if [[ -f ${manifest} ]]; then
+        while IFS= read -r listed; do
+            case ${listed} in /usr/* | /etc/*) installed+=("${listed}") ;; esac
+        done < "${manifest}"
+    fi
+    present=()
+    for path in "${installed[@]}"; do
+        if [[ -f ${path} || -L ${path} ]] \
+                && ! { command -v pacman >/dev/null 2>&1 && pacman -Qqo -- "${path}" >/dev/null 2>&1; }; then
+            present+=("${path}")
+        fi
+    done
+    if ((${#present[@]} > 0)); then
+        sudo rm -f -- "${present[@]}"
+    fi
+    sudo rmdir --ignore-fail-on-non-empty /usr/share/tettegouche 2>/dev/null || true
 fi
 kbuildsycoca6
 
