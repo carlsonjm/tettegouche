@@ -4319,8 +4319,12 @@ TestCase {
         tryCompare(findChild(launcher, "ask-answer-who"), "text", "44% of about 2.5 GB")
         // Codex only: the question waits for Ask Codex.
         askStub.state = "needsModel"
-        const codexOnly = findChild(launcher, "ask-codex-only")
-        tryCompare(codexOnly, "visible", true)
+        let codexOnly = null
+        tryVerify(() => (codexOnly = findChild(launcher, "ask-codex-only")) !== null && codexOnly.parent !== null
+            && codexOnly.visible && codexOnly.width > 36
+            && top(codexOnly) > top(findChild(launcher, "ask-answer-text"))
+            && top(codexOnly) + codexOnly.height <= answer.height)
+        waitForRendering(answer)
         mouseClick(codexOnly, codexOnly.width / 2, codexOnly.height / 2)
         compare(askStub.codexOnlyChoices, 1)
         tryVerify(() => findChild(launcher, "ask-codex-now") !== null && findChild(launcher, "ask-codex-now").visible)
