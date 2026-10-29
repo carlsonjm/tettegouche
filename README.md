@@ -246,8 +246,7 @@ cd tettegouche
 ./install.sh
 ```
 
-The installer checks the code, builds it and runs its tests, which takes a few
-minutes. Then it asks for your password in Konsole (nothing shows as you type)
+The installer checks the code, builds it and runs its tests. Then it asks for your password in Konsole (nothing shows as you type)
 to install Tettegouche for the whole computer, and restarts the panel. The
 panel blinks out for a moment; your windows stay open. It ends with
 **Tettegouche installed**.
