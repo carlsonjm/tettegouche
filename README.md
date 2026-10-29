@@ -204,19 +204,26 @@ Check your Plasma version. It must say 6.7 or higher:
 plasmashell --version
 ```
 
-Bring the computer up to date, then restart it, so Tettegouche is built
-against the Plasma you are running:
+Bring the computer up to date. If you just did this for another part of the
+suite, skip it:
 
 ```bash
 sudo pacman -Syu
 ```
 
-After the restart, open Konsole again and install what the build and its
-checks need. Type your password when asked, and answer `Y`:
+Restart the computer only if that update installed a new `kwin`,
+`plasma-workspace` or kernel (`linux`, or `linux-cachyos` on CachyOS): Tettegouche is built against what is
+installed, so that has to be what is running.
+
+Then install what the build needs. Type your password when asked, and answer
+`Y`:
 
 ```bash
 sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules python ripgrep gettext qt6-base qt6-declarative qt6-svg qt6-tools kbookmarks kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice bluez-qt solid kirigami kpackage layer-shell-qt libplasma plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt kate okular ffmpegthumbs kdegraphics-thumbnailers
 ```
+
+If pacman says a package **is up to date -- skipping**, or **there is nothing
+to do**, that is normal: it is already installed.
 
 Kate, Okular and the thumbnailers are there because the installer's checks
 open real files with them. `kdeplasma-addons`, if you add it, lets Search
@@ -252,6 +259,11 @@ panel blinks out for a moment; your windows stay open. It ends with
 3. Plasma gives the launcher key to the first launcher it finds on the panel.
    For `Meta` to open Search, remove Plasma's own **Application Launcher**:
    right-click it and choose **Remove**, or remove it in the panel's edit mode.
+
+On Plasma's standard bottom panel the dot then sits at the left end. Live
+activity, such as the song playing, shows as an island a good way to the dot's
+right, and Plasma's task icons move to the middle of the panel. That is how it
+lays out on a panel without Shuffle.
 
 ### 5. Check it worked
 
