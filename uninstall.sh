@@ -50,9 +50,27 @@ if [[ -x "${install_key}" ]] \
         && sudo -n -l "${install_key}" tettegouche remove >/dev/null 2>&1; then
     sudo -n "${install_key}" tettegouche remove
 else
-    sudo rm -f /usr/bin/tettegouche
-    sudo rm -f /usr/share/applications/io.github.carlsonjm.Tettegouche.desktop
-    sudo rm -f /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
+    # Every file install.sh puts in place, as CMakeLists.txt installs them.
+    # A copy left behind would keep a launcher entry, and would stop Shuffle's
+    # own package from installing over it.
+    installed=(
+        /usr/bin/tettegouche
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.desktop
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.Files.desktop
+        /usr/share/applications/io.github.carlsonjm.Tettegouche.Apps.desktop
+        /usr/share/tettegouche/org.freedesktop.FileManager1.service
+        /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche.png
+        /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche-logo.png
+        /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche-apps.svg
+        /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche.svg
+        /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
+    )
+    shopt -s nullglob
+    installed+=(/usr/share/locale/*/LC_MESSAGES/tettegouche.mo
+        /usr/share/locale/*/LC_MESSAGES/plasma_applet_co.goodinput.tettegouche.mo)
+    shopt -u nullglob
+    sudo rm -f -- "${installed[@]}"
+    sudo rmdir --ignore-fail-on-non-empty /usr/share/tettegouche 2>/dev/null || true
 fi
 kbuildsycoca6
 
