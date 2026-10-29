@@ -110,6 +110,7 @@ void AskClient::send()
     m_helpers.clear();
     m_query.clear();
     m_handedToCodex = false;
+    m_needsEngine = false;
     m_id = 0;
     m_sending = true;
     if (m_state != QLatin1String("downloading"))
@@ -159,6 +160,7 @@ void AskClient::clear()
     m_helpers.clear();
     m_query.clear();
     m_handedToCodex = false;
+    m_needsEngine = false;
     setState(m_state == QLatin1String("downloading") ? m_state : QStringLiteral("idle"));
 }
 
@@ -203,12 +205,16 @@ void AskClient::answered(uint id, const QVariantMap &result)
     m_helpers = result.value(QStringLiteral("helpers")).toStringList();
     m_query = result.value(QStringLiteral("query")).toString();
     m_handedToCodex = result.value(QStringLiteral("handedToCodex")).toBool();
+    m_needsEngine = result.value(QStringLiteral("needsEngine")).toBool();
     // Ask is running now, so asking after Codex starts nothing.
     lookAtCodex();
+    if (result.value(QStringLiteral("needsModel")).toBool()) lookAtModel();
     if (result.value(QStringLiteral("off")).toBool())
         setState(QStringLiteral("off"));
     else if (result.value(QStringLiteral("needsModel")).toBool())
         setState(m_declined ? QStringLiteral("idle") : QStringLiteral("needsModel"));
+    else if (result.value(QStringLiteral("codexOnly")).toBool())
+        setState(QStringLiteral("codexOnly"));
     else if (!result.value(QStringLiteral("problem")).toString().isEmpty())
         setState(QStringLiteral("problem"));
     else
@@ -220,6 +226,8 @@ void AskClient::modelChanged(const QVariantMap &model)
     const QString state = model.value(QStringLiteral("state")).toString();
     m_progress = model.value(QStringLiteral("progress")).toDouble();
     m_size = model.value(QStringLiteral("size")).toString();
+    if (model.contains(QStringLiteral("name"))) m_modelName = model.value(QStringLiteral("name")).toString();
+    if (model.contains(QStringLiteral("credit"))) m_modelCredit = model.value(QStringLiteral("credit")).toString();
     if (state == QLatin1String("downloading") || state == QLatin1String("verifying")) {
         setState(QStringLiteral("downloading"));
         return;
@@ -240,9 +248,32 @@ void AskClient::modelChanged(const QVariantMap &model)
     setState(state == QLatin1String("failed") ? QStringLiteral("problem") : QStringLiteral("idle"));
 }
 
+void AskClient::chooseCodexOnly()
+{
+    if (!m_codexInstalled) return;
+    auto *call = new QDBusPendingCallWatcher(
+        m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("SetCodexOnly")) << true, 5000),
+        this);
+    connect(call, &QDBusPendingCallWatcher::finished, this, [this, call] {
+        const QDBusPendingReply<bool> reply = *call;
+        call->deleteLater();
+        if (reply.isError() || !reply.value()) return;
+        if (!m_codexOnly) {
+            m_codexOnly = true;
+            Q_EMIT codexChanged();
+        }
+        // The question on the card is asked again, and now waits for Codex.
+        if (m_question.isEmpty()) return;
+        const QString again = m_question;
+        m_question.clear();
+        m_typed = again;
+        send();
+    });
+}
+
 bool AskClient::askCodex()
 {
-    if (!m_codexReady || m_question.isEmpty()) return false;
+    if (!(m_codexReady || (m_codexOnly && m_codexInstalled)) || m_question.isEmpty()) return false;
     m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("OpenCodex")) << m_question);
     return true;
 }
@@ -260,11 +291,33 @@ void AskClient::lookAtCodex()
     });
 }
 
+// The model's name, size and credit, for the card that offers it.
+void AskClient::lookAtModel()
+{
+    auto *call = new QDBusPendingCallWatcher(
+        m_bus.asyncCall(QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Model")), 5000),
+        this);
+    connect(call, &QDBusPendingCallWatcher::finished, this, [this, call] {
+        const QDBusPendingReply<QVariantMap> reply = *call;
+        call->deleteLater();
+        if (reply.isError()) return;
+        const QVariantMap model = reply.value();
+        m_size = model.value(QStringLiteral("size")).toString();
+        m_modelName = model.value(QStringLiteral("name")).toString();
+        m_modelCredit = model.value(QStringLiteral("credit")).toString();
+        Q_EMIT changed();
+    });
+}
+
 void AskClient::codexStateChanged(const QVariantMap &codex)
 {
-    const bool ready = codex.value(QStringLiteral("installed")).toBool() && codex.value(QStringLiteral("signedIn")).toBool();
-    if (ready == m_codexReady) return;
+    const bool installed = codex.value(QStringLiteral("installed")).toBool();
+    const bool ready = installed && codex.value(QStringLiteral("signedIn")).toBool();
+    const bool only = installed && codex.value(QStringLiteral("only")).toBool();
+    if (ready == m_codexReady && installed == m_codexInstalled && only == m_codexOnly) return;
     m_codexReady = ready;
+    m_codexInstalled = installed;
+    m_codexOnly = only;
     Q_EMIT codexChanged();
 }
 

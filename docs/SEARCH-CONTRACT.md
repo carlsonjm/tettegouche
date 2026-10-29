@@ -83,7 +83,7 @@ Helper". With nothing typed it is the same row of tiles. Typed words that read
 as a question, three words or more or ending in "?", go to Ask once typing
 pauses for 0.7 seconds, or at once on Enter when nothing is listed; a Helper's
 name alone is never sent. Ask's answer sits above the list on the subtle
-paper, 8 round, 12 by 16 inside, its words at 15 as they are written, and
+paper, 10 round, 12 by 16 inside, its words at 15 as they are written, and
 beneath at 12 who gave it: "Answered on this computer · nothing changes until
 you open a Helper". The Helpers the answer names come first in its order,
 then those the words find; Install an app opens searching for the app the
@@ -104,11 +104,23 @@ computer · Codex answers in its own window", and no Ask Codex row is offered.
 Signed out, no row is offered and the answer says where to sign in.
 
 Before the model is downloaded, the first question gets what Ask needs in the
-answer's place, with Download, the light pill, and Not now. Not now holds
-until the field is cleared. While it downloads, a 4 tall bar fills in the same
-box with "Downloading the model · N% of" its size, the Helpers stay listed
-under it, and the question is answered when the download ends if Search is
-still open. Leaving the chip, or Search closing, stops the question. Without
+answer's place, under a heading at 16, demi-bold: the model by name, that it
+runs on this computer, its size, and that nothing asked leaves the computer,
+with whose model it is at 12 beneath. Its pills, 40 tall and 8 apart: Download
+and the model's name, the light pill; Codex only, on the raised grey, where
+Codex is installed; and Not now, bare until hovered. Not now holds until the
+field is cleared. Where llama.cpp, which runs the model, isn't installed, the
+box says so first, and Install llama.cpp takes Download's place: it opens
+Install an app at llama.cpp, and Search closes as from a Helper's row. Codex
+only leaves the model out from then on, at the person's choice: the question
+is asked again, and the box says it waits for Codex, with Ask Codex, the light
+pill. Ask Codex or Enter sends it to Codex's own window, which signs in first
+where it must, and Search closes; nothing goes to Codex before that tap, and
+the safety check still answers on this computer. While it downloads, a 4 tall
+bar fills in the same box under "Downloading" and the model's name, with "N%
+of" its size beneath, the Helpers stay listed under it, and the question is
+answered when the download ends if Search is still open. Leaving the chip, or
+Search closing, stops the question. Without
 Ask, the chip is Helpers, as above, and nothing is asked.
 
 ### Notes

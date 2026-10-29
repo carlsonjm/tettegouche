@@ -23,7 +23,8 @@ class AskClient : public QObject {
     Q_OBJECT
     // Ask is installed: the chip is named Ask, and a question gets an answer.
     Q_PROPERTY(bool available READ available NOTIFY availableChanged)
-    // idle, asking, answered, needsModel, downloading, off or problem.
+    // idle, asking, answered, needsModel, codexOnly, downloading, off or
+    // problem.
     Q_PROPERTY(QString state READ state NOTIFY changed)
     // The question the words answer, and the words so far.
     Q_PROPERTY(QString question READ question NOTIFY changed)
@@ -37,10 +38,19 @@ class AskClient : public QObject {
     // While the model downloads: how far, and its size in words.
     Q_PROPERTY(double progress READ progress NOTIFY changed)
     Q_PROPERTY(QString size READ size NOTIFY changed)
+    // The model's name, such as Qwen3 4B, and whose it is, as its licence asks.
+    Q_PROPERTY(QString modelName READ modelName NOTIFY changed)
+    Q_PROPERTY(QString modelCredit READ modelCredit NOTIFY changed)
     // Codex is installed and signed in, so the answer offers Ask Codex.
     Q_PROPERTY(bool codexReady READ codexReady NOTIFY codexChanged)
     // Ask handed this question on to Codex itself, by the person's switch.
     Q_PROPERTY(bool handedToCodex READ handedToCodex NOTIFY changed)
+    // Before the model: llama.cpp, which runs it, isn't installed either.
+    Q_PROPERTY(bool needsEngine READ needsEngine NOTIFY changed)
+    // Codex is installed, signed in or not, so Codex only can be offered.
+    Q_PROPERTY(bool codexInstalled READ codexInstalled NOTIFY codexChanged)
+    // The person chose Codex only: every question waits for Ask Codex.
+    Q_PROPERTY(bool codexOnly READ codexOnly NOTIFY codexChanged)
 public:
     static constexpr char Service[] = "io.github.carlsonjm.splitrock.Ask";
     static constexpr char Path[] = "/Ask";
@@ -58,8 +68,13 @@ public:
     QString query() const { return m_query; }
     double progress() const { return m_progress; }
     QString size() const { return m_size; }
+    QString modelName() const { return m_modelName; }
+    QString modelCredit() const { return m_modelCredit; }
     bool codexReady() const { return m_codexReady; }
     bool handedToCodex() const { return m_handedToCodex; }
+    bool needsEngine() const { return m_needsEngine; }
+    bool codexInstalled() const { return m_codexInstalled; }
+    bool codexOnly() const { return m_codexOnly; }
 
     // What is typed now. A question is sent once the typing pauses and it
     // reads as one; anything else clears the answer.
@@ -70,8 +85,12 @@ public:
     // After the person's tap on Download, and Not now.
     Q_INVOKABLE void download();
     Q_INVOKABLE void notNow();
+    // After the person's tap on Codex only: Ask leaves the model out from
+    // now on, and the question asked is asked again.
+    Q_INVOKABLE void chooseCodexOnly();
     // After the person's tap on Ask Codex: the question goes to Codex's own
-    // window. False where there is nothing to hand on.
+    // window, which signs in first where it must under Codex only. False
+    // where there is nothing to hand on.
     Q_INVOKABLE bool askCodex();
 
     // Whether these words read as a question to answer, rather than a
@@ -96,6 +115,7 @@ private:
     void stop();
     void setState(const QString &state);
     void lookAtCodex();
+    void lookAtModel();
     QDBusConnection m_bus;
     QTimer m_pause;
     bool m_available = false;
@@ -108,8 +128,13 @@ private:
     QString m_query;
     double m_progress = 0;
     QString m_size;
+    QString m_modelName;
+    QString m_modelCredit;
     bool m_codexReady = false;
     bool m_handedToCodex = false;
+    bool m_needsEngine = false;
+    bool m_codexInstalled = false;
+    bool m_codexOnly = false;
     uint m_id = 0;
     // A question sent whose id hasn't come back yet.
     bool m_sending = false;

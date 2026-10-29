@@ -21,6 +21,8 @@ public:
     bool needsModel = false;
     bool codexSignedIn = false;
     bool handsToCodex = false;
+    bool needsEngine = false;
+    bool codexOnly = false;
     // Questions are left unanswered, as while the model thinks.
     bool slow = false;
     uint pending = 0;
@@ -41,9 +43,15 @@ public Q_SLOTS:
             return id;
         }
         QTimer::singleShot(10, this, [this, id, question] {
+            if (codexOnly) {
+                Q_EMIT Answered(id,
+                    { { QStringLiteral("codexOnly"), true },
+                        { QStringLiteral("text"), QStringLiteral("Ask is set to Codex only.") } });
+                return;
+            }
             if (needsModel) {
                 Q_EMIT Answered(id,
-                    { { QStringLiteral("needsModel"), true },
+                    { { QStringLiteral("needsModel"), true }, { QStringLiteral("needsEngine"), needsEngine },
                         { QStringLiteral("text"), QStringLiteral("Ask needs a one-time download.") } });
                 return;
             }
@@ -74,7 +82,20 @@ public Q_SLOTS:
     }
     QVariantMap Codex() const
     {
-        return { { QStringLiteral("installed"), true }, { QStringLiteral("signedIn"), codexSignedIn } };
+        return { { QStringLiteral("installed"), true }, { QStringLiteral("signedIn"), codexSignedIn },
+            { QStringLiteral("only"), codexOnly } };
+    }
+    QVariantMap Model() const
+    {
+        return { { QStringLiteral("state"), QStringLiteral("missing") }, { QStringLiteral("size"), QStringLiteral("about 2.5 GB") },
+            { QStringLiteral("name"), QStringLiteral("Qwen3 4B") }, { QStringLiteral("credit"), QStringLiteral("Qwen3 4B by the Qwen team") },
+            { QStringLiteral("engine"), !needsEngine } };
+    }
+    bool SetCodexOnly(bool only)
+    {
+        codexOnly = only;
+        Q_EMIT CodexChanged(Codex());
+        return true;
     }
     bool OpenCodex(const QString &question)
     {
@@ -201,6 +222,12 @@ private Q_SLOTS:
         client.type(QStringLiteral("how do I print"));
         client.askNow();
         QTRY_COMPARE(client.state(), QStringLiteral("needsModel"));
+        // The card names the model and whose it is, and Codex only is offered
+        // where Codex is installed.
+        QTRY_COMPARE(client.modelName(), QStringLiteral("Qwen3 4B"));
+        QCOMPARE(client.modelCredit(), QStringLiteral("Qwen3 4B by the Qwen team"));
+        QTRY_VERIFY(client.codexInstalled());
+        QVERIFY(!client.needsEngine());
         client.notNow();
         QCOMPARE(client.state(), QStringLiteral("idle"));
         client.type(QStringLiteral("how do I print a letter"));
@@ -257,6 +284,40 @@ private Q_SLOTS:
         QTRY_VERIFY(!client.codexReady());
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask-3"));
+    }
+
+    // Without llama.cpp the card says so; Codex only leaves the model out,
+    // asks the question again, and sends it to Codex only on the tap, signed
+    // in or not, since Codex's window signs in first.
+    void codexOnlyInsteadOfTheModel()
+    {
+        FakeAsk ask;
+        ask.needsModel = true;
+        ask.needsEngine = true;
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-ask-4"));
+        QVERIFY(peer.registerObject(
+            QStringLiteral("/Ask"), &ask, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Ask")));
+
+        AskClient client(QDBusConnection::sessionBus());
+        client.setPause(50);
+        QTRY_VERIFY(client.available());
+        client.type(QStringLiteral("my wifi keeps dropping"));
+        QTRY_COMPARE(client.state(), QStringLiteral("needsModel"));
+        QVERIFY(client.needsEngine());
+        QTRY_VERIFY(client.codexInstalled());
+        QVERIFY(!client.codexOnly());
+        client.chooseCodexOnly();
+        QTRY_VERIFY(ask.codexOnly);
+        QTRY_COMPARE(client.state(), QStringLiteral("codexOnly"));
+        QVERIFY(client.codexOnly());
+        QVERIFY(!client.needsEngine());
+        QCOMPARE(ask.asked.size(), 2);
+        QVERIFY(ask.toCodex.isEmpty());
+        QVERIFY(client.askCodex());
+        QTRY_COMPARE(ask.toCodex, QStringList { QStringLiteral("my wifi keeps dropping") });
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask-4"));
     }
 };
 

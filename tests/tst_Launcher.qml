@@ -269,9 +269,16 @@ TestCase {
         property int declines: 0
         property bool codexReady: false
         property bool handedToCodex: false
+        property bool needsEngine: false
+        property bool codexInstalled: false
+        property bool codexOnly: false
+        property string modelName: ""
+        property string modelCredit: ""
         property int codexAsks: 0
+        property int codexOnlyChoices: 0
         function type(words) { typed = typed.concat([words]) }
-        function askCodex() { if (!codexReady) return false; codexAsks++; return true }
+        function askCodex() { if (!codexReady && !(codexOnly && codexInstalled)) return false; codexAsks++; return true }
+        function chooseCodexOnly() { codexOnlyChoices++; codexOnly = true; state = "codexOnly" }
         function askNow() { asksNow++ }
         function clear() {}
         function download() { downloads++; state = "downloading" }
@@ -281,6 +288,8 @@ TestCase {
             helpers = []; query = ""; progress = 0; size = ""
             typed = []; asksNow = 0; downloads = 0; declines = 0
             codexReady = false; handedToCodex = false; codexAsks = 0
+            needsEngine = false; codexInstalled = false; codexOnly = false
+            modelName = ""; modelCredit = ""; codexOnlyChoices = 0
         }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
@@ -4274,21 +4283,54 @@ TestCase {
         compare(findChild(launcher, "ask-answer-who").text, "From this computer · Codex answers in its own window")
         askStub.handedToCodex = false
         askStub.codexReady = false
-        // Without the model: what Ask needs, Download and Not now.
+        // Without the model: what Ask needs, by name, with Download, Codex
+        // only where Codex is installed, and Not now.
         askStub.state = "needsModel"
-        askStub.text = "To answer on this computer, Ask needs a one-time download of about 2.5 GB."
-        const download = findChild(launcher, "ask-download")
+        askStub.modelName = "Qwen3 4B"
+        askStub.modelCredit = "Qwen3 4B by the Qwen team, an open model under the Apache 2.0 licence"
+        askStub.codexInstalled = true
+        askStub.text = "Ask can answer with Qwen3 4B, an open AI model that runs on this computer."
+        tryCompare(findChild(launcher, "ask-answer-heading"), "text", "Answer here on this computer, or with Codex")
+        let download = findChild(launcher, "ask-download")
         tryCompare(download, "visible", true)
         verify(findChild(launcher, "ask-not-now").visible)
+        verify(findChild(launcher, "ask-codex-only").visible)
+        verify(findChild(launcher, "ask-answer-codex").visible)
         // The box places its pills under the words once they show.
         tryVerify(() => top(download) > top(findChild(launcher, "ask-answer-text"))
             && top(download) + download.height <= answer.height)
+        // Without llama.cpp the card says so, and offers to install it.
+        askStub.needsEngine = true
+        tryCompare(findChild(launcher, "ask-answer-heading"), "text", "Ask needs llama.cpp before it can answer here")
+        tryVerify(() => findChild(launcher, "ask-install-engine") !== null && findChild(launcher, "ask-install-engine").visible)
+        askStub.needsEngine = false
+        // The pills are made again; tap the new Download once the row has
+        // placed it.
+        tryVerify(() => (download = findChild(launcher, "ask-download")) !== null && download.parent !== null
+            && download.visible && download.width > 36
+            && top(download) > top(findChild(launcher, "ask-answer-text"))
+            && top(download) + download.height <= answer.height)
+        waitForRendering(answer)
         mouseClick(download, download.width / 2, download.height / 2)
         compare(askStub.downloads, 1)
         askStub.progress = 0.44
         askStub.size = "about 2.5 GB"
-        tryCompare(findChild(launcher, "ask-answer-who"), "text", "Downloading the model · 44% of about 2.5 GB")
-        verify(!download.visible)
+        tryCompare(findChild(launcher, "ask-answer-heading"), "text", "Downloading Qwen3 4B")
+        tryCompare(findChild(launcher, "ask-answer-who"), "text", "44% of about 2.5 GB")
+        // Codex only: the question waits for Ask Codex.
+        askStub.state = "needsModel"
+        let codexOnly = null
+        tryVerify(() => (codexOnly = findChild(launcher, "ask-codex-only")) !== null && codexOnly.parent !== null
+            && codexOnly.visible && codexOnly.width > 36
+            && top(codexOnly) > top(findChild(launcher, "ask-answer-text"))
+            && top(codexOnly) + codexOnly.height <= answer.height)
+        waitForRendering(answer)
+        mouseClick(codexOnly, codexOnly.width / 2, codexOnly.height / 2)
+        compare(askStub.codexOnlyChoices, 1)
+        tryVerify(() => findChild(launcher, "ask-codex-now") !== null && findChild(launcher, "ask-codex-now").visible)
+        verify(findChild(launcher, "ask-answer-who").text.indexOf("Codex only") === 0)
+        askStub.codexOnly = false
+        askStub.codexInstalled = false
         // Enter with nothing listed sends the question at once.
         askStub.state = "idle"
         launcher.submit()

@@ -791,6 +791,17 @@ Item {
                 root.fileBrowser.openSelected()
             return
         }
+        // Codex only: Enter sends the question on the card to Codex, and
+        // asks a question not yet sent first, so the card shows it.
+        if (!root.drawerOpen && root.askShown && root.askClient.codexOnly && query.text.trim().length > 0
+                && root.askClient.state !== "needsModel") {
+            if (root.askClient.state === "codexOnly" && root.askClient.question === query.text.trim().replace(/\s+/g, " ")) {
+                if (root.askClient.askCodex()) root.launcherController.finishLaunch()
+            } else {
+                root.askClient.askNow()
+            }
+            return
+        }
         if (!root.drawerOpen && root.selectedChildKey !== "") {
             root.openChildSettings()
         } else if (!root.drawerOpen && root.searchResults.querying) {
