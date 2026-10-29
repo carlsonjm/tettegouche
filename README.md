@@ -191,43 +191,128 @@ Shuffle's bars, appear only where Shuffle is installed.
 
 ## Install
 
+These steps are for Arch Linux or CachyOS running KDE Plasma 6.7 or newer in a
+Wayland session, the default on both. Tettegouche is built on your computer
+from this page's code, so you type a few commands into **Konsole**, Plasma's
+terminal. Open it from the application launcher.
+
+### 1. What you need
+
+Check your Plasma version. It must say 6.7 or higher:
+
+```bash
+plasmashell --version
+```
+
+Bring the computer up to date, then restart it, so Tettegouche is built
+against the Plasma you are running:
+
+```bash
+sudo pacman -Syu
+```
+
+After the restart, open Konsole again and install what the build and its
+checks need. Type your password when asked, and answer `Y`:
+
+```bash
+sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules python ripgrep gettext qt6-base qt6-declarative qt6-svg qt6-tools kbookmarks kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice bluez-qt solid kirigami kpackage layer-shell-qt libplasma plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt kate okular ffmpegthumbs kdegraphics-thumbnailers
+```
+
+Kate, Okular and the thumbnailers are there because the installer's checks
+open real files with them. `kdeplasma-addons`, if you add it, lets Search
+answer sums, unit conversions and times in other zones.
+
+### 2. Download
+
+This puts the code in a folder called `tettegouche` in your home folder. Use
+`git` rather than GitHub's Download ZIP, so a later update is one command:
+
+```bash
+cd ~
+git clone https://github.com/carlsonjm/tettegouche.git
+cd tettegouche
+```
+
+### 3. Install
+
 ```bash
 ./install.sh
 ```
 
-The installer builds and tests Tettegouche, installs the launcher and Plasma
-widget, then restarts the panel so it runs the new widget. On a first install,
-open panel edit mode, choose **Add Widgets**, search for **Tettegouche**, and
-add it to the panel.
+The installer checks the code, builds it and runs its tests, which takes a few
+minutes. Then it asks for your password in Konsole (nothing shows as you type)
+to install Tettegouche for the whole computer, and restarts the panel. The
+panel blinks out for a moment; your windows stay open. It ends with
+**Tettegouche installed**.
 
-<details>
-<summary>Requirements</summary>
+### 4. Put it on the panel
 
-- KDE Plasma 6.7 or newer, on Wayland
-- Qt 6.10 and KDE Frameworks 6.26, or newer
-- LayerShellQt 6.7, BluezQt, Solid, and AppStreamQt 1.0
-- CMake and a C++20 compiler
-- gettext, for translations and the checks on them
+1. Right-click an empty part of the panel and choose **Add Widgets…**.
+2. Search for **Tettegouche** and drag it onto the panel, at its left end.
+3. Plasma gives the launcher key to the first launcher it finds on the panel.
+   For `Meta` to open Search, remove Plasma's own **Application Launcher**:
+   right-click it and choose **Remove**, or remove it in the panel's edit mode.
 
-Build again after each Plasma update: until then, Ambient leaves out waiting
-applications and Plasma's own transfers.
+### 5. Check it worked
 
-Bluetooth hardware and Kadunce are optional. Some related-setting results come
-from optional system tools and appear only when the tool is installed. Sums,
-unit conversions and times in other zones come from KDE's Plasma add-ons
-(`kdeplasma-addons`) and answer only where it is installed.
+- Tap the dot on the panel, or press `Meta`. Search opens, ready to type.
+  Type the name of an application and press `Enter` to open it.
+- `Meta+G` opens Apps. `Meta+E` opens Files, unless Dolphin already has that
+  key; System Settings' **Shortcuts** page, under Dolphin and Tettegouche,
+  moves it.
 
-</details>
+Without Kadunce, Search opens in its own window. That is a full setup, not a
+reduced one.
 
-<details>
-<summary>Uninstall</summary>
+### 6. Update
+
+After every Plasma update, and to get a newer Tettegouche:
 
 ```bash
-./uninstall.sh
+cd ~/tettegouche
+git pull
+./install.sh
 ```
 
-Uninstalling removes Tettegouche's program, its main launcher entry and the
-panel widget, and leaves this source folder in place.
+Until it is built again after a Plasma update, Ambient leaves out waiting
+applications and Plasma's own transfers.
+
+### 7. Uninstall
+
+1. Put Plasma's launcher back first: right-click the panel, choose **Add
+   Widgets…**, and drag **Application Launcher** onto it.
+2. Right-click the Tettegouche dot and choose **Remove**.
+3. In Konsole:
+
+   ```bash
+   cd ~/tettegouche
+   ./uninstall.sh
+   ```
+
+   It asks for your password and ends with **Tettegouche removed**.
+
+To delete the download too, run `rm -rf ~/tettegouche`.
+
+<details>
+<summary>If the install stops</summary>
+
+The installer changes nothing until every check has passed, so you can fix
+the cause and run `./install.sh` again.
+
+- **A package is missing:** run the `pacman` line in step 1 again.
+- **It stops at `words-test`:** the checks need the English (US) language
+  files, which some systems don't generate. Add them, then run the installer
+  again:
+
+  ```bash
+  sudo sed -i 's/^#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen
+  sudo locale-gen
+  ```
+
+- **It says the panel still holds the previous widget:** sign out and back in.
+
+Some related-setting results come from optional system tools and appear only
+when the tool is installed. Bluetooth hardware is optional.
 
 </details>
 
