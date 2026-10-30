@@ -4,6 +4,7 @@
 */
 
 #include "NotesIslandProvider.h"
+#include "BusValue.h"
 #include "NotesDoor.h"
 
 #include <KIO/ApplicationLauncherJob>
@@ -21,6 +22,8 @@
 
 namespace
 {
+using tettegouche::plainBusValue;
+
 QString service() { return QString::fromLatin1(NotesIslandProvider::Service); }
 QString path() { return QString::fromLatin1(NotesIslandProvider::Path); }
 QString iface() { return QString::fromLatin1(NotesIslandProvider::Interface); }
@@ -43,28 +46,6 @@ QDBusMessage stuckMethod(const QString &name, const QVariantList &arguments = {}
     return message;
 }
 
-// A dictionary inside a variant arrives as a bus argument; the row wants it
-// as a plain map.
-QVariant plain(const QVariant &value)
-{
-    if (value.canConvert<QDBusArgument>()) {
-        const auto argument = value.value<QDBusArgument>();
-        if (argument.currentType() == QDBusArgument::MapType) {
-            QVariantMap map;
-            argument >> map;
-            for (auto it = map.begin(); it != map.end(); ++it) it.value() = plain(it.value());
-            return map;
-        }
-        if (argument.currentType() == QDBusArgument::ArrayType) {
-            QVariantList list;
-            argument >> list;
-            for (QVariant &item : list) item = plain(item);
-            return list;
-        }
-    }
-    if (value.canConvert<QDBusVariant>()) return plain(value.value<QDBusVariant>().variant());
-    return value;
-}
 } // namespace
 
 NotesIslandProvider::NotesIslandProvider(const QDBusConnection &bus, QObject *parent)
@@ -135,7 +116,7 @@ void NotesIslandProvider::askStuck()
             const QDBusMessage reply = windows->reply();
             windows->deleteLater();
             if (generation != m_generation || reply.type() != QDBusMessage::ReplyMessage) return;
-            setStuck(plain(reply.arguments().value(0)).toList());
+            setStuck(plainBusValue(reply.arguments().value(0)).toList());
         });
     });
 }
@@ -143,7 +124,7 @@ void NotesIslandProvider::askStuck()
 void NotesIslandProvider::stuckChanged(const QDBusMessage &message)
 {
     if (!m_stuckSpeaks || (!m_owner.isEmpty() && message.service() != m_owner)) return;
-    setStuck(plain(message.arguments().value(0)).toList());
+    setStuck(plainBusValue(message.arguments().value(0)).toList());
 }
 
 void NotesIslandProvider::setStuck(const QVariantList &windows)
@@ -275,7 +256,7 @@ void NotesIslandProvider::ask()
             pinned->deleteLater();
             if (generation != m_generation) return;
             // An application without Pinned answers with an error: no pinned note.
-            setPinned(reply.type() == QDBusMessage::ReplyMessage ? plain(reply.arguments().value(0)).toMap()
+            setPinned(reply.type() == QDBusMessage::ReplyMessage ? plainBusValue(reply.arguments().value(0)).toMap()
                                                                  : QVariantMap());
         });
     });
@@ -285,7 +266,7 @@ void NotesIslandProvider::pinnedChanged(const QVariantMap &pinned, const QDBusMe
 {
     if (!m_speaks || (!m_owner.isEmpty() && message.service() != m_owner)) return;
     QVariantMap note = pinned;
-    for (auto it = note.begin(); it != note.end(); ++it) it.value() = plain(it.value());
+    for (auto it = note.begin(); it != note.end(); ++it) it.value() = plainBusValue(it.value());
     setPinned(note);
 }
 
