@@ -1,0 +1,1611 @@
+# French translation of tettegouche.
+# Machine-made first translation; corrections from native speakers are welcome.
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: tettegouche\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-30 14:21+0000\n"
+"PO-Revision-Date: 2026-10-30 00:00+0000\n"
+"Last-Translator: Claude\n"
+"Language-Team: French\n"
+"Language: fr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/LauncherController.cpp:166
+#, kde-format
+msgid "Open Bluetooth settings"
+msgstr "Ouvrir les réglages Bluetooth"
+
+#: src/LauncherController.cpp:167
+#, kde-format
+msgid "Open Sound settings"
+msgstr "Ouvrir les réglages du son"
+
+#: src/LauncherController.cpp:168
+#, kde-format
+msgid "Open Network settings"
+msgstr "Ouvrir les réglages réseau"
+
+#: src/LauncherController.cpp:169
+#, kde-format
+msgid "Open Display settings"
+msgstr "Ouvrir les réglages d'affichage"
+
+#: src/LauncherController.cpp:170
+#, kde-format
+msgid "Open Power settings"
+msgstr "Ouvrir les réglages d'alimentation"
+
+#: src/LauncherController.cpp:171
+#, kde-format
+msgid "Open Printer settings"
+msgstr "Ouvrir les réglages d'impression"
+
+#: src/LauncherController.cpp:172
+#, kde-format
+msgid "Open Device Actions"
+msgstr "Ouvrir les actions des périphériques"
+
+#: src/LauncherController.cpp:173
+#, kde-format
+msgid "Open Default Applications"
+msgstr "Ouvrir les applications par défaut"
+
+#: src/LauncherController.cpp:174
+#, kde-format
+msgid "Open Night Light settings"
+msgstr "Ouvrir les réglages de l'éclairage nocturne"
+
+#: src/LauncherController.cpp:175 src/LauncherController.cpp:177
+#, kde-format
+msgid "Open KDE Connect"
+msgstr "Ouvrir KDE Connect"
+
+#: src/LauncherController.cpp:220
+#, kde-format
+msgid "Open With…"
+msgstr "Ouvrir avec…"
+
+#: src/LauncherController.cpp:221
+#, kde-format
+msgid "Show in Folder"
+msgstr "Afficher dans le dossier"
+
+#: src/LauncherController.cpp:222
+#, kde-format
+msgid "Copy Path"
+msgstr "Copier le chemin"
+
+#: src/LauncherController.cpp:223 qml/FilesPane.qml:352 qml/FilesPane.qml:608 qml/FilesPane.qml:1182
+#, kde-format
+msgid "Move to Trash"
+msgstr "Mettre à la corbeille"
+
+#: src/LauncherController.cpp:869 src/FileBrowser.h:382 src/FileBrowser.h:393 qml/ModeRow.qml:246
+#, kde-format
+msgid "Files"
+msgstr "Fichiers"
+
+#: src/LauncherController.cpp:1161
+#, kde-format
+msgid "Files cannot open %1, and Dolphin is not installed."
+msgstr "Fichiers ne peut pas ouvrir %1, et Dolphin n'est pas installé."
+
+#: src/ApplicationCatalog.cpp:249 src/ApplicationCatalog.cpp:502 src/ApplicationCatalog.cpp:535 src/ApplicationCatalog.cpp:994
+#, kde-format
+msgctxt "@label an Apps folder with no name"
+msgid "Folder"
+msgstr "Dossier"
+
+#: src/ApplicationCatalog.cpp:512
+#, kde-format
+msgctxt "@label an Apps folder of games"
+msgid "Games"
+msgstr "Jeux"
+
+#: src/ApplicationCatalog.cpp:514
+#, kde-format
+msgctxt "@label an Apps folder of media players"
+msgid "Media"
+msgstr "Médias"
+
+#: src/ApplicationCatalog.cpp:515
+#, kde-format
+msgctxt "@label an Apps folder of programming tools"
+msgid "Code"
+msgstr "Code"
+
+#: src/ApplicationCatalog.cpp:516
+#, kde-format
+msgctxt "@label an Apps folder of office applications"
+msgid "Office"
+msgstr "Bureautique"
+
+#: src/ApplicationCatalog.cpp:517
+#, kde-format
+msgctxt "@label an Apps folder of graphics applications"
+msgid "Graphics"
+msgstr "Graphisme"
+
+#: src/ApplicationCatalog.cpp:518
+#, kde-format
+msgctxt "@label an Apps folder of internet applications"
+msgid "Internet"
+msgstr "Internet"
+
+#: src/ApplicationCatalog.cpp:519
+#, kde-format
+msgctxt "@label an Apps folder of system tools"
+msgid "System"
+msgstr "Système"
+
+#: src/ApplicationCatalog.cpp:520
+#, kde-format
+msgctxt "@label an Apps folder of utilities"
+msgid "Tools"
+msgstr "Outils"
+
+#: src/ApplicationCatalog.cpp:972
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "Used today"
+msgstr "Utilisées aujourd'hui"
+
+#: src/ApplicationCatalog.cpp:973 src/ApplicationCatalog.cpp:980
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "This week"
+msgstr "Cette semaine"
+
+#: src/ApplicationCatalog.cpp:974 src/ApplicationCatalog.cpp:981
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "This month"
+msgstr "Ce mois-ci"
+
+#: src/ApplicationCatalog.cpp:975
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "Earlier"
+msgstr "Plus tôt"
+
+#: src/ApplicationCatalog.cpp:982
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "This year"
+msgstr "Cette année"
+
+#: src/ApplicationCatalog.cpp:983
+#, kde-format
+msgctxt "@title a section of Apps"
+msgid "Older"
+msgstr "Plus anciennes"
+
+#: src/FileBrowser.h:171
+#, kde-format
+msgid "“%1” can be unplugged."
+msgstr "« %1 » peut être débranché."
+
+#: src/FileBrowser.h:210
+#, kde-format
+msgid "Kind"
+msgstr "Type"
+
+#: src/FileBrowser.h:210 src/FileBrowser.h:1577
+#, kde-format
+msgid "Folder"
+msgstr "Dossier"
+
+#: src/FileBrowser.h:211 src/FileBrowser.h:212
+#, kde-format
+msgid "Size"
+msgstr "Taille"
+
+#: src/FileBrowser.h:211
+#, kde-format
+msgid "Counting…"
+msgstr "Calcul…"
+
+#: src/FileBrowser.h:211
+#, kde-format
+msgid "Contains"
+msgstr "Contient"
+
+#: src/FileBrowser.h:213
+#, kde-format
+msgid "%1 (%2 bytes)"
+msgstr "%1 (%2 octets)"
+
+#: src/FileBrowser.h:214
+#, kde-format
+msgid "Where"
+msgstr "Emplacement"
+
+#: src/FileBrowser.h:215
+#, kde-format
+msgid "Modified"
+msgstr "Modifié"
+
+#: src/FileBrowser.h:216
+#, kde-format
+msgid "Created"
+msgstr "Créé"
+
+#: src/FileBrowser.h:217
+#, kde-format
+msgid "Last opened"
+msgstr "Dernière ouverture"
+
+#: src/FileBrowser.h:229
+#, kde-format
+msgid "Unknown"
+msgstr "Inconnu"
+
+#: src/FileBrowser.h:232
+#, kde-format
+msgid "1 file"
+msgid_plural "%1 files"
+msgstr[0] "1 fichier"
+msgstr[1] "%1 fichiers"
+
+#: src/FileBrowser.h:232
+#, kde-format
+msgid "1 folder"
+msgid_plural "%1 folders"
+msgstr[0] "1 dossier"
+msgstr[1] "%1 dossiers"
+
+#: src/FileBrowser.h:231
+#, kde-format
+msgctxt "what a folder holds: files, folders"
+msgid "%1 and %2"
+msgstr "%1 et %2"
+
+#: src/FileBrowser.h:319
+#, kde-format
+msgid "Compressing with Ark…"
+msgstr "Compression avec Ark…"
+
+#: src/FileBrowser.h:325
+#, kde-format
+msgid "Extracting with Ark…"
+msgstr "Extraction avec Ark…"
+
+#: src/FileBrowser.h:365
+#, kde-format
+msgid "Emptying Trash…"
+msgstr "Vidage de la corbeille…"
+
+#: src/FileBrowser.h:544 src/FileBrowser.h:834
+#, kde-format
+msgid "Moving to Trash…"
+msgstr "Mise à la corbeille…"
+
+#: src/FileBrowser.h:561 src/FileBrowser.h:899 src/FileBrowser.h:936 src/FileBrowser.h:957
+#, kde-format
+msgid "Copying…"
+msgstr "Copie…"
+
+#: src/FileBrowser.h:573 src/FileBrowser.h:876 src/FileBrowser.h:878
+#, kde-format
+msgid "Restoring from Trash…"
+msgstr "Restauration depuis la corbeille…"
+
+#: src/FileBrowser.h:583
+#, kde-format
+msgid "Deleting…"
+msgstr "Suppression…"
+
+#: src/FileBrowser.h:593 src/FileBrowser.h:620 src/FileBrowser.h:1251 qml/FilesPane.qml:1241
+#, kde-format
+msgid "Recent"
+msgstr "Récentes"
+
+#: src/FileBrowser.h:594 src/FileBrowser.h:1256 src/FileBrowser.h:1341 src/FileBrowser.h:1459 src/PlaceBook.h:142 qml/FilesPane.qml:1721
+#, kde-format
+msgid "Home"
+msgstr "Dossier personnel"
+
+#: src/FileBrowser.h:595 src/PlaceBook.h:144
+#, kde-format
+msgid "Documents"
+msgstr "Documents"
+
+#: src/FileBrowser.h:596 src/PlaceBook.h:145
+#, kde-format
+msgid "Downloads"
+msgstr "Téléchargements"
+
+#: src/FileBrowser.h:597 src/PlaceBook.h:146
+#, kde-format
+msgid "Pictures"
+msgstr "Images"
+
+#: src/FileBrowser.h:622 src/FileBrowser.h:1252 src/PlaceBook.h:141
+#, kde-format
+msgid "Trash"
+msgstr "Corbeille"
+
+#: src/FileBrowser.h:681
+#, kde-format
+msgid "This file is no longer available. Refresh the folder."
+msgstr "Ce fichier n'est plus disponible. Actualisez le dossier."
+
+#: src/FileBrowser.h:777
+#, kde-format
+msgid "Selection changed. Refresh and select again."
+msgstr "La sélection a changé. Actualisez et sélectionnez à nouveau."
+
+#: src/FileBrowser.h:781
+#, kde-format
+msgid "Copied 1 item to clipboard"
+msgid_plural "Copied %1 items to clipboard"
+msgstr[0] "1 élément copié dans le presse-papiers"
+msgstr[1] "%1 éléments copiés dans le presse-papiers"
+
+#: src/FileBrowser.h:796
+#, kde-format
+msgid "Cut 1 item — paste to move"
+msgid_plural "Cut %1 items — paste to move"
+msgstr[0] "1 élément coupé — collez pour le déplacer"
+msgstr[1] "%1 éléments coupés — collez pour les déplacer"
+
+#: src/FileBrowser.h:811
+#, kde-format
+msgid "Renaming…"
+msgstr "Renommage…"
+
+#: src/FileBrowser.h:862
+#, kde-format
+msgid "That item is no longer in Trash."
+msgstr "Cet élément n'est plus dans la corbeille."
+
+#: src/FileBrowser.h:944
+#, kde-format
+msgid "Destination is no longer available."
+msgstr "La destination n'est plus disponible."
+
+#: src/FileBrowser.h:957
+#, kde-format
+msgid "Moving…"
+msgstr "Déplacement…"
+
+#: src/FileBrowser.h:962
+#, kde-format
+msgid "Enter a folder name without a slash."
+msgstr "Saisissez un nom de dossier sans barre oblique."
+
+#: src/FileBrowser.h:977
+#, kde-format
+msgid "Creating folder…"
+msgstr "Création du dossier…"
+
+#: src/FileBrowser.h:994
+#, kde-format
+msgid "Enter an absolute local folder path."
+msgstr "Saisissez un chemin de dossier local absolu."
+
+#: src/FileBrowser.h:1102
+#, kde-format
+msgid "1 item"
+msgid_plural "%1 items"
+msgstr[0] "1 élément"
+msgstr[1] "%1 éléments"
+
+#: src/FileBrowser.h:1115
+#, kde-format
+msgid "Ejects when done"
+msgstr "Éjecté une fois terminé"
+
+#: src/FileBrowser.h:1115
+#, kde-format
+msgid "Ejecting…"
+msgstr "Éjection…"
+
+#: src/FileBrowser.h:1115 qml/FilesPane.qml:1744
+#, kde-format
+msgid "Opening…"
+msgstr "Ouverture…"
+
+#: src/FileBrowser.h:1145
+#, kde-format
+msgid "%1 free"
+msgstr "%1 libres"
+
+#: src/FileBrowser.h:1317
+#, kde-format
+msgid "Could not hide that here."
+msgstr "Impossible de masquer cela ici."
+
+#: src/FileBrowser.h:1317
+#, kde-format
+msgid "Could not unhide that here."
+msgstr "Impossible d'afficher cela ici."
+
+#: src/FileBrowser.h:1395
+#, kde-format
+msgid "You don't have permission to open “%1”."
+msgstr "Vous n'avez pas l'autorisation d'ouvrir « %1 »."
+
+#: src/FileBrowser.h:1397
+#, kde-format
+msgid "“%1” isn't there any more."
+msgstr "« %1 » n'est plus là."
+
+#: src/FileBrowser.h:1441
+#, kde-format
+msgid "Ark could not be started."
+msgstr "Ark n'a pas pu être lancé."
+
+#: src/FileBrowser.h:1454
+#, kde-format
+msgid "%1, modified %2"
+msgstr "%1, modifié %2"
+
+#: src/FileBrowser.h:1516 qml/FilesPane.qml:89 qml/FilesPane.qml:93 qml/FilesPane.qml:154 qml/FilesPane.qml:753
+#, kde-format
+msgid "Done"
+msgstr "Terminé"
+
+#: src/FileBrowser.h:1517
+#, kde-format
+msgid "Done, except one item that could not be read: %2"
+msgid_plural "Done, except %1 items that could not be read: %2"
+msgstr[0] "Terminé, sauf un élément illisible : %2"
+msgstr[1] "Terminé, sauf %1 éléments illisibles : %2"
+
+#: src/FileBrowser.h:1519
+#, kde-format
+msgid "Stopped."
+msgstr "Arrêté."
+
+#: src/FileBrowser.h:1519
+#, kde-format
+msgid "Stopped: %1"
+msgstr "Arrêté : %1"
+
+#: src/FileBrowser.h:1520
+#, kde-format
+msgid " Some items may already have transferred."
+msgstr " Certains éléments ont peut-être déjà été transférés."
+
+#: src/PlaceBook.h:144
+#, kde-format
+msgid "Desktop"
+msgstr "Bureau"
+
+#: src/PlaceBook.h:145
+#, kde-format
+msgid "Music"
+msgstr "Musique"
+
+#: src/PlaceBook.h:146
+#, kde-format
+msgid "Videos"
+msgstr "Vidéos"
+
+#: src/FileDevices.h:183 src/FileDevices.h:346
+#, kde-format
+msgid "“%1” could not be opened.%2"
+msgstr "« %1 » n'a pas pu être ouvert.%2"
+
+#: src/FileDevices.h:190
+#, kde-format
+msgid "“%1” could not be ejected.%2"
+msgstr "« %1 » n'a pas pu être éjecté.%2"
+
+#: src/FileDevices.h:222
+#, kde-format
+msgid "Files needs kio-fuse to open “%1” by cable."
+msgstr "Fichiers a besoin de kio-fuse pour ouvrir « %1 » par câble."
+
+#: src/FileDevices.h:223
+#, kde-format
+msgid "“%1” could not be opened. Unlock it, and let this computer reach its files."
+msgstr "« %1 » n'a pas pu être ouvert. Déverrouillez-le, et autorisez cet ordinateur à accéder à ses fichiers."
+
+#: src/FileDevices.h:321
+#, kde-format
+msgid "Files needs sshfs to open “%1” over Wi-Fi."
+msgstr "Fichiers a besoin de sshfs pour ouvrir « %1 » par Wi-Fi."
+
+#: src/FileDevices.h:345
+#, kde-format
+msgid "Allow KDE Connect on “%1” to reach its files, then open it again."
+msgstr "Autorisez KDE Connect sur « %1 » à accéder à ses fichiers, puis rouvrez-le."
+
+#: src/OmniResults.h:537 qml/NotesPane.qml:648
+#, kde-format
+msgid "Empty note"
+msgstr "Note vide"
+
+#: src/OmniResults.h:540
+#, kde-format
+msgid "Note stuck to %1"
+msgstr "Note collée à %1"
+
+#: src/OmniResults.h:541
+#, kde-format
+msgid "Note in %1"
+msgstr "Note dans %1"
+
+#: src/OmniResults.h:550
+#, kde-format
+msgctxt "@info a line of a note, then where it is"
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: src/OmniResults.h:648
+#, kde-format
+msgctxt "@info what Core watches, then how it stands"
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: src/RelatedInfo.cpp:53 src/RelatedInfo.cpp:161
+#, kde-format
+msgid "Connected"
+msgstr "Connecté"
+
+#: src/RelatedInfo.cpp:69
+#, kde-format
+msgid "%1 more in settings"
+msgstr "%1 de plus dans les paramètres"
+
+#: src/RelatedInfo.cpp:125
+#, kde-format
+msgid " · Muted"
+msgstr " · Coupé"
+
+#: src/RelatedInfo.cpp:126
+#, kde-format
+msgid " · In use"
+msgstr " · Utilisé"
+
+#: src/RelatedInfo.cpp:137 src/RelatedInfo.cpp:206 src/RelatedInfo.cpp:221
+#, kde-format
+msgid "Disabled"
+msgstr "Désactivé"
+
+#: src/RelatedInfo.cpp:139
+#, kde-format
+msgid "Enabled"
+msgstr "Activé"
+
+#: src/RelatedInfo.cpp:144
+#, kde-format
+msgid " · %1% scale"
+msgstr " · échelle %1 %"
+
+#: src/RelatedInfo.cpp:161
+#, kde-format
+msgid "VPN · Active"
+msgstr "VPN · Actif"
+
+#: src/RelatedInfo.cpp:176
+#, kde-format
+msgid "Output"
+msgstr "Sortie"
+
+#: src/RelatedInfo.cpp:176
+#, kde-format
+msgid "Microphone"
+msgstr "Micro"
+
+#: src/RelatedInfo.cpp:186
+#, kde-format
+msgid "Battery"
+msgstr "Batterie"
+
+#: src/RelatedInfo.cpp:188
+#, kde-format
+msgid "Charging"
+msgstr "En charge"
+
+#: src/RelatedInfo.cpp:188
+#, kde-format
+msgid "Not charging"
+msgstr "Pas en charge"
+
+#: src/RelatedInfo.cpp:187
+#, kde-format
+msgctxt "battery charge and state"
+msgid "%1% · %2"
+msgstr "%1 % · %2"
+
+#: src/RelatedInfo.cpp:197
+#, kde-format
+msgid "System power profile"
+msgstr "Profil d'énergie du système"
+
+#: src/RelatedInfo.cpp:206
+#, kde-format
+msgid "Night Light"
+msgstr "Éclairage nocturne"
+
+#: src/RelatedInfo.cpp:207
+#, kde-format
+msgid "Active · %1 K"
+msgstr "Actif · %1 K"
+
+#: src/RelatedInfo.cpp:207
+#, kde-format
+msgid "Enabled · Not active"
+msgstr "Activé · Inactif"
+
+#: src/RelatedInfo.cpp:212
+#, kde-format
+msgid "Reachable"
+msgstr "Joignable"
+
+#: src/RelatedInfo.cpp:222
+#, kde-format
+msgid "Printing"
+msgstr "Impression"
+
+#: src/RelatedInfo.cpp:222
+#, kde-format
+msgid "Idle"
+msgstr "Inactive"
+
+#: src/RelatedInfo.cpp:230
+#, kde-format
+msgid "Browser"
+msgstr "Navigateur"
+
+#: src/RelatedInfo.cpp:231
+#, kde-format
+msgid "Mail"
+msgstr "Courriel"
+
+#: src/RelatedInfo.cpp:231
+#, kde-format
+msgid "File manager"
+msgstr "Gestionnaire de fichiers"
+
+#: src/RelatedInfo.cpp:244
+#, kde-format
+msgid "Mounted"
+msgstr "Monté"
+
+#: src/RelatedInfo.cpp:244
+#, kde-format
+msgid "Not mounted"
+msgstr "Non monté"
+
+#: qml/AppsGrid.qml:51
+msgid "%1, folder"
+msgstr "%1, dossier"
+
+#: qml/AppsGrid.qml:196 qml/FilesPane.qml:1344
+msgid "Folder name"
+msgstr "Nom du dossier"
+
+#: qml/AskAnswer.qml:37
+msgid "the model"
+msgstr "le modèle"
+
+#: qml/AskAnswer.qml:62
+msgid "Ask needs llama.cpp before it can answer here"
+msgstr "Demander a besoin de llama.cpp pour répondre ici"
+
+#: qml/AskAnswer.qml:63
+msgid "Downloading %1"
+msgstr "Téléchargement de %1"
+
+#: qml/AskAnswer.qml:64
+msgid "Answer here on this computer, or with Codex"
+msgstr "Répondre ici sur cet ordinateur, ou avec Codex"
+
+#: qml/AskAnswer.qml:65
+msgid "Answer here on this computer"
+msgstr "Répondre ici sur cet ordinateur"
+
+#: qml/AskAnswer.qml:78
+msgid "Once it's here, Ask answers this question. If the connection drops, the download picks up where it stopped."
+msgstr "Une fois là, Demander répondra à cette question. Si la connexion tombe, le téléchargement reprend là où il s'est arrêté."
+
+#: qml/AskAnswer.qml:80
+msgid "Looking into it…"
+msgstr "Je regarde…"
+
+#: qml/AskAnswer.qml:81
+msgid "Ask is switched off in Settings."
+msgstr "Demander est désactivé dans les Paramètres."
+
+#: qml/AskAnswer.qml:82
+msgid "Ask couldn't answer this time. The Helpers below still can."
+msgstr "Demander n'a pas pu répondre cette fois. Les Assistants ci-dessous le peuvent encore."
+
+#: qml/AskAnswer.qml:96
+msgid "Or skip both: with Codex only, your questions go to Codex online, on your own ChatGPT plan."
+msgstr "Ou passez les deux : avec Codex seulement, vos questions partent en ligne vers Codex, sur votre propre forfait ChatGPT."
+
+#: qml/AskAnswer.qml:97
+msgid "Or skip the download: with Codex only, your questions go to Codex online, on your own ChatGPT plan."
+msgstr "Ou passez le téléchargement : avec Codex seulement, vos questions partent en ligne vers Codex, sur votre propre forfait ChatGPT."
+
+#: qml/AskAnswer.qml:116 qml/SearchResults.qml:208
+msgid "Ask Codex"
+msgstr "Demander à Codex"
+
+#: qml/AskAnswer.qml:118
+msgid "Install llama.cpp"
+msgstr "Installer llama.cpp"
+
+#: qml/AskAnswer.qml:119
+msgid "Download %1"
+msgstr "Télécharger %1"
+
+#: qml/AskAnswer.qml:120
+msgid "Download"
+msgstr "Télécharger"
+
+#: qml/AskAnswer.qml:122
+msgid "Codex only"
+msgstr "Codex seulement"
+
+#: qml/AskAnswer.qml:123
+msgid "Not now"
+msgstr "Pas maintenant"
+
+#: qml/AskAnswer.qml:189
+msgid "%1% of %2"
+msgstr "%1 % sur %2"
+
+#: qml/AskAnswer.qml:191
+msgid "Install opens Install an app at llama.cpp, and waits for your yes"
+msgstr "Installer ouvre Installer une appli sur llama.cpp, et attend votre accord"
+
+#: qml/AskAnswer.qml:193
+msgid "Codex signs you in through its own page"
+msgstr "Codex vous connecte via sa propre page"
+
+#: qml/AskAnswer.qml:195
+msgid "Codex only · nothing is sent until you tap · warnings about scams and passwords still come from this computer"
+msgstr "Codex seulement · rien n'est envoyé avant que vous touchiez · les avertissements sur les arnaques et les mots de passe viennent toujours de cet ordinateur"
+
+#: qml/AskAnswer.qml:196
+msgid "From this computer · Codex answers in its own window"
+msgstr "Depuis cet ordinateur · Codex répond dans sa propre fenêtre"
+
+#: qml/AskAnswer.qml:197
+msgid "On this computer · an answer can take up to a minute"
+msgstr "Sur cet ordinateur · une réponse peut prendre jusqu'à une minute"
+
+#: qml/AskAnswer.qml:198
+msgid "Answered on this computer · nothing changes until you open a Helper"
+msgstr "Répondu sur cet ordinateur · rien ne change tant que vous n'ouvrez pas un Assistant"
+
+#: qml/FilesPane.qml:92 qml/FilesPane.qml:1711
+msgid "Searching…"
+msgstr "Recherche…"
+
+#: qml/FilesPane.qml:338 qml/FilesPane.qml:1744
+msgid "Open"
+msgstr "Ouvrir"
+
+#: qml/FilesPane.qml:339 qml/FilesPane.qml:1177
+msgid "Restore"
+msgstr "Restaurer"
+
+#: qml/FilesPane.qml:340
+msgid "Delete for good…"
+msgstr "Supprimer définitivement…"
+
+#: qml/FilesPane.qml:341 qml/FilesPane.qml:633
+msgid "Open in new tab"
+msgstr "Ouvrir dans un nouvel onglet"
+
+#: qml/FilesPane.qml:344
+msgid "Show in folder"
+msgstr "Afficher dans le dossier"
+
+#: qml/FilesPane.qml:348 qml/FilesPane.qml:1179
+msgid "Copy"
+msgstr "Copier"
+
+#: qml/FilesPane.qml:349 qml/FilesPane.qml:1180
+msgid "Cut"
+msgstr "Couper"
+
+#: qml/FilesPane.qml:350 qml/FilesPane.qml:634 qml/FilesPane.qml:1181 qml/FilesPane.qml:1347 qml/Launcher.qml:1664
+msgid "Rename"
+msgstr "Renommer"
+
+#: qml/FilesPane.qml:351
+msgid "Open with…"
+msgstr "Ouvrir avec…"
+
+#: qml/FilesPane.qml:353
+msgid "Compress"
+msgstr "Compresser"
+
+#: qml/FilesPane.qml:354
+msgid "Extract here"
+msgstr "Extraire ici"
+
+#: qml/FilesPane.qml:355
+msgid "Restore last trashed item"
+msgstr "Restaurer le dernier élément supprimé"
+
+#: qml/FilesPane.qml:356 qml/FilesPane.qml:636
+msgid "Empty Trash…"
+msgstr "Vider la corbeille…"
+
+#: qml/FilesPane.qml:359
+msgid "Paste into “%1”"
+msgstr "Coller dans « %1 »"
+
+#: qml/FilesPane.qml:359
+msgid "Paste here"
+msgstr "Coller ici"
+
+#: qml/FilesPane.qml:364
+msgid "Select all"
+msgstr "Tout sélectionner"
+
+#: qml/FilesPane.qml:366 qml/FilesPane.qml:1097
+msgid "New tab"
+msgstr "Nouvel onglet"
+
+#: qml/FilesPane.qml:367
+msgid "Refresh"
+msgstr "Actualiser"
+
+#: qml/FilesPane.qml:368 qml/FilesPane.qml:1213 qml/Launcher.qml:1478 qml/NotesPane.qml:1185 qml/NotesPane.qml:1187
+msgid "New folder"
+msgstr "Nouveau dossier"
+
+#: qml/FilesPane.qml:371 qml/Launcher.qml:1608
+msgid "Unhide"
+msgstr "Afficher"
+
+#: qml/FilesPane.qml:371 qml/FilesPane.qml:635 qml/Launcher.qml:1608
+msgid "Hide"
+msgstr "Masquer"
+
+#: qml/FilesPane.qml:375
+msgid "Properties"
+msgstr "Propriétés"
+
+#: qml/FilesPane.qml:385 qml/FilesPane.qml:1241
+msgid "Name A–Z"
+msgstr "Nom A–Z"
+
+#: qml/FilesPane.qml:386 qml/FilesPane.qml:1241
+msgid "Name Z–A"
+msgstr "Nom Z–A"
+
+#: qml/FilesPane.qml:387
+msgid "Newest first"
+msgstr "Plus récents d'abord"
+
+#: qml/FilesPane.qml:388
+msgid "Largest first"
+msgstr "Plus grands d'abord"
+
+#: qml/FilesPane.qml:394
+msgid "Empty Trash?"
+msgstr "Vider la corbeille ?"
+
+#: qml/FilesPane.qml:395
+msgid "Empty Trash"
+msgstr "Vider la corbeille"
+
+#: qml/FilesPane.qml:399
+msgid "1 item, %2, will be deleted for good. This can't be undone."
+msgid_plural "%1 items, %2, will be deleted for good. This can't be undone."
+msgstr[0] "1 élément, %2, sera supprimé définitivement. Cette action est irréversible."
+msgstr[1] "%1 éléments, %2, seront supprimés définitivement. Cette action est irréversible."
+
+#: qml/FilesPane.qml:400
+msgid "1 item will be deleted for good. This can't be undone."
+msgid_plural "%1 items will be deleted for good. This can't be undone."
+msgstr[0] "1 élément sera supprimé définitivement. Cette action est irréversible."
+msgstr[1] "%1 éléments seront supprimés définitivement. Cette action est irréversible."
+
+#: qml/FilesPane.qml:428
+msgctxt "a name, then the folder it is in"
+msgid "“%1” is already in %2"
+msgstr "« %1 » est déjà dans %2"
+
+#: qml/FilesPane.qml:434
+msgid "Merge puts what arrives into the folder that is there. A file already in it asks again."
+msgstr "Fusionner place ce qui arrive dans le dossier existant. Un fichier déjà présent redemande."
+
+#: qml/FilesPane.qml:440
+msgid "Already there"
+msgstr "Déjà là"
+
+#: qml/FilesPane.qml:442
+msgid "Arriving"
+msgstr "Arrivant"
+
+#: qml/FilesPane.qml:449
+msgid "Do the same for the rest"
+msgstr "Faire de même pour le reste"
+
+#: qml/FilesPane.qml:454
+msgid "Stop"
+msgstr "Arrêter"
+
+#: qml/FilesPane.qml:455
+msgid "Skip"
+msgstr "Passer"
+
+#: qml/FilesPane.qml:456
+msgid "Keep both"
+msgstr "Garder les deux"
+
+#: qml/FilesPane.qml:457
+msgid "Merge"
+msgstr "Fusionner"
+
+#: qml/FilesPane.qml:457
+msgid "Replace"
+msgstr "Remplacer"
+
+#: qml/FilesPane.qml:481
+msgid "Choose an application for “%1”"
+msgstr "Choisir une application pour « %1 »"
+
+#: qml/FilesPane.qml:482
+msgctxt "a file name; the applications follow"
+msgid "Open “%1” with"
+msgstr "Ouvrir « %1 » avec"
+
+#: qml/FilesPane.qml:490
+msgid "Filter applications"
+msgstr "Filtrer les applications"
+
+#: qml/FilesPane.qml:509 qml/FilesPane.qml:516
+msgid "Default"
+msgstr "Par défaut"
+
+#: qml/FilesPane.qml:531
+msgid "Show all applications"
+msgstr "Afficher toutes les applications"
+
+#: qml/FilesPane.qml:537
+msgctxt "a kind of file, as “PNG image”"
+msgid "Always use it for %1"
+msgstr "Toujours l'utiliser pour %1"
+
+#: qml/FilesPane.qml:537
+msgid "Always use it for this kind of file"
+msgstr "Toujours l'utiliser pour ce type de fichier"
+
+#: qml/FilesPane.qml:539 qml/FilesPane.qml:1336 qml/FilesPane.qml:1348 qml/Launcher.qml:1516 qml/SearchResults.qml:101 qml/SheetConfirm.qml:67
+msgid "Cancel"
+msgstr "Annuler"
+
+#: qml/FilesPane.qml:597
+msgid "Close"
+msgstr "Fermer"
+
+#: qml/FilesPane.qml:606
+msgid "Move “%1” to the Trash?"
+msgstr "Mettre « %1 » à la corbeille ?"
+
+#: qml/FilesPane.qml:607
+msgid "Move 1 item to the Trash?"
+msgid_plural "Move %1 items to the Trash?"
+msgstr[0] "Mettre 1 élément à la corbeille ?"
+msgstr[1] "Mettre %1 éléments à la corbeille ?"
+
+#: qml/FilesPane.qml:609
+msgid "Restore last trashed item, in Files' menu, brings them back one at a time."
+msgstr "Restaurer le dernier élément supprimé, dans le menu de Fichiers, les ramène un par un."
+
+#: qml/FilesPane.qml:617
+msgid "Delete 1 item for good?"
+msgid_plural "Delete %1 items for good?"
+msgstr[0] "Supprimer définitivement 1 élément ?"
+msgstr[1] "Supprimer définitivement %1 éléments ?"
+
+#: qml/FilesPane.qml:618 qml/FilesPane.qml:1178
+msgid "Delete for good"
+msgstr "Supprimer définitivement"
+
+#: qml/FilesPane.qml:619
+msgid "This can't be undone."
+msgstr "Cette action est irréversible."
+
+#: qml/FilesPane.qml:638
+msgid "Remove from places"
+msgstr "Retirer des emplacements"
+
+#: qml/FilesPane.qml:654
+msgid "Add this folder"
+msgstr "Ajouter ce dossier"
+
+#: qml/FilesPane.qml:659
+msgid "Add a folder…"
+msgstr "Ajouter un dossier…"
+
+#: qml/FilesPane.qml:660 qml/FilesPane.qml:691
+msgid "Show or hide places"
+msgstr "Afficher ou masquer les emplacements"
+
+#: qml/FilesPane.qml:664
+msgid "Add a folder to the places"
+msgstr "Ajouter un dossier aux emplacements"
+
+#: qml/FilesPane.qml:747
+msgid "Show %1"
+msgstr "Afficher %1"
+
+#: qml/FilesPane.qml:747
+msgid "Hide %1"
+msgstr "Masquer %1"
+
+#: qml/FilesPane.qml:869
+msgid "Show the places"
+msgstr "Afficher les emplacements"
+
+#: qml/FilesPane.qml:869 qml/FilesPane.qml:899
+msgid "Fold"
+msgstr "Replier"
+
+#: qml/FilesPane.qml:870
+msgid "Fold the places"
+msgstr "Replier les emplacements"
+
+#: qml/FilesPane.qml:915
+msgid "Add a place"
+msgstr "Ajouter un emplacement"
+
+#: qml/FilesPane.qml:1025
+msgid "Eject %1"
+msgstr "Éjecter %1"
+
+#: qml/FilesPane.qml:1050
+msgid "Places width"
+msgstr "Largeur des emplacements"
+
+#: qml/FilesPane.qml:1094
+msgid "Close tab"
+msgstr "Fermer l'onglet"
+
+#: qml/FilesPane.qml:1110 qml/FilesPane.qml:1721 qml/NotesPane.qml:1555
+msgid "Back"
+msgstr "Retour"
+
+#: qml/FilesPane.qml:1111
+msgid "Forward"
+msgstr "Suivant"
+
+#: qml/FilesPane.qml:1143
+msgid "Type a path"
+msgstr "Saisir un chemin"
+
+#: qml/FilesPane.qml:1162
+msgid "Absolute folder path"
+msgstr "Chemin absolu du dossier"
+
+#: qml/FilesPane.qml:1173
+msgid "Stop searching"
+msgstr "Arrêter la recherche"
+
+#: qml/FilesPane.qml:1174
+msgid "Search inside folders"
+msgstr "Chercher dans les dossiers"
+
+#: qml/FilesPane.qml:1176
+msgctxt "stop choosing several files"
+msgid "Done"
+msgstr "Terminé"
+
+#: qml/FilesPane.qml:1176
+msgid "Done selecting"
+msgstr "Sélection terminée"
+
+#: qml/FilesPane.qml:1212
+msgid "Paste"
+msgstr "Coller"
+
+#: qml/FilesPane.qml:1225 qml/Launcher.qml:1428
+msgid "Sort: %1"
+msgstr "Tri : %1"
+
+#: qml/FilesPane.qml:1241
+msgid "Newest"
+msgstr "Plus récents"
+
+#: qml/FilesPane.qml:1241
+msgid "Largest"
+msgstr "Plus grands"
+
+#: qml/FilesPane.qml:1276
+msgid "More actions"
+msgstr "Plus d'actions"
+
+#: qml/FilesPane.qml:1300
+msgid "Paused · %1"
+msgstr "En pause · %1"
+
+#: qml/FilesPane.qml:1301
+msgctxt "what is being done, as “Copying…”, then to what"
+msgid "%1 %2"
+msgstr "%1 %2"
+
+#: qml/FilesPane.qml:1327
+msgid "Resume"
+msgstr "Reprendre"
+
+#: qml/FilesPane.qml:1327
+msgid "Pause"
+msgstr "Pause"
+
+#: qml/FilesPane.qml:1344
+msgid "Place name"
+msgstr "Nom de l'emplacement"
+
+#: qml/FilesPane.qml:1344
+msgid "New name"
+msgstr "Nouveau nom"
+
+#: qml/FilesPane.qml:1347
+msgid "Create"
+msgstr "Créer"
+
+#: qml/FilesPane.qml:1711
+msgid "Loading…"
+msgstr "Chargement…"
+
+#: qml/FilesPane.qml:1712
+msgid "Nothing here matches “%1”"
+msgstr "Rien ici ne correspond à « %1 »"
+
+#: qml/FilesPane.qml:1713
+msgid "Nothing found"
+msgstr "Rien trouvé"
+
+#: qml/FilesPane.qml:1713
+msgid "Nothing used recently"
+msgstr "Rien d'utilisé récemment"
+
+#: qml/FilesPane.qml:1713
+msgid "No files here"
+msgstr "Aucun fichier ici"
+
+#: qml/FilesPane.qml:1741
+msgid "1 selected"
+msgid_plural "%1 selected"
+msgstr[0] "1 sélectionné"
+msgstr[1] "%1 sélectionnés"
+
+#: qml/FilesPane.qml:1741
+msgid "Select a file to open"
+msgstr "Sélectionnez un fichier à ouvrir"
+
+#: qml/FilesPane.qml:1799
+msgid "Add to places"
+msgstr "Ajouter aux emplacements"
+
+#: qml/FilesPane.qml:1800
+msgid "Move 1 to Trash"
+msgid_plural "Move %1 to Trash"
+msgstr[0] "Mettre 1 élément à la corbeille"
+msgstr[1] "Mettre %1 éléments à la corbeille"
+
+#: qml/FilesPane.qml:1801 qml/FilesPane.qml:1802
+msgid "Copy 1 to “%2”"
+msgid_plural "Copy %1 to “%2”"
+msgstr[0] "Copier 1 élément vers « %2 »"
+msgstr[1] "Copier %1 éléments vers « %2 »"
+
+#: qml/FilesPane.qml:1802
+msgid "Copy 1 · choose a folder"
+msgid_plural "Copy %1 · choose a folder"
+msgstr[0] "Copier 1 élément · choisir un dossier"
+msgstr[1] "Copier %1 éléments · choisir un dossier"
+
+#: qml/FilesWindow.qml:85 qml/Launcher.qml:1286
+msgid "Show hidden files"
+msgstr "Afficher les fichiers cachés"
+
+#: qml/FilesWindow.qml:182 qml/FilesWindow.qml:187 qml/SearchField.qml:233
+msgid "Find a file"
+msgstr "Trouver un fichier"
+
+#: qml/FilesWindow.qml:202 qml/SearchField.qml:122
+msgid "Clear search"
+msgstr "Effacer la recherche"
+
+#: qml/HelpersRow.qml:52 qml/ModeRow.qml:262
+msgid "Helpers"
+msgstr "Assistants"
+
+#: qml/Launcher.qml:165
+msgid "just now"
+msgstr "à l'instant"
+
+#: qml/Launcher.qml:166
+msgid "%1 min ago"
+msgid_plural "%1 min ago"
+msgstr[0] "il y a %1 min"
+msgstr[1] "il y a %1 min"
+
+#: qml/Launcher.qml:169
+msgid "%1 h ago"
+msgid_plural "%1 h ago"
+msgstr[0] "il y a %1 h"
+msgstr[1] "il y a %1 h"
+
+#: qml/Launcher.qml:171
+msgid "yesterday"
+msgstr "hier"
+
+#: qml/Launcher.qml:177
+msgctxt "a recent file's folder and when it was used"
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: qml/Launcher.qml:843
+msgid "Web search"
+msgstr "Recherche sur le Web"
+
+#: qml/Launcher.qml:1287
+msgid "Show hidden applications"
+msgstr "Afficher les applications cachées"
+
+#: qml/Launcher.qml:1425 qml/Launcher.qml:1718
+msgid "A to Z"
+msgstr "De A à Z"
+
+#: qml/Launcher.qml:1426 qml/Launcher.qml:1719
+msgid "Most used"
+msgstr "Les plus utilisées"
+
+#: qml/Launcher.qml:1426 qml/Launcher.qml:1720
+msgid "Newest installed"
+msgstr "Installées récemment"
+
+#: qml/Launcher.qml:1507
+msgid "Choose applications for the new folder"
+msgstr "Choisir les applications du nouveau dossier"
+
+#: qml/Launcher.qml:1508
+msgid "%1 chosen"
+msgid_plural "%1 chosen"
+msgstr[0] "%1 choisie"
+msgstr[1] "%1 choisies"
+
+#: qml/Launcher.qml:1527
+msgid "Make folder"
+msgstr "Créer le dossier"
+
+#: qml/Launcher.qml:1585
+msgid "Unpin from dock"
+msgstr "Détacher du dock"
+
+#: qml/Launcher.qml:1585
+msgid "Pin to dock"
+msgstr "Épingler au dock"
+
+#: qml/Launcher.qml:1596
+msgid "Put in “%1”"
+msgstr "Mettre dans « %1 »"
+
+#: qml/Launcher.qml:1602
+msgid "Take out of folder"
+msgstr "Sortir du dossier"
+
+#: qml/Launcher.qml:1613
+msgid "Edit Application…"
+msgstr "Modifier l'application…"
+
+#: qml/Launcher.qml:1622 qml/Launcher.qml:1644
+msgid "Uninstall…"
+msgstr "Désinstaller…"
+
+#: qml/Launcher.qml:1670
+msgid "Remove folder"
+msgstr "Supprimer le dossier"
+
+#: qml/Launcher.qml:1679
+msgid "No applications found"
+msgstr "Aucune application trouvée"
+
+#: qml/Launcher.qml:1771
+msgid "Opening"
+msgstr "Ouverture"
+
+#: qml/ModeRow.qml:158
+msgid "Search"
+msgstr "Rechercher"
+
+#: qml/ModeRow.qml:239
+msgid "Apps"
+msgstr "Applis"
+
+#: qml/ModeRow.qml:254 qml/NotesPane.qml:105 qml/NotesPane.qml:110 qml/NotesPane.qml:389
+msgid "Notes"
+msgstr "Notes"
+
+#: qml/ModeRow.qml:262
+msgid "Ask"
+msgstr "Demander"
+
+#: qml/ModeRow.qml:284
+msgid "Open in Notes"
+msgstr "Ouvrir dans Notes"
+
+#: qml/ModeRow.qml:284
+msgid "Open Files in its own window"
+msgstr "Ouvrir Fichiers dans sa propre fenêtre"
+
+#: qml/NotesPane.qml:322 qml/NotesPane.qml:387 qml/NotesPane.qml:558 qml/NotesPane.qml:1303
+msgid "Today"
+msgstr "Aujourd'hui"
+
+#: qml/NotesPane.qml:325
+msgid "Yesterday"
+msgstr "Hier"
+
+#: qml/NotesPane.qml:335 qml/NotesPane.qml:368 qml/NotesPane.qml:681
+msgid "Inbox"
+msgstr "Boîte de réception"
+
+#: qml/NotesPane.qml:336 qml/NotesPane.qml:682 qml/NotesPane.qml:1386
+msgid "Stuck to %1"
+msgstr "Collée à %1"
+
+#: qml/NotesPane.qml:388 qml/NotesPane.qml:559
+msgid "On windows"
+msgstr "Sur les fenêtres"
+
+#: qml/NotesPane.qml:404
+msgid "Folders"
+msgstr "Dossiers"
+
+#: qml/NotesPane.qml:509 qml/NotesPane.qml:511
+msgid "Find a note"
+msgstr "Trouver une note"
+
+#: qml/NotesPane.qml:525
+msgid "Enter opens"
+msgstr "Entrée ouvre"
+
+#: qml/NotesPane.qml:557
+msgid "Everything"
+msgstr "Tout"
+
+#: qml/NotesPane.qml:568
+msgid "Tucked away"
+msgstr "Rangées"
+
+#: qml/NotesPane.qml:650
+msgid "%1 note"
+msgid_plural "%1 notes"
+msgstr[0] "%1 note"
+msgstr[1] "%1 notes"
+
+#: qml/NotesPane.qml:712
+msgid "No note says that. Enter starts one."
+msgstr "Aucune note ne dit cela. Entrée en commence une."
+
+#: qml/NotesPane.qml:713
+msgid "Nothing is tucked away."
+msgstr "Rien n'est rangé."
+
+#: qml/NotesPane.qml:714
+msgid "No notes yet. Type to start one."
+msgstr "Aucune note pour l'instant. Tapez pour en commencer une."
+
+#: qml/NotesPane.qml:771 qml/NotesPane.qml:811
+msgid "New note"
+msgstr "Nouvelle note"
+
+#: qml/NotesPane.qml:905
+msgid "Write it down…"
+msgstr "Notez-le…"
+
+#: qml/NotesPane.qml:907
+msgid "Note"
+msgstr "Note"
+
+#: qml/NotesPane.qml:1008
+msgid "Line"
+msgstr "Ligne"
+
+#: qml/NotesPane.qml:1068
+msgid "Colour"
+msgstr "Couleur"
+
+#: qml/NotesPane.qml:1165
+msgid "%1 · this workspace"
+msgstr "%1 · cet espace de travail"
+
+#: qml/NotesPane.qml:1233
+msgid "Don't stick to a window"
+msgstr "Ne pas coller à une fenêtre"
+
+#: qml/NotesPane.qml:1277
+msgid "No reminder"
+msgstr "Aucun rappel"
+
+#: qml/NotesPane.qml:1303
+msgid "Tomorrow"
+msgstr "Demain"
+
+#: qml/NotesPane.qml:1375
+msgid "Folder: %1"
+msgstr "Dossier : %1"
+
+#: qml/NotesPane.qml:1385
+msgid "Not stuck"
+msgstr "Non collée"
+
+#: qml/NotesPane.qml:1387
+msgid "Not stuck to a window"
+msgstr "Non collée à une fenêtre"
+
+#: qml/NotesPane.qml:1402
+msgid "Saved as you go"
+msgstr "Enregistré au fil de la saisie"
+
+#: qml/NotesPane.qml:1415
+msgid "Kept by a newer Gooseberry; not changed here"
+msgstr "Enregistrée par une version plus récente de Gooseberry ; non modifiée ici"
+
+#: qml/NotesPane.qml:1416
+msgid "Not kept yet: %1"
+msgstr "Pas encore enregistrée : %1"
+
+#: qml/NotesPane.qml:1433
+msgid "Checklist"
+msgstr "Liste de contrôle"
+
+#: qml/NotesPane.qml:1447
+msgid "Remind"
+msgstr "Rappeler"
+
+#: qml/NotesPane.qml:1456
+msgid "More"
+msgstr "Plus"
+
+#: qml/NotesPane.qml:1485
+msgid "Copy all"
+msgstr "Tout copier"
+
+#: qml/NotesPane.qml:1498
+msgid "Unpin"
+msgstr "Détacher"
+
+#: qml/NotesPane.qml:1498
+msgid "Pin"
+msgstr "Épingler"
+
+#: qml/NotesPane.qml:1506
+msgid "Tuck away"
+msgstr "Ranger"
+
+#: qml/NotesPane.qml:1521
+msgid "Remove"
+msgstr "Supprimer"
+
+#: qml/RecentRow.qml:239
+msgctxt "opens everything of a recent section's kind"
+msgid "See all %1"
+msgstr "Tout voir : %1"
+
+#: qml/RecentRow.qml:260
+msgid "See all"
+msgstr "Tout voir"
+
+#: qml/RecentRow.qml:408
+msgid "Recent apps"
+msgstr "Applis récentes"
+
+#: qml/RecentRow.qml:418
+msgid "The apps you open show up here."
+msgstr "Les applis que vous ouvrez apparaissent ici."
+
+#: qml/RecentRow.qml:442
+msgid "Recent files"
+msgstr "Fichiers récents"
+
+#: qml/RecentRow.qml:453
+msgid "The files you open show up here."
+msgstr "Les fichiers que vous ouvrez apparaissent ici."
+
+#: qml/SearchField.qml:233
+msgid "Find an app"
+msgstr "Trouver une appli"
+
+#: qml/SearchField.qml:234
+msgid "Ask a question, or find a Helper"
+msgstr "Poser une question, ou trouver un Assistant"
+
+#: qml/SearchField.qml:235
+msgid "Look over the computer, free up space…"
+msgstr "Examiner l'ordinateur, libérer de l'espace…"
+
+#: qml/SearchField.qml:236
+msgid "Just type"
+msgstr "Tapez, simplement"
+
+#: qml/SearchResults.qml:44
+msgid "All files ⇄"
+msgstr "Tous les fichiers ⇄"
+
+#: qml/SearchResults.qml:44
+msgid "Everyday search ⇄"
+msgstr "Recherche courante ⇄"
+
+#: qml/SearchResults.qml:64
+msgid "Quiet folders…"
+msgstr "Dossiers discrets…"
+
+#: qml/SearchResults.qml:85
+msgid "Quiet folders"
+msgstr "Dossiers discrets"
+
+#: qml/SearchResults.qml:87
+msgid "One full folder path per line. All files includes these again."
+msgstr "Un chemin de dossier complet par ligne. Tous les fichiers les inclut à nouveau."
+
+#: qml/SearchResults.qml:100
+msgid "Save"
+msgstr "Enregistrer"
+
+#: qml/SearchResults.qml:216
+msgid "For a bigger fix, with your ChatGPT plan"
+msgstr "Pour une correction plus importante, avec votre forfait ChatGPT"
+
+#: qml/SearchResults.qml:238 qml/SearchResults.qml:432
+msgid "Search the web for “%1”"
+msgstr "Rechercher « %1 » sur le Web"
+
+#: qml/SearchResults.qml:327
+msgid "OPEN"
+msgstr "OUVRIR"
+
+#: qml/SearchResults.qml:338
+msgid "Result"
+msgstr "Résultat"
+
+#: qml/SearchResults.qml:361 qml/SearchResults.qml:373
+msgctxt "a setting, then its state"
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: qml/SearchResults.qml:371
+msgctxt "an action, then why it did not happen"
+msgid "%1 · Couldn't do that—try again"
+msgstr "%1 · Impossible — réessayez"
+
+#: qml/SearchResults.qml:372
+msgctxt "a setting, then why it did not open"
+msgid "%1 · Couldn't open settings—try again"
+msgstr "%1 · Impossible d'ouvrir les paramètres — réessayez"
+
+#: qml/SizePill.qml:44
+msgid "Larger tiles"
+msgstr "Tuiles plus grandes"
+
+#: qml/SizePill.qml:44
+msgid "Smaller tiles"
+msgstr "Tuiles plus petites"
+
+#: qml/WindowActions.qml:23
+msgid "Open in its own window"
+msgstr "Ouvrir dans sa propre fenêtre"
+
+#: qml/WindowActions.qml:37
+msgid "Make smaller"
+msgstr "Réduire"
+
+#: qml/WindowActions.qml:37
+msgid "Expand"
+msgstr "Déplier"
+
+#: qml/WindowActions.qml:50
+msgid "Close Search"
+msgstr "Fermer la Recherche"
