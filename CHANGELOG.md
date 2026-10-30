@@ -5,6 +5,9 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Tettegouche speaks German, French, Spanish and Brazilian Portuguese as well as English, following the
+  system language. These first translations are machine-made, and
+  corrections from native speakers are welcome.
 - On an ordinary Plasma panel the islands sit right beside the launcher dot
   and take only the room they need, so the task icons and other widgets
   follow straight after them instead of being pushed toward the middle.
