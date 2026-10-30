@@ -94,6 +94,18 @@ computer · an answer can take up to a minute", so the web search never stands
 alone. A question Ask stops for another surface's says Ask couldn't answer
 this time; one this Search typed over is simply replaced.
 
+Where the person's apps offer Ask their tools, as Notes does, an answer that
+reads them names what it read in its line beneath: "On this computer · Read:
+Testing notes, Tablet round 30 Oct". An answer that would write in an app,
+such as keeping it as a note, ends with its Do it card inside the box: what it
+does and, beneath at 12 in quotes, the first words it writes, with a Do it
+pill 32 tall, the light pill, at its end. Only the tap makes the write: Search
+hands the card's token to Split Rock's broker (`Run` at
+`io.github.carlsonjm.splitrock.Broker`, `/Broker`), once, and the pill becomes
+"Done", or "Didn't work" with the broker's reason beneath. Until then the line
+beneath reads "Answered on this computer · nothing changes until you tap Do
+it". A card that runs a settings command is not shown in Search.
+
 Where Split Rock's Codex is signed in, an answer's list ends with an Ask Codex
 row, a row like a Helper's: "For a bigger fix, with your ChatGPT plan". Only a
 tap on it hands the question on, to Codex's own window, and Search closes as

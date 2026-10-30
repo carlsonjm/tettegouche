@@ -10,6 +10,8 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QRegularExpression>
 
 namespace {
@@ -111,6 +113,7 @@ void AskClient::send()
     m_query.clear();
     m_handedToCodex = false;
     m_needsEngine = false;
+    forgetCard();
     m_id = 0;
     m_sending = true;
     if (m_state != QLatin1String("downloading"))
@@ -161,6 +164,7 @@ void AskClient::clear()
     m_query.clear();
     m_handedToCodex = false;
     m_needsEngine = false;
+    forgetCard();
     setState(m_state == QLatin1String("downloading") ? m_state : QStringLiteral("idle"));
 }
 
@@ -206,6 +210,12 @@ void AskClient::answered(uint id, const QVariantMap &result)
     m_query = result.value(QStringLiteral("query")).toString();
     m_handedToCodex = result.value(QStringLiteral("handedToCodex")).toBool();
     m_needsEngine = result.value(QStringLiteral("needsEngine")).toBool();
+    forgetCard();
+    m_read = result.value(QStringLiteral("read")).toStringList();
+    // Only a card from an app's tool is shown here: its token is the one way
+    // to its write. A settings skill's card, which runs a command, is not.
+    const auto card = QJsonDocument::fromJson(result.value(QStringLiteral("doIt")).toString().toUtf8()).object();
+    if (!card.value(QStringLiteral("token")).toString().isEmpty()) m_card = card.toVariantMap();
     // Ask is running now, so asking after Codex starts nothing.
     lookAtCodex();
     if (result.value(QStringLiteral("needsModel")).toBool()) lookAtModel();
@@ -325,4 +335,46 @@ void AskClient::setState(const QString &state)
 {
     m_state = state;
     Q_EMIT changed();
+}
+
+QVariantMap AskClient::doIt() const
+{
+    if (m_card.isEmpty()) return {};
+    return {{QStringLiteral("title"), m_card.value(QStringLiteral("title")).toString()},
+            {QStringLiteral("what"), m_card.value(QStringLiteral("what")).toString()},
+            {QStringLiteral("app"), m_card.value(QStringLiteral("app")).toString()},
+            {QStringLiteral("tool"), m_card.value(QStringLiteral("tool")).toString()}};
+}
+
+void AskClient::forgetCard()
+{
+    m_read.clear();
+    m_card.clear();
+    m_doItState.clear();
+    m_doItProblem.clear();
+}
+
+bool AskClient::runDoIt()
+{
+    if (m_card.isEmpty() || !m_doItState.isEmpty()) return false;
+    const QString token = m_card.value(QStringLiteral("token")).toString();
+    m_doItState = QStringLiteral("running");
+    Q_EMIT changed();
+    auto *call = new QDBusPendingCallWatcher(
+        m_bus.asyncCall(QDBusMessage::createMethodCall(QString::fromLatin1(BrokerService), QString::fromLatin1(BrokerPath),
+                                                       QString::fromLatin1(BrokerInterface), QStringLiteral("Run"))
+                            << token,
+                        30000),
+        this);
+    connect(call, &QDBusPendingCallWatcher::finished, this, [this, call, token] {
+        const QDBusPendingReply<QVariantMap> reply = *call;
+        call->deleteLater();
+        // A newer answer has its own card by now.
+        if (m_card.value(QStringLiteral("token")).toString() != token) return;
+        const bool ok = !reply.isError() && reply.value().value(QStringLiteral("ok")).toBool();
+        m_doItState = ok ? QStringLiteral("done") : QStringLiteral("failed");
+        m_doItProblem = ok || reply.isError() ? QString() : reply.value().value(QStringLiteral("problem")).toString();
+        Q_EMIT changed();
+    });
+    return true;
 }

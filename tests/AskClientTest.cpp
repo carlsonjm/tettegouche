@@ -27,6 +27,9 @@ public:
     bool slow = false;
     uint pending = 0;
     QStringList toCodex;
+    // A Do it card, as JSON, and what was read, for the plain answer.
+    QString doIt;
+    QStringList read;
     int downloads = 0;
     uint next = 0;
 public Q_SLOTS:
@@ -69,7 +72,8 @@ public Q_SLOTS:
                     { QStringLiteral("text"), QStringLiteral("Wi-Fi that drops often comes from power saving.") },
                     { QStringLiteral("helpers"),
                         QStringList { QStringLiteral("health"), QStringLiteral("changes") } },
-                    { QStringLiteral("query"), QStringLiteral("wifi") } });
+                    { QStringLiteral("query"), QStringLiteral("wifi") }, { QStringLiteral("doIt"), doIt },
+                    { QStringLiteral("read"), read } });
         });
         return id;
     }
@@ -120,6 +124,24 @@ Q_SIGNALS:
     void CodexChanged(const QVariantMap &codex);
 };
 
+// A stand-in for Split Rock's broker: it makes a card's write once, for the
+// token it handed out.
+class FakeBroker : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.SplitRock.Broker")
+public:
+    QStringList ran;
+    QString problem;
+public Q_SLOTS:
+    QVariantMap Run(const QString &token)
+    {
+        ran.append(token);
+        if (!problem.isEmpty())
+            return { { QStringLiteral("ok"), false }, { QStringLiteral("problem"), problem } };
+        return { { QStringLiteral("ok"), true } };
+    }
+};
+
 class AskClientTest : public QObject {
     Q_OBJECT
 private Q_SLOTS:
@@ -140,6 +162,69 @@ private Q_SLOTS:
         QVERIFY(AskClient::readsAsQuestion(QStringLiteral("wifi?")));
         QVERIFY(!AskClient::readsAsQuestion(QStringLiteral("update")));
         QVERIFY(!AskClient::readsAsQuestion(QStringLiteral("free up")));
+    }
+
+    // An answer that would keep something in Notes carries a Do it card and
+    // names the notes it read; only the tap hands the card's token to the
+    // broker's Run, once, and the card says how it went. A settings skill's
+    // card, which has no token, is not shown here.
+    void aDoItCardRunsOnlyOnTheTap()
+    {
+        FakeAsk ask;
+        ask.read = QStringList { QStringLiteral("Testing notes"), QStringLiteral("Tablet round 30 Oct") };
+        ask.doIt = QStringLiteral(R"({"title":"Where I left off with testing","what":"Save a note","tool":"notes.create",)"
+                                  R"("app":"Notes","args":{"text":"x"},"token":"t-1"})");
+        FakeBroker broker;
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-ask"));
+        QVERIFY(peer.registerObject(
+            QStringLiteral("/Ask"), &ask, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Ask")));
+        QVERIFY(peer.registerObject(QStringLiteral("/Broker"), &broker, QDBusConnection::ExportAllSlots));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Broker")));
+
+        AskClient client(QDBusConnection::sessionBus());
+        client.setPause(50);
+        QTRY_VERIFY(client.available());
+        QVERIFY(!client.runDoIt());
+        client.type(QStringLiteral("save this answer to my notes"));
+        QTRY_COMPARE(client.state(), QStringLiteral("answered"));
+        QCOMPARE(client.read(), ask.read);
+        QCOMPARE(client.doIt().value(QStringLiteral("title")).toString(), QStringLiteral("Where I left off with testing"));
+        QCOMPARE(client.doIt().value(QStringLiteral("app")).toString(), QStringLiteral("Notes"));
+        QVERIFY(!client.doIt().contains(QStringLiteral("token")));
+        QVERIFY(client.doItState().isEmpty());
+        QTest::qWait(100);
+        QVERIFY(broker.ran.isEmpty());
+
+        QVERIFY(client.runDoIt());
+        QCOMPARE(client.doItState(), QStringLiteral("running"));
+        QVERIFY(!client.runDoIt());
+        QTRY_COMPARE(client.doItState(), QStringLiteral("done"));
+        QCOMPARE(broker.ran, QStringList { QStringLiteral("t-1") });
+
+        // A write the broker refuses says so, with its words.
+        broker.problem = QStringLiteral("The card has expired");
+        ask.doIt.replace(QStringLiteral("t-1"), QStringLiteral("t-2"));
+        client.type(QStringLiteral("save that answer to my notes"));
+        QTRY_VERIFY(client.doItState().isEmpty() && !client.doIt().isEmpty() && client.state() == QLatin1String("answered"));
+        QVERIFY(client.runDoIt());
+        QTRY_COMPARE(client.doItState(), QStringLiteral("failed"));
+        QCOMPARE(client.doItProblem(), QStringLiteral("The card has expired"));
+
+        // A settings skill's card runs a command, not a token: not shown.
+        ask.doIt = QStringLiteral(R"({"title":"Turn on Night Color","command":"kwriteconfig6 x"})");
+        ask.read.clear();
+        client.type(QStringLiteral("turn on night color please"));
+        QTRY_VERIFY(client.state() == QLatin1String("answered") && client.doItState().isEmpty());
+        QVERIFY(client.doIt().isEmpty());
+        QVERIFY(client.read().isEmpty());
+        QVERIFY(!client.runDoIt());
+        client.type(QString());
+        QVERIFY(client.doIt().isEmpty());
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Broker"));
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask"));
     }
 
     // A question is sent once the typing pauses; its words come as written,
