@@ -250,6 +250,8 @@ public Q_SLOTS:
     Q_INVOKABLE void reportShowing(const QString &mode, bool loading);
     // Says it again, for a widget that forgot it while Search was hidden.
     void repeatShowing();
+    // Asks the widget on Search's display for the island in the band.
+    void requestIsland(const QString &kind);
 
 Q_SIGNALS:
     void filesRequested();
@@ -269,6 +271,9 @@ Q_SIGNALS:
     // hidden, so a running launcher is not an open one.
     Q_SCRIPTABLE void shown(bool visible);
     Q_SCRIPTABLE void showing(const QString &mode, bool loading);
+    // An island that opens in place in the band, such as Layouts, asked for
+    // from Search: the widget on the display Search is on opens it.
+    Q_SCRIPTABLE void islandRequested(const QString &kind, const QString &output);
 
 private:
     void openFor(bool toType);

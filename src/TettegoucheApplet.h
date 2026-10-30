@@ -36,6 +36,14 @@ class TettegoucheApplet final : public Plasma::Applet
     // Split Rock's Ask is installed, so the Helpers door reads Ask, as
     // Search's chip does.
     Q_PROPERTY(bool askOffered READ askOffered NOTIFY pearlDoorsChanged)
+    // Split Rock's Core keeps saved layouts, for the Layouts island: each
+    // layout as Core lists it, and what is open now once asked for.
+    Q_PROPERTY(bool keepsLayouts READ keepsLayouts NOTIFY layoutsChanged)
+    Q_PROPERTY(QVariantList layouts READ layouts NOTIFY layoutsChanged)
+    // What is open on the workspace in use, as Core reads it from Cards
+    // (`available`, `groups`), with the workspace's name (`workspaceName`)
+    // where KWin gives it; empty until readCurrentLayout() is answered.
+    Q_PROPERTY(QVariantMap currentLayout READ currentLayout NOTIFY currentLayoutChanged)
 
 public:
     TettegoucheApplet(QObject *parent, const KPluginMetaData &data,
@@ -67,10 +75,21 @@ public:
     Q_INVOKABLE qint64 monotonicNowUs() const;
     Q_INVOKABLE QRectF screenRect(QQuickItem *item) const;
     Q_INVOKABLE bool prepareIslandSurface(QWindow *window, QQuickItem *panelItem) const;
+    // The name of the display the item is on.
+    Q_INVOKABLE QString screenName(QQuickItem *item) const;
+    bool keepsLayouts() const;
+    QVariantList layouts() const;
+    QVariantMap currentLayout() const { return m_currentLayout; }
+    Q_INVOKABLE void readCurrentLayout();
+    Q_INVOKABLE void saveLayout(const QString &name, const QVariantList &groups, bool atSignIn);
+    Q_INVOKABLE void openLayout(const QString &id);
+    Q_INVOKABLE void removeLayout(const QString &id);
+    Q_INVOKABLE void setLayoutAtSignIn(const QString &id, bool on);
 
 private Q_SLOTS:
     void launcherShown(bool visible);
     void launcherShowing(const QString &mode, bool loading);
+    void launcherIslandRequested(const QString &kind, const QString &output);
 
 Q_SIGNALS:
     void invocationRequested();
@@ -80,6 +99,11 @@ Q_SIGNALS:
     void panelGeometryChanged();
     void activityActionInvoked(const QString &id, int generation, const QString &action);
     void pearlDoorsChanged();
+    void layoutsChanged();
+    void currentLayoutChanged();
+    // Search asked for an island in the band, such as Layouts, on the
+    // display named (empty where Search could not say).
+    void islandRequested(const QString &kind, const QString &output);
 
 private:
     // One of the widget's settings as main.xml declares it, read where its
@@ -125,6 +149,9 @@ private:
     bool m_askOffered = false;
     void setPearlDoors();
     suite::PanelWatch m_panelWatch;
+    // Names the workspace a current layout was read on, then shows it.
+    void nameWorkspace(QVariantMap layout);
+    QVariantMap m_currentLayout;
     std::shared_ptr<ActivityModel> m_activities;
     std::shared_ptr<LauncherKeys> m_keys;
 };

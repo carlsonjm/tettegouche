@@ -274,6 +274,10 @@ Item {
             readonly property bool alreadyOpen:
                 launcher.launcherController.contextAvailable
                 && launcher.launcherController.resultIsOpen(index)
+            // A pill the row carries at its end, such as Open on a saved
+            // layout's; it does what a tap on the row does.
+            readonly property string pill: launcher.searchResults.resultPill
+                ? launcher.searchResults.resultPill(index) : ""
 
             width: resultList.width
             height: resultsArea.rowHeight + deviceChildren.height
@@ -304,7 +308,7 @@ Item {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 44
+                    width: parent.width - 44 - (rowPill.visible ? rowPill.width + 12 : 0)
                     spacing: 3
 
                     Row {
@@ -339,6 +343,37 @@ Item {
                         color: launcher.secondaryText
                         font.pixelSize: 12
                         elide: Text.ElideRight
+                    }
+                }
+
+                // The light pill, 32 tall, as Ask's Do it.
+                Rectangle {
+                    id: rowPill
+                    objectName: "result-pill-" + resultDelegate.index
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: resultDelegate.pill.length > 0
+                    width: rowPillLabel.implicitWidth + 32
+                    height: 32
+                    radius: 16
+                    color: rowPillTap.pressed ? tone.lightPressed : tone.primaryText
+                    Accessible.role: Accessible.Button
+                    Accessible.name: resultDelegate.pill.length > 0
+                        ? words.i18nc("a pill, then the result it acts on", "%1: %2", resultDelegate.pill, resultDelegate.model.display || "") : ""
+                    Accessible.onPressAction: launcher.runResult(resultDelegate.index)
+                    Text {
+                        id: rowPillLabel
+                        anchors.centerIn: parent
+                        text: resultDelegate.pill
+                        color: tone.surface
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+                    // Taken here, so the row's own tap does not open it again.
+                    MouseArea {
+                        id: rowPillTap
+                        anchors.fill: parent
+                        enabled: !launcher.guestDragged && !launcher.applicationLaunchPending
+                        onClicked: launcher.runResult(resultDelegate.index)
                     }
                 }
             }

@@ -1039,6 +1039,12 @@ void LauncherController::repeatShowing()
     Q_EMIT showing(m_showingMode, m_showingLoading);
 }
 
+void LauncherController::requestIsland(const QString &kind)
+{
+    const QScreen *screen = placedScreen();
+    Q_EMIT islandRequested(kind, screen ? screen->name() : QString());
+}
+
 void LauncherController::completeGuestNavigation(int slot)
 {
     if (m_guestMode && slot != 0) {

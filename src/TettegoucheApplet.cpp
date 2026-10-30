@@ -15,6 +15,7 @@
 #include <KIO/CommandLauncherJob>
 #include <KService>
 #include <QStandardPaths>
+#include <QDBusArgument>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
@@ -22,6 +23,7 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+#include <QDBusVariant>
 #include <QQuickItem>
 #include <QTimer>
 #include <Plasma/Containment>
@@ -96,6 +98,9 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     QDBusConnection::sessionBus().connect(LauncherService,
         QStringLiteral("/Launcher"), LauncherService,
         QStringLiteral("showing"), this, SLOT(launcherShowing(QString,bool)));
+    QDBusConnection::sessionBus().connect(LauncherService,
+        QStringLiteral("/Launcher"), LauncherService,
+        QStringLiteral("islandRequested"), this, SLOT(launcherIslandRequested(QString,QString)));
 
     // Search's key, bare Meta, activates the widget; its button launches it.
     connect(this, &Plasma::Applet::activated, this, [this] {
@@ -151,6 +156,8 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         connect(m_activities.get(), &ActivityModel::revealRequested, this, [this](const QString &path) {
             startLauncher(setting(QStringLiteral("useKadunce"), true), path);
         });
+        connect(m_activities->core(), &CoreFactProvider::layoutsChanged, this, &TettegoucheApplet::layoutsChanged);
+        connect(m_activities->core(), &CoreFactProvider::currentLayoutRead, this, &TettegoucheApplet::nameWorkspace);
         setAmbientActivities(m_activities->activities());
     }
 }
@@ -273,6 +280,96 @@ QRectF TettegoucheApplet::screenRect(QQuickItem *item) const
     const QScreen *screen = item->window()->screen();
     const QPointF origin = screen ? QPointF(screen->geometry().topLeft()) : QPointF();
     return QRectF(topLeft - origin, QSizeF(item->width(), item->height()));
+}
+
+QString TettegoucheApplet::screenName(QQuickItem *item) const
+{
+    const QScreen *screen = item && item->window() ? item->window()->screen() : nullptr;
+    return screen ? screen->name() : QString();
+}
+
+void TettegoucheApplet::launcherIslandRequested(const QString &kind, const QString &output)
+{
+    Q_EMIT islandRequested(kind, output);
+}
+
+bool TettegoucheApplet::keepsLayouts() const
+{
+    return m_activities && m_activities->core()->keepsLayouts();
+}
+
+QVariantList TettegoucheApplet::layouts() const
+{
+    QVariantList listed;
+    if (!m_activities) return listed;
+    for (const auto &layout : m_activities->core()->layouts()) listed.append(layout);
+    return listed;
+}
+
+void TettegoucheApplet::readCurrentLayout()
+{
+    m_currentLayout.clear();
+    Q_EMIT currentLayoutChanged();
+    if (m_activities) m_activities->core()->readCurrentLayout();
+    else nameWorkspace({{QStringLiteral("available"), false}});
+}
+
+// KWin names its virtual desktops; Core gives the one in use by its id.
+void TettegoucheApplet::nameWorkspace(QVariantMap layout)
+{
+    const auto id = layout.value(QStringLiteral("workspace")).toString();
+    const auto show = [this](const QVariantMap &named) {
+        m_currentLayout = named;
+        Q_EMIT currentLayoutChanged();
+    };
+    if (id.isEmpty()) {
+        show(layout);
+        return;
+    }
+    auto get = QDBusMessage::createMethodCall(QStringLiteral("org.kde.KWin"), QStringLiteral("/VirtualDesktopManager"),
+        QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
+    get.setArguments({QStringLiteral("org.kde.KWin.VirtualDesktopManager"), QStringLiteral("desktops")});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(get, 1000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [watcher, layout, id, show]() mutable {
+        watcher->deleteLater();
+        const QDBusPendingReply<QDBusVariant> reply = *watcher;
+        const auto desktops = reply.isError() ? QVariant() : reply.value().variant();
+        if (desktops.canConvert<QDBusArgument>()) {
+            // Each desktop is (position, id, name).
+            const auto argument = desktops.value<QDBusArgument>();
+            argument.beginArray();
+            while (!argument.atEnd()) {
+                uint position = 0;
+                QString desktop, name;
+                argument.beginStructure();
+                argument >> position >> desktop >> name;
+                argument.endStructure();
+                if (desktop == id) layout.insert(QStringLiteral("workspaceName"), name);
+            }
+            argument.endArray();
+        }
+        show(layout);
+    });
+}
+
+void TettegoucheApplet::saveLayout(const QString &name, const QVariantList &groups, bool atSignIn)
+{
+    if (m_activities) m_activities->core()->saveLayout(name, groups, atSignIn);
+}
+
+void TettegoucheApplet::openLayout(const QString &id)
+{
+    if (m_activities) m_activities->core()->openLayout(id);
+}
+
+void TettegoucheApplet::removeLayout(const QString &id)
+{
+    if (m_activities) m_activities->core()->removeLayout(id);
+}
+
+void TettegoucheApplet::setLayoutAtSignIn(const QString &id, bool on)
+{
+    if (m_activities) m_activities->core()->setLayoutAtSignIn(id, on);
 }
 
 bool TettegoucheApplet::prepareIslandSurface(QWindow *window, QQuickItem *panelItem) const

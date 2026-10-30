@@ -7,6 +7,9 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include <algorithm>
 
@@ -17,6 +20,10 @@ QString path() { return QString::fromLatin1(CoreFactProvider::Path); }
 QString iface() { return QString::fromLatin1(CoreFactProvider::Interface); }
 
 const QString Choices = QStringLiteral("choices");
+// The row that names what a layout left out. Not one of Core's topics, so
+// nothing about it goes to Core.
+const QString Missed = QStringLiteral("layout-missed");
+constexpr int MissedMs = 60000;
 const QString DismissText = QStringLiteral("dismissText");
 
 QVariantList choicesOf(const QVariantMap &fact) { return fact.value(Choices).toList(); }
@@ -66,13 +73,48 @@ QVariantMap CoreFactProvider::readFact(const QVariantMap &fact) {
     return read;
 }
 
+namespace {
+QList<QVariantMap> mapsOf(const QVariant &value) {
+    if (value.canConvert<QDBusArgument>()) return qdbus_cast<QList<QVariantMap>>(value.value<QDBusArgument>());
+    QList<QVariantMap> maps;
+    for (const auto &entry : value.toList()) maps.append(entry.toMap());
+    return maps;
+}
+
+// A layout's groups as they come from the bus, made plain. A group without
+// apps is left out; names stand in for apps the menu doesn't name.
+QVariantList groupsOf(const QVariant &value) {
+    QVariantList groups;
+    for (const auto &group : mapsOf(value)) {
+        const auto apps = group.value(QStringLiteral("apps")).toStringList();
+        if (apps.isEmpty()) continue;
+        auto names = group.value(QStringLiteral("names")).toStringList();
+        for (qsizetype i = 0; i < apps.size(); ++i) {
+            if (i >= names.size()) names.append(apps.at(i));
+            else if (names.at(i).isEmpty()) names[i] = apps.at(i);
+        }
+        names = names.mid(0, apps.size());
+        groups.append(QVariantMap{{QStringLiteral("apps"), apps}, {QStringLiteral("names"), names},
+                                  {QStringLiteral("stack"), apps.size() > 1 && group.value(QStringLiteral("stack")).toBool()}});
+    }
+    return groups;
+}
+}
+
 CoreFactProvider::CoreFactProvider(const QDBusConnection &bus, QObject *parent) : QObject(parent), m_bus(bus) {
     qDBusRegisterMetaType<QList<QVariantMap>>();
+    m_missedFor.setSingleShot(true);
+    m_missedFor.setInterval(MissedMs);
+    connect(&m_missedFor, &QTimer::timeout, this, &CoreFactProvider::forgetMissed);
     if (!m_bus.isConnected()) return;
     auto *watcher = new QDBusServiceWatcher(service(), m_bus, QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &CoreFactProvider::ownerChanged);
     m_bus.connect(service(), path(), iface(), QStringLiteral("FactChanged"), this,
                   SLOT(factChanged(QVariantMap,QDBusMessage)));
+    m_bus.connect(service(), path(), iface(), QStringLiteral("LayoutsChanged"), this, SLOT(layoutsMoved(QDBusMessage)));
+    m_bus.connect(service(), path(), iface(), QStringLiteral("LayoutOpened"), this,
+                  SLOT(layoutOpened(QString,int,int,QStringList,QDBusMessage)));
+
     // The first question starts Core where it is installed and not yet running.
     ask();
 }
@@ -82,6 +124,10 @@ void CoreFactProvider::ownerChanged(const QString &name, const QString &, const 
     ++m_generation;
     m_owner = owner;
     if (!m_actions.isEmpty()) { m_actions.clear(); Q_EMIT actionsChanged(); }
+    if (m_keepsLayouts || !m_layouts.isEmpty()) { m_keepsLayouts = false; m_layouts.clear(); Q_EMIT layoutsChanged(); }
+    m_missedFor.stop();
+    m_missed.clear();
+    m_missedLayout.clear();
     if (!m_facts.isEmpty()) { m_facts.clear(); Q_EMIT changed(); }
     if (!owner.isEmpty()) ask();
 }
@@ -111,7 +157,116 @@ void CoreFactProvider::ask() {
             m_actions = reply.value();
             Q_EMIT actionsChanged();
         });
+        askLayouts();
     });
+}
+
+// A Core older than layouts answers that it has no such method: it keeps none.
+void CoreFactProvider::askLayouts() {
+    const int generation = m_generation;
+    auto *layouts = new QDBusPendingCallWatcher(m_bus.asyncCall(
+        QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Layouts")), 5000), this);
+    connect(layouts, &QDBusPendingCallWatcher::finished, this, [this, layouts, generation] {
+        const QDBusPendingReply<QList<QVariantMap>> reply = *layouts; layouts->deleteLater();
+        if (generation != m_generation) return;
+        QList<QVariantMap> read;
+        if (!reply.isError()) {
+            for (const auto &layout : reply.value()) {
+                const auto id = layout.value(QStringLiteral("id")).toString();
+                const auto name = layout.value(QStringLiteral("name")).toString();
+                if (id.isEmpty() || name.isEmpty()) continue;
+                read.append({{QStringLiteral("id"), id}, {QStringLiteral("name"), name},
+                             {QStringLiteral("groups"), groupsOf(layout.value(QStringLiteral("groups")))},
+                             {QStringLiteral("atSignIn"), layout.value(QStringLiteral("atSignIn")).toBool()}});
+            }
+        }
+        const bool keeps = !reply.isError();
+        if (keeps == m_keepsLayouts && read == m_layouts) return;
+        m_keepsLayouts = keeps;
+        m_layouts = read;
+        Q_EMIT layoutsChanged();
+    });
+}
+
+void CoreFactProvider::layoutsMoved(const QDBusMessage &message) {
+    if (!m_keepsLayouts || (!m_owner.isEmpty() && message.service() != m_owner)) return;
+    askLayouts();
+}
+
+void CoreFactProvider::layoutOpened(const QString &id, int, int missed, const QStringList &missedNames,
+                                    const QDBusMessage &message) {
+    if (!m_owner.isEmpty() && message.service() != m_owner) return;
+    if (missed <= 0 || missedNames.isEmpty()) return;
+    m_missed = missedNames;
+    m_missedLayout.clear();
+    for (const auto &layout : std::as_const(m_layouts)) {
+        if (layout.value(QStringLiteral("id")).toString() == id) m_missedLayout = layout.value(QStringLiteral("name")).toString();
+    }
+    m_missedFor.start();
+    Q_EMIT changed();
+}
+
+void CoreFactProvider::forgetMissed() {
+    m_missedFor.stop();
+    if (m_missed.isEmpty()) return;
+    m_missed.clear();
+    m_missedLayout.clear();
+    Q_EMIT changed();
+}
+
+void CoreFactProvider::readCurrentLayout() {
+    if (!m_keepsLayouts) {
+        Q_EMIT currentLayoutRead({{QStringLiteral("available"), false}});
+        return;
+    }
+    const int generation = m_generation;
+    auto *current = new QDBusPendingCallWatcher(m_bus.asyncCall(
+        QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("CurrentLayout")), 5000), this);
+    connect(current, &QDBusPendingCallWatcher::finished, this, [this, current, generation] {
+        const QDBusPendingReply<QVariantMap> reply = *current; current->deleteLater();
+        if (generation != m_generation || reply.isError()) {
+            Q_EMIT currentLayoutRead({{QStringLiteral("available"), false}});
+            return;
+        }
+        const auto layout = reply.value();
+        Q_EMIT currentLayoutRead({{QStringLiteral("available"), layout.value(QStringLiteral("available"), true).toBool()},
+                                  {QStringLiteral("workspace"), layout.value(QStringLiteral("workspace")).toString()},
+                                  {QStringLiteral("groups"), groupsOf(layout.value(QStringLiteral("groups")))}});
+    });
+}
+
+void CoreFactProvider::saveLayout(const QString &name, const QVariantList &groups, bool atSignIn) {
+    QJsonArray kept;
+    for (const auto &entry : groups) {
+        const auto group = entry.toMap();
+        const auto apps = group.value(QStringLiteral("apps")).toStringList();
+        if (apps.isEmpty()) continue;
+        kept.append(QJsonObject{{QStringLiteral("apps"), QJsonArray::fromStringList(apps)},
+                                {QStringLiteral("stack"), apps.size() > 1 && group.value(QStringLiteral("stack")).toBool()}});
+    }
+    if (name.trimmed().isEmpty() || kept.isEmpty()) return;
+    call(QStringLiteral("SaveLayout"),
+         {name.trimmed(), QString::fromUtf8(QJsonDocument(kept).toJson(QJsonDocument::Compact)), atSignIn});
+}
+
+void CoreFactProvider::openLayout(const QString &id) {
+    call(QStringLiteral("OpenLayout"), {id});
+}
+
+void CoreFactProvider::removeLayout(const QString &id) {
+    call(QStringLiteral("RemoveLayout"), {id});
+}
+
+void CoreFactProvider::setLayoutAtSignIn(const QString &id, bool on) {
+    call(QStringLiteral("SetLayoutAtSignIn"), {id, on});
+}
+
+// Core answers with LayoutsChanged, which reads the layouts again.
+void CoreFactProvider::call(const QString &method, const QVariantList &arguments) {
+    if (!m_keepsLayouts || arguments.value(0).toString().isEmpty()) return;
+    auto message = QDBusMessage::createMethodCall(service(), path(), iface(), method);
+    message.setArguments(arguments);
+    m_bus.asyncCall(message, 5000);
 }
 
 void CoreFactProvider::factChanged(const QVariantMap &arrived, const QDBusMessage &message) {
@@ -155,12 +310,22 @@ QVariantList CoreFactProvider::activities() const {
             {DismissText, fact.value(DismissText).toString()},
             {QStringLiteral("capabilities"), capabilities}});
     }
+    if (!m_missed.isEmpty()) {
+        rows.append(QVariantMap{
+            {QStringLiteral("id"), QString(Prefix + Missed)}, {QStringLiteral("generation"), m_generation},
+            {QStringLiteral("kind"), QStringLiteral("core")}, {QStringLiteral("state"), QStringLiteral("running")},
+            {QStringLiteral("icon"), QStringLiteral("view-grid")}, {QStringLiteral("missed"), m_missed},
+            {QStringLiteral("layout"), m_missedLayout},
+            {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("open"), true}}}});
+    }
     return rows;
 }
 
 void CoreFactProvider::invoke(const QString &id, int generation, const QString &action) {
     if (!id.startsWith(Prefix) || generation != m_generation) return;
     const auto topic = id.mid(Prefix.size());
+    // Told once: a tap takes it away.
+    if (topic == Missed) { if (action == QLatin1String("open")) forgetMissed(); return; }
     if (action == QLatin1String("open")) { act(topic, action); return; }
     if (action == QLatin1String("never") && topic == QLatin1String("windows")) { act(topic, action); return; }
     const auto found = std::find_if(m_facts.cbegin(), m_facts.cend(), [&topic](const QVariantMap &fact) {
@@ -171,7 +336,8 @@ void CoreFactProvider::invoke(const QString &id, int generation, const QString &
 }
 
 void CoreFactProvider::dismiss(const QString &id) {
-    if (id.startsWith(Prefix)) act(id.mid(Prefix.size()), QStringLiteral("dismiss"));
+    if (id == Prefix + Missed) forgetMissed();
+    else if (id.startsWith(Prefix)) act(id.mid(Prefix.size()), QStringLiteral("dismiss"));
 }
 
 void CoreFactProvider::open(const QString &topic) {

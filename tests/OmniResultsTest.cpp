@@ -375,6 +375,64 @@ int main(int argc, char **argv)
         if (!without.helpers().isEmpty() || without.openHelper(QStringLiteral("install"))) return 114;
     }
     {
+        // Core's saved layouts: Layouts found by its words opens the island
+        // in the band, a layout found by its name opens at once with its one
+        // Open pill, and "desktop" asks for neither.
+        if (!layoutsFit(QStringLiteral("lay")) || !layoutsFit(QStringLiteral("Layouts")) || !layoutsFit(QStringLiteral("desk"))
+            || !layoutsFit(QStringLiteral("save layout")) || !layoutsFit(QStringLiteral("layout coding"))) return 132;
+        if (layoutsFit(QStringLiteral("la")) || layoutsFit(QStringLiteral("desktop")) || layoutsFit(QStringLiteral("storage"))) return 133;
+        if (!layoutNamed(QStringLiteral("Coding"), QStringLiteral("cod")) || !layoutNamed(QStringLiteral("Deep work"), QStringLiteral("work"))
+            || !layoutNamed(QStringLiteral("Tv"), QStringLiteral("tv"))) return 134;
+        if (layoutNamed(QStringLiteral("Coding"), QStringLiteral("co")) || layoutNamed(QStringLiteral("Coding"), QStringLiteral("odin"))) return 135;
+        const QVariantMap coding{{QStringLiteral("id"), QStringLiteral("1")}, {QStringLiteral("name"), QStringLiteral("Coding")},
+            {QStringLiteral("groups"), QVariantList{
+                QVariantMap{{QStringLiteral("apps"), QStringList{QStringLiteral("ghostty"), QStringLiteral("claude")}},
+                            {QStringLiteral("names"), QStringList{QStringLiteral("Ghostty"), QStringLiteral("Claude")}}, {QStringLiteral("stack"), true}},
+                QVariantMap{{QStringLiteral("apps"), QStringList{QStringLiteral("zen")}},
+                            {QStringLiteral("names"), QStringList{QStringLiteral("Zen")}}, {QStringLiteral("stack"), false}}}}};
+        if (layoutLine(coding) != QStringLiteral("Ghostty, Claude · Zen")) return 136;
+        bool keeps = true;
+        QList<QVariantMap> layouts{coding};
+        int islands = 0;
+        QStringList opened;
+        Results core;
+        core.setCoreLayouts([&keeps] { return keeps; }, [&layouts] { return layouts; }, [&islands] { ++islands; },
+                            [&opened](const QString &id) { opened.append(id); });
+        core.testQuery = QStringLiteral("layouts");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1) return 137;
+        const auto all = core.getQueryMatch(core.index(0, 0));
+        if (!coreMatch(all) || all.text() != QStringLiteral("Layouts")
+            || core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("1 saved")) return 138;
+        if (!core.resultPill(0).isEmpty()) return 139;
+        if (!core.run(core.index(0, 0)) || islands != 1 || !opened.isEmpty()) return 140;
+        core.testQuery = QStringLiteral("cod");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1) return 141;
+        if (core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Open your Coding layout")
+            || core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("Ghostty, Claude · Zen")) return 142;
+        if (core.resultPill(0) != QStringLiteral("Open")) return 143;
+        if (!core.run(core.index(0, 0)) || opened != QStringList{QStringLiteral("1")} || islands != 1) return 144;
+        // With none saved, Layouts still offers to save what's open.
+        layouts.clear();
+        core.testQuery = QStringLiteral("save layout");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1
+            || core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("Save what's open as a layout")) return 145;
+        // A Core that keeps no layouts, or none at all: no Layouts.
+        keeps = false;
+        layouts = {coding};
+        for (const auto &query : {QStringLiteral("layouts"), QStringLiteral("coding")}) {
+            core.testQuery = query;
+            core.showCore(core.testQuery);
+            if (core.rowCount() != 0) return 146;
+        }
+        Results without;
+        without.testQuery = QStringLiteral("layouts");
+        without.showCore(without.testQuery);
+        if (without.rowCount() != 0) return 147;
+    }
+    {
         // Windows names find the apps that do those jobs here, once the
         // second word is begun, and only where the app is installed.
         if (windowsWordsReached(QStringLiteral("org.kde.dolphin.desktop"), QStringLiteral("File E")).isEmpty()

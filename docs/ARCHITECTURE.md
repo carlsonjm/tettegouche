@@ -237,6 +237,10 @@ Ambient's drives share. Opening an
 island maps a clear top-layer surface over the whole display, set up as the
 launcher's is, on which `AmbientIsland.qml` grows the island into its card; the surface takes the
 keyboard so Esc closes it, and is destroyed when it closes.
+Search asks for an island that opens there, such as Layouts, with
+`islandRequested` on the launcher's bus interface, naming its display; the
+widget on that display opens it, and the island asks Split Rock's Core,
+through the shared `CoreFactProvider`, for what it shows and does.
 
 `TETTE_AMBIENT_FIXTURE=transfer-media`, or `paused` for paused media, replaces
 the live sources with one sample transfer and one media row for tests and

@@ -49,6 +49,8 @@ than repeat it.
 | Tap Do it on Ask's answer, where it offers one | Split Rock's broker makes the write the card names, such as keeping the answer in Notes, once, and the card says Done, or that it didn't work and why. Nothing is written before the tap. |
 | Tap Ask Codex after an answer, where Codex is signed in, or under Codex only; or press Enter under Codex only | The question goes on to Codex's own window and Search closes. Codex runs only from this tap or Enter, or from the person's own Settings switch. |
 | Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its Helpers, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
+| Tap or click Layouts among the results, where Split Rock's Core keeps saved layouts | Search closes and the Layouts island opens in place in the band, above the panel. |
+| Tap or click a saved layout among the results, such as Open your Coding layout, or its Open pill | Split Rock's Core opens it: what isn't running starts, the rest moves to its place, and Search closes. Nothing is closed. |
 | Touch and hold an application among the results, or right-click it | Opens its sheet with Uninstall…, where it can be uninstalled: Split Rock's Core, where it is installed, opens Remove an app straight to the yes for the package that owns it, and nothing is removed until that yes; without Core, the software centre opens on it where it lists it. Other results have no sheet. |
 | Highlight an application or a file among the results | Its actions show under it while it is highlighted, and move with the highlight: an application's own, such as New Window or New Private Window, at most four; a file's Open With…, Show in Folder, Copy Path and Move to Trash, a folder's without Open With…. Touch and hold a file to highlight it without opening it; held, an application also opens its sheet. |
 | Tap or click an application's action, or Enter on it | Starts that action as the application's own entry offers it, a fresh start rather than its open window brought forward, and Search closes. |
@@ -224,6 +226,7 @@ than repeat it.
 | Tap or click a drive's island, or its Open | Files opens the drive, mounting it first. |
 | Tap or click a waiting application's island | Brings the application forward, and its dialog with it. |
 | Tap or click a Core fact's island | Split Rock's Core opens the card that acts on it, such as Free up space, and takes the fact off the island. A fact that asks a question opens in place instead, with its answers. |
+| Tap or click the island that says an app didn't open, after a saved layout opened | Takes the line away and opens the Layouts island. Set aside, or after a minute, it goes and opens nothing. |
 | Tap or click Don't tell me again on a Windows program's island | Split Rock's Core stops telling about Windows programs for good and takes the fact off the island. Only that fact has the pill. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Starts a quick note on Gooseberry's own card. |
@@ -239,6 +242,14 @@ than repeat it.
 | In the open island, tap or click previous, play or pause, or next | Acts on the media. Each shows only when the player supports it. |
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island on a Core question, tap or click an answer | Passes that answer to Split Rock's Core, such as Bring back, Always or Not now, and closes the island. The words are Core's. |
+| In the Layouts island, tap or click Open on a saved layout | Split Rock's Core opens that layout and the island closes. |
+| In the Layouts island, tap or click a saved layout off its pill | Shows its switch "Open when I sign in" and Remove; again, hides them. The switch flips whether Core opens it at sign-in; Remove forgets it. |
+| In the Layouts island, tap or click Save what's open | Turns the island into the form, with what is open on this workspace, group by group. |
+| In the Layouts form, type in the name field | Names the layout. `Enter` saves, as Save does. |
+| In the Layouts form, tap or click Remove on a group | Takes that group out of the layout being saved. |
+| In the Layouts form, tap or click Open when I sign in | Flips whether Core opens the layout at sign-in. It starts off. |
+| In the Layouts form, tap or click Save, or Not now | Save keeps the layout under its name, replacing one of the same name, and closes the island; it does nothing until there is a name and a group. Not now closes the island without saving. |
+| In the Layouts island, tap or click Close, press `Esc`, or tap outside it | Closes the island. |
 | In the open island, tap or click Show and the player's name | Brings the player forward and closes the island. It shows only when the player can be raised. |
 | In the open island, tap or click a mark along its top | Moves between the media and the transfers. |
 | In the open island, turn the mouse wheel | Scrolls a card too long to show whole, 80 pixels a notch, as in Search. |
