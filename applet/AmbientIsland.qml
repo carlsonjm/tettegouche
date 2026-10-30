@@ -50,6 +50,14 @@ Window {
         Math.max(sideLeft, Math.min(sideRight - openWidth, start.x + start.width / 2 - openWidth / 2))))
     readonly property real openY: Math.max(8, start.y + start.height - openHeight)
     readonly property var activity: kind === "media" ? (surface ? surface.player : null) : null
+    // The fact from Core the card answers, while Core still asks it.
+    readonly property var question: kind === "core" && surface && surface.coreAsks ? surface.coreShown : null
+    onQuestionChanged: if (kind === "core" && question === null) dismiss()
+    // An answer goes to Core, which takes the fact off the island.
+    function answer(action) {
+        if (question) surface.invoke(question, action);
+        dismiss();
+    }
 
     // Not close(): that is the window's own, and would drop it at once.
     function dismiss() {
@@ -297,7 +305,7 @@ Window {
                 // With more than one kind going on, a row to move between them.
                 Row {
                     objectName: "ambient-island-kinds"
-                    visible: overlay.surface !== null && overlay.surface.kinds.length > 1
+                    visible: overlay.kind !== "core" && overlay.surface !== null && overlay.surface.kinds.length > 1
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
                     Repeater {
@@ -570,6 +578,81 @@ Window {
                         onActivated: {
                             overlay.surface.invoke(overlay.activity, "raise");
                             overlay.dismiss();
+                        }
+                    }
+                }
+
+                // A question from Core: its icon, the question and its detail,
+                // then its answers as pills, the tap's own first and Not now
+                // last, with the choices Core lists between them.
+                Column {
+                    objectName: "ambient-island-core"
+                    visible: overlay.question !== null
+                    width: parent.width
+                    spacing: 14
+                    Row {
+                        width: parent.width
+                        spacing: 12
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 10
+                            color: tone.art
+                            Kirigami.Icon {
+                                objectName: "ambient-island-core-icon"
+                                anchors.centerIn: parent
+                                width: 24
+                                height: 24
+                                source: overlay.surface ? overlay.surface.coreIcon : ""
+                            }
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 52
+                            spacing: 2
+                            Label {
+                                objectName: "ambient-island-core-line"
+                                width: parent.width
+                                text: overlay.question ? overlay.question.line || overlay.question.title || "" : ""
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 3
+                            }
+                            Label {
+                                objectName: "ambient-island-core-detail"
+                                width: parent.width
+                                visible: text.length > 0
+                                text: overlay.question ? overlay.question.detail || "" : ""
+                                opacity: 0.66
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 2
+                            }
+                        }
+                    }
+                    Flow {
+                        objectName: "ambient-island-core-answers"
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-core-open"
+                            filled: true
+                            label: overlay.question ? overlay.question.actionText || words.i18n("Open") : ""
+                            onActivated: overlay.answer("open")
+                        }
+                        Repeater {
+                            model: overlay.surface ? overlay.surface.coreChoices : []
+                            delegate: PillButton {
+                                required property var modelData
+                                objectName: "ambient-island-core-choice-" + modelData.action
+                                label: modelData.text
+                                onActivated: overlay.answer(modelData.action)
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-core-not-now"
+                            label: overlay.surface ? overlay.surface.coreNotNow : ""
+                            onActivated: overlay.answer("not-now")
                         }
                     }
                 }

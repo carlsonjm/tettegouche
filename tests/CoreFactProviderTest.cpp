@@ -42,6 +42,36 @@ QVariantMap windows() {
             {QStringLiteral("attention"), QStringLiteral("island")}, {QStringLiteral("icon"), QStringLiteral("application-x-ms-dos-executable")},
             {QStringLiteral("actionText"), QStringLiteral("Find the Linux version")}};
 }
+
+// Bringing back the last sign-in's apps, with Always beside the tap when
+// `always` is set, as Core lists it.
+QVariantMap memory(bool always) {
+    QVariantMap fact{{QStringLiteral("topic"), QStringLiteral("memory")}, {QStringLiteral("title"), QStringLiteral("Workspace Memory")},
+                     {QStringLiteral("line"), QStringLiteral("Bring back 4 apps from yesterday?")},
+                     {QStringLiteral("detail"), QStringLiteral("Each one goes back to its place")},
+                     {QStringLiteral("level"), QStringLiteral("island")}, {QStringLiteral("attention"), QStringLiteral("island")},
+                     {QStringLiteral("icon"), QStringLiteral("window-restore")}, {QStringLiteral("actionText"), QStringLiteral("Bring back")}};
+    if (always)
+        fact.insert(QStringLiteral("choices"), QVariant::fromValue(QList<QVariantMap>{
+            {{QStringLiteral("action"), QStringLiteral("always")}, {QStringLiteral("text"), QStringLiteral("Always")}},
+            // Without words it is not drawn, and Not now has its own place.
+            {{QStringLiteral("action"), QStringLiteral("later")}},
+            {{QStringLiteral("action"), QStringLiteral("not-now")}, {QStringLiteral("text"), QStringLiteral("Later")}}}));
+    return fact;
+}
+
+QVariantMap automations() {
+    return {{QStringLiteral("topic"), QStringLiteral("automations")}, {QStringLiteral("title"), QStringLiteral("Automations")},
+            {QStringLiteral("line"), QStringLiteral("Open Firefox, Notes and Mail when you sign in?")},
+            {QStringLiteral("level"), QStringLiteral("island")}, {QStringLiteral("attention"), QStringLiteral("island")},
+            {QStringLiteral("actionText"), QStringLiteral("Yes, each time")}, {QStringLiteral("dismissText"), QStringLiteral("No thanks")}};
+}
+
+QVariantMap rowOf(const CoreFactProvider &provider, const QString &id) {
+    for (const auto &value : provider.activities())
+        if (value.toMap().value(QStringLiteral("id")).toString() == id) return value.toMap();
+    return {};
+}
 }
 
 class CoreFactProviderTest : public QObject {
@@ -139,6 +169,91 @@ private Q_SLOTS:
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
         peer.unregisterObject(QStringLiteral("/Core"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-core-3"));
+    }
+
+    // A fact that asks carries Core's choices and its words for Not now, and
+    // each answer goes to Core as Core names it; nothing it doesn't list does.
+    void aQuestionAndItsChoices() {
+        FakeCore core;
+        core.facts = {storage(QStringLiteral("island")), memory(true), automations()};
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-core-4"));
+        QVERIFY(peer.registerObject(QStringLiteral("/Core"), &core, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Core")));
+
+        CoreFactProvider provider(QDBusConnection::sessionBus());
+        QTRY_COMPARE(provider.activities().size(), 3);
+        const auto plain = rowOf(provider, QStringLiteral("core:storage"));
+        QVERIFY(!plain.value(QStringLiteral("asks")).toBool());
+        QVERIFY(plain.value(QStringLiteral("choices")).toList().isEmpty());
+        QVERIFY(!plain.value(QStringLiteral("capabilities")).toMap().contains(QStringLiteral("not-now")));
+
+        const auto question = rowOf(provider, QStringLiteral("core:memory"));
+        QVERIFY(question.value(QStringLiteral("asks")).toBool());
+        const auto choices = question.value(QStringLiteral("choices")).toList();
+        QCOMPARE(choices.size(), 1);
+        QCOMPARE(choices.first().toMap().value(QStringLiteral("action")).toString(), QStringLiteral("always"));
+        QCOMPARE(choices.first().toMap().value(QStringLiteral("text")).toString(), QStringLiteral("Always"));
+        QVERIFY(question.value(QStringLiteral("dismissText")).toString().isEmpty());
+        const auto capabilities = question.value(QStringLiteral("capabilities")).toMap();
+        QVERIFY(capabilities.value(QStringLiteral("open")).toBool());
+        QVERIFY(capabilities.value(QStringLiteral("always")).toBool());
+        QVERIFY(capabilities.value(QStringLiteral("not-now")).toBool());
+        QVERIFY(!capabilities.contains(QStringLiteral("later")));
+
+        const auto offer = rowOf(provider, QStringLiteral("core:automations"));
+        QVERIFY(offer.value(QStringLiteral("asks")).toBool());
+        QCOMPARE(offer.value(QStringLiteral("dismissText")).toString(), QStringLiteral("No thanks"));
+        QVERIFY(offer.value(QStringLiteral("choices")).toList().isEmpty());
+
+        const int generation = question.value(QStringLiteral("generation")).toInt();
+        provider.invoke(QStringLiteral("core:memory"), generation, QStringLiteral("always"));
+        QTRY_COMPARE(core.acts, QStringList{QStringLiteral("memory always")});
+        // Not listed, or listed for another fact: not passed.
+        provider.invoke(QStringLiteral("core:memory"), generation, QStringLiteral("later"));
+        provider.invoke(QStringLiteral("core:automations"), generation, QStringLiteral("always"));
+        provider.invoke(QStringLiteral("core:storage"), generation, QStringLiteral("not-now"));
+        provider.invoke(QStringLiteral("core:automations"), generation, QStringLiteral("not-now"));
+        QTRY_COMPARE(core.acts.size(), 2);
+        QCOMPARE(core.acts.last(), QStringLiteral("automations not-now"));
+        QTest::qWait(100);
+        QCOMPARE(core.acts.size(), 2);
+
+        // A change on the bus carries its choices the same way.
+        Q_EMIT core.FactChanged(memory(false));
+        QTRY_VERIFY(rowOf(provider, QStringLiteral("core:memory")).value(QStringLiteral("choices")).toList().isEmpty());
+        Q_EMIT core.FactChanged(memory(true));
+        QTRY_COMPARE(rowOf(provider, QStringLiteral("core:memory")).value(QStringLiteral("choices")).toList().size(), 1);
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
+        peer.unregisterObject(QStringLiteral("/Core"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-core-4"));
+    }
+
+    // A Core that lists no choices still asks: bringing the apps back has
+    // its tap and Not now, and Always is not passed for it.
+    void aQuestionFromACoreWithoutChoices() {
+        FakeCore core;
+        core.facts = {memory(false)};
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-core-5"));
+        QVERIFY(peer.registerObject(QStringLiteral("/Core"), &core, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Core")));
+
+        CoreFactProvider provider(QDBusConnection::sessionBus());
+        QTRY_COMPARE(provider.activities().size(), 1);
+        const auto row = provider.activities().first().toMap();
+        QVERIFY(row.value(QStringLiteral("asks")).toBool());
+        QVERIFY(row.value(QStringLiteral("choices")).toList().isEmpty());
+        const int generation = row.value(QStringLiteral("generation")).toInt();
+        provider.invoke(QStringLiteral("core:memory"), generation, QStringLiteral("always"));
+        provider.invoke(QStringLiteral("core:memory"), generation, QStringLiteral("not-now"));
+        QTRY_COMPARE(core.acts, QStringList{QStringLiteral("memory not-now")});
+        provider.invoke(QStringLiteral("core:memory"), generation, QStringLiteral("open"));
+        QTRY_COMPARE(core.acts.size(), 2);
+        QCOMPARE(core.acts.last(), QStringLiteral("memory open"));
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
+        peer.unregisterObject(QStringLiteral("/Core"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-core-5"));
     }
 
     // A Core that speaks another version is left alone.

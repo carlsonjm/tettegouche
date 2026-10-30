@@ -378,6 +378,14 @@ Item {
     readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
     // A Windows program's fact can be told never to come back.
     readonly property string neverLabel: words.i18n("Don't tell me again")
+    // A fact that asks a question, such as bringing back the last sign-in's
+    // apps, opens as a card with its answers rather than acting on a tap:
+    // its tap's words, the choices Core lists, and Not now in Core's own
+    // words where it gives them.
+    readonly property bool coreAsks: coreShown !== null && Boolean(coreShown.asks)
+    readonly property var coreChoices: coreShown && coreShown.choices ? coreShown.choices : []
+    readonly property string coreNotNow: coreShown && coreShown.dismissText ? coreShown.dismissText
+        : words.i18n("Not now")
 
     // The quick note's island, there while Gooseberry is installed: a dot
     // with a plus that starts a quick note or resumes it, and beside it the
@@ -594,12 +602,14 @@ Item {
     // A drive's island is one tap: Files opens the drive, mounting it first.
     // A shared screen's island only tells, and stops: a tap opens nothing.
     // A waiting application's island brings the application forward, and its
-    // dialog with it. Core's island opens the card that does what it suggests.
+    // dialog with it. Core's island opens the card that does what it suggests,
+    // or, for a fact that asks, opens in place with its answers.
     // The quick note's island opens Search's Notes on the quick note.
     function open(kind) {
         if (kind === "note") drawerRequested("note");
         else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
+        else if (kind === "core" && coreAsks) openRequested("core");
         else if (kind === "core") invoke(coreShown, "open");
         else if (kind !== "screen") openRequested(openKind(kind));
     }
@@ -609,7 +619,8 @@ Item {
     }
     // Where the open island grows from.
     function islandFor(kind) {
-        const candidates = kind === "media" ? [mediaIsland] : [transferIsland, arrivedIsland];
+        const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
+            : [transferIsland, arrivedIsland];
         for (const island of candidates)
             if (island.present) return island.shape;
         return bubble;

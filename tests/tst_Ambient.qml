@@ -723,6 +723,94 @@ TestCase {
         compare(invoked.signalArguments[1][2], "open");
     }
 
+    // A fact that asks opens in place rather than acting on a tap: the card
+    // shows the question, its tap's words first, the choices Core lists in
+    // Core's order, and Not now last in Core's words where it gives them.
+    // Each answer goes to Core and closes the card.
+    function test_a_core_question_opens_with_its_answers() {
+        const fact = {id: "core:memory", generation: 7, kind: "core", state: "running",
+            title: "Workspace Memory", line: "Bring back 4 apps from yesterday?",
+            detail: "Each one goes back to its place", actionText: "Bring back", icon: "window-restore",
+            asks: true, choices: [{action: "always", text: "Always"}], dismissText: "",
+            capabilities: {open: true, always: true, "not-now": true}};
+        const surface = createSurface(640, [fact]);
+        settle();
+        const shape = island(surface, "core");
+        const invoked = spyOn(surface, "invokeRequested");
+        const opens = spyOn(surface, "openRequested");
+        mouseClick(shape, shape.width - 12, shape.height / 2);
+        compare(invoked.count, 0);
+        compare(opens.count, 1);
+        compare(opens.signalArguments[0][0], "core");
+
+        const opened = openIsland(surface, "core");
+        const card = findChild(opened.contentItem, "ambient-island-core");
+        verify(card.visible);
+        verify(!findChild(opened.contentItem, "ambient-island-kinds").visible);
+        compare(findChild(opened.contentItem, "ambient-island-core-line").text, "Bring back 4 apps from yesterday?");
+        compare(findChild(opened.contentItem, "ambient-island-core-detail").text, "Each one goes back to its place");
+        const main = findChild(opened.contentItem, "ambient-island-core-open");
+        const always = findChild(opened.contentItem, "ambient-island-core-choice-always");
+        const notNow = findChild(opened.contentItem, "ambient-island-core-not-now");
+        compare(main.label, "Bring back");
+        verify(main.filled);
+        compare(always.label, "Always");
+        verify(!always.filled);
+        compare(notNow.label, "Not now");
+        // The island's pills: 40 tall, round, 8 apart, in reading order.
+        for (const pill of [main, always, notNow]) {
+            compare(pill.height, 40);
+            compare(pill.radius, 20);
+        }
+        const along = item => item.mapToItem(card, 0, 0);
+        fuzzyCompare(along(always).x, along(main).x + main.width + 8, 0.5);
+        fuzzyCompare(along(notNow).x, along(always).x + always.width + 8, 0.5);
+
+        const closed = spyOn(opened, "closed");
+        mouseClick(always, always.width / 2, always.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][0], "core:memory");
+        compare(invoked.signalArguments[0][1], 7);
+        compare(invoked.signalArguments[0][2], "always");
+        tryCompare(closed, "count", 1);
+
+        const again = openIsland(surface, "core");
+        const later = findChild(again.contentItem, "ambient-island-core-not-now");
+        mouseClick(later, later.width / 2, later.height / 2);
+        compare(invoked.count, 2);
+        compare(invoked.signalArguments[1][2], "not-now");
+    }
+
+    // An offer with its own words for Not now and no choices has two pills;
+    // Core's words are drawn as given, and the card closes when Core stops
+    // asking.
+    function test_a_core_offer_says_not_now_in_cores_words() {
+        const fact = {id: "core:automations", generation: 2, kind: "core", state: "running",
+            title: "Automations", line: "Open Firefox, Notes and Mail when you sign in?",
+            detail: "You've started with these three times", actionText: "Yes, each time",
+            asks: true, choices: [], dismissText: "No thanks", capabilities: {open: true, "not-now": true}};
+        const surface = createSurface(640, [fact]);
+        settle();
+        const opened = openIsland(surface, "core");
+        const answers = findChild(opened.contentItem, "ambient-island-core-answers");
+        let pills = 0;
+        for (let i = 0; i < answers.children.length; ++i)
+            if (answers.children[i].visible && answers.children[i].label !== undefined) ++pills;
+        compare(pills, 2);
+        compare(findChild(opened.contentItem, "ambient-island-core-open").label, "Yes, each time");
+        compare(findChild(opened.contentItem, "ambient-island-core-not-now").label, "No thanks");
+        const invoked = spyOn(surface, "invokeRequested");
+        const yes = findChild(opened.contentItem, "ambient-island-core-open");
+        mouseClick(yes, yes.width / 2, yes.height / 2);
+        compare(invoked.count, 1);
+        compare(invoked.signalArguments[0][2], "open");
+
+        const reopened = openIsland(surface, "core");
+        const gone = spyOn(reopened, "closed");
+        surface.activities = [];
+        tryCompare(gone, "count", 1);
+    }
+
     // The quick note's island: a dot with a plus that opens the quick note,
     // and the pinned note beside it, its colour's bead and first words, which
     // opens that note. Narrow, the pinned note goes first.

@@ -1,4 +1,5 @@
 #include "CoreFactProvider.h"
+#include <QDBusArgument>
 #include <QDBusConnectionInterface>
 #include <QDBusError>
 #include <QDBusMessage>
@@ -14,6 +15,55 @@ const QString Prefix = QStringLiteral("core:");
 QString service() { return QString::fromLatin1(CoreFactProvider::Service); }
 QString path() { return QString::fromLatin1(CoreFactProvider::Path); }
 QString iface() { return QString::fromLatin1(CoreFactProvider::Interface); }
+
+const QString Choices = QStringLiteral("choices");
+const QString DismissText = QStringLiteral("dismissText");
+
+QVariantList choicesOf(const QVariantMap &fact) { return fact.value(Choices).toList(); }
+
+// A fact asks when Core gives it more to answer than its tap: choices, or its
+// own words for Not now. Bringing back the last sign-in's apps and an
+// automation's offer ask whatever their Core gives them, since a single tap
+// on either would be a yes to words nobody read.
+bool asks(const QVariantMap &fact) {
+    const auto topic = fact.value(QStringLiteral("topic")).toString();
+    return !choicesOf(fact).isEmpty() || !fact.value(DismissText).toString().isEmpty()
+        || topic == QLatin1String("memory") || topic == QLatin1String("automations");
+}
+
+bool listed(const QVariantMap &fact, const QString &action) {
+    const auto choices = choicesOf(fact);
+    return std::any_of(choices.cbegin(), choices.cend(), [&action](const QVariant &choice) {
+        return choice.toMap().value(QStringLiteral("action")).toString() == action;
+    });
+}
+}
+
+QVariantMap CoreFactProvider::readFact(const QVariantMap &fact) {
+    if (!fact.contains(Choices)) return fact;
+    auto read = fact;
+    const auto value = fact.value(Choices);
+    QVariantList raw;
+    if (value.canConvert<QDBusArgument>()) {
+        for (const auto &choice : qdbus_cast<QList<QVariantMap>>(value.value<QDBusArgument>())) raw.append(choice);
+    } else {
+        raw = value.toList();
+    }
+    // Only a choice with both an action and its words is drawn; an action
+    // Search already offers in its own place is not offered twice.
+    QVariantList choices;
+    for (const auto &entry : std::as_const(raw)) {
+        const auto choice = entry.toMap();
+        const auto action = choice.value(QStringLiteral("action")).toString();
+        const auto text = choice.value(QStringLiteral("text")).toString();
+        if (action.isEmpty() || text.isEmpty() || action == QLatin1String("open") || action == QLatin1String("not-now")
+                || action == QLatin1String("dismiss"))
+            continue;
+        choices.append(QVariantMap{{QStringLiteral("action"), action}, {QStringLiteral("text"), text}});
+    }
+    if (choices.isEmpty()) read.remove(Choices);
+    else read.insert(Choices, choices);
+    return read;
 }
 
 CoreFactProvider::CoreFactProvider(const QDBusConnection &bus, QObject *parent) : QObject(parent), m_bus(bus) {
@@ -49,7 +99,9 @@ void CoreFactProvider::ask() {
         connect(facts, &QDBusPendingCallWatcher::finished, this, [this, facts, generation] {
             const QDBusPendingReply<QList<QVariantMap>> reply = *facts; facts->deleteLater();
             if (reply.isError() || generation != m_generation) return;
-            if (reply.value() != m_facts) { m_facts = reply.value(); Q_EMIT changed(); }
+            QList<QVariantMap> read;
+            for (const auto &fact : reply.value()) read.append(readFact(fact));
+            if (read != m_facts) { m_facts = read; Q_EMIT changed(); }
         });
         auto *actions = new QDBusPendingCallWatcher(m_bus.asyncCall(
             QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Actions")), 5000), this);
@@ -62,8 +114,9 @@ void CoreFactProvider::ask() {
     });
 }
 
-void CoreFactProvider::factChanged(const QVariantMap &fact, const QDBusMessage &message) {
+void CoreFactProvider::factChanged(const QVariantMap &arrived, const QDBusMessage &message) {
     if (!m_owner.isEmpty() && message.service() != m_owner) return;
+    const auto fact = readFact(arrived);
     const auto topic = fact.value(QStringLiteral("topic")).toString();
     if (topic.isEmpty()) return;
     for (auto &known : m_facts) {
@@ -85,6 +138,10 @@ QVariantList CoreFactProvider::activities() const {
         QVariantMap capabilities{{QStringLiteral("open"), true}};
         // Core takes "never" only for Windows programs.
         if (topic == QLatin1String("windows")) capabilities.insert(QStringLiteral("never"), true);
+        const bool asking = asks(fact);
+        if (asking) capabilities.insert(QStringLiteral("not-now"), true);
+        for (const auto &choice : choicesOf(fact))
+            capabilities.insert(choice.toMap().value(QStringLiteral("action")).toString(), true);
         rows.append(QVariantMap{
             {QStringLiteral("id"), QString(Prefix + topic)}, {QStringLiteral("generation"), m_generation},
             {QStringLiteral("kind"), QStringLiteral("core")}, {QStringLiteral("state"), QStringLiteral("running")},
@@ -93,6 +150,9 @@ QVariantList CoreFactProvider::activities() const {
             {QStringLiteral("detail"), fact.value(QStringLiteral("detail")).toString()},
             {QStringLiteral("actionText"), fact.value(QStringLiteral("actionText")).toString()},
             {QStringLiteral("icon"), fact.value(QStringLiteral("icon")).toString()},
+            {QStringLiteral("asks"), asking},
+            {Choices, choicesOf(fact)},
+            {DismissText, fact.value(DismissText).toString()},
             {QStringLiteral("capabilities"), capabilities}});
     }
     return rows;
@@ -101,8 +161,13 @@ QVariantList CoreFactProvider::activities() const {
 void CoreFactProvider::invoke(const QString &id, int generation, const QString &action) {
     if (!id.startsWith(Prefix) || generation != m_generation) return;
     const auto topic = id.mid(Prefix.size());
-    if (action == QLatin1String("open")) act(topic, action);
-    else if (action == QLatin1String("never") && topic == QLatin1String("windows")) act(topic, action);
+    if (action == QLatin1String("open")) { act(topic, action); return; }
+    if (action == QLatin1String("never") && topic == QLatin1String("windows")) { act(topic, action); return; }
+    const auto found = std::find_if(m_facts.cbegin(), m_facts.cend(), [&topic](const QVariantMap &fact) {
+        return fact.value(QStringLiteral("topic")).toString() == topic;
+    });
+    if (found == m_facts.cend()) return;
+    if ((action == QLatin1String("not-now") && asks(*found)) || listed(*found, action)) act(topic, action);
 }
 
 void CoreFactProvider::dismiss(const QString &id) {

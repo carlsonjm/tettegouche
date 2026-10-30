@@ -171,8 +171,20 @@ and takes the fact off the island. Setting it aside tells Core it was
 dismissed, and Core stays quiet about it until it gets worse. A fact about a
 Windows program in Downloads, and no other, adds a "Don't tell me again" pill
 after its words; a tap on the pill asks Core never to raise Windows programs
-again, and a tap anywhere else on the island still opens the card. Core owns the
-fact and its history; Ambient keeps neither. Without Split Rock there is no
+again, and a tap anywhere else on the island still opens the card.
+
+A fact that asks a question, such as bringing back the last sign-in's apps or
+an offer to open a set of apps at sign-in, is not answered by a tap on the
+island: the tap, or the bubble holding it, opens the island in place on the
+question, its detail and its answers as pills. The tap's own words come first,
+then the choices Core lists beside it (`choices`, each an action and its
+words, such as Always), then Not now, in Core's words where it gives them
+(`dismissText`). A fact asks when Core lists choices or words for Not now, and
+bringing back apps and an automation's offer always ask. Each answer is passed
+to Core as Core names it, Not now as `not-now`, and closes the island; an
+action the fact does not list is not passed. The words are Core's; Ambient
+draws them as given. Core owns the fact and its history; Ambient keeps
+neither. Without Split Rock there is no
 Core island and nothing else changes.
 
 ### Quick note
