@@ -10,9 +10,12 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+#include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
+
+#include <algorithm>
 
 namespace {
 QString service()
@@ -216,6 +219,12 @@ void AskClient::answered(uint id, const QVariantMap &result)
     // to its write. A settings skill's card, which runs a command, is not.
     const auto card = QJsonDocument::fromJson(result.value(QStringLiteral("doIt")).toString().toUtf8()).object();
     if (!card.value(QStringLiteral("token")).toString().isEmpty()) m_card = card.toVariantMap();
+    for (const QJsonValue &note : QJsonDocument::fromJson(result.value(QStringLiteral("open")).toString().toUtf8()).array()) {
+        const QString id = note.toObject().value(QStringLiteral("id")).toString();
+        const QString title = note.toObject().value(QStringLiteral("title")).toString();
+        if (!id.isEmpty() && !title.isEmpty())
+            m_notes.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("title"), title}});
+    }
     // Ask is running now, so asking after Codex starts nothing.
     lookAtCodex();
     if (result.value(QStringLiteral("needsModel")).toBool()) lookAtModel();
@@ -349,9 +358,21 @@ QVariantMap AskClient::doIt() const
 void AskClient::forgetCard()
 {
     m_read.clear();
+    m_notes.clear();
     m_card.clear();
     m_doItState.clear();
     m_doItProblem.clear();
+}
+
+bool AskClient::openNote(const QString &id)
+{
+    const bool named = std::any_of(m_notes.cbegin(), m_notes.cend(),
+                                   [&id](const QVariant &note) { return note.toMap().value(QStringLiteral("id")).toString() == id; });
+    if (id.isEmpty() || !named) return false;
+    // Notes opens it on its own card; Search waits for nothing.
+    return m_bus.send(QDBusMessage::createMethodCall(QString::fromLatin1(NotesService), QString::fromLatin1(NotesPath),
+                                                     QString::fromLatin1(NotesInterface), QStringLiteral("OpenNote"))
+                      << id);
 }
 
 bool AskClient::runDoIt()

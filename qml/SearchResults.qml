@@ -119,6 +119,7 @@ Item {
         // Helper's row; Ask Codex the same.
         onInstallEngine: if (launcher.searchResults.openHelper("install", "llama.cpp")) launcher.launcherController.finishLaunch()
         onAskCodex: if (launcher.askClient.askCodex()) launcher.launcherController.finishLaunch()
+        onNoteOpened: launcher.launcherController.finishLaunch()
     }
 
     ListView {

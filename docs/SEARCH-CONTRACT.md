@@ -106,6 +106,12 @@ hands the card's token to Split Rock's broker (`Run` at
 beneath reads "Answered on this computer · nothing changes until you tap Do
 it". A card that runs a settings command is not shown in Search.
 
+An answer naming the note where something was written down ends with one
+light pill 40 tall per note, "Open “Accounts”", and the line beneath reads
+"Answered on this computer · the note opens in Notes". The tap asks Notes to
+open that note (`OpenNote` at `io.github.carlsonjm.gooseberry`, `/QuickNote`)
+and Search closes. Ask sends only each note's id and title, never its words.
+
 Where Split Rock's Codex is signed in, an answer's list ends with an Ask Codex
 row, a row like a Helper's: "For a bigger fix, with your ChatGPT plan". Only a
 tap on it hands the question on, to Codex's own window, and Search closes as

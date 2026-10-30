@@ -65,6 +65,9 @@ class AskClient : public QObject {
     // failed, with the broker's problem in words when it says one.
     Q_PROPERTY(QString doItState READ doItState NOTIFY changed)
     Q_PROPERTY(QString doItProblem READ doItProblem NOTIFY changed)
+    // The notes an answer names where something was written down, each its
+    // id and title, for one tap to open; never their words.
+    Q_PROPERTY(QVariantList notes READ notes NOTIFY changed)
 public:
     static constexpr char Service[] = "io.github.carlsonjm.splitrock.Ask";
     static constexpr char Path[] = "/Ask";
@@ -74,6 +77,10 @@ public:
     static constexpr char BrokerService[] = "io.github.carlsonjm.splitrock.Broker";
     static constexpr char BrokerPath[] = "/Broker";
     static constexpr char BrokerInterface[] = "io.github.carlsonjm.SplitRock.Broker";
+    // Notes, which opens a note the answer names.
+    static constexpr char NotesService[] = "io.github.carlsonjm.gooseberry";
+    static constexpr char NotesPath[] = "/QuickNote";
+    static constexpr char NotesInterface[] = "io.github.carlsonjm.Gooseberry.QuickNote";
 
     explicit AskClient(const QDBusConnection &bus, QObject *parent = nullptr);
 
@@ -97,6 +104,7 @@ public:
     QVariantMap doIt() const;
     QString doItState() const { return m_doItState; }
     QString doItProblem() const { return m_doItProblem; }
+    QVariantList notes() const { return m_notes; }
 
     // What is typed now. A question is sent once the typing pauses and it
     // reads as one; anything else clears the answer.
@@ -106,6 +114,9 @@ public:
     Q_INVOKABLE void clear();
     // After the person's tap on Download, and Not now.
     Q_INVOKABLE void download();
+    // After the person's tap on a note the answer names: Notes opens it on
+    // its own card. False for a note the answer didn't name.
+    Q_INVOKABLE bool openNote(const QString &id);
     Q_INVOKABLE void notNow();
     // After the person's tap on Codex only: Ask leaves the model out from
     // now on, and the question asked is asked again.
@@ -166,6 +177,7 @@ private:
     QVariantMap m_card;
     QString m_doItState;
     QString m_doItProblem;
+    QVariantList m_notes;
     uint m_id = 0;
     // A question sent whose id hasn't come back yet.
     bool m_sending = false;

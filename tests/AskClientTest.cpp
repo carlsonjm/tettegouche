@@ -30,6 +30,8 @@ public:
     // A Do it card, as JSON, and what was read, for the plain answer.
     QString doIt;
     QStringList read;
+    // The notes a whereabouts answer names, as JSON.
+    QString open;
     int downloads = 0;
     uint next = 0;
 public Q_SLOTS:
@@ -73,7 +75,7 @@ public Q_SLOTS:
                     { QStringLiteral("helpers"),
                         QStringList { QStringLiteral("health"), QStringLiteral("changes") } },
                     { QStringLiteral("query"), QStringLiteral("wifi") }, { QStringLiteral("doIt"), doIt },
-                    { QStringLiteral("read"), read } });
+                    { QStringLiteral("read"), read }, { QStringLiteral("open"), open } });
         });
         return id;
     }
@@ -139,6 +141,19 @@ public Q_SLOTS:
         if (!problem.isEmpty())
             return { { QStringLiteral("ok"), false }, { QStringLiteral("problem"), problem } };
         return { { QStringLiteral("ok"), true } };
+    }
+};
+
+class FakeNotes : public QObject {
+    Q_OBJECT
+    Q_CLASSINFO("D-Bus Interface", "io.github.carlsonjm.Gooseberry.QuickNote")
+public:
+    QStringList opened;
+public Q_SLOTS:
+    bool OpenNote(const QString &id)
+    {
+        opened.append(id);
+        return true;
     }
 };
 
@@ -223,6 +238,42 @@ private Q_SLOTS:
         QVERIFY(client.doIt().isEmpty());
 
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Broker"));
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask"));
+    }
+
+    // An answer naming where something was written down offers each note,
+    // by title, for one tap that opens it in Notes; nothing opens before the
+    // tap, and only a note the answer named.
+    void aNamedNoteOpensOnTheTap()
+    {
+        FakeAsk ask;
+        ask.open = QStringLiteral(R"([{"id":"n3","title":"Accounts"},{"id":"","title":"No id"}])");
+        FakeNotes notes;
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-ask"));
+        QVERIFY(peer.registerObject(
+            QStringLiteral("/Ask"), &ask, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Ask")));
+        QVERIFY(peer.registerObject(QStringLiteral("/QuickNote"), &notes, QDBusConnection::ExportAllSlots));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.gooseberry")));
+
+        AskClient client(QDBusConnection::sessionBus());
+        client.setPause(50);
+        QTRY_VERIFY(client.available());
+        client.type(QStringLiteral("where is my email password"));
+        QTRY_COMPARE(client.state(), QStringLiteral("answered"));
+        QCOMPARE(client.notes().size(), 1);
+        QCOMPARE(client.notes().first().toMap().value(QStringLiteral("title")).toString(), QStringLiteral("Accounts"));
+        QTest::qWait(100);
+        QVERIFY(notes.opened.isEmpty());
+        QVERIFY(!client.openNote(QStringLiteral("n9")));
+        QVERIFY(client.openNote(QStringLiteral("n3")));
+        QTRY_COMPARE(notes.opened, QStringList { QStringLiteral("n3") });
+        client.type(QString());
+        QVERIFY(client.notes().isEmpty());
+        QVERIFY(!client.openNote(QStringLiteral("n3")));
+
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.gooseberry"));
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Ask"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-ask"));
     }

@@ -277,6 +277,9 @@ TestCase {
         property int codexAsks: 0
         property int codexOnlyChoices: 0
         property var read: []
+        property var notes: []
+        property var opened: []
+        function openNote(id) { if (!notes.some(n => n.id === id)) return false; opened = opened.concat([id]); return true }
         property var doIt: ({})
         property string doItState: ""
         property string doItProblem: ""
@@ -297,6 +300,7 @@ TestCase {
             needsEngine = false; codexInstalled = false; codexOnly = false
             modelName = ""; modelCredit = ""; codexOnlyChoices = 0
             read = []; doIt = ({}); doItState = ""; doItProblem = ""; runs = 0
+            notes = []; opened = []
         }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
@@ -4306,6 +4310,24 @@ TestCase {
         askStub.doItState = ""
         askStub.doItProblem = ""
         tryCompare(doIt, "visible", false)
+        // An answer naming where something was written down offers the note
+        // by its title; the tap opens it in Notes and closes Search.
+        const openNotes = findChild(launcher, "ask-open-notes")
+        verify(!openNotes.visible)
+        askStub.notes = [{id: "n3", title: "Accounts"}]
+        tryCompare(openNotes, "visible", true)
+        compare(findChild(launcher, "ask-answer-who").text,
+            "Answered on this computer · the note opens in Notes")
+        const notePill = findChild(launcher, "ask-open-note")
+        compare(notePill.height, 40)
+        tryVerify(() => top(notePill) + notePill.height <= answer.height)
+        const closesBeforeNote = controller.closes
+        waitForRendering(answer)
+        mouseClick(notePill, notePill.width / 2, notePill.height / 2)
+        compare(askStub.opened, ["n3"])
+        compare(controller.closes, closesBeforeNote + 1)
+        askStub.notes = []
+        tryCompare(openNotes, "visible", false)
         // Codex is offered only once it is signed in, and only on a tap,
         // which hands the question on and closes Search.
         let codex = findChild(launcher, "ask-codex")

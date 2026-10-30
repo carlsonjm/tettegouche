@@ -26,6 +26,8 @@ Rectangle {
     // The person's tap on Install llama.cpp, and on Ask Codex under Codex only.
     signal installEngine()
     signal askCodex()
+    // A note the answer named was opened; Search closes, as from a Helper.
+    signal noteOpened()
     readonly property string phase: askClient ? askClient.state : "idle"
     readonly property bool needsModel: phase === "needsModel"
     readonly property bool needsEngine: needsModel && !!askClient && askClient.needsEngine
@@ -42,6 +44,7 @@ Rectangle {
         ? askClient.doIt : null
     readonly property string doing: askClient ? askClient.doItState : ""
     readonly property var readNames: phase === "answered" && askClient ? askClient.read : []
+    readonly property var notes: phase === "answered" && askClient && askClient.notes ? askClient.notes : []
     readonly property string modelName: askClient && askClient.modelName.length > 0 ? askClient.modelName : words.i18n("the model")
     readonly property bool shown: phase === "asking" ? true
         : phase === "answered" ? askClient.text.length > 0
@@ -205,6 +208,7 @@ Rectangle {
                 : answer.thinking ? answer.words.i18n("On this computer · an answer can take up to a minute")
                 : answer.readNames.length > 0 ? answer.words.i18n("On this computer · Read: %1", answer.readNames.join(", "))
                 : answer.card ? answer.words.i18n("Answered on this computer · nothing changes until you tap Do it")
+                : answer.notes.length > 0 ? answer.words.i18n("Answered on this computer · the note opens in Notes")
                 : answer.phase === "answered" || answer.phase === "asking" ? answer.words.i18n("Answered on this computer · nothing changes until you open a Helper")
                 : ""
             color: answer.tone.secondaryText
@@ -295,6 +299,49 @@ Rectangle {
                     color: answer.tone.primaryText
                     font.pixelSize: 14
                     font.weight: Font.DemiBold
+                }
+            }
+        }
+
+        // Where something was written down: each note named opens in Notes
+        // with one tap, and Search closes.
+        Flow {
+            objectName: "ask-open-notes"
+            visible: answer.notes.length > 0
+            width: parent.width
+            topPadding: 4
+            spacing: 8
+            Repeater {
+                model: answer.notes
+                Rectangle {
+                    id: notePill
+                    required property var modelData
+                    objectName: "ask-open-note"
+                    width: Math.min(noteLabel.implicitWidth + 36, answer.width)
+                    height: 40
+                    radius: 20
+                    color: noteTap.pressed ? answer.tone.lightPressed : answer.tone.primaryText
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: noteLabel.text
+                    Accessible.onPressAction: notePill.activate()
+                    Keys.onReturnPressed: notePill.activate()
+                    Keys.onEnterPressed: notePill.activate()
+                    Keys.onSpacePressed: notePill.activate()
+                    function activate() {
+                        if (answer.askClient && answer.askClient.openNote(modelData.id)) answer.noteOpened()
+                    }
+                    Text {
+                        id: noteLabel
+                        anchors.centerIn: parent
+                        width: Math.min(implicitWidth, parent.width - 36)
+                        text: answer.words.i18n("Open “%1”", notePill.modelData.title)
+                        elide: Text.ElideRight
+                        color: answer.tone.surface
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+                    TapHandler { id: noteTap; onTapped: notePill.activate() }
                 }
             }
         }
