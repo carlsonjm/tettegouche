@@ -1,0 +1,399 @@
+# Brazilian Portuguese translation of plasma_applet_co.goodinput.tettegouche.
+# Machine-made first translation; corrections from native speakers are welcome.
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: plasma_applet_co.goodinput.tettegouche\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-10-30 14:21+0000\n"
+"PO-Revision-Date: 2026-10-30 00:00+0000\n"
+"Last-Translator: Claude\n"
+"Language-Team: Brazilian Portuguese\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: src/LauncherKeys.cpp:40
+#, kde-format
+msgid "Open Apps"
+msgstr "Abrir Apps"
+
+#: src/LauncherKeys.cpp:42
+#, kde-format
+msgid "Open Files"
+msgstr "Abrir Arquivos"
+
+#: src/MprisActivityProvider.cpp:94 applet/AmbientIsland.qml:312 applet/AmbientIsland.qml:359 applet/AmbientSurface.qml:320
+#, kde-format
+msgid "Media"
+msgstr "Mídia"
+
+#: src/DriveActivityProvider.cpp:133
+#, kde-format
+msgid "Plugged in"
+msgstr "Na tomada"
+
+#: src/DriveActivityProvider.cpp:133
+#, kde-format
+msgid "%1, plugged in"
+msgstr "%1, conectado"
+
+#: src/DriveActivityProvider.cpp:134
+#, kde-format
+msgid "Open in Files"
+msgstr "Abrir no Arquivos"
+
+#: src/DriveActivityProvider.cpp:139 src/TetteTransferProvider.cpp:58 applet/main.qml:278
+#, kde-format
+msgid "Files"
+msgstr "Arquivos"
+
+#: src/FinishNotices.cpp:36
+#, kde-format
+msgid "Transfer incomplete"
+msgstr "Transferência incompleta"
+
+#: src/FinishNotices.cpp:36
+#, kde-format
+msgid "Transfer failed"
+msgstr "A transferência falhou"
+
+#: src/FinishNotices.cpp:42
+#, kde-format
+msgid "Arrived in Downloads"
+msgstr "Chegou em Downloads"
+
+#: src/FinishNotices.cpp:99 applet/AmbientIsland.qml:656
+#, kde-format
+msgid "Show in Files"
+msgstr "Mostrar no Arquivos"
+
+#: src/IncomingFileProvider.cpp:152
+#, kde-format
+msgid "Incoming file"
+msgstr "Arquivo recebido"
+
+#: applet/AmbientIsland.qml:35
+msgid "Ambient"
+msgstr "Ambiente"
+
+#: applet/AmbientIsland.qml:312
+msgid "Transfers"
+msgstr "Transferências"
+
+#: applet/AmbientIsland.qml:402
+msgid "Position"
+msgstr "Posição"
+
+#: applet/AmbientIsland.qml:470 applet/AmbientSurface.qml:1093
+msgid "Previous"
+msgstr "Anterior"
+
+#: applet/AmbientIsland.qml:488 applet/AmbientSurface.qml:1105
+msgid "Pause"
+msgstr "Pausar"
+
+#: applet/AmbientIsland.qml:488 applet/AmbientSurface.qml:1105
+msgid "Play"
+msgstr "Reproduzir"
+
+#: applet/AmbientIsland.qml:509 applet/AmbientSurface.qml:1117
+msgid "Next"
+msgstr "Próximo"
+
+#: applet/AmbientIsland.qml:524
+msgid "Show %1 here"
+msgstr "Mostrar %1 aqui"
+
+#: applet/AmbientIsland.qml:542
+msgid "playing"
+msgstr "tocando"
+
+#: applet/AmbientIsland.qml:542
+msgid "paused"
+msgstr "pausado"
+
+#: applet/AmbientIsland.qml:558
+msgid "Pause %1"
+msgstr "Pausar %1"
+
+#: applet/AmbientIsland.qml:559
+msgid "Play %1"
+msgstr "Reproduzir %1"
+
+#: applet/AmbientIsland.qml:569
+msgid "player"
+msgstr "player"
+
+#: applet/AmbientIsland.qml:569
+msgid "Show %1"
+msgstr "Mostrar %1"
+
+#: applet/AmbientIsland.qml:585 applet/AmbientSurface.qml:331
+msgid "1 transfer"
+msgid_plural "%1 transfers"
+msgstr[0] "1 transferência"
+msgstr[1] "%1 transferências"
+
+#: applet/AmbientIsland.qml:585 applet/AmbientSurface.qml:289
+msgid "Transfer"
+msgstr "Transferência"
+
+#: applet/AmbientIsland.qml:625
+msgid "Paused"
+msgstr "Pausado"
+
+#: applet/AmbientIsland.qml:627
+msgid "Incoming file · completion unknown"
+msgstr "Arquivo recebido · progresso desconhecido"
+
+#: applet/AmbientIsland.qml:639
+msgid "Resume"
+msgstr "Retomar"
+
+#: applet/AmbientIsland.qml:639
+msgid "Pause transfer"
+msgstr "Pausar a transferência"
+
+#: applet/AmbientIsland.qml:648 applet/AmbientSurface.qml:1231
+msgid "Cancel %1"
+msgstr "Cancelar %1"
+
+#: applet/AmbientSurface.qml:271
+msgctxt "gigabytes"
+msgid "%1 GB"
+msgstr "%1 GB"
+
+#: applet/AmbientSurface.qml:272
+msgctxt "megabytes"
+msgid "%1 MB"
+msgstr "%1 MB"
+
+#: applet/AmbientSurface.qml:273
+msgctxt "kilobytes"
+msgid "%1 KB"
+msgstr "%1 KB"
+
+#: applet/AmbientSurface.qml:274
+msgctxt "bytes"
+msgid "%1 B"
+msgstr "%1 B"
+
+#: applet/AmbientSurface.qml:279
+msgctxt "bytes done of all"
+msgid "%1 of %2"
+msgstr "%1 de %2"
+
+#: applet/AmbientSurface.qml:281
+msgid "File size %1"
+msgstr "Tamanho do arquivo %1"
+
+#: applet/AmbientSurface.qml:343
+msgid "1 transfer ended"
+msgid_plural "%1 transfers ended"
+msgstr[0] "1 transferência encerrada"
+msgstr[1] "%1 transferências encerradas"
+
+#: applet/AmbientSurface.qml:343
+msgid "1 file arrived"
+msgid_plural "%1 files arrived"
+msgstr[0] "1 arquivo chegou"
+msgstr[1] "%1 arquivos chegaram"
+
+#: applet/AmbientSurface.qml:349
+msgid "Drive"
+msgstr "Disco"
+
+#: applet/AmbientSurface.qml:352
+msgid "Open"
+msgstr "Abrir"
+
+#: applet/AmbientSurface.qml:357
+msgid "Sharing your screen"
+msgstr "Compartilhando sua tela"
+
+#: applet/AmbientSurface.qml:358
+msgid "Stop"
+msgstr "Parar"
+
+#: applet/AmbientSurface.qml:365
+msgid "An application"
+msgstr "Um aplicativo"
+
+#: applet/AmbientSurface.qml:375
+msgid "%1 · %2"
+msgstr "%1 · %2"
+
+#: applet/AmbientSurface.qml:380
+msgid "Don't tell me again"
+msgstr "Não me avise de novo"
+
+#: applet/AmbientSurface.qml:388
+msgid "Pinned note"
+msgstr "Nota fixada"
+
+#: applet/AmbientSurface.qml:618
+msgid "Media %1, open"
+msgstr "Mídia %1, abrir"
+
+#: applet/AmbientSurface.qml:619
+msgid "1 transfer, open"
+msgid_plural "%1 transfers, open"
+msgstr[0] "1 transferência, abrir"
+msgstr[1] "%1 transferências, abrir"
+
+#: applet/AmbientSurface.qml:622
+msgid "%1 is waiting: %2, show it"
+msgstr "%1 está esperando: %2, mostrar"
+
+#: applet/AmbientSurface.qml:623
+msgid "%1 is waiting, show it"
+msgstr "%1 está esperando, mostrar"
+
+#: applet/AmbientSurface.qml:624
+msgid "%1, open in Files"
+msgstr "%1, abrir no Arquivos"
+
+#: applet/AmbientSurface.qml:625
+msgid "New quick note"
+msgstr "Nova nota rápida"
+
+#: applet/AmbientSurface.qml:627
+msgid "%1, %2"
+msgstr "%1, %2"
+
+#: applet/AmbientSurface.qml:628
+msgid "%1, open"
+msgstr "%1, abrir"
+
+#: applet/AmbientSurface.qml:1285
+msgid "Show %1 in Files"
+msgstr "Mostrar %1 no Arquivos"
+
+#: applet/AmbientSurface.qml:1352
+msgid "Open %1 in Files"
+msgstr "Abrir %1 no Arquivos"
+
+#: applet/AmbientSurface.qml:1423
+msgid "Stop: %1"
+msgstr "Parar: %1"
+
+#: applet/AmbientSurface.qml:1554
+msgid "%1: %2"
+msgstr "%1: %2"
+
+#: applet/AmbientSurface.qml:1618
+msgid "Pinned note: %1"
+msgstr "Nota fixada: %1"
+
+#: applet/AmbientSurface.qml:1673
+msgid "Put away the note"
+msgid_plural "Put away the %1 notes"
+msgstr[0] "Guardar a nota"
+msgstr[1] "Guardar as %1 notas"
+
+#: applet/AmbientSurface.qml:1674
+msgid "Show the note"
+msgid_plural "Show the %1 notes"
+msgstr[0] "Mostrar a nota"
+msgstr[1] "Mostrar as %1 notas"
+
+#: applet/AmbientSurface.qml:1702
+msgctxt "more than nine notes"
+msgid "9+"
+msgstr "9+"
+
+#: applet/ConfigGeneral.qml:35
+msgid "Kadunce:"
+msgstr "Kadunce:"
+
+#: applet/ConfigGeneral.qml:36
+msgid "Open inside Spread when available"
+msgstr "Abrir dentro do Leque quando possível"
+
+#: applet/ConfigGeneral.qml:44
+msgid "Search shows:"
+msgstr "A Pesquisa mostra:"
+
+#: applet/ConfigGeneral.qml:45
+msgid "Recent apps"
+msgstr "Apps recentes"
+
+#: applet/ConfigGeneral.qml:56
+msgid "Recent files"
+msgstr "Arquivos recentes"
+
+#: applet/ConfigGeneral.qml:65
+msgid "Notes:"
+msgstr "Notas:"
+
+#: applet/ConfigGeneral.qml:66
+msgid "Show Notes when Gooseberry is installed"
+msgstr "Mostrar Notas quando o Gooseberry estiver instalado"
+
+#: applet/ConfigGeneral.qml:72
+msgid "Show the Notes pill"
+msgstr "Mostrar o botão de Notas"
+
+#: applet/ConfigGeneral.qml:79
+msgid "Helpers:"
+msgstr "Ajudantes:"
+
+#: applet/ConfigGeneral.qml:80
+msgid "Show the Helpers pill when Split Rock is installed"
+msgstr "Mostrar o botão de Ajudantes quando o Split Rock estiver instalado"
+
+#: applet/ConfigGeneral.qml:86
+msgid "Ambient:"
+msgstr "Ambiente:"
+
+#: applet/ConfigGeneral.qml:87
+msgid "Show islands beside the launcher"
+msgstr "Mostrar ilhas ao lado do lançador"
+
+#: applet/ConfigGeneral.qml:93
+msgid "Show the quick note island"
+msgstr "Mostrar a ilha de nota rápida"
+
+#: applet/ConfigGeneral.qml:100
+msgid "Motion:"
+msgstr "Movimento:"
+
+#: applet/ConfigGeneral.qml:101
+msgid "Animate the launcher indicator"
+msgstr "Animar o indicador do lançador"
+
+#: applet/config.qml:7
+msgid "General"
+msgstr "Geral"
+
+#: applet/main.qml:102
+msgid "Launcher is open"
+msgstr "O lançador está aberto"
+
+#: applet/main.qml:103
+msgid "Find an application"
+msgstr "Encontrar um aplicativo"
+
+#: applet/main.qml:277
+msgid "Apps"
+msgstr "Apps"
+
+#: applet/main.qml:279
+msgid "Ask"
+msgstr "Perguntar"
+
+#: applet/main.qml:279
+msgid "Helpers"
+msgstr "Ajudantes"
+
+#: applet/main.qml:279
+msgid "Notes"
+msgstr "Notas"
+
+#: applet/main.qml:348
+msgctxt "@action:button %1 is the widget's name"
+msgid "Open %1"
+msgstr "Abrir %1"
