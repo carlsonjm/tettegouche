@@ -120,6 +120,8 @@ TestCase {
         return opened;
     }
     function tap(item) { mouseClick(item, item.width / 2, item.height / 2); }
+    // What a tap shows in the open island is laid out on the next frame and
+    // the card then grows to it, so a test taps it only once it rests.
 
     function createSurface(width, activities) {
         const surface = createTemporaryObject(surfaceComponent, testCase, {width: width});
@@ -908,6 +910,7 @@ TestCase {
         const toggle = findChild(opened.contentItem, "ambient-island-layout-switch-1");
         verify(!toggle.visible);
         mouseClick(row, 20, 20);
+        settle();
         verify(toggle.visible);
         verify(toggle.on);
         tap(toggle);
@@ -926,6 +929,7 @@ TestCase {
         const host = createTemporaryObject(layoutsComponent, testCase);
         const opened = openLayouts(host);
         tap(findChild(opened.contentItem, "ambient-island-layouts-save"));
+        settle();
         const form = findChild(opened.contentItem, "ambient-island-layout-form");
         verify(form.visible);
         verify(!findChild(opened.contentItem, "ambient-island-layouts").visible);
@@ -936,6 +940,7 @@ TestCase {
             {apps: ["ghostty", "claude"], names: ["Ghostty", "Claude"], stack: true},
             {apps: ["zen"], names: ["Zen"], stack: false},
             {apps: ["mail", "notes", "files"], names: ["Mail", "Notes", "Files"], stack: true}]};
+        settle();
         verify(!findChild(opened.contentItem, "ambient-island-layout-form-empty").visible);
         compare(findChild(opened.contentItem, "ambient-island-layout-form-where").text, " · what's open on Work");
         compare(findChild(opened.contentItem, "ambient-island-layout-group-title-0").text, "Stack");
@@ -954,6 +959,7 @@ TestCase {
         verify(opened.expanded);
 
         tap(findChild(opened.contentItem, "ambient-island-layout-group-remove-2"));
+        settle();
         verify(findChild(opened.contentItem, "ambient-island-layout-group-1").visible);
         verify(findChild(opened.contentItem, "ambient-island-layout-group-2") === null);
         tap(toggle);
@@ -976,12 +982,15 @@ TestCase {
         const host = createTemporaryObject(layoutsComponent, testCase);
         const opened = openLayouts(host);
         tap(findChild(opened.contentItem, "ambient-island-layouts-save"));
+        settle();
         host.currentLayout = {available: false};
+        settle();
         compare(findChild(opened.contentItem, "ambient-island-layout-form-empty").text,
             "Nothing open here to save. Arrange your apps, then come back.");
         findChild(opened.contentItem, "ambient-island-layout-name").text = "Coding";
         tap(findChild(opened.contentItem, "ambient-island-layout-form-save"));
         compare(host.calls.length, 1);
+        verify(opened.expanded);
         const closed = spyOn(opened, "closed");
         tap(findChild(opened.contentItem, "ambient-island-layout-form-not-now"));
         compare(host.calls.length, 1);
