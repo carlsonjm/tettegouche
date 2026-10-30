@@ -16,6 +16,13 @@ if rg -n -i 'tette[[:space:]]+files' --glob '!build*/**' --glob '!tests/verify-s
     exit 1
 fi
 
+# The panel and Search draw the same dot. Each package carries its own copy,
+# so the two copies must stay one file.
+if ! cmp -s applet/DotMark.qml qml/DotMark.qml; then
+    echo "applet/DotMark.qml and qml/DotMark.qml differ." >&2
+    exit 1
+fi
+
 # Kadunce's launcher-guest handshake, the calls the launcher makes as it
 # opens, launches and closes, and what is open, are exercised by
 # launcher-controller-test against a stand-in Kadunce.
