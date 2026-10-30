@@ -43,7 +43,7 @@ target_link_libraries(tettegouche-core PUBLIC Qt6::DBus Qt6::Core)
 
 # The quick note's island: a door to a quick note while Gooseberry is
 # installed, and the note pinned there.
-add_library(tettegouche-notes-island STATIC src/NotesIslandProvider.cpp src/NotesIslandProvider.h)
+add_library(tettegouche-notes-island STATIC src/NotesIslandProvider.cpp src/NotesIslandProvider.h src/BusValue.h)
 target_include_directories(tettegouche-notes-island PUBLIC src)
 set_target_properties(tettegouche-notes-island PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(tettegouche-notes-island PUBLIC Qt6::DBus Qt6::Core KF6::KIOGui KF6::Service)
@@ -103,6 +103,7 @@ add_library(tettegouche-launcher STATIC
     src/NotesDoor.h
     src/QuickNote.cpp
     src/QuickNote.h
+    src/BusValue.h
     src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h
     src/FileDetails.cpp src/FileDetails.h
@@ -325,7 +326,7 @@ if(BUILD_TESTING)
     add_test(NAME notes-door-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:notes-door-test>)
     set_tests_properties(notes-door-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
-    qt_add_executable(quick-note-test tests/QuickNoteTest.cpp src/QuickNote.cpp src/QuickNote.h)
+    qt_add_executable(quick-note-test tests/QuickNoteTest.cpp src/QuickNote.cpp src/QuickNote.h src/BusValue.h)
     target_include_directories(quick-note-test PRIVATE src)
     target_link_libraries(quick-note-test PRIVATE Qt6::DBus Qt6::Test)
     # The real notes application on a private bus, in a home of its own.
