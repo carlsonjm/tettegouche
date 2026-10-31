@@ -1087,11 +1087,12 @@ TestCase {
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""
-        tryCompare(findChild(launcher, "result-0"), "height", 56 + 2 * 40 + 4)
+        tryCompare(findChild(launcher, "result-0"), "height", 56 + 2 * 40 + 4 + 8)
         compare(findChild(launcher, "result-1").height, 56)
-        // Down goes through the highlighted row's actions, then on to the
-        // next row, whose actions take their place.
-        launcher.moveResultSelection(1)
+        // Right goes in among the highlighted row's actions; Down goes
+        // through them, then on to the next row, whose actions take their
+        // place.
+        verify(launcher.enterResultChildren())
         compare(launcher.selectedChildKey, launcher.childKey(controller.actionsByRow[0][0]))
         controller.actionRuns = []
         controller.closes = 0
@@ -1103,7 +1104,7 @@ TestCase {
         compare(list.currentIndex, 1)
         compare(launcher.selectedChildKey, "")
         tryCompare(findChild(launcher, "result-0"), "height", 56)
-        tryCompare(findChild(launcher, "result-1"), "height", 56 + 4 * 40 + 3 * 4)
+        tryCompare(findChild(launcher, "result-1"), "height", 56 + 4 * 40 + 3 * 4 + 8)
         // Show in Folder goes on in Files: Search stays and nothing failed.
         controller.actionResult = 0
         list.positionViewAtIndex(1, ListView.End)
@@ -1118,6 +1119,81 @@ TestCase {
         launcher.submit()
         compare(launcher.childLaunchFailed, true)
         controller.actionResult = 1
+        controller.actionsByRow = ({})
+        results.clear()
+        query.text = ""
+    }
+    // A result and its actions are one stop for Down and Up; Right at the
+    // end of the typed words goes in among the actions, and Left, or Up
+    // from the first, comes back.
+    function test_rightEntersResultActions() {
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        const query = findChild(launcher, "search-query")
+        query.text = "fire"
+        controller.actionsByRow = {
+            0: [{label: "New Window", action: "app:0"}, {label: "New Private Window", action: "app:1"}]
+        }
+        results.append({display: "Firefox", decoration: "firefox", subtext: "Web browser"})
+        results.append({display: "Firewall", decoration: "preferences-system", subtext: "Settings"})
+        results.append({display: "fireworks.png", decoration: "image-png", subtext: "Pictures"})
+        const list = findChild(launcher, "search-result-list")
+        list.currentIndex = 0
+        launcher.selectedChildKey = ""
+        query.forceActiveFocus()
+        query.cursorPosition = query.text.length
+        tryVerify(() => findChild(launcher, "children-mark-0") !== null)
+        const mark = findChild(launcher, "children-mark-0")
+        verify(mark.visible)
+        compare(mark.glyph, "chevron-right")
+        // Down passes Firefox's actions by, and Up comes back to Firefox.
+        keyClick(Qt.Key_Down)
+        compare(list.currentIndex, 1)
+        compare(launcher.selectedChildKey, "")
+        keyClick(Qt.Key_Up)
+        compare(list.currentIndex, 0)
+        compare(launcher.selectedChildKey, "")
+        // Right in the middle of the words moves the cursor, not the highlight.
+        query.cursorPosition = 2
+        keyClick(Qt.Key_Right)
+        compare(query.cursorPosition, 3)
+        compare(launcher.selectedChildKey, "")
+        // Shift with Right keeps choosing words.
+        query.cursorPosition = query.text.length
+        keyClick(Qt.Key_Right, Qt.ShiftModifier)
+        compare(launcher.selectedChildKey, "")
+        keyClick(Qt.Key_Right)
+        compare(launcher.selectedChildKey, launcher.childKey(controller.actionsByRow[0][0]))
+        compare(mark.glyph, "chevron-left")
+        keyClick(Qt.Key_Down)
+        compare(launcher.selectedChildKey, launcher.childKey(controller.actionsByRow[0][1]))
+        keyClick(Qt.Key_Left)
+        compare(launcher.selectedChildKey, "")
+        compare(list.currentIndex, 0)
+        compare(query.cursorPosition, query.text.length)
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Up)
+        compare(launcher.selectedChildKey, "")
+        compare(list.currentIndex, 0)
+        // Down from the last action goes on to the next result.
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Down)
+        keyClick(Qt.Key_Down)
+        compare(list.currentIndex, 1)
+        compare(launcher.selectedChildKey, "")
+        // A result with nothing under it has no mark, and Right moves nothing.
+        verify(!findChild(launcher, "children-mark-1").visible)
+        keyClick(Qt.Key_Right)
+        compare(launcher.selectedChildKey, "")
+        compare(list.currentIndex, 1)
+        // Enter on an action does it.
+        list.currentIndex = 0
+        launcher.searchResults.pinSelection(0)
+        keyClick(Qt.Key_Right)
+        keyClick(Qt.Key_Down)
+        controller.actionRuns = []
+        keyClick(Qt.Key_Return)
+        compare(controller.actionRuns, ["0:app:1"])
         controller.actionsByRow = ({})
         results.clear()
         query.text = ""
@@ -1256,15 +1332,19 @@ TestCase {
         controller.relatedRevision++
         tryVerify(function() { return findChild(launcher, "result-0") !== null })
         const result = findChild(launcher, "result-0")
-        tryCompare(result, "height", 140)
+        tryCompare(result, "height", 148)
+        // One fill holds the setting and its detail rows.
         const highlight = findChild(launcher, "parent-highlight-0")
-        compare(highlight.height, 56)
+        compare(highlight.height, 148)
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""
-        launcher.moveResultSelection(1)
+        const onResult = String(highlight.color)
+        verify(launcher.enterResultChildren())
         compare(launcher.selectedChildKey, launcher.childKey(controller.relatedItems(0)[0]))
-        compare(highlight.color, Qt.rgba(0, 0, 0, 0))
+        // Gone in, the setting keeps a lighter fill.
+        verify(String(highlight.color) !== onResult)
+        verify(highlight.color.a > 0)
         launcher.moveResultSelection(1)
         compare(launcher.selectedChildKey, launcher.childKey(controller.relatedItems(0)[1]))
         launcher.moveResultSelection(-1)

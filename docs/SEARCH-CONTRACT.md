@@ -292,7 +292,9 @@ Firefox-family handlers are verified.
 - Context children sit under their parent destination and are not ranked as
   results of their own. An application's or a file's actions are children
   of the highlighted row only, shown while it is highlighted; another row's
-  stay hidden, so every other row is one line. Selecting one opens the parent settings page after revalidating that
+  stay hidden, so every other row is one line. A parent and its children are
+  one stop for Down and Up and share one highlight; Right goes in among the
+  children, and Left comes back. Selecting one opens the parent settings page after revalidating that
   the child is still present.
 - Independent tools with similar names stay separate destinations.
 

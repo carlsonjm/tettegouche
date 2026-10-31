@@ -216,6 +216,14 @@ Rectangle {
                        && resultList.count > 0) {
                 launcher.moveResultSelection(-1)
                 event.accepted = true
+            } else if (event.key === Qt.Key_Right && !launcher.drawerOpen && !launcher.arrowModified(event)
+                       && resultList.count > 0 && query.selectedText.length === 0
+                       && query.cursorPosition === query.text.length
+                       && launcher.enterResultChildren()) {
+                event.accepted = true
+            } else if (event.key === Qt.Key_Left && !launcher.drawerOpen && !launcher.arrowModified(event)
+                       && launcher.leaveResultChildren()) {
+                event.accepted = true
             } else if (event.key === Qt.Key_Return
                        || event.key === Qt.Key_Enter) {
                 launcher.submit()
