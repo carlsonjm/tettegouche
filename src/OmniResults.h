@@ -16,6 +16,7 @@
 #include <QSettings>
 #include <QDir>
 #include <QTimer>
+#include <algorithm>
 #include <climits>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
@@ -164,6 +165,46 @@ inline bool coreFactFits(const QVariantMap &fact, const QString &query) {
         if (known.startsWith(asked) || asked.contains(known)) return true;
     }
     return false;
+}
+
+// Whether a query asks for Layouts: the start of one of its words, the words
+// themselves, or a query that begins with one ("layout coding"). "Desktop"
+// does not.
+inline bool layoutsFit(const QString &query) {
+    const auto asked = query.trimmed().toLower();
+    if (asked.size() < 3) return false;
+    QStringList words{QStringLiteral("layout"), QStringLiteral("layouts"), QStringLiteral("desk"), QStringLiteral("save layout")};
+    // The same words in the person's language, where it has them.
+    words.append(i18nc("@info words Search finds Layouts by, comma separated", "layout, layouts, desk, save layout")
+                     .split(QLatin1Char(','), Qt::SkipEmptyParts));
+    for (const auto &word : std::as_const(words)) {
+        const auto known = word.trimmed().toLower();
+        if (known.isEmpty()) continue;
+        if (known.startsWith(asked) || asked == known || asked.startsWith(known + QLatin1Char(' '))) return true;
+    }
+    return false;
+}
+
+// Whether a query names a saved layout: the start of its name or of a word
+// in it, three letters at least, or the whole name however short.
+inline bool layoutNamed(const QString &name, const QString &query) {
+    const auto asked = query.trimmed().toLower();
+    const auto known = name.trimmed().toLower();
+    if (asked.isEmpty() || known.isEmpty()) return false;
+    if (asked == known) return true;
+    if (asked.size() < 3) return false;
+    if (known.startsWith(asked)) return true;
+    const auto words = known.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+    return std::any_of(words.cbegin(), words.cend(), [&asked](const QString &word) { return word.startsWith(asked); });
+}
+
+// A layout's groups in a line: each group's apps, front first, groups apart.
+inline QString layoutLine(const QVariantMap &layout) {
+    QStringList groups;
+    for (const auto &entry : layout.value(QStringLiteral("groups")).toList())
+        groups.append(entry.toMap().value(QStringLiteral("names")).toStringList().join(QStringLiteral(", ")));
+    groups.removeAll(QString());
+    return groups.join(QStringLiteral(" · "));
 }
 
 inline bool noteMatch(const KRunner::QueryMatch &match) {
@@ -568,6 +609,24 @@ public:
         m_openCoreAction = std::move(open);
         Q_EMIT helpersChanged();
     }
+    // Core's saved layouts, where Core keeps them: Layouts, found by its
+    // words, opens the Layouts island in the band; a layout found by its
+    // name opens at once, with one Open pill on its row.
+    void setCoreLayouts(std::function<bool()> keeps, std::function<QList<QVariantMap>()> layouts,
+                        std::function<void()> openIsland, std::function<void(const QString &)> open) {
+        m_keepsLayouts = std::move(keeps);
+        m_coreLayouts = std::move(layouts);
+        m_openLayouts = std::move(openIsland);
+        m_openLayout = std::move(open);
+    }
+    // The pill a row carries at its end, such as Open on a saved layout's;
+    // empty for a row with none.
+    Q_INVOKABLE QString resultPill(int row) const {
+        const auto match = getQueryMatch(index(row, 0));
+        if (coreMatch(match) && match.data().toString().startsWith(QLatin1String("layout:")))
+            return i18nc("@action:button opens a saved layout", "Open");
+        return {};
+    }
     // Every upkeep card Core lists, in Core's own order: its id, title, the
     // line under it and its icon. None without Core.
     QVariantList helpers() const {
@@ -662,6 +721,40 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
+        if (m_keepsLayouts && m_keepsLayouts()) {
+            const auto layouts = m_coreLayouts ? m_coreLayouts() : QList<QVariantMap>{};
+            if (layoutsFit(query)) {
+                const auto title = i18nc("@title the saved layouts", "Layouts");
+                const auto sub = layouts.isEmpty() ? i18nc("@info under Layouts with none saved", "Save what's open as a layout")
+                                                   : i18ncp("@info under Layouts", "%1 saved", "%1 saved", int(layouts.size()));
+                KRunner::QueryMatch match(&m_coreRunner);
+                match.setId(QStringLiteral("layouts"));
+                match.setText(title);
+                match.setSubtext(sub);
+                match.setData(QStringLiteral("layouts"));
+                auto *item = new QStandardItem(QIcon::fromTheme(QStringLiteral("view-grid")), title);
+                item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+                item->setData(sub, KRunner::ResultsModel::SubtextRole);
+                item->setData(true, KRunner::ResultsModel::EnabledRole);
+                m_core.appendRow(item);
+            }
+            for (const auto &layout : layouts) {
+                const auto id = layout.value(QStringLiteral("id")).toString();
+                const auto name = layout.value(QStringLiteral("name")).toString();
+                if (id.isEmpty() || !layoutNamed(name, query)) continue;
+                const auto text = i18nc("@action a saved layout's name", "Open your %1 layout", name);
+                KRunner::QueryMatch match(&m_coreRunner);
+                match.setId(QStringLiteral("layout:") + id);
+                match.setText(text);
+                match.setSubtext(layoutLine(layout));
+                match.setData(QString(QStringLiteral("layout:") + id));
+                auto *item = new QStandardItem(QIcon::fromTheme(QStringLiteral("view-grid")), text);
+                item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+                item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
+                item->setData(true, KRunner::ResultsModel::EnabledRole);
+                m_core.appendRow(item);
+            }
+        }
         // The Helpers Ask named come first, in its order; then those the
         // words find.
         const auto actions = m_coreActions ? m_coreActions() : QList<QVariantMap>{};
@@ -745,6 +838,18 @@ public:
                 const auto id = target.mid(7);
                 m_openCoreAction(id, m_askedHelpers.contains(id) && !m_askedQuery.isEmpty()
                         ? m_askedQuery : queryString().trimmed());
+                return true;
+            }
+            // Layouts opens in place in the band, never as a window; a saved
+            // layout opens at once.
+            if (target == QLatin1String("layouts")) {
+                if (!m_openLayouts) return false;
+                m_openLayouts();
+                return true;
+            }
+            if (target.startsWith(QLatin1String("layout:"))) {
+                if (!m_openLayout) return false;
+                m_openLayout(target.mid(7));
                 return true;
             }
             if (!m_openCore) return false;
@@ -982,6 +1087,10 @@ private:
     std::function<void(const QString &)> m_openCore;
     std::function<QList<QVariantMap>()> m_coreActions;
     std::function<void(const QString &, const QString &)> m_openCoreAction;
+    std::function<bool()> m_keepsLayouts;
+    std::function<QList<QVariantMap>()> m_coreLayouts;
+    std::function<void()> m_openLayouts;
+    std::function<void(const QString &)> m_openLayout;
     SearchSource m_results;
     QStandardItemModel m_aliases;
     QStandardItemModel m_notes;

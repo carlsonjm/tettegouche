@@ -18,7 +18,10 @@ class QDBusMessage;
 // answer names. Ask changes nothing; a Helper opens only from its row. The bus
 // starts Ask on the first question. Without it, the chip stays Helpers and
 // nothing here is asked. Where Codex is signed in, a bigger fix goes on to it
-// on the person's tap, in Codex's own window and under its own name.
+// on the person's tap, in Codex's own window and under its own name. An
+// answer that would write in one of the person's apps, such as keeping it in
+// Notes, comes with a Do it card; the write is made by Split Rock's broker,
+// once, only on the person's tap on it, and the card then says how it went.
 class AskClient : public QObject {
     Q_OBJECT
     // Ask is installed: the chip is named Ask, and a question gets an answer.
@@ -51,11 +54,33 @@ class AskClient : public QObject {
     Q_PROPERTY(bool codexInstalled READ codexInstalled NOTIFY codexChanged)
     // The person chose Codex only: every question waits for Ask Codex.
     Q_PROPERTY(bool codexOnly READ codexOnly NOTIFY codexChanged)
+    // What the apps' tools read for the answer, by name, such as each note's
+    // title.
+    Q_PROPERTY(QStringList read READ read NOTIFY changed)
+    // The answer's Do it card from an app's tool: its title (the first words
+    // it writes), what it does, the app's name and the tool; empty when
+    // there is none.
+    Q_PROPERTY(QVariantMap doIt READ doIt NOTIFY changed)
+    // How the card's write went: empty until the tap, then running, done or
+    // failed, with the broker's problem in words when it says one.
+    Q_PROPERTY(QString doItState READ doItState NOTIFY changed)
+    Q_PROPERTY(QString doItProblem READ doItProblem NOTIFY changed)
+    // The notes an answer names where something was written down, each its
+    // id and title, for one tap to open; never their words.
+    Q_PROPERTY(QVariantList notes READ notes NOTIFY changed)
 public:
     static constexpr char Service[] = "io.github.carlsonjm.splitrock.Ask";
     static constexpr char Path[] = "/Ask";
     static constexpr char Interface[] = "io.github.carlsonjm.SplitRock.Ask";
     static constexpr uint Version = 1;
+    // Split Rock's broker, which makes a Do it card's write after the tap.
+    static constexpr char BrokerService[] = "io.github.carlsonjm.splitrock.Broker";
+    static constexpr char BrokerPath[] = "/Broker";
+    static constexpr char BrokerInterface[] = "io.github.carlsonjm.SplitRock.Broker";
+    // Notes, which opens a note the answer names.
+    static constexpr char NotesService[] = "io.github.carlsonjm.gooseberry";
+    static constexpr char NotesPath[] = "/QuickNote";
+    static constexpr char NotesInterface[] = "io.github.carlsonjm.Gooseberry.QuickNote";
 
     explicit AskClient(const QDBusConnection &bus, QObject *parent = nullptr);
 
@@ -75,6 +100,11 @@ public:
     bool needsEngine() const { return m_needsEngine; }
     bool codexInstalled() const { return m_codexInstalled; }
     bool codexOnly() const { return m_codexOnly; }
+    QStringList read() const { return m_read; }
+    QVariantMap doIt() const;
+    QString doItState() const { return m_doItState; }
+    QString doItProblem() const { return m_doItProblem; }
+    QVariantList notes() const { return m_notes; }
 
     // What is typed now. A question is sent once the typing pauses and it
     // reads as one; anything else clears the answer.
@@ -84,6 +114,9 @@ public:
     Q_INVOKABLE void clear();
     // After the person's tap on Download, and Not now.
     Q_INVOKABLE void download();
+    // After the person's tap on a note the answer names: Notes opens it on
+    // its own card. False for a note the answer didn't name.
+    Q_INVOKABLE bool openNote(const QString &id);
     Q_INVOKABLE void notNow();
     // After the person's tap on Codex only: Ask leaves the model out from
     // now on, and the question asked is asked again.
@@ -92,6 +125,9 @@ public:
     // window, which signs in first where it must under Codex only. False
     // where there is nothing to hand on.
     Q_INVOKABLE bool askCodex();
+    // After the person's tap on Do it: the broker makes the card's write,
+    // once. False where there is no card, or it was already tapped.
+    Q_INVOKABLE bool runDoIt();
 
     // Whether these words read as a question to answer, rather than a
     // Helper's name: three words or more, or a question mark.
@@ -116,6 +152,8 @@ private:
     void setState(const QString &state);
     void lookAtCodex();
     void lookAtModel();
+    // Forgets the answer's card and read line.
+    void forgetCard();
     QDBusConnection m_bus;
     QTimer m_pause;
     bool m_available = false;
@@ -135,6 +173,11 @@ private:
     bool m_needsEngine = false;
     bool m_codexInstalled = false;
     bool m_codexOnly = false;
+    QStringList m_read;
+    QVariantMap m_card;
+    QString m_doItState;
+    QString m_doItProblem;
+    QVariantList m_notes;
     uint m_id = 0;
     // A question sent whose id hasn't come back yet.
     bool m_sending = false;
