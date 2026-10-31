@@ -17,6 +17,9 @@ history carries the implementation detail.
   such as New Window or New Private Window, and for a file Open With…, Show
   in Folder, Copy Path and Move to Trash, which go on in Files with the file
   chosen. They follow the highlight, and every other row stays one line.
+- A result and its actions or detail rows read as one choice under one
+  highlight, so Down and Up move from result to result. Right, at the end of
+  what is typed, goes in among the actions; Left comes back.
 - "Search the web for …" is the last line after the results too, so the web
   is a tap away whatever was found. Enter still opens the highlighted result,
   except when every result is only a document with the words somewhere
