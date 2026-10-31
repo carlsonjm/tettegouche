@@ -848,8 +848,8 @@ TestCase {
     }
 
     // Layouts opens in place: its title and count, each saved layout drawn
-    // small with its Open pill, the first filled, "Opens when you sign in"
-    // where that is on, then Save what's open and Close. Open asks for that
+    // small with its Open pill, the first filled, nothing about sign-in,
+    // then Save what's open and Close. Open asks for that
     // layout and closes the island.
     function test_layouts_open_in_place() {
         const host = createTemporaryObject(layoutsComponent, testCase);
@@ -861,8 +861,7 @@ TestCase {
         compare(findChild(opened.contentItem, "ambient-island-layouts-title").text, "Layouts");
         compare(findChild(opened.contentItem, "ambient-island-layouts-count").text, " · 2 saved");
         verify(!findChild(opened.contentItem, "ambient-island-layouts-none").visible);
-        verify(findChild(opened.contentItem, "ambient-island-layout-at-sign-in-1").visible);
-        verify(!findChild(opened.contentItem, "ambient-island-layout-at-sign-in-2").visible);
+        verify(findChild(opened.contentItem, "ambient-island-layout-at-sign-in-1") === null);
         // Each group a card in the miniature, three for Coding.
         const miniature = findChild(opened.contentItem, "ambient-island-layout-miniature-1");
         let cards = 0;
@@ -892,6 +891,19 @@ TestCase {
         tryCompare(closed, "count", 1);
     }
 
+    // A band reaching past the display's foot, as a panel tucked under
+    // another surface does, still leaves the whole card on the display.
+    function test_the_card_stays_on_the_display() {
+        const host = createTemporaryObject(layoutsComponent, testCase);
+        const opened = createTemporaryObject(islandComponent, testCase,
+            {surface: createSurface(460, []), layouts: host, kind: "layouts",
+             start: Qt.rect(40, 700, 44, 44), sideLeft: 0, sideRight: 460, height: 600, width: 460});
+        verify(opened !== null);
+        opened.show();
+        tryVerify(() => opened.expanded);
+        verify(opened.openY + opened.openHeight <= opened.height);
+    }
+
     // With none saved, the island says how to make one.
     function test_layouts_with_none_saved() {
         const host = createTemporaryObject(layoutsComponent, testCase, {layouts: []});
@@ -901,30 +913,27 @@ TestCase {
         verify(findChild(opened.contentItem, "ambient-island-layouts-save").visible);
     }
 
-    // A tap on a saved layout's row shows its own switch and Remove; each
-    // goes to Core.
-    function test_a_saved_layouts_switch_and_remove() {
+    // A tap on a saved layout's row shows its own Remove, which goes to
+    // Core; no layout has a sign-in switch.
+    function test_a_saved_layouts_remove() {
         const host = createTemporaryObject(layoutsComponent, testCase);
         const opened = openLayouts(host);
         const row = findChild(opened.contentItem, "ambient-island-layout-1");
-        const toggle = findChild(opened.contentItem, "ambient-island-layout-switch-1");
-        verify(!toggle.visible);
+        const remove = findChild(opened.contentItem, "ambient-island-layout-remove-1");
+        verify(!remove.visible);
+        verify(findChild(opened.contentItem, "ambient-island-layout-switch-1") === null);
         mouseClick(row, 20, 20);
         settle();
-        verify(toggle.visible);
-        verify(toggle.on);
-        tap(toggle);
-        compare(host.calls[0], ["atSignIn", "1", false]);
-        const remove = findChild(opened.contentItem, "ambient-island-layout-remove-1");
+        verify(remove.visible);
         compare(remove.label, "Remove");
         tap(remove);
-        compare(host.calls[1], ["remove", "1"]);
+        compare(host.calls[0], ["remove", "1"]);
         verify(opened.expanded);
     }
 
     // Save what's open turns the island into the form: a name, what Core
-    // reads as open, group by group with Remove, the sign-in switch off, then
-    // Save and Not now. Save needs a name and a group, and closes the island.
+    // reads as open, group by group with Remove, then Save and Not now; it
+    // saves no layout to open at sign-in. Save needs a name and a group, and closes the island.
     function test_saving_whats_open() {
         const host = createTemporaryObject(layoutsComponent, testCase);
         const opened = openLayouts(host);
@@ -947,8 +956,7 @@ TestCase {
         compare(findChild(opened.contentItem, "ambient-island-layout-group-line-0").text, "Ghostty, Claude");
         compare(findChild(opened.contentItem, "ambient-island-layout-group-title-1").text, "Zen");
         compare(findChild(opened.contentItem, "ambient-island-layout-group-line-1").text, "On its own");
-        const toggle = findChild(opened.contentItem, "ambient-island-layout-form-switch");
-        verify(!toggle.on);
+        verify(findChild(opened.contentItem, "ambient-island-layout-form-switch") === null);
         const save = findChild(opened.contentItem, "ambient-island-layout-form-save");
         compare(save.label, "Save");
         compare(findChild(opened.contentItem, "ambient-island-layout-form-not-now").label, "Not now");
@@ -962,8 +970,6 @@ TestCase {
         settle();
         verify(findChild(opened.contentItem, "ambient-island-layout-group-1").visible);
         verify(findChild(opened.contentItem, "ambient-island-layout-group-2") === null);
-        tap(toggle);
-        verify(toggle.on);
         const name = findChild(opened.contentItem, "ambient-island-layout-name");
         name.text = "Coding";
         const closed = spyOn(opened, "closed");
@@ -973,7 +979,7 @@ TestCase {
         compare(host.calls[1][1], "Coding");
         compare(host.calls[1][2].length, 2);
         compare(host.calls[1][2][1].apps, ["zen"]);
-        compare(host.calls[1][3], true);
+        compare(host.calls[1][3], false);
         tryCompare(closed, "count", 1);
     }
 

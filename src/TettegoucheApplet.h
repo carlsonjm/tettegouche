@@ -77,6 +77,10 @@ public:
     Q_INVOKABLE bool prepareIslandSurface(QWindow *window, QQuickItem *panelItem) const;
     // The name of the display the item is on.
     Q_INVOKABLE QString screenName(QQuickItem *item) const;
+    // True for the first widget in this shell to take an island Search asked
+    // for; another widget on the same display, or one the request named no
+    // display for, hears it within the second and leaves it.
+    Q_INVOKABLE bool claimIsland(const QString &kind);
     bool keepsLayouts() const;
     QVariantList layouts() const;
     QVariantMap currentLayout() const { return m_currentLayout; }

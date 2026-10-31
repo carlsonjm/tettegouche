@@ -24,6 +24,7 @@
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
 #include <QDBusVariant>
+#include <QElapsedTimer>
 #include <QQuickItem>
 #include <QTimer>
 #include <Plasma/Containment>
@@ -286,6 +287,16 @@ QString TettegoucheApplet::screenName(QQuickItem *item) const
 {
     const QScreen *screen = item && item->window() ? item->window()->screen() : nullptr;
     return screen ? screen->name() : QString();
+}
+
+bool TettegoucheApplet::claimIsland(const QString &kind)
+{
+    static QElapsedTimer since;
+    static QString lastKind;
+    if (since.isValid() && lastKind == kind && since.elapsed() < 1000) return false;
+    lastKind = kind;
+    since.start();
+    return true;
 }
 
 void TettegoucheApplet::launcherIslandRequested(const QString &kind, const QString &output)

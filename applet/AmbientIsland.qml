@@ -43,12 +43,15 @@ Window {
     readonly property color ink: tone.text
     readonly property real openWidth: Math.min(384, width - 16)
     // The card grows up from the band, and no taller than the room above it;
-    // what does not fit scrolls.
-    readonly property real openRoom: Math.max(120, start.y + start.height - 8)
+    // what does not fit scrolls. A band reaching past the display's bottom,
+    // as a panel tucked away under another surface does, is taken as ending
+    // at the display's edge, so the card's foot stays on it.
+    readonly property real bandFoot: Math.min(start.y + start.height, height)
+    readonly property real openRoom: Math.max(120, bandFoot - 8)
     readonly property real openHeight: Math.min(content.implicitHeight + 36, openRoom)
     readonly property real openX: Math.max(8, Math.min(width - 8 - openWidth,
         Math.max(sideLeft, Math.min(sideRight - openWidth, start.x + start.width / 2 - openWidth / 2))))
-    readonly property real openY: Math.max(8, start.y + start.height - openHeight)
+    readonly property real openY: Math.max(8, bandFoot - openHeight)
     readonly property var activity: kind === "media" ? (surface ? surface.player : null) : null
     // The fact from Core the card answers, while Core still asks it.
     readonly property var question: kind === "core" && surface && surface.coreAsks ? surface.coreShown : null
@@ -61,19 +64,18 @@ Window {
 
     // The keeper of saved layouts, for Layouts: the widget, which asks Split
     // Rock's Core. It lists `layouts`, reads `currentLayout` on
-    // readCurrentLayout(), and saves, opens, removes and switches them.
+    // readCurrentLayout(), and saves, opens, and removes them.
     property var layouts: null
     readonly property var savedLayouts: kind === "layouts" && layouts && layouts.layouts ? layouts.layouts : []
     // Layouts shows the saved layouts, or the form that saves what's open.
     property bool savingLayout: false
-    // The saved layout whose switch and Remove show, by its id.
+    // The saved layout whose Remove shows, by its id.
     property string chosenLayout: ""
     // The form: what is open, less the groups taken out; whether Core has
-    // answered; the workspace's name; and the sign-in switch, off.
+    // answered; and the workspace's name.
     property var keptGroups: []
     property bool currentRead: false
     property string workspaceName: ""
-    property bool openAtSignIn: false
     readonly property bool canSave: layoutName.text.trim().length > 0 && keptGroups.length > 0
     onKindChanged: {
         savingLayout = false;
@@ -83,7 +85,6 @@ Window {
         keptGroups = [];
         currentRead = false;
         workspaceName = "";
-        openAtSignIn = false;
         layoutName.text = "";
         savingLayout = true;
         layoutName.forceActiveFocus();
@@ -108,7 +109,7 @@ Window {
     }
     function saveLayout() {
         if (!canSave) return;
-        if (layouts) layouts.saveLayout(layoutName.text.trim(), keptGroups, openAtSignIn);
+        if (layouts) layouts.saveLayout(layoutName.text.trim(), keptGroups, false);
         dismiss();
     }
 
@@ -284,54 +285,6 @@ Window {
                     maximumLineCount: 2
                 }
             }
-        }
-    }
-
-    // "Open when I sign in" and its switch, which the whole line flips.
-    component SwitchRow: Item {
-        id: switchRow
-        property bool on: false
-        signal toggled()
-        height: 32
-        activeFocusOnTab: visible
-        Accessible.role: Accessible.CheckBox
-        Accessible.name: switchWords.text
-        Accessible.checkable: true
-        Accessible.checked: on
-        Accessible.onToggleAction: toggled()
-        Accessible.onPressAction: toggled()
-        Keys.onSpacePressed: toggled()
-        Keys.onReturnPressed: toggled()
-        Label {
-            id: switchWords
-            anchors.verticalCenter: parent.verticalCenter
-            width: parent.width - knobTrack.width - 12
-            text: words.i18n("Open when I sign in")
-            font.pixelSize: 15
-        }
-        Rectangle {
-            id: knobTrack
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            width: 40
-            height: 22
-            radius: 11
-            color: switchRow.on ? overlay.ink : tone.wash(0.2)
-            border.width: switchRow.activeFocus ? 1 : 0
-            border.color: overlay.ink
-            Rectangle {
-                x: switchRow.on ? parent.width - width - 3 : 3
-                anchors.verticalCenter: parent.verticalCenter
-                width: 16
-                height: 16
-                radius: 8
-                color: switchRow.on ? tone.textOnInk : tone.wash(0.66)
-                Behavior on x { NumberAnimation { duration: overlay.ms(120) } }
-            }
-        }
-        MouseArea {
-            anchors.fill: parent
-            onClicked: switchRow.toggled()
         }
     }
 
@@ -870,7 +823,7 @@ Window {
                                 Accessible.role: Accessible.ListItem
                                 Accessible.name: modelData.name
                                 // A tap on the row, off its pill, shows its own
-                                // switch and Remove.
+                                // Remove.
                                 MouseArea {
                                     id: savedArea
                                     anchors.fill: parent
@@ -890,13 +843,6 @@ Window {
                                             text: saved.modelData.name
                                             font.pixelSize: 15
                                         }
-                                        Label {
-                                            objectName: "ambient-island-layout-at-sign-in-" + saved.modelData.id
-                                            width: parent.width
-                                            visible: saved.modelData.atSignIn === true
-                                            text: words.i18n("Opens when you sign in")
-                                            opacity: 0.66
-                                        }
                                     }
                                     Miniature {
                                         objectName: "ambient-island-layout-miniature-" + saved.modelData.id
@@ -907,12 +853,6 @@ Window {
                                         width: parent.width
                                         visible: saved.chosen
                                         spacing: 8
-                                        SwitchRow {
-                                            objectName: "ambient-island-layout-switch-" + saved.modelData.id
-                                            width: parent.width
-                                            on: saved.modelData.atSignIn === true
-                                            onToggled: if (overlay.layouts) overlay.layouts.setLayoutAtSignIn(saved.modelData.id, !on)
-                                        }
                                         PillButton {
                                             objectName: "ambient-island-layout-remove-" + saved.modelData.id
                                             height: 32
@@ -957,8 +897,8 @@ Window {
                 }
 
                 // The same island as a form: a name, what is open on this
-                // workspace group by group, each with Remove, and whether it
-                // opens at sign-in; then Save and Not now.
+                // workspace group by group, each with Remove; then Save and
+                // Not now.
                 Column {
                     objectName: "ambient-island-layout-form"
                     visible: overlay.kind === "layouts" && overlay.savingLayout
@@ -1067,20 +1007,6 @@ Window {
                                     label: words.i18nc("@action:button takes a group out of the layout", "Remove")
                                     onActivated: overlay.keptGroups = overlay.keptGroups.filter((group, at) => at !== kept.index)
                                 }
-                            }
-                        }
-                        Rectangle {
-                            width: parent.width
-                            height: 44
-                            radius: 10
-                            color: tone.wash(0.075)
-                            SwitchRow {
-                                objectName: "ambient-island-layout-form-switch"
-                                x: 12
-                                width: parent.width - 24
-                                anchors.verticalCenter: parent.verticalCenter
-                                on: overlay.openAtSignIn
-                                onToggled: overlay.openAtSignIn = !overlay.openAtSignIn
                             }
                         }
                     }

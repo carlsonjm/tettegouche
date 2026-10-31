@@ -138,11 +138,13 @@ PlasmoidItem {
     Connections {
         target: Plasmoid
         function onPanelGeometryChanged() { Qt.callLater(root.refreshResponsiveWidth); }
-        // Search asked for an island in the band, such as Layouts: the
+        // Search asked for an island in the band, such as Layouts: one
         // widget on Search's display opens it, islands shown or not.
         function onIslandRequested(kind, output) {
             if (kind !== "layouts" || !Plasmoid.keepsLayouts) return;
             if (output.length > 0 && Plasmoid.screenName(root) !== output) return;
+            // One widget opens it, however many hear the request.
+            if (!Plasmoid.claimIsland(kind)) return;
             root.openIsland(kind);
         }
     }

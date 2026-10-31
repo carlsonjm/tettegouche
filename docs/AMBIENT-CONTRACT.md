@@ -192,17 +192,19 @@ Core island and nothing else changes.
 Search's Layouts result opens the Layouts island in place, the way a Core
 question does: grown up from the band's end over the desk, on a surface of its
 own that is never a window Cards takes as a card, so it never becomes part of a
-layout. It opens on the widget on Search's display, with its islands shown or
-not; where they are not, it grows from the dot. Split Rock's Core keeps the
+layout. It opens once, on the first widget on Search's display to hear the
+ask, with its islands shown or not; where they are not, it grows from the dot.
+Its foot stays on the display even where the band reaches past it. Split Rock's Core keeps the
 layouts; the island reads them from Core (`Layouts()`) and asks Core for every
 change.
 
 The island's title reads "Layouts · 2 saved". Each saved layout is a row: its
-name, "Opens when you sign in" beneath where that is on, and its miniature, each
+name and its miniature, each
 group a small card, 6 px corners, naming its front app, a Stack's cards fanned
 5 px behind it, and the group's apps beneath; then an Open pill, 32 tall, the
-first row's filled. A tap on a row off its pill shows its own "Open when I sign
-in" switch (`SetLayoutAtSignIn`) and Remove (`RemoveLayout`). With none saved,
+first row's filled. A tap on a row off its pill shows its own Remove
+(`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
+brings apps back. With none saved,
 a line says how to make one. Below the rows are the pills Save what's open,
 filled, and Close.
 
@@ -210,7 +212,7 @@ Save what's open turns the same island into the form: "Save this layout ·
 what's open on Work", the workspace named as KWin names it, a name field,
 then one row per group Core reads from Cards (`CurrentLayout()`), "Stack ·
 Ghostty, Claude" or "Zen · On its own", each with Remove, which takes that
-group out, and the switch "Open when I sign in", off; then Save and Not now.
+group out; then Save and Not now.
 Save needs a name and at least one group, and passes the groups left
 (`SaveLayout`); a name already used replaces that layout. Open, Save and Not
 now close the island, as do Close, Esc and a tap outside it.
