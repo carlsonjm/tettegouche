@@ -188,25 +188,50 @@ Item {
         return row < 0 ? [] : root.launcherController.relatedItems(row)
             .concat(root.launcherController.resultActions(row))
     }
+    // A result and what sits under it, its setting's detail rows and its
+    // actions, are one stop for Down and Up. Right goes in among them, where
+    // Down and Up move one at a time; Left, or Up from the first, comes back
+    // to the result, and Down from the last goes on to the next result.
     function moveResultSelection(direction) {
-        const children = currentChildren()
-        let child = children.findIndex(function(item) { return root.childKey(item) === root.selectedChildKey })
-        if (direction > 0 && child + 1 < children.length) {
-            root.selectedChildKey = root.childKey(children[child + 1])
-        } else if (direction < 0 && root.selectedChildKey !== "") {
-            root.selectedChildKey = child > 0 ? root.childKey(children[child - 1]) : ""
-        } else {
-            if ((direction < 0 && resultList.currentIndex <= 0)
-                || (direction > 0 && resultList.currentIndex >= resultList.count - 1)) return
-            resultList.currentIndex = Math.max(0, Math.min(resultList.count - 1, resultList.currentIndex + direction))
-            root.selectedChildKey = ""
+        if (root.selectedChildKey !== "") {
+            const children = currentChildren()
+            const child = children.findIndex(function(item) { return root.childKey(item) === root.selectedChildKey })
+            if (direction > 0 && child >= 0 && child + 1 < children.length) {
+                root.selectedChildKey = root.childKey(children[child + 1])
+                return
+            }
             if (direction < 0) {
-                const previous = root.launcherController.relatedItems(resultList.currentIndex)
-                if (previous.length) root.selectedChildKey = root.childKey(previous[previous.length - 1])
+                root.selectedChildKey = child > 0 ? root.childKey(children[child - 1]) : ""
+                return
             }
         }
+        if ((direction < 0 && resultList.currentIndex <= 0)
+            || (direction > 0 && resultList.currentIndex >= resultList.count - 1)) return
+        resultList.currentIndex = Math.max(0, Math.min(resultList.count - 1, resultList.currentIndex + direction))
+        root.selectedChildKey = ""
+        root.childLaunchFailed = false
         root.searchResults.pinSelection(resultList.currentIndex)
         resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+    }
+    function enterResultChildren() {
+        if (root.selectedChildKey !== "" || resultList.currentIndex < 0) return false
+        const children = currentChildren()
+        if (!children.length) return false
+        root.searchResults.pinSelection(resultList.currentIndex)
+        root.selectedChildKey = root.childKey(children[0])
+        root.childLaunchFailed = false
+        resultList.positionViewAtIndex(resultList.currentIndex, ListView.Contain)
+        return true
+    }
+    // Shift, Ctrl, Alt or Meta with an arrow keeps it for the typed words.
+    function arrowModified(event) {
+        return (event.modifiers & (Qt.ShiftModifier | Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier)) !== 0
+    }
+    function leaveResultChildren() {
+        if (root.selectedChildKey === "") return false
+        root.selectedChildKey = ""
+        root.childLaunchFailed = false
+        return true
     }
     function openChildSettings() {
         const child = currentChildren().find(function(item) { return root.childKey(item) === root.selectedChildKey })

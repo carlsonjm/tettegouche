@@ -43,7 +43,8 @@ than repeat it.
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
-| Down or Up | Moves the highlight through the results, passing through a setting's detail rows and the highlighted result's actions on the way. |
+| Down or Up | Moves the highlight from one result to the next. A result and the rows under it, a setting's detail rows or the highlighted result's actions, are one choice under one highlight, with › at the right while there are rows to go into. |
+| Right, with the cursor at the end of what is typed | Goes in among the highlighted result's rows: the first takes the highlight and › turns to ‹. Down and Up then move one row; Up from the first, or Left, returns to the result, and Down from the last goes on to the next result. Anywhere else in the words, or with Shift, Ctrl, Alt or Meta, Right and Left move the cursor as usual. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, or only documents found by the words inside them and none chosen, it searches the web in the browser. Under the Ask chip, with nothing listed, it sends the question to Ask at once, and never searches the web. |
 | Type a question under the Ask chip, where Split Rock's Ask is installed | Once typing pauses, Ask's answer comes above the Helpers it names. Nothing changes until a Helper is opened or Do it is tapped. Before the model is downloaded, the answer's place names the model and offers Download, Codex only where Codex is installed, and Not now; without llama.cpp it offers Install llama.cpp first. |
 | Tap Open on a note Ask's answer names | Notes opens that note on its own card, and Search closes. |
@@ -95,7 +96,7 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Down or Up in the search results | Steps from a setting into its detail rows, such as connected Bluetooth devices, and on to the next result. |
+| Right on a highlighted setting in the search results | Goes into its detail rows, such as connected Bluetooth devices; Down and Up move through them, and Left returns to the setting. |
 | Enter on a detail row | Opens that setting's page in System Settings. |
 | Tap or click a detail row | Opens that setting's page in System Settings. It never connects, pairs, mounts or switches anything. If the page cannot open, the row says so. |
 

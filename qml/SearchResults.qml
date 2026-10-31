@@ -280,15 +280,23 @@ Item {
             readonly property string pill: launcher.searchResults.resultPill
                 ? launcher.searchResults.resultPill(index) : ""
 
+            readonly property bool hasChildren: childRows.length > 0
+            // Gone in among its rows with Right: the result keeps a lighter
+            // fill and the row the keys are on takes the full one.
+            readonly property bool childrenEntered: ListView.isCurrentItem && launcher.selectedChildKey !== ""
+
             width: resultList.width
-            height: resultsArea.rowHeight + deviceChildren.height
+            height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 8 : 0)
             radius: launcher.paperRadius
             color: "transparent"
+            // One fill for the result and the rows under it, so they read as
+            // one choice.
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
-                width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
-                color: resultDelegate.ListView.isCurrentItem && launcher.selectedChildKey === ""
-                    ? tone.current : (hover.hovered ? tone.hover : "transparent")
+                width: parent.width; height: parent.height; radius: launcher.paperRadius
+                color: resultDelegate.ListView.isCurrentItem
+                    ? (resultDelegate.childrenEntered ? tone.hover : tone.current)
+                    : (hover.hovered ? tone.hover : "transparent")
             }
 
             Row {
@@ -309,7 +317,8 @@ Item {
 
                 Column {
                     anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 44 - (rowPill.visible ? rowPill.width + 12 : 0)
+                    width: parent.width - 44 - (rowPill.visible ? rowPill.width + parent.spacing : 0)
+                        - (enterMark.visible ? enterMark.width + parent.spacing : 0)
                     spacing: 3
 
                     Row {
@@ -376,6 +385,18 @@ Item {
                         enabled: !launcher.guestDragged && !launcher.applicationLaunchPending
                         onClicked: launcher.runResult(resultDelegate.index)
                     }
+                }
+                // Right goes in among the rows under the highlighted result;
+                // once in, the mark turns back toward it, as Left does.
+                SuiteIcon {
+                    id: enterMark
+                    objectName: "children-mark-" + resultDelegate.index
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16
+                    height: 16
+                    visible: resultDelegate.ListView.isCurrentItem && resultDelegate.hasChildren
+                    glyph: resultDelegate.childrenEntered ? "chevron-left" : "chevron-right"
+                    opacity: resultDelegate.childrenEntered ? 0.66 : 1
                 }
             }
 
