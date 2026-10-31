@@ -276,6 +276,15 @@ TestCase {
         property string modelCredit: ""
         property int codexAsks: 0
         property int codexOnlyChoices: 0
+        property var read: []
+        property var notes: []
+        property var opened: []
+        function openNote(id) { if (!notes.some(n => n.id === id)) return false; opened = opened.concat([id]); return true }
+        property var doIt: ({})
+        property string doItState: ""
+        property string doItProblem: ""
+        property int runs: 0
+        function runDoIt() { if (doItState !== "") return false; runs++; doItState = "running"; return true }
         function type(words) { typed = typed.concat([words]) }
         function askCodex() { if (!codexReady && !(codexOnly && codexInstalled)) return false; codexAsks++; return true }
         function chooseCodexOnly() { codexOnlyChoices++; codexOnly = true; state = "codexOnly" }
@@ -290,6 +299,8 @@ TestCase {
             codexReady = false; handedToCodex = false; codexAsks = 0
             needsEngine = false; codexInstalled = false; codexOnly = false
             modelName = ""; modelCredit = ""; codexOnlyChoices = 0
+            read = []; doIt = ({}); doItState = ""; doItProblem = ""; runs = 0
+            notes = []; opened = []
         }
     }
     // Gooseberry's quick note, as the launcher's door offers it.
@@ -4343,6 +4354,60 @@ TestCase {
         // The list starts under the answer.
         const list = findChild(launcher, "search-result-list")
         compare(list.anchors.topMargin, answer.height + 8)
+        // An answer that would keep something in Notes ends with its Do it
+        // card, and names the notes it read; only the tap runs it.
+        const doIt = findChild(launcher, "ask-do-it")
+        verify(!doIt.visible)
+        askStub.read = ["Testing notes", "Tablet round 30 Oct"]
+        askStub.doIt = {title: "Where I left off with testing", what: "Save a note", app: "Notes", tool: "notes.create"}
+        tryCompare(doIt, "visible", true)
+        compare(findChild(launcher, "ask-answer-who").text, "On this computer · Read: Testing notes, Tablet round 30 Oct")
+        compare(findChild(launcher, "ask-do-it-what").text, "Save a note")
+        compare(findChild(launcher, "ask-do-it-title").text, "“Where I left off with testing”")
+        const run = findChild(launcher, "ask-do-it-run")
+        verify(run.visible)
+        compare(run.height, 32)
+        compare(run.radius, 16)
+        verify(top(run) > top(findChild(launcher, "ask-answer-who")))
+        tryVerify(() => top(run) + run.height <= answer.height)
+        compare(askStub.runs, 0)
+        waitForRendering(answer)
+        mouseClick(run, run.width / 2, run.height / 2)
+        compare(askStub.runs, 1)
+        mouseClick(run, run.width / 2, run.height / 2)
+        compare(askStub.runs, 1)
+        askStub.doItState = "done"
+        tryCompare(findChild(launcher, "ask-do-it-done"), "text", "Done")
+        verify(!run.visible)
+        askStub.doItState = "failed"
+        askStub.doItProblem = "The card has expired"
+        tryCompare(findChild(launcher, "ask-do-it-done"), "text", "Didn't work")
+        compare(findChild(launcher, "ask-do-it-problem").text, "It didn't work: The card has expired")
+        askStub.read = []
+        compare(findChild(launcher, "ask-answer-who").text,
+            "Answered on this computer · nothing changes until you tap Do it")
+        askStub.doIt = ({})
+        askStub.doItState = ""
+        askStub.doItProblem = ""
+        tryCompare(doIt, "visible", false)
+        // An answer naming where something was written down offers the note
+        // by its title; the tap opens it in Notes and closes Search.
+        const openNotes = findChild(launcher, "ask-open-notes")
+        verify(!openNotes.visible)
+        askStub.notes = [{id: "n3", title: "Accounts"}]
+        tryCompare(openNotes, "visible", true)
+        compare(findChild(launcher, "ask-answer-who").text,
+            "Answered on this computer · the note opens in Notes")
+        const notePill = findChild(launcher, "ask-open-note")
+        compare(notePill.height, 40)
+        tryVerify(() => top(notePill) + notePill.height <= answer.height)
+        const closesBeforeNote = controller.closes
+        waitForRendering(answer)
+        mouseClick(notePill, notePill.width / 2, notePill.height / 2)
+        compare(askStub.opened, ["n3"])
+        compare(controller.closes, closesBeforeNote + 1)
+        askStub.notes = []
+        tryCompare(openNotes, "visible", false)
         // Codex is offered only once it is signed in, and only on a tap,
         // which hands the question on and closes Search.
         let codex = findChild(launcher, "ask-codex")

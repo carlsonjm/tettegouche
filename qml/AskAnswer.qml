@@ -13,7 +13,11 @@ import org.kde.ki18n
 // leaves the computer, with Download, Codex only where Codex is installed,
 // and Not now. Without llama.cpp it says so first, and offers to install it
 // in the download's place. While it downloads, a 4 tall bar fills in it on
-// the raised grey. Under Codex only, a question waits for Ask Codex.
+// the raised grey. Under Codex only, a question waits for Ask Codex. An
+// answer that would write in one of the person's apps ends with its Do it
+// card: what it does and the first words it writes, with a Do it pill 32
+// tall; the write is made only on that tap, and the card then says how it
+// went. Who answered names what the apps' tools read for it.
 Rectangle {
     id: answer
     required property var askClient
@@ -22,6 +26,8 @@ Rectangle {
     // The person's tap on Install llama.cpp, and on Ask Codex under Codex only.
     signal installEngine()
     signal askCodex()
+    // A note the answer named was opened; Search closes, as from a Helper.
+    signal noteOpened()
     readonly property string phase: askClient ? askClient.state : "idle"
     readonly property bool needsModel: phase === "needsModel"
     readonly property bool needsEngine: needsModel && !!askClient && askClient.needsEngine
@@ -34,6 +40,11 @@ Rectangle {
     // While the model on this computer thinks, which can take most of a
     // minute, the box says so rather than leaving only the web below.
     readonly property bool thinking: phase === "asking" && !!askClient && askClient.text.length === 0
+    readonly property var card: phase === "answered" && askClient && askClient.doIt && askClient.doIt.title !== undefined
+        ? askClient.doIt : null
+    readonly property string doing: askClient ? askClient.doItState : ""
+    readonly property var readNames: phase === "answered" && askClient ? askClient.read : []
+    readonly property var notes: phase === "answered" && askClient && askClient.notes ? askClient.notes : []
     readonly property string modelName: askClient && askClient.modelName.length > 0 ? askClient.modelName : words.i18n("the model")
     readonly property bool shown: phase === "asking" ? true
         : phase === "answered" ? askClient.text.length > 0
@@ -195,11 +206,144 @@ Rectangle {
                 : answer.codexOnly ? answer.words.i18n("Codex only · nothing is sent until you tap · warnings about scams and passwords still come from this computer")
                 : answer.handedOn ? answer.words.i18n("From this computer · Codex answers in its own window")
                 : answer.thinking ? answer.words.i18n("On this computer · an answer can take up to a minute")
+                : answer.readNames.length > 0 ? answer.words.i18n("On this computer · Read: %1", answer.readNames.join(", "))
+                : answer.card ? answer.words.i18n("Answered on this computer · nothing changes until you tap Do it")
+                : answer.notes.length > 0 ? answer.words.i18n("Answered on this computer · the note opens in Notes")
                 : answer.phase === "answered" || answer.phase === "asking" ? answer.words.i18n("Answered on this computer · nothing changes until you open a Helper")
                 : ""
             color: answer.tone.secondaryText
             font.pixelSize: 12
             wrapMode: Text.Wrap
+        }
+
+        // The Do it card: what it does, in the app's words, and the first
+        // words it writes; then Do it, or how the write went.
+        Item {
+            objectName: "ask-do-it"
+            visible: answer.card !== null
+            width: parent.width
+            height: Math.max(doItWords.implicitHeight, 32) + 4
+            Column {
+                id: doItWords
+                y: 4
+                width: parent.width - doItEnd.width - 12
+                spacing: 2
+                Text {
+                    objectName: "ask-do-it-what"
+                    width: parent.width
+                    text: !answer.card ? "" : answer.card.what || answer.card.app || ""
+                    color: answer.tone.primaryText
+                    font.pixelSize: 15
+                    wrapMode: Text.Wrap
+                }
+                Text {
+                    objectName: "ask-do-it-title"
+                    width: parent.width
+                    visible: text.length > 0
+                    text: answer.card && answer.card.title ? answer.words.i18n("“%1”", answer.card.title) : ""
+                    color: answer.tone.secondaryText
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+                Text {
+                    objectName: "ask-do-it-problem"
+                    width: parent.width
+                    visible: answer.doing === "failed"
+                    text: answer.askClient && answer.askClient.doItProblem.length > 0
+                        ? answer.words.i18n("It didn't work: %1", answer.askClient.doItProblem)
+                        : answer.words.i18n("It didn't work. Nothing was changed.")
+                    color: answer.tone.secondaryText
+                    font.pixelSize: 12
+                    wrapMode: Text.Wrap
+                }
+            }
+            Item {
+                id: doItEnd
+                anchors.right: parent.right
+                y: 4
+                width: answer.doing === "done" || answer.doing === "failed" ? doneText.implicitWidth : doItPill.width
+                height: 32
+                Rectangle {
+                    id: doItPill
+                    objectName: "ask-do-it-run"
+                    visible: answer.doing === "" || answer.doing === "running"
+                    width: doItLabel.implicitWidth + 32
+                    height: 32
+                    radius: 16
+                    color: doItTap.pressed || answer.doing === "running" ? answer.tone.lightPressed : answer.tone.primaryText
+                    activeFocusOnTab: visible && answer.doing === ""
+                    Accessible.role: Accessible.Button
+                    Accessible.name: answer.card ? answer.words.i18n("Do it: %1", answer.card.what || answer.card.app || answer.card.title || "") : ""
+                    Accessible.onPressAction: doItPill.activate()
+                    Keys.onReturnPressed: doItPill.activate()
+                    Keys.onEnterPressed: doItPill.activate()
+                    Keys.onSpacePressed: doItPill.activate()
+                    function activate() { if (answer.askClient) answer.askClient.runDoIt() }
+                    Text {
+                        id: doItLabel
+                        anchors.centerIn: parent
+                        text: answer.doing === "running" ? answer.words.i18n("Doing it…") : answer.words.i18n("Do it")
+                        color: answer.tone.surface
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+                    TapHandler { id: doItTap; enabled: answer.doing === ""; onTapped: doItPill.activate() }
+                }
+                Text {
+                    id: doneText
+                    objectName: "ask-do-it-done"
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.right: parent.right
+                    visible: answer.doing === "done" || answer.doing === "failed"
+                    text: answer.doing === "done" ? answer.words.i18n("Done") : answer.words.i18n("Didn't work")
+                    color: answer.tone.primaryText
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+            }
+        }
+
+        // Where something was written down: each note named opens in Notes
+        // with one tap, and Search closes.
+        Flow {
+            objectName: "ask-open-notes"
+            visible: answer.notes.length > 0
+            width: parent.width
+            topPadding: 4
+            spacing: 8
+            Repeater {
+                model: answer.notes
+                Rectangle {
+                    id: notePill
+                    required property var modelData
+                    objectName: "ask-open-note"
+                    width: Math.min(noteLabel.implicitWidth + 36, answer.width)
+                    height: 40
+                    radius: 20
+                    color: noteTap.pressed ? answer.tone.lightPressed : answer.tone.primaryText
+                    activeFocusOnTab: true
+                    Accessible.role: Accessible.Button
+                    Accessible.name: noteLabel.text
+                    Accessible.onPressAction: notePill.activate()
+                    Keys.onReturnPressed: notePill.activate()
+                    Keys.onEnterPressed: notePill.activate()
+                    Keys.onSpacePressed: notePill.activate()
+                    function activate() {
+                        if (answer.askClient && answer.askClient.openNote(modelData.id)) answer.noteOpened()
+                    }
+                    Text {
+                        id: noteLabel
+                        anchors.centerIn: parent
+                        width: Math.min(implicitWidth, parent.width - 36)
+                        text: answer.words.i18n("Open “%1”", notePill.modelData.title)
+                        elide: Text.ElideRight
+                        color: answer.tone.surface
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
+                    TapHandler { id: noteTap; onTapped: notePill.activate() }
+                }
+            }
         }
     }
 }

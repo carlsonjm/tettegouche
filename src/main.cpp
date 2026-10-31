@@ -386,6 +386,11 @@ int main(int argc, char **argv)
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
     QObject::connect(&core, &CoreFactProvider::actionsChanged, &results, &OmniResults::helpersChanged);
+    // Core's saved layouts: Layouts opens its island in the band, through
+    // the widget there, and Search closes; a layout found by name opens.
+    results.setCoreLayouts([&core] { return core.keepsLayouts(); }, [&core] { return core.layouts(); },
+                           [&controller] { controller.requestIsland(QStringLiteral("layouts")); },
+                           [&core](const QString &id) { core.openLayout(id); });
     // Apps found by the names Windows gives its own tools, such as Task
     // Manager, where they are installed.
     results.setApplications([](const QString &name) {

@@ -138,6 +138,15 @@ PlasmoidItem {
     Connections {
         target: Plasmoid
         function onPanelGeometryChanged() { Qt.callLater(root.refreshResponsiveWidth); }
+        // Search asked for an island in the band, such as Layouts: one
+        // widget on Search's display opens it, islands shown or not.
+        function onIslandRequested(kind, output) {
+            if (kind !== "layouts" || !Plasmoid.keepsLayouts) return;
+            if (output.length > 0 && Plasmoid.screenName(root) !== output) return;
+            // One widget opens it, however many hear the request.
+            if (!Plasmoid.claimIsland(kind)) return;
+            root.openIsland(kind);
+        }
     }
 
     AmbientSurface {
@@ -169,7 +178,7 @@ PlasmoidItem {
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
         onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
-        onKindsChanged: if (root.island && kinds.length === 0) root.island.dismiss()
+        onKindsChanged: if (root.island && root.island.kind !== "layouts" && kinds.length === 0) root.island.dismiss()
     }
 
     // A slide from the dot: press it and move away from the dot's edge,
@@ -304,10 +313,14 @@ PlasmoidItem {
             island.kind = kind;
             return;
         }
-        const from = ambient.islandFor(kind);
-        const side = Plasmoid.screenRect(ambient);
+        // Layouts grows from the band whether or not its islands show: from
+        // the dot where they don't.
+        const inBand = ambient.visible;
+        const from = inBand ? ambient.islandFor(kind) : launcherButton;
+        const side = Plasmoid.screenRect(inBand ? ambient : root);
         const opened = islandComponent.createObject(null, {
             surface: ambient,
+            layouts: Plasmoid,
             kind: kind,
             start: Plasmoid.screenRect(from),
             sideLeft: side.x,
@@ -327,7 +340,7 @@ PlasmoidItem {
             opened.frameSwapped.disconnect(stepAside);
             if (root.island === opened) ambient.opened = true;
         });
-        if (!Plasmoid.prepareIslandSurface(opened, ambient)) {
+        if (!Plasmoid.prepareIslandSurface(opened, inBand ? ambient : root)) {
             island = null;
             opened.destroy();
             return;

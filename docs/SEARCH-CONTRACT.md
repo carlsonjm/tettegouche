@@ -94,6 +94,24 @@ computer · an answer can take up to a minute", so the web search never stands
 alone. A question Ask stops for another surface's says Ask couldn't answer
 this time; one this Search typed over is simply replaced.
 
+Where the person's apps offer Ask their tools, as Notes does, an answer that
+reads them names what it read in its line beneath: "On this computer · Read:
+Testing notes, Tablet round 30 Oct". An answer that would write in an app,
+such as keeping it as a note, ends with its Do it card inside the box: what it
+does and, beneath at 12 in quotes, the first words it writes, with a Do it
+pill 32 tall, the light pill, at its end. Only the tap makes the write: Search
+hands the card's token to Split Rock's broker (`Run` at
+`io.github.carlsonjm.splitrock.Broker`, `/Broker`), once, and the pill becomes
+"Done", or "Didn't work" with the broker's reason beneath. Until then the line
+beneath reads "Answered on this computer · nothing changes until you tap Do
+it". A card that runs a settings command is not shown in Search.
+
+An answer naming the note where something was written down ends with one
+light pill 40 tall per note, "Open “Accounts”", and the line beneath reads
+"Answered on this computer · the note opens in Notes". The tap asks Notes to
+open that note (`OpenNote` at `io.github.carlsonjm.gooseberry`, `/QuickNote`)
+and Search closes. Ask sends only each note's id and title, never its words.
+
 Where Split Rock's Codex is signed in, an answer's list ends with an Ask Codex
 row, a row like a Helper's: "For a bigger fix, with your ChatGPT plan". Only a
 tap on it hands the question on, to Codex's own window, and Search closes as
@@ -274,6 +292,30 @@ Helper, not a folder called update. Enter on one asks Core to open the card on i
 gets what was typed, so "install pdf editor" opens it searching. A card changes
 nothing until the person's yes on it. Shell commands, session and kill actions, browser history and online runners
 are left out.
+
+### Layouts
+
+Where Split Rock's Core keeps saved layouts, named desks of apps, each group
+one app on its own or a Stack, Search finds them as it finds Core's facts and
+ranks them the same. "Layouts" is found by "layout", "layouts", "desk" or "save
+layout", or the start of one of them, never by "desktop", and reads "2 saved"
+beneath, or "Save what's open as a layout" with none. Each saved layout is
+found by the start of its name or of a word in it, three letters or more, or
+its whole name however short: "Open your Coding layout", its groups' apps
+beneath ("Ghostty, Claude · Zen"), and one Open pill at the row's end, the
+light pill, 32 tall. Search holds the layouts as Core last listed them
+(`Layouts()`), reads them again on `LayoutsChanged`, and asks Core nothing
+while typing.
+
+Enter, or a tap on the row or its pill, opens a saved layout through Core
+(`OpenLayout`): Core launches what isn't running, Cards moves the rest to its
+place, nothing is closed, and Search closes. Layouts itself opens in place in
+the band: Search closes and asks the widget on its display for the Layouts
+island (`islandRequested` on the launcher's interface,
+[AMBIENT-CONTRACT.md](AMBIENT-CONTRACT.md) § Layouts). It is never a window or a
+card, so it never becomes part of the desk it saves. Without Split Rock, or
+with a Core that has no `Layouts()`, there is no Layouts result and nothing
+else changes.
 
 Application results may activate an exact existing Kadunce window. Files and
 settings execute their provider or verified module action. Web dispatch sends an

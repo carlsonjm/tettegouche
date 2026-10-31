@@ -171,9 +171,59 @@ and takes the fact off the island. Setting it aside tells Core it was
 dismissed, and Core stays quiet about it until it gets worse. A fact about a
 Windows program in Downloads, and no other, adds a "Don't tell me again" pill
 after its words; a tap on the pill asks Core never to raise Windows programs
-again, and a tap anywhere else on the island still opens the card. Core owns the
-fact and its history; Ambient keeps neither. Without Split Rock there is no
+again, and a tap anywhere else on the island still opens the card.
+
+A fact that asks a question, such as bringing back the last sign-in's apps or
+an offer to open a set of apps at sign-in, is not answered by a tap on the
+island: the tap, or the bubble holding it, opens the island in place on the
+question, its detail and its answers as pills. The tap's own words come first,
+then the choices Core lists beside it (`choices`, each an action and its
+words, such as Always), then Not now, in Core's words where it gives them
+(`dismissText`). A fact asks when Core lists choices or words for Not now, and
+bringing back apps and an automation's offer always ask. Each answer is passed
+to Core as Core names it, Not now as `not-now`, and closes the island; an
+action the fact does not list is not passed. The words are Core's; Ambient
+draws them as given. Core owns the fact and its history; Ambient keeps
+neither. Without Split Rock there is no
 Core island and nothing else changes.
+
+### Layouts
+
+Search's Layouts result opens the Layouts island in place, the way a Core
+question does: grown up from the band's end over the desk, on a surface of its
+own that is never a window Cards takes as a card, so it never becomes part of a
+layout. It opens once, on the first widget on Search's display to hear the
+ask, with its islands shown or not; where they are not, it grows from the dot.
+Its foot stays on the display even where the band reaches past it. Split Rock's Core keeps the
+layouts; the island reads them from Core (`Layouts()`) and asks Core for every
+change.
+
+The island's title reads "Layouts · 2 saved". Each saved layout is a row: its
+name and its miniature, each
+group a small card, 6 px corners, naming its front app, a Stack's cards fanned
+5 px behind it, and the group's apps beneath; then an Open pill, 32 tall, the
+first row's filled. A tap on a row off its pill shows its own Remove
+(`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
+brings apps back. With none saved,
+a line says how to make one. Below the rows are the pills Save what's open,
+filled, and Close.
+
+Save what's open turns the same island into the form: "Save this layout ·
+what's open on Work", the workspace named as KWin names it, a name field,
+then one row per group Core reads from Cards (`CurrentLayout()`), "Stack ·
+Ghostty, Claude" or "Zen · On its own", each with Remove, which takes that
+group out; then Save and Not now.
+Save needs a name and at least one group, and passes the groups left
+(`SaveLayout`); a name already used replaces that layout. Open, Save and Not
+now close the island, as do Close, Esc and a tap outside it.
+
+When a layout's run ends with apps that didn't come, Core's island says so
+once: "Mail didn't open", and beneath, "The rest of Coding is in place". A tap
+takes it away and opens Layouts; setting it aside, or a minute, takes it away
+and opens nothing. Core is told nothing of either.
+
+Without Split Rock, or with a Core that has no `Layouts()`, there is no Layouts
+island and nothing else changes.
 
 ### Quick note
 

@@ -43,13 +43,75 @@ Window {
     readonly property color ink: tone.text
     readonly property real openWidth: Math.min(384, width - 16)
     // The card grows up from the band, and no taller than the room above it;
-    // what does not fit scrolls.
-    readonly property real openRoom: Math.max(120, start.y + start.height - 8)
+    // what does not fit scrolls. A band reaching past the display's bottom,
+    // as a panel tucked away under another surface does, is taken as ending
+    // at the display's edge, so the card's foot stays on it.
+    readonly property real bandFoot: Math.min(start.y + start.height, height)
+    readonly property real openRoom: Math.max(120, bandFoot - 8)
     readonly property real openHeight: Math.min(content.implicitHeight + 36, openRoom)
     readonly property real openX: Math.max(8, Math.min(width - 8 - openWidth,
         Math.max(sideLeft, Math.min(sideRight - openWidth, start.x + start.width / 2 - openWidth / 2))))
-    readonly property real openY: Math.max(8, start.y + start.height - openHeight)
+    readonly property real openY: Math.max(8, bandFoot - openHeight)
     readonly property var activity: kind === "media" ? (surface ? surface.player : null) : null
+    // The fact from Core the card answers, while Core still asks it.
+    readonly property var question: kind === "core" && surface && surface.coreAsks ? surface.coreShown : null
+    onQuestionChanged: if (kind === "core" && question === null) dismiss()
+    // An answer goes to Core, which takes the fact off the island.
+    function answer(action) {
+        if (question) surface.invoke(question, action);
+        dismiss();
+    }
+
+    // The keeper of saved layouts, for Layouts: the widget, which asks Split
+    // Rock's Core. It lists `layouts`, reads `currentLayout` on
+    // readCurrentLayout(), and saves, opens, and removes them.
+    property var layouts: null
+    readonly property var savedLayouts: kind === "layouts" && layouts && layouts.layouts ? layouts.layouts : []
+    // Layouts shows the saved layouts, or the form that saves what's open.
+    property bool savingLayout: false
+    // The saved layout whose Remove shows, by its id.
+    property string chosenLayout: ""
+    // The form: what is open, less the groups taken out; whether Core has
+    // answered; and the workspace's name.
+    property var keptGroups: []
+    property bool currentRead: false
+    property string workspaceName: ""
+    readonly property bool canSave: layoutName.text.trim().length > 0 && keptGroups.length > 0
+    onKindChanged: {
+        savingLayout = false;
+        chosenLayout = "";
+    }
+    function saveWhatsOpen() {
+        keptGroups = [];
+        currentRead = false;
+        workspaceName = "";
+        layoutName.text = "";
+        savingLayout = true;
+        layoutName.forceActiveFocus();
+        if (layouts) layouts.readCurrentLayout();
+    }
+    function takeCurrent() {
+        const current = layouts ? layouts.currentLayout : null;
+        if (!savingLayout || !current || current.available === undefined) return;
+        keptGroups = current.available && current.groups ? current.groups.slice() : [];
+        workspaceName = current.workspaceName || "";
+        currentRead = true;
+    }
+    Connections {
+        target: overlay.layouts
+        ignoreUnknownSignals: true
+        function onCurrentLayoutChanged() { overlay.takeCurrent(); }
+    }
+    // Open, Save and Not now close the island; Core and Cards do the rest.
+    function openLayout(id) {
+        if (layouts) layouts.openLayout(id);
+        dismiss();
+    }
+    function saveLayout() {
+        if (!canSave) return;
+        if (layouts) layouts.saveLayout(layoutName.text.trim(), keptGroups, false);
+        dismiss();
+    }
 
     // Not close(): that is the window's own, and would drop it at once.
     function dismiss() {
@@ -163,6 +225,66 @@ Window {
             id: pillArea
             anchors.fill: parent
             onClicked: pill.activated()
+        }
+    }
+
+    // A saved layout drawn small: each group a card, a Stack's cards fanned
+    // 5 px behind its front one, and its apps' names beneath.
+    component Miniature: Flow {
+        id: miniature
+        property var groups: []
+        spacing: 8
+        Repeater {
+            model: miniature.groups
+            delegate: Column {
+                id: drawn
+                required property var modelData
+                readonly property var names: modelData.names || modelData.apps || []
+                readonly property int fanned: Math.min(3, Math.max(1, names.length))
+                spacing: 4
+                Item {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 64 + 5 * (drawn.fanned - 1)
+                    height: 44 + 5 * (drawn.fanned - 1)
+                    Repeater {
+                        model: drawn.fanned
+                        delegate: Rectangle {
+                            required property int index
+                            x: 5 * (drawn.fanned - 1 - index)
+                            y: 5 * (drawn.fanned - 1 - index)
+                            z: -index
+                            width: 64
+                            height: 44
+                            radius: 6
+                            color: tone.over(0.14)
+                            border.width: 1
+                            border.color: tone.wash(0.35)
+                            opacity: [1, 0.7, 0.45][index]
+                            Text {
+                                anchors.fill: parent
+                                anchors.margins: 4
+                                visible: parent.index === 0
+                                text: drawn.names[0] || ""
+                                color: overlay.ink
+                                font.pixelSize: 10
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+                }
+                Label {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: Math.min(92, implicitWidth)
+                    text: drawn.names.join(words.i18nc("@info between apps in a Stack", ", "))
+                    font.pixelSize: 11
+                    opacity: 0.66
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                }
+            }
         }
     }
 
@@ -297,7 +419,8 @@ Window {
                 // With more than one kind going on, a row to move between them.
                 Row {
                     objectName: "ambient-island-kinds"
-                    visible: overlay.surface !== null && overlay.surface.kinds.length > 1
+                    visible: overlay.kind !== "core" && overlay.kind !== "layouts" && overlay.surface !== null
+                        && overlay.surface.kinds.length > 1
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
                     Repeater {
@@ -570,6 +693,337 @@ Window {
                         onActivated: {
                             overlay.surface.invoke(overlay.activity, "raise");
                             overlay.dismiss();
+                        }
+                    }
+                }
+
+                // A question from Core: its icon, the question and its detail,
+                // then its answers as pills, the tap's own first and Not now
+                // last, with the choices Core lists between them.
+                Column {
+                    objectName: "ambient-island-core"
+                    visible: overlay.question !== null
+                    width: parent.width
+                    spacing: 14
+                    Row {
+                        width: parent.width
+                        spacing: 12
+                        Rectangle {
+                            width: 40
+                            height: 40
+                            radius: 10
+                            color: tone.art
+                            Kirigami.Icon {
+                                objectName: "ambient-island-core-icon"
+                                anchors.centerIn: parent
+                                width: 24
+                                height: 24
+                                source: overlay.surface ? overlay.surface.coreIcon : ""
+                            }
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 52
+                            spacing: 2
+                            Label {
+                                objectName: "ambient-island-core-line"
+                                width: parent.width
+                                text: overlay.question ? overlay.question.line || overlay.question.title || "" : ""
+                                font.pixelSize: 15
+                                font.weight: Font.DemiBold
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 3
+                            }
+                            Label {
+                                objectName: "ambient-island-core-detail"
+                                width: parent.width
+                                visible: text.length > 0
+                                text: overlay.question ? overlay.question.detail || "" : ""
+                                opacity: 0.66
+                                wrapMode: Text.Wrap
+                                maximumLineCount: 2
+                            }
+                        }
+                    }
+                    Flow {
+                        objectName: "ambient-island-core-answers"
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-core-open"
+                            filled: true
+                            label: overlay.question ? overlay.question.actionText || words.i18n("Open") : ""
+                            onActivated: overlay.answer("open")
+                        }
+                        Repeater {
+                            model: overlay.surface ? overlay.surface.coreChoices : []
+                            delegate: PillButton {
+                                required property var modelData
+                                objectName: "ambient-island-core-choice-" + modelData.action
+                                label: modelData.text
+                                onActivated: overlay.answer(modelData.action)
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-core-not-now"
+                            label: overlay.surface ? overlay.surface.coreNotNow : ""
+                            onActivated: overlay.answer("not-now")
+                        }
+                    }
+                }
+
+                // Layouts, asked for from Search: each saved layout drawn
+                // small with its Open pill, then Save what's open and Close.
+                Column {
+                    objectName: "ambient-island-layouts"
+                    visible: overlay.kind === "layouts" && !overlay.savingLayout
+                    width: parent.width
+                    spacing: 12
+                    Row {
+                        spacing: 0
+                        Label {
+                            id: layoutsTitle
+                            objectName: "ambient-island-layouts-title"
+                            text: words.i18nc("@title the saved layouts", "Layouts")
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                        }
+                        Label {
+                            objectName: "ambient-island-layouts-count"
+                            anchors.baseline: layoutsTitle.baseline
+                            visible: overlay.savedLayouts.length > 0
+                            text: words.i18ncp("@title after Layouts", " · %1 saved", " · %1 saved", overlay.savedLayouts.length)
+                            opacity: 0.66
+                        }
+                    }
+                    Label {
+                        objectName: "ambient-island-layouts-none"
+                        width: parent.width
+                        visible: overlay.savedLayouts.length === 0
+                        text: words.i18n("Nothing saved yet. Arrange your apps, then save what's open.")
+                        opacity: 0.66
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 3
+                    }
+                    Column {
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: overlay.savedLayouts
+                            delegate: Rectangle {
+                                id: saved
+                                required property var modelData
+                                required property int index
+                                readonly property bool chosen: overlay.chosenLayout === modelData.id
+                                objectName: "ambient-island-layout-" + modelData.id
+                                width: parent.width
+                                height: savedColumn.implicitHeight + 24
+                                radius: 10
+                                color: tone.wash(savedArea.pressed ? 0.12 : 0.075)
+                                Accessible.role: Accessible.ListItem
+                                Accessible.name: modelData.name
+                                // A tap on the row, off its pill, shows its own
+                                // Remove.
+                                MouseArea {
+                                    id: savedArea
+                                    anchors.fill: parent
+                                    onClicked: overlay.chosenLayout = saved.chosen ? "" : saved.modelData.id
+                                }
+                                Column {
+                                    id: savedColumn
+                                    x: 12
+                                    y: 12
+                                    width: parent.width - 24 - openSaved.width - 12
+                                    spacing: 10
+                                    Column {
+                                        width: parent.width
+                                        spacing: 2
+                                        Label {
+                                            width: parent.width
+                                            text: saved.modelData.name
+                                            font.pixelSize: 15
+                                        }
+                                    }
+                                    Miniature {
+                                        objectName: "ambient-island-layout-miniature-" + saved.modelData.id
+                                        width: parent.width
+                                        groups: saved.modelData.groups || []
+                                    }
+                                    Column {
+                                        width: parent.width
+                                        visible: saved.chosen
+                                        spacing: 8
+                                        PillButton {
+                                            objectName: "ambient-island-layout-remove-" + saved.modelData.id
+                                            height: 32
+                                            label: words.i18nc("@action:button forgets a saved layout", "Remove")
+                                            onActivated: {
+                                                overlay.chosenLayout = "";
+                                                if (overlay.layouts) overlay.layouts.removeLayout(saved.modelData.id);
+                                            }
+                                        }
+                                    }
+                                }
+                                PillButton {
+                                    id: openSaved
+                                    objectName: "ambient-island-layout-open-" + saved.modelData.id
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    y: 12
+                                    height: 32
+                                    filled: saved.index === 0
+                                    label: words.i18nc("@action:button opens a saved layout", "Open")
+                                    Accessible.name: words.i18nc("@action:button a saved layout's name", "Open %1", saved.modelData.name)
+                                    onActivated: overlay.openLayout(saved.modelData.id)
+                                }
+                            }
+                        }
+                    }
+                    Flow {
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-layouts-save"
+                            filled: true
+                            label: words.i18n("Save what's open")
+                            onActivated: overlay.saveWhatsOpen()
+                        }
+                        PillButton {
+                            objectName: "ambient-island-layouts-close"
+                            label: words.i18n("Close")
+                            onActivated: overlay.dismiss()
+                        }
+                    }
+                }
+
+                // The same island as a form: a name, what is open on this
+                // workspace group by group, each with Remove; then Save and
+                // Not now.
+                Column {
+                    objectName: "ambient-island-layout-form"
+                    visible: overlay.kind === "layouts" && overlay.savingLayout
+                    width: parent.width
+                    spacing: 12
+                    Row {
+                        width: parent.width
+                        Label {
+                            id: formTitle
+                            text: words.i18n("Save this layout")
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                        }
+                        Label {
+                            objectName: "ambient-island-layout-form-where"
+                            anchors.baseline: formTitle.baseline
+                            width: parent.width - formTitle.width
+                            text: overlay.workspaceName.length > 0
+                                ? words.i18nc("@title after Save this layout, a workspace's name", " · what's open on %1", overlay.workspaceName)
+                                : words.i18nc("@title after Save this layout", " · what's open")
+                            opacity: 0.66
+                        }
+                    }
+                    Rectangle {
+                        width: parent.width
+                        height: 40
+                        radius: 10
+                        color: tone.wash(0.075)
+                        border.width: layoutName.activeFocus ? 1 : 0
+                        border.color: tone.wash(0.35)
+                        TextInput {
+                            id: layoutName
+                            objectName: "ambient-island-layout-name"
+                            x: 12
+                            width: parent.width - 24
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: overlay.ink
+                            font.pixelSize: 15
+                            clip: true
+                            selectByMouse: true
+                            Accessible.role: Accessible.EditableText
+                            Accessible.name: words.i18n("Name")
+                            onAccepted: overlay.saveLayout()
+                        }
+                        Label {
+                            anchors.left: layoutName.left
+                            anchors.verticalCenter: parent.verticalCenter
+                            visible: layoutName.text.length === 0
+                            text: words.i18n("Name it, such as Coding")
+                            font.pixelSize: 15
+                            opacity: 0.45
+                        }
+                    }
+                    Label {
+                        objectName: "ambient-island-layout-form-empty"
+                        width: parent.width
+                        visible: overlay.keptGroups.length === 0
+                        text: overlay.currentRead ? words.i18n("Nothing open here to save. Arrange your apps, then come back.")
+                            : words.i18n("Looking at what's open…")
+                        opacity: 0.66
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 3
+                    }
+                    Column {
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: overlay.keptGroups
+                            delegate: Rectangle {
+                                id: kept
+                                required property var modelData
+                                required property int index
+                                readonly property var names: modelData.names || modelData.apps || []
+                                objectName: "ambient-island-layout-group-" + index
+                                width: parent.width
+                                height: Math.max(44, keptWords.implicitHeight + 24)
+                                radius: 10
+                                color: tone.wash(0.075)
+                                Column {
+                                    id: keptWords
+                                    x: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: parent.width - 24 - removeGroup.width - 12
+                                    spacing: 2
+                                    Label {
+                                        objectName: "ambient-island-layout-group-title-" + kept.index
+                                        width: parent.width
+                                        text: kept.modelData.stack ? words.i18nc("@info apps together in one Stack", "Stack") : kept.names[0] || ""
+                                        font.pixelSize: 15
+                                    }
+                                    Label {
+                                        objectName: "ambient-island-layout-group-line-" + kept.index
+                                        width: parent.width
+                                        text: kept.modelData.stack ? kept.names.join(words.i18nc("@info between apps in a Stack", ", "))
+                                            : words.i18nc("@info an app not in a Stack", "On its own")
+                                        opacity: 0.66
+                                    }
+                                }
+                                PillButton {
+                                    id: removeGroup
+                                    objectName: "ambient-island-layout-group-remove-" + kept.index
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: 32
+                                    label: words.i18nc("@action:button takes a group out of the layout", "Remove")
+                                    onActivated: overlay.keptGroups = overlay.keptGroups.filter((group, at) => at !== kept.index)
+                                }
+                            }
+                        }
+                    }
+                    Flow {
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-layout-form-save"
+                            filled: true
+                            opacity: overlay.canSave ? 1 : 0.4
+                            label: words.i18nc("@action:button saves the layout", "Save")
+                            onActivated: overlay.saveLayout()
+                        }
+                        PillButton {
+                            objectName: "ambient-island-layout-form-not-now"
+                            label: words.i18n("Not now")
+                            onActivated: overlay.dismiss()
                         }
                     }
                 }

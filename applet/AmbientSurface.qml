@@ -371,13 +371,34 @@ Item {
     // done. The newest shows; a tap opens the card that does it.
     readonly property var cores: activities.filter(activity => activity.kind === "core")
     readonly property var coreShown: cores.length > 0 ? cores[cores.length - 1] : null
-    readonly property string coreName: coreShown
-        ? (coreShown.line ? words.i18n("%1 · %2", coreShown.title, coreShown.line) : coreShown.title || "") : ""
-    readonly property string coreDetail: coreShown
-        ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
+    // After a saved layout opened without some of its apps, the island says
+    // once which didn't open; a tap opens Layouts.
+    readonly property var coreMissed: coreShown && coreShown.missed ? coreShown.missed : []
+    readonly property string coreName: coreMissed.length > 0 ? didntOpen(coreMissed)
+        : coreShown ? (coreShown.line ? words.i18n("%1 · %2", coreShown.title, coreShown.line) : coreShown.title || "") : ""
+    readonly property string coreDetail: coreMissed.length > 0
+        ? (coreShown.layout ? words.i18nc("@info the rest of a saved layout's apps", "The rest of %1 is in place", coreShown.layout)
+            : words.i18nc("@info the rest of a saved layout's apps", "The rest is in place"))
+        : coreShown ? [coreShown.detail, coreShown.actionText].filter(part => part).join(" · ") : ""
     readonly property string coreIcon: coreShown && coreShown.icon ? coreShown.icon : "dialog-information"
     // A Windows program's fact can be told never to come back.
     readonly property string neverLabel: words.i18n("Don't tell me again")
+    // A fact that asks a question, such as bringing back the last sign-in's
+    // apps, opens as a card with its answers rather than acting on a tap:
+    // its tap's words, the choices Core lists, and Not now in Core's own
+    // words where it gives them.
+    readonly property bool coreAsks: coreShown !== null && Boolean(coreShown.asks)
+    function didntOpen(names) {
+        if (names.length === 1)
+            return words.i18nc("@info an app a saved layout opens", "%1 didn't open", names[0]);
+        if (names.length === 2)
+            return words.i18nc("@info two apps a saved layout opens", "%1 and %2 didn't open", names[0], names[1]);
+        return words.i18ncp("@info apps a saved layout opens", "%2 and %1 more didn't open",
+            "%2 and %1 more didn't open", names.length - 1, names[0]);
+    }
+    readonly property var coreChoices: coreShown && coreShown.choices ? coreShown.choices : []
+    readonly property string coreNotNow: coreShown && coreShown.dismissText ? coreShown.dismissText
+        : words.i18n("Not now")
 
     // The quick note's island, there while Gooseberry is installed: a dot
     // with a plus that starts a quick note or resumes it, and beside it the
@@ -594,12 +615,16 @@ Item {
     // A drive's island is one tap: Files opens the drive, mounting it first.
     // A shared screen's island only tells, and stops: a tap opens nothing.
     // A waiting application's island brings the application forward, and its
-    // dialog with it. Core's island opens the card that does what it suggests.
+    // dialog with it. Core's island opens the card that does what it suggests,
+    // or, for a fact that asks, opens in place with its answers; what a saved
+    // layout left out, told once, opens Layouts in place.
     // The quick note's island opens Search's Notes on the quick note.
     function open(kind) {
         if (kind === "note") drawerRequested("note");
         else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
+        else if (kind === "core" && coreAsks) openRequested("core");
+        else if (kind === "core" && coreMissed.length > 0) { invoke(coreShown, "open"); openRequested("layouts"); }
         else if (kind === "core") invoke(coreShown, "open");
         else if (kind !== "screen") openRequested(openKind(kind));
     }
@@ -609,7 +634,9 @@ Item {
     }
     // Where the open island grows from.
     function islandFor(kind) {
-        const candidates = kind === "media" ? [mediaIsland] : [transferIsland, arrivedIsland];
+        // Layouts, asked for from Search, grows from the band's end.
+        const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
+            : kind === "layouts" ? [] : [transferIsland, arrivedIsland];
         for (const island of candidates)
             if (island.present) return island.shape;
         return bubble;
