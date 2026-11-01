@@ -244,7 +244,8 @@ Notes had when the note left. A
    `Local State` or `Secure Preferences`, or a Firefox-family `prefs.js`, and
    site storage, caches and crash reports wherever they sit), and file matches
    shorter than three characters. All files relaxes those Tettegouche filters
-   but does not widen KDE indexing or scan content.
+   but does not widen KDE indexing or scan content. A file KDE's index still
+   names but that is no longer there is listed in neither scope.
 2. Confidence precedes provider preference: exact name, named intent, prefix,
    query words, descriptive context, then unrelated. Unrelated rows are omitted.
    Files and folders are the exception: they follow every app, setting, Helper
@@ -345,10 +346,6 @@ Firefox-family handlers are verified.
 - Independent tools with similar names stay separate destinations.
 
 ## Stable interaction
-
-Results arrive and leave as themselves: a refresh removes a row that no longer
-answers and inserts one that now does, then puts the rest in order, so the
-list never draws a row on top of another while it fills in.
 
 Keyboard navigation and pointer/touch press pin the destination identity and a
 snapshot of displayed order. Late arrivals follow that snapshot; a replacement

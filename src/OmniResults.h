@@ -483,37 +483,20 @@ public:
         sort(0);
         connect(&m_results, &KRunner::ResultsModel::queryStringChanged, this, &OmniResults::queryStringChanged);
         connect(&m_results, &KRunner::ResultsModel::queryingChanged, this, &OmniResults::queryingChanged);
-        connect(this, &QAbstractItemModel::layoutChanged, this, [this]() { if (!m_unsorting) Q_EMIT selectionChanged(); });
+        connect(this, &QAbstractItemModel::layoutChanged, this, &OmniResults::selectionChanged);
         connect(this, &QAbstractItemModel::rowsInserted, this, &OmniResults::selectionChanged);
         connect(this, &QAbstractItemModel::rowsRemoved, this, &OmniResults::selectionChanged);
         connect(this, &QAbstractItemModel::modelReset, this, &OmniResults::selectionChanged);
         const auto queueRefresh = [this]() {
             if (m_refreshQueued) return;
             m_refreshQueued = true;
-            QTimer::singleShot(0, this, [this]() { m_refreshQueued = false; refresh(); });
+            QTimer::singleShot(0, this, [this]() { m_refreshQueued = false; invalidate(); });
         };
         connect(&m_combined, &QAbstractItemModel::rowsInserted, this, queueRefresh);
         connect(&m_combined, &QAbstractItemModel::rowsRemoved, this, queueRefresh);
         connect(&m_combined, &QAbstractItemModel::dataChanged, this, queueRefresh);
         connect(&m_combined, &QAbstractItemModel::modelReset, this, queueRefresh);
         connect(&m_combined, &QAbstractItemModel::layoutChanged, this, queueRefresh);
-    }
-    // Judges every row again and sorts them again. A row that leaves or
-    // arrives is removed or inserted as itself, and the rows that stay are
-    // then put in order, so the list never swaps its whole set of rows in one
-    // change: a list view handed that can leave rows drawn where they were,
-    // on top of the ones that replace them.
-    void refresh() {
-        beginFilterChange();
-        endFilterChange(QSortFilterProxyModel::Direction::Rows);
-        const int column = sortColumn() < 0 ? 0 : sortColumn();
-        const auto order = sortOrder();
-        // Sorting by the same column again would do nothing; going through
-        // the rows' own order makes it sort afresh.
-        m_unsorting = true;
-        sort(-1, order);
-        m_unsorting = false;
-        sort(column, order);
     }
     Q_INVOKABLE void pinSelection(int row) {
         if (row < 0 || row >= rowCount()) return;
@@ -579,13 +562,13 @@ public:
     void setLimit(int limit) { m_results.setLimit(limit); }
     virtual QString queryString() const { return m_results.queryString(); }
     bool allFiles() const { return m_allFiles; }
-    void setAllFiles(bool value) { if (m_allFiles == value) return; releaseSelection(); m_allFiles = value; refresh(); Q_EMIT scopeChanged(); }
+    void setAllFiles(bool value) { if (m_allFiles == value) return; releaseSelection(); m_allFiles = value; invalidate(); Q_EMIT scopeChanged(); }
     QString quietFolders() const { return m_quietFolders; }
     void setQuietFolders(const QString &value) {
         QSettings settings(QStringLiteral("co.goodinput"), QStringLiteral("tettegouche-search"));
         settings.setValue(QStringLiteral("quietFolders"), value);
         m_quietFolders = value;
-        refresh(); Q_EMIT scopeChanged();
+        invalidate(); Q_EMIT scopeChanged();
     }
     // Notes are asked of Gooseberry only while Search offers Notes.
     void setNotesOffered(bool offered) { m_notesOffered = offered; }
@@ -615,7 +598,7 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_notes.appendRow(item);
         }
-        refresh();
+        invalidate();
     }
     // Core's facts, as its provider holds them, and how to ask Core to open
     // one's card. Asked of nothing while typing: the facts are already here.
@@ -685,7 +668,7 @@ public:
         if (m_helpersOnly == only) return;
         releaseSelection();
         m_helpersOnly = only;
-        refresh();
+        invalidate();
         Q_EMIT helpersOnlyChanged();
     }
     // How to find an installed app by its desktop name (its name, icon,
@@ -717,7 +700,7 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_windowsWords.appendRow(item);
         }
-        refresh();
+        invalidate();
     }
     void showCore(const QString &query) {
         m_core.removeRows(0, m_core.rowCount());
@@ -805,7 +788,7 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
-        refresh();
+        invalidate();
     }
     void setQueryString(const QString &query) {
         releaseSelection();
@@ -826,7 +809,7 @@ public:
             m_aliases.appendRow(item);
         }
         m_results.setQueryString(query);
-        refresh();
+        invalidate();
     }
     bool querying() const { return m_results.querying(); }
     QHash<int, QByteArray> roleNames() const override { return m_results.roleNames(); }
@@ -998,6 +981,8 @@ protected:
     // Every match judged afresh, counted so a test can hold the work to one
     // judgement for each.
     mutable int m_verdictChecks = 0;
+    // Whether a file is still there, asked once for each match judged.
+    std::function<bool(const QString &)> m_fileExists = [](const QString &path) { return QFileInfo::exists(path); };
     bool candidateEligible(const KRunner::QueryMatch &match, int priority) const {
         if (searchTier(match) != 1 && !noteMatch(match) && priority >= 5000) return false;
         if (match.runner() && match.runner() != &m_aliasRunner
@@ -1010,6 +995,9 @@ protected:
         }
         if (searchTier(match) != 1) return true;
         const auto path = matchFilePath(match);
+        // KDE's file index can name a file deleted since it was indexed; a
+        // file that is gone is never listed, in either scope.
+        if (!path.isEmpty() && m_fileExists && !m_fileExists(path)) return false;
         const bool inside = priority == FilesFoundInside;
         if (m_allFiles) return !path.isEmpty()
             && (inside || nameMatchQuality(QFileInfo(path).fileName(), queryString()) < 3);
@@ -1102,7 +1090,6 @@ private:
     mutable bool m_shownStale = true;
     QList<QMetaObject::Connection> m_rowWatch;
     bool m_refreshQueued = false;
-    bool m_unsorting = false;
     bool m_notesOffered = false;
     int m_notesAsk = 0;
     QString m_selectedDestination;
