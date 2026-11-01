@@ -187,6 +187,16 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/chevron-right.svg
         assets/icons/lucide/minus.svg
         assets/icons/lucide/grip-vertical.svg
+        assets/icons/lucide/shopping-bag.svg
+        assets/icons/lucide/hard-drive.svg
+        assets/icons/lucide/heart-pulse.svg
+        assets/icons/lucide/undo-2.svg
+        assets/icons/lucide/folder-down.svg
+        assets/icons/lucide/history.svg
+        assets/icons/lucide/users.svg
+        assets/icons/lucide/panels-top-left.svg
+        assets/icons/lucide/chevron-up.svg
+        assets/icons/lucide/wrench.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core

@@ -413,6 +413,30 @@ int main(int argc, char **argv)
             || core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("Ghostty, Claude · Zen")) return 142;
         if (core.resultPill(0) != QStringLiteral("Open")) return 143;
         if (!core.run(core.index(0, 0)) || opened != QStringList{QStringLiteral("1")} || islands != 1) return 144;
+        // Layouts joins the Helpers behind More, where Core lists Helpers and
+        // keeps layouts, and its tile opens the island.
+        if (!core.helpers().isEmpty()) return 401;
+        const QVariantMap tidy{{QStringLiteral("id"), QStringLiteral("tidy")}, {QStringLiteral("title"), QStringLiteral("Tidy up Downloads")},
+            {QStringLiteral("icon"), QStringLiteral("folder-download")}, {QStringLiteral("more"), true},
+            {QStringLiteral("keywords"), QStringList{QStringLiteral("tidy")}}};
+        const QVariantMap health{{QStringLiteral("id"), QStringLiteral("health")}, {QStringLiteral("title"), QStringLiteral("Health check")},
+            {QStringLiteral("icon"), QStringLiteral("security-high")}, {QStringLiteral("keywords"), QStringList{QStringLiteral("health")}}};
+        QStringList helpersOpened;
+        core.setCoreActions([&health, &tidy] { return QList<QVariantMap>{health, tidy}; },
+                            [&helpersOpened](const QString &id, const QString &) { helpersOpened.append(id); });
+        const auto tiles = core.helpers();
+        if (tiles.size() != 3) return 402;
+        if (tiles.at(0).toMap().value(QStringLiteral("more")).toBool() || !tiles.at(1).toMap().value(QStringLiteral("more")).toBool())
+            return 403;
+        const auto layoutsTile = tiles.at(2).toMap();
+        if (layoutsTile.value(QStringLiteral("id")).toString() != QStringLiteral("layouts")
+            || layoutsTile.value(QStringLiteral("title")).toString() != QStringLiteral("Layouts")
+            || !layoutsTile.value(QStringLiteral("more")).toBool()) return 404;
+        if (!core.openHelper(QStringLiteral("layouts")) || islands != 2 || !helpersOpened.isEmpty()) return 405;
+        keeps = false;
+        if (core.helpers().size() != 2 || core.openHelper(QStringLiteral("layouts")) || islands != 2) return 406;
+        keeps = true;
+        core.setCoreActions({}, {});
         // With none saved, Layouts still offers to save what's open.
         layouts.clear();
         core.testQuery = QStringLiteral("save layout");
