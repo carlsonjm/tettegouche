@@ -4321,10 +4321,14 @@ TestCase {
         ]
         const pill = findChild(launcher, "helpers-pill")
         tryCompare(pill, "visible", true)
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        // The row places the pill once it shows, and makes room for it.
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
+        tryVerify(() => pill.x + pill.width <= pill.parent.width)
         mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown)
         const row = findChild(launcher, "helpers-row")
         tryCompare(row, "opacity", 1)
-        const left = item => item.mapToItem(launcher, 0, 0).x
         const install = findChild(launcher, "helper-install")
         const changes = findChild(launcher, "helper-changes")
         const more = findChild(launcher, "helper-more")
