@@ -4335,6 +4335,19 @@ TestCase {
         verify(install.visible && changes.visible && more.visible)
         compare(install.width, 96)
         compare(left(more) - left(changes), 96 + 12)
+        // The block of tiles stands centred under the field, and each glyph
+        // and its name centred in their tile.
+        const first = findChild(launcher, "helpers-first-row")
+        const spare = row.width - (7 * 96 + 6 * 12)
+        verify(Math.abs(first.x - spare / 2) <= 1)
+        compare(findChild(launcher, "helpers-label").x, first.x)
+        for (const id of ["install", "update", "more"]) {
+            const face = findChild(launcher, "helper-" + id + "-face")
+            const tileOf = findChild(launcher, "helper-" + id)
+            verify(Math.abs(face.y + face.height / 2 - tileOf.height / 2) <= 0.5)
+            const glyphOf = findChild(launcher, "helper-" + id + "-glyph")
+            verify(Math.abs(glyphOf.mapToItem(tileOf, 0, 0).x + 12 - tileOf.width / 2) <= 0.5)
+        }
         compare(findChild(launcher, "helper-install-glyph").glyph, "download")
         compare(findChild(launcher, "helper-more-glyph").glyph, "chevron-down")
         verify(!findChild(launcher, "helpers-more-rows").visible)
@@ -4351,6 +4364,7 @@ TestCase {
         // One more row, the same tiles 12 under the first.
         tryCompare(sheet, "height", resting + 12 + 88)
         compare(layouts.mapToItem(row, 0, 0).y, row.labelHeight + 88 + 12)
+        compare(findChild(launcher, "helpers-more-rows").x, first.x)
         mouseClick(layouts, layouts.width / 2, layouts.height / 2)
         compare(results.helpersOpened[results.helpersOpened.length - 1], "layouts")
         // Shown again, More starts closed.

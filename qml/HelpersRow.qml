@@ -46,6 +46,12 @@ Item {
     readonly property var behindMore: split.rest
     property bool expanded: false
     readonly property int moreRows: expanded ? Math.ceil(behindMore.length / perRow) : 0
+    // The tiles stand as one block centred under the field: as wide as its
+    // widest row, rows under the first starting at the same left edge.
+    readonly property int firstCount: firstRow.length + (behindMore.length > 0 ? 1 : 0)
+    readonly property int columns: Math.max(firstCount, expanded ? Math.min(perRow, behindMore.length) : 0)
+    readonly property real blockWidth: Math.max(0, columns * (tileWidth + tileGap) - tileGap)
+    readonly property real blockX: Math.max(0, Math.round((width - blockWidth) / 2))
     // How tall it is, which sizes the sheet at rest.
     readonly property real naturalHeight: labelHeight + tileHeight + moreRows * (tileGap + tileHeight)
 
@@ -118,27 +124,32 @@ Item {
             scale: tileTap.pressed ? 1.04 : 1
             Behavior on scale { NumberAnimation { duration: tile.host.launcher.ms(120); easing.type: Easing.OutCubic } }
             Behavior on color { ColorAnimation { duration: tile.host.launcher.ms(120) } }
-            SuiteIcon {
-                objectName: tile.objectName + "-glyph"
-                x: (parent.width - 24) / 2
-                y: 16
-                width: 24
-                height: 24
-                glyph: tile.glyph
-            }
-            Text {
-                x: 4
-                y: 16 + 24 + 8
+            // The glyph and its name, centred together in the tile both ways,
+            // whether the name takes one line or two.
+            Column {
+                objectName: tile.objectName + "-face"
+                anchors.centerIn: parent
                 width: parent.width - 8
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                lineHeight: 14
-                lineHeightMode: Text.FixedHeight
-                text: tile.title
-                color: tile.host.launcher.primaryText
-                font.pixelSize: 12
+                spacing: 8
+                SuiteIcon {
+                    objectName: tile.objectName + "-glyph"
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 24
+                    height: 24
+                    glyph: tile.glyph
+                }
+                Text {
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    elide: Text.ElideRight
+                    lineHeight: 14
+                    lineHeightMode: Text.FixedHeight
+                    text: tile.title
+                    color: tile.host.launcher.primaryText
+                    font.pixelSize: 12
+                }
             }
         }
         // Keyboard focus alone gets an outline.
@@ -166,7 +177,7 @@ Item {
 
     Text {
         objectName: "helpers-label"
-        x: 12
+        x: helpersRow.blockX
         height: helpersRow.labelHeight
         verticalAlignment: Text.AlignTop
         text: words.i18n("Helpers")
@@ -176,6 +187,7 @@ Item {
 
     Row {
         objectName: "helpers-first-row"
+        x: helpersRow.blockX
         y: helpersRow.labelHeight
         spacing: helpersRow.tileGap
         Repeater {
@@ -205,11 +217,13 @@ Item {
         }
     }
 
-    // Behind More: rows of the same tiles, left-packed, as many as they take.
+    // Behind More: rows of the same tiles, as many as they take, starting at
+    // the first row's left edge.
     Flow {
         objectName: "helpers-more-rows"
+        x: helpersRow.blockX
         y: helpersRow.labelHeight + helpersRow.tileHeight + helpersRow.tileGap
-        width: parent.width
+        width: Math.max(helpersRow.blockWidth, helpersRow.tileWidth)
         spacing: helpersRow.tileGap
         visible: helpersRow.expanded
         Repeater {
