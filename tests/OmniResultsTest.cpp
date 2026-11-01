@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QAbstractListModel>
 #include <QElapsedTimer>
+#include <QTemporaryDir>
 #include <iostream>
 
 struct Runner : KRunner::AbstractRunner {
@@ -30,6 +31,10 @@ struct Stream : QAbstractListModel {
     }
 };
 struct Results : OmniResults {
+    // The paths these checks name are made up; each is taken as present
+    // unless a check says otherwise.
+    Results() { m_fileExists = [](const QString &) { return true; }; }
+    void realFiles() { m_fileExists = [](const QString &path) { return QFileInfo::exists(path); }; }
     using OmniResults::lessThan;
     QString testQuery;
     QString queryString() const override { return testQuery.isNull() ? OmniResults::queryString() : testQuery; }
@@ -73,6 +78,12 @@ int main(int argc, char **argv)
                 }
                 if (i < 6 && tier != 1) std::cout << "Result " << i << ": " << match.text().toStdString()
                     << " [" << match.id().toStdString() << "]\n";
+                // Every row as listed, with the provider, tier, rank and path
+                // it was judged by, for reading a live machine's results.
+                if (qEnvironmentVariableIsSet("OMNI_PROBE_ROWS"))
+                    std::cout << "Row " << i << " | " << match.runner()->id().toStdString() << " | tier " << tier
+                              << " | " << priority << " | " << match.text().toStdString() << " | "
+                              << matchFilePath(match).toStdString() << '\n';
                 if (match.runner()->id().contains(QStringLiteral("systemsettings")))
                     std::cout << "Setting: " << match.id().toStdString() << '\n';
             }
@@ -560,6 +571,78 @@ int main(int argc, char **argv)
         stream.add({file(QStringLiteral("/home/test/Pictures/timberwolves schedule.png"))});
         inside.invalidate();
         if (inside.rowCount() != 2 || inside.onlyFoundInside()) return 130;
+    }
+    {
+        // Files that answer as well, the one fewer folders down first.
+        Results steady;
+        steady.testQuery = QStringLiteral("chrome");
+        Stream stream;
+        steady.setSourceModel(&stream);
+        auto file = [&files](const QString &path) {
+            KRunner::QueryMatch match(&files);
+            match.setId(path);
+            match.setText(QFileInfo(path).fileName());
+            match.setData(QUrl::fromLocalFile(path));
+            return match;
+        };
+        stream.add({file(QStringLiteral("/home/test/Documents/work/a/b/chrome")),
+                    file(QStringLiteral("/home/test/Documents/chromebook.pdf"))});
+        steady.invalidate();
+        stream.add({file(QStringLiteral("/home/test/chrome")), file(QStringLiteral("/home/test/Pictures/chrome logo.png"))});
+        steady.invalidate();
+        steady.testQuery = QStringLiteral("chromeb");
+        steady.invalidate();
+        if (steady.rowCount() != 1) return 148;
+        steady.testQuery = QStringLiteral("chrome");
+        steady.invalidate();
+        if (steady.rowCount() != 4) return 149;
+        // Of the two files named exactly what was typed, the one nearer the
+        // top of the folders first.
+        if (matchFilePath(steady.getQueryMatch(steady.index(0, 0))) != QStringLiteral("/home/test/chrome")
+            || matchFilePath(steady.getQueryMatch(steady.index(1, 0))) != QStringLiteral("/home/test/Documents/work/a/b/chrome")) return 150;
+    }
+    {
+        // What a browser or an app built on one keeps in its profile is left
+        // out of Everyday, by the profile's own files or its storage folders;
+        // All files lists it. A file the index still names but that is gone
+        // is listed in neither.
+        if (usefulFile(QStringLiteral("/home/test/Documents/run/profile/Default/Partitions/app/chrome_cart_db"), QStringLiteral("chrome"))) return 151;
+        if (usefulFile(QStringLiteral("/home/test/Documents/run/zen/storage/permanent/chrome"), QStringLiteral("chrome"))) return 152;
+        if (!usefulFile(QStringLiteral("/home/test/Documents/Partition plan.pdf"), QStringLiteral("partition"))) return 153;
+        QTemporaryDir home;
+        if (!home.isValid()) return 154;
+        const QDir root(home.path());
+        root.mkpath(QStringLiteral("Documents/run/test-profile/Default"));
+        root.mkpath(QStringLiteral("Documents/run/zen-profile"));
+        auto touch = [&root](const QString &name) {
+            QFile made(root.filePath(name));
+            return made.open(QIODevice::WriteOnly);
+        };
+        if (!touch(QStringLiteral("Documents/run/test-profile/Local State"))
+            || !touch(QStringLiteral("Documents/run/test-profile/Default/chrome_cart_db"))
+            || !touch(QStringLiteral("Documents/run/zen-profile/prefs.js"))
+            || !touch(QStringLiteral("Documents/run/zen-profile/chrome"))
+            || !touch(QStringLiteral("Documents/chrome notes.pdf"))) return 155;
+        Results owned;
+        owned.realFiles();
+        owned.testQuery = QStringLiteral("chrome");
+        Stream stream;
+        owned.setSourceModel(&stream);
+        for (const auto &name : {QStringLiteral("Documents/run/test-profile/Default/chrome_cart_db"),
+                                 QStringLiteral("Documents/run/zen-profile/chrome"),
+                                 QStringLiteral("Documents/chrome notes.pdf"),
+                                 QStringLiteral("Documents/gone/chrome")}) {
+            KRunner::QueryMatch match(&files);
+            match.setId(name);
+            match.setText(QFileInfo(name).fileName());
+            match.setData(QUrl::fromLocalFile(root.filePath(name)));
+            stream.add({match});
+        }
+        owned.invalidate();
+        if (owned.rowCount() != 1 || QFileInfo(matchFilePath(owned.getQueryMatch(owned.index(0, 0)))).fileName()
+            != QStringLiteral("chrome notes.pdf")) return 156;
+        owned.setAllFiles(true);
+        if (owned.rowCount() != 3) return 157;
     }
     {
         // Three thousand files arriving a hundred batches at a time, as a

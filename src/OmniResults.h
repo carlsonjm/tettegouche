@@ -253,9 +253,14 @@ inline int nameMatchQuality(QString name, QString query)
 inline bool ordinaryFile(const QString &path, const QString &query)
 {
     const QString normalized = QLatin1Char('/') + path + QLatin1Char('/');
+    // The last two lines are what a browser or an app built on one keeps for
+    // itself in its profile: site storage, caches and crash reports.
     for (const auto &part : {"/.cache/", "/.git/", "/node_modules/", "/go/pkg/mod/",
                              "/.cargo/registry/", "/.venv/", "/__pycache__/",
-                             "/CMakeFiles/", "/CMakeTmp/"})
+                             "/CMakeFiles/", "/CMakeTmp/",
+                             "/Partitions/", "/IndexedDB/", "/Local Storage/", "/Session Storage/",
+                             "/Service Worker/", "/Code Cache/", "/GPUCache/", "/blob_storage/",
+                             "/Crashpad/", "/storage/permanent/", "/storage/default/", "/cache2/"})
         if (normalized.contains(QString::fromLatin1(part))) return false;
     static const QRegularExpression generatedDirectory(
         QStringLiteral("/(?:build(?:[-_][^/]*)?|cmake-build-[^/]+|[^/]+_autogen)/"));
@@ -482,16 +487,16 @@ public:
         connect(this, &QAbstractItemModel::rowsInserted, this, &OmniResults::selectionChanged);
         connect(this, &QAbstractItemModel::rowsRemoved, this, &OmniResults::selectionChanged);
         connect(this, &QAbstractItemModel::modelReset, this, &OmniResults::selectionChanged);
-        const auto refresh = [this]() {
+        const auto queueRefresh = [this]() {
             if (m_refreshQueued) return;
             m_refreshQueued = true;
             QTimer::singleShot(0, this, [this]() { m_refreshQueued = false; invalidate(); });
         };
-        connect(&m_combined, &QAbstractItemModel::rowsInserted, this, refresh);
-        connect(&m_combined, &QAbstractItemModel::rowsRemoved, this, refresh);
-        connect(&m_combined, &QAbstractItemModel::dataChanged, this, refresh);
-        connect(&m_combined, &QAbstractItemModel::modelReset, this, refresh);
-        connect(&m_combined, &QAbstractItemModel::layoutChanged, this, refresh);
+        connect(&m_combined, &QAbstractItemModel::rowsInserted, this, queueRefresh);
+        connect(&m_combined, &QAbstractItemModel::rowsRemoved, this, queueRefresh);
+        connect(&m_combined, &QAbstractItemModel::dataChanged, this, queueRefresh);
+        connect(&m_combined, &QAbstractItemModel::modelReset, this, queueRefresh);
+        connect(&m_combined, &QAbstractItemModel::layoutChanged, this, queueRefresh);
     }
     Q_INVOKABLE void pinSelection(int row) {
         if (row < 0 || row >= rowCount()) return;
@@ -947,6 +952,8 @@ protected:
         bool setting = false;
         int priority = 0;
         int tier = 3;
+        // How many folders down a file sits; nought for anything else.
+        int depth = 0;
         QString key;
     };
     const Verdict &verdict(const QModelIndex &index) const {
@@ -973,6 +980,7 @@ protected:
             Verdict found;
             found.priority = resultPriority(match, query);
             found.tier = searchTier(match);
+            if (found.tier == 1) found.depth = int(QDir::cleanPath(matchFilePath(match)).count(QLatin1Char('/')));
             found.key = destinationKey(match);
             found.setting = runner.contains(QStringLiteral("systemsettings"));
             found.eligible = candidateEligible(match, found.priority);
@@ -989,6 +997,8 @@ protected:
     // Every match judged afresh, counted so a test can hold the work to one
     // judgement for each.
     mutable int m_verdictChecks = 0;
+    // Whether a file is still there, asked once for each match judged.
+    std::function<bool(const QString &)> m_fileExists = [](const QString &path) { return QFileInfo::exists(path); };
     bool candidateEligible(const KRunner::QueryMatch &match, int priority) const {
         if (searchTier(match) != 1 && !noteMatch(match) && priority >= 5000) return false;
         if (match.runner() && match.runner() != &m_aliasRunner
@@ -1001,19 +1011,28 @@ protected:
         }
         if (searchTier(match) != 1) return true;
         const auto path = matchFilePath(match);
+        // KDE's file index can name a file deleted since it was indexed; a
+        // file that is gone is never listed, in either scope.
+        if (!path.isEmpty() && m_fileExists && !m_fileExists(path)) return false;
         const bool inside = priority == FilesFoundInside;
         if (m_allFiles) return !path.isEmpty()
             && (inside || nameMatchQuality(QFileInfo(path).fileName(), queryString()) < 3);
         if (queryString().trimmed().size() < 3 || bundledFile(path)
             || withinQuietFolder(path, quietFolders().split(QLatin1Char('\n')))) return false;
+        // A repository, and a browser's or an app's own profile, belong to
+        // the program that keeps them: a folder with a .git, a Chromium or
+        // Electron profile's Local State or Secure Preferences, or a Firefox
+        // family profile's prefs.js, at any depth above the file.
         const auto directory = QFileInfo(path).absolutePath();
         if (!m_repoDirectories.contains(directory)) {
             QDir parent(directory);
-            bool repository = false;
+            bool owned = false;
             do {
-                if (QFileInfo::exists(parent.filePath(QStringLiteral(".git")))) { repository = true; break; }
-            } while (parent.cdUp());
-            m_repoDirectories.insert(directory, repository);
+                for (const auto &marker : {".git", "Local State", "Secure Preferences", "prefs.js"}) {
+                    if (QFileInfo::exists(parent.filePath(QString::fromLatin1(marker)))) { owned = true; break; }
+                }
+            } while (!owned && parent.cdUp());
+            m_repoDirectories.insert(directory, owned);
         }
         // A file the words found sits past FilesAfterAids; one they did not
         // find stays below it, unrelated. One found by the words inside it is
@@ -1031,13 +1050,17 @@ protected:
             if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
         }
         const auto &judgedA = verdict(left);
-        const int qualityA = judgedA.priority, a = judgedA.tier;
+        const int qualityA = judgedA.priority, a = judgedA.tier, depthA = judgedA.depth;
         const auto &judgedB = verdict(right);
-        const int qualityB = judgedB.priority, b = judgedB.tier;
+        const int qualityB = judgedB.priority, b = judgedB.tier, depthB = judgedB.depth;
         if (qualityA != qualityB)
             return sortOrder() == Qt::AscendingOrder ? qualityA < qualityB : qualityA > qualityB;
         // QSortFilterProxyModel reverses the comparator for descending sorting.
         if (a != b) return sortOrder() == Qt::AscendingOrder ? a < b : a > b;
+        // Of two files that answer as well, the one fewer folders down first:
+        // what someone keeps near the top of their folders, before a copy
+        // deep inside a project or an app's data.
+        if (depthA != depthB) return sortOrder() == Qt::AscendingOrder ? depthA < depthB : depthA > depthB;
         // Preserve KDE's relevance order within each tier.
         return left.row() < right.row();
     }

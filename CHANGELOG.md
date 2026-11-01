@@ -5,6 +5,15 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Search's results no longer draw on top of each other as you type: rows
+  left from the letters before are cleared, and the rows under the
+  highlighted result move down to make room for its actions.
+- Search no longer lists a file that has been deleted but that KDE's file
+  index still remembers.
+- Everyday search leaves out what a browser or an app keeps in its own
+  profile, such as site storage and caches, and of two files named as well,
+  the one nearer the top of your folders comes first. All files still lists
+  everything.
 - Tettegouche speaks German, French, Spanish and Brazilian Portuguese as well as English, following the
   system language. These first translations are machine-made, and
   corrections from native speakers are welcome.

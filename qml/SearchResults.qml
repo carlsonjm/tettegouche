@@ -131,8 +131,16 @@ Item {
         // A wheel notch scrolls 80 pixels at Plasma's usual three lines per notch.
         Kirigami.WheelHandler { target: resultList; verticalStepSize: Qt.styleHints.wheelScrollLines * 80 / 3 }
         spacing: resultsArea.rowGap
+        // Rows are made only as they come into view, never ahead of it in
+        // the background: a row still being made when a new letter replaces
+        // the results lands later where nothing lays it out, and stays drawn
+        // over the new ones.
+        cacheBuffer: 0
         currentIndex: count > 0 ? 0 : -1
         model: launcher.searchResults
+        // The rows under it are laid out again once a row grows or shrinks,
+        // as when the highlighted result opens its actions.
+        function relayoutSoon() { Qt.callLater(resultList.forceLayout) }
         // Model insertions and changing child heights can preserve
         // an old scroll offset even when the first row is selected.
         // Let layout settle before aligning a fresh search to its
@@ -287,6 +295,10 @@ Item {
 
             width: resultList.width
             height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 8 : 0)
+            onHeightChanged: resultList.relayoutSoon()
+            // A row whose result is gone is never drawn, wherever it was
+            // left.
+            visible: index >= 0
             radius: launcher.paperRadius
             color: "transparent"
             // One fill for the result and the rows under it, so they read as
