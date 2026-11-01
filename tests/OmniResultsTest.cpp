@@ -74,6 +74,12 @@ int main(int argc, char **argv)
                 }
                 if (i < 6 && tier != 1) std::cout << "Result " << i << ": " << match.text().toStdString()
                     << " [" << match.id().toStdString() << "]\n";
+                // Every row as listed, with the provider, tier, rank and path
+                // it was judged by, for reading a live machine's results.
+                if (qEnvironmentVariableIsSet("OMNI_PROBE_ROWS"))
+                    std::cout << "Row " << i << " | " << match.runner()->id().toStdString() << " | tier " << tier
+                              << " | " << priority << " | " << match.text().toStdString() << " | "
+                              << matchFilePath(match).toStdString() << '\n';
                 if (match.runner()->id().contains(QStringLiteral("systemsettings")))
                     std::cout << "Setting: " << match.id().toStdString() << '\n';
             }
