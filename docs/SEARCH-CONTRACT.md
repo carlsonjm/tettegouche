@@ -239,15 +239,19 @@ Notes had when the note left. A
 ## Eligibility and confidence
 
 1. Scope decides eligibility, not authorship. Everyday hides quiet collections,
-   repositories, technical/internal files, and file matches shorter than three
-   characters. All files relaxes those Tettegouche filters but does not widen
-   KDE indexing or scan content.
+   repositories, technical/internal files, what a browser or an app built on
+   one keeps in its own profile (a folder holding a Chromium or Electron
+   `Local State` or `Secure Preferences`, or a Firefox-family `prefs.js`, and
+   site storage, caches and crash reports wherever they sit), and file matches
+   shorter than three characters. All files relaxes those Tettegouche filters
+   but does not widen KDE indexing or scan content.
 2. Confidence precedes provider preference: exact name, named intent, prefix,
    query words, descriptive context, then unrelated. Unrelated rows are omitted.
    Files and folders are the exception: they follow every app, setting, Helper
    and sum the words found, so a folder called settings never comes
-   before Settings. A file whose whole name is typed with its extension keeps
-   its place by confidence. A file Baloo found by the words inside it, its name
+   before Settings. Among files and folders that answer as well, the one fewer
+   folders down comes first. A file whose whole name is typed with its
+   extension keeps its place by confidence. A file Baloo found by the words inside it, its name
    holding none of them, follows every file and folder named for them. It is
    listed from three characters, and Everyday lists only a document someone
    wrote that way (PDF, Word, LibreOffice, RTF, EPUB), outside hidden folders;
@@ -341,6 +345,10 @@ Firefox-family handlers are verified.
 - Independent tools with similar names stay separate destinations.
 
 ## Stable interaction
+
+Results arrive and leave as themselves: a refresh removes a row that no longer
+answers and inserts one that now does, then puts the rest in order, so the
+list never draws a row on top of another while it fills in.
 
 Keyboard navigation and pointer/touch press pin the destination identity and a
 snapshot of displayed order. Late arrivals follow that snapshot; a replacement

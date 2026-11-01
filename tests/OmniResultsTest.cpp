@@ -5,6 +5,7 @@
 #include <QTimer>
 #include <QAbstractListModel>
 #include <QElapsedTimer>
+#include <QTemporaryDir>
 #include <iostream>
 
 struct Runner : KRunner::AbstractRunner {
@@ -538,6 +539,81 @@ int main(int argc, char **argv)
         if (inside.rowCount() != 2 || inside.onlyFoundInside()) return 130;
     }
     {
+        // Refreshing never swaps the whole set of rows in one layout change:
+        // rows that leave or arrive are removed and inserted, so a list view
+        // never keeps one drawn where it was.
+        Results steady;
+        steady.testQuery = QStringLiteral("chrome");
+        Stream stream;
+        steady.setSourceModel(&stream);
+        auto file = [&files](const QString &path) {
+            KRunner::QueryMatch match(&files);
+            match.setId(path);
+            match.setText(QFileInfo(path).fileName());
+            match.setData(QUrl::fromLocalFile(path));
+            return match;
+        };
+        int before = -1;
+        bool countKept = true;
+        QObject::connect(&steady, &QAbstractItemModel::layoutAboutToBeChanged, [&]() { before = steady.rowCount(); });
+        QObject::connect(&steady, &QAbstractItemModel::layoutChanged, [&]() { countKept = countKept && before == steady.rowCount(); });
+        stream.add({file(QStringLiteral("/home/test/Documents/work/a/b/chrome")),
+                    file(QStringLiteral("/home/test/Documents/chromebook.pdf"))});
+        steady.refresh();
+        stream.add({file(QStringLiteral("/home/test/chrome")), file(QStringLiteral("/home/test/Pictures/chrome logo.png"))});
+        steady.refresh();
+        steady.testQuery = QStringLiteral("chromeb");
+        steady.refresh();
+        if (steady.rowCount() != 1) return 148;
+        steady.testQuery = QStringLiteral("chrome");
+        steady.refresh();
+        if (!countKept || steady.rowCount() != 4) return 149;
+        // Of the two files named exactly what was typed, the one nearer the
+        // top of the folders first.
+        if (matchFilePath(steady.getQueryMatch(steady.index(0, 0))) != QStringLiteral("/home/test/chrome")
+            || matchFilePath(steady.getQueryMatch(steady.index(1, 0))) != QStringLiteral("/home/test/Documents/work/a/b/chrome")) return 150;
+    }
+    {
+        // What a browser or an app built on one keeps in its profile is left
+        // out of Everyday, by the profile's own files or its storage folders;
+        // All files lists it.
+        if (usefulFile(QStringLiteral("/home/test/Documents/run/profile/Default/Partitions/app/chrome_cart_db"), QStringLiteral("chrome"))) return 151;
+        if (usefulFile(QStringLiteral("/home/test/Documents/run/zen/storage/permanent/chrome"), QStringLiteral("chrome"))) return 152;
+        if (!usefulFile(QStringLiteral("/home/test/Documents/Partition plan.pdf"), QStringLiteral("partition"))) return 153;
+        QTemporaryDir home;
+        if (!home.isValid()) return 154;
+        const QDir root(home.path());
+        root.mkpath(QStringLiteral("Documents/run/test-profile/Default"));
+        root.mkpath(QStringLiteral("Documents/run/zen-profile"));
+        auto touch = [&root](const QString &name) {
+            QFile made(root.filePath(name));
+            return made.open(QIODevice::WriteOnly);
+        };
+        if (!touch(QStringLiteral("Documents/run/test-profile/Local State"))
+            || !touch(QStringLiteral("Documents/run/test-profile/Default/chrome_cart_db"))
+            || !touch(QStringLiteral("Documents/run/zen-profile/prefs.js"))
+            || !touch(QStringLiteral("Documents/run/zen-profile/chrome"))
+            || !touch(QStringLiteral("Documents/chrome notes.pdf"))) return 155;
+        Results owned;
+        owned.testQuery = QStringLiteral("chrome");
+        Stream stream;
+        owned.setSourceModel(&stream);
+        for (const auto &name : {QStringLiteral("Documents/run/test-profile/Default/chrome_cart_db"),
+                                 QStringLiteral("Documents/run/zen-profile/chrome"),
+                                 QStringLiteral("Documents/chrome notes.pdf")}) {
+            KRunner::QueryMatch match(&files);
+            match.setId(name);
+            match.setText(QFileInfo(name).fileName());
+            match.setData(QUrl::fromLocalFile(root.filePath(name)));
+            stream.add({match});
+        }
+        owned.refresh();
+        if (owned.rowCount() != 1 || QFileInfo(matchFilePath(owned.getQueryMatch(owned.index(0, 0)))).fileName()
+            != QStringLiteral("chrome notes.pdf")) return 156;
+        owned.setAllFiles(true);
+        if (owned.rowCount() != 3) return 157;
+    }
+    {
         // Three thousand files arriving a hundred batches at a time, as a
         // short query brings them: each is judged once, never again as later
         // batches arrive or the list is sorted and re-filtered.
@@ -559,7 +635,7 @@ int main(int argc, char **argv)
             }
             stream.add(arriving);
             // Search re-filters and re-sorts everything after each batch.
-            many.invalidate();
+            many.refresh();
             QCoreApplication::processEvents();
         }
         QCoreApplication::processEvents();
@@ -573,11 +649,11 @@ int main(int argc, char **argv)
         if (many.checks() != 3000) return failed(91);
         // The same file twice stands once.
         stream.add({stream.matches.first()});
-        many.invalidate();
+        many.refresh();
         if (many.rowCount() != 3000) return failed(92);
         // A new query judges afresh.
         many.testQuery = QStringLiteral("repo");
-        many.invalidate();
+        many.refresh();
         // The list is laid out again when it is next read.
         if (many.rowCount() != 3000 || many.checks() != 6000) return failed(93);
     }
