@@ -112,6 +112,7 @@ CoreFactProvider::CoreFactProvider(const QDBusConnection &bus, QObject *parent) 
     m_bus.connect(service(), path(), iface(), QStringLiteral("FactChanged"), this,
                   SLOT(factChanged(QVariantMap,QDBusMessage)));
     m_bus.connect(service(), path(), iface(), QStringLiteral("LayoutsChanged"), this, SLOT(layoutsMoved(QDBusMessage)));
+    m_bus.connect(service(), path(), iface(), QStringLiteral("ActionsChanged"), this, SLOT(actionsMoved(QDBusMessage)));
     m_bus.connect(service(), path(), iface(), QStringLiteral("LayoutOpened"), this,
                   SLOT(layoutOpened(QString,int,int,QStringList,QDBusMessage)));
 
@@ -149,16 +150,27 @@ void CoreFactProvider::ask() {
             for (const auto &fact : reply.value()) read.append(readFact(fact));
             if (read != m_facts) { m_facts = read; Q_EMIT changed(); }
         });
-        auto *actions = new QDBusPendingCallWatcher(m_bus.asyncCall(
-            QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Actions")), 5000), this);
-        connect(actions, &QDBusPendingCallWatcher::finished, this, [this, actions, generation] {
-            const QDBusPendingReply<QList<QVariantMap>> reply = *actions; actions->deleteLater();
-            if (reply.isError() || generation != m_generation || reply.value() == m_actions) return;
-            m_actions = reply.value();
-            Q_EMIT actionsChanged();
-        });
+        askActions();
         askLayouts();
     });
+}
+
+void CoreFactProvider::askActions() {
+    const int generation = m_generation;
+    auto *actions = new QDBusPendingCallWatcher(m_bus.asyncCall(
+        QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Actions")), 5000), this);
+    connect(actions, &QDBusPendingCallWatcher::finished, this, [this, actions, generation] {
+        const QDBusPendingReply<QList<QVariantMap>> reply = *actions; actions->deleteLater();
+        if (reply.isError() || generation != m_generation || reply.value() == m_actions) return;
+        m_actions = reply.value();
+        Q_EMIT actionsChanged();
+    });
+}
+
+// Core's Helpers changed, as when the app store came or went.
+void CoreFactProvider::actionsMoved(const QDBusMessage &message) {
+    if (!m_owner.isEmpty() && message.service() != m_owner) return;
+    askActions();
 }
 
 // A Core older than layouts answers that it has no such method: it keeps none.

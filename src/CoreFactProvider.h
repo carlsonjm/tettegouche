@@ -87,12 +87,15 @@ private Q_SLOTS:
     void ownerChanged(const QString &name, const QString &oldOwner, const QString &newOwner);
     void factChanged(const QVariantMap &fact, const QDBusMessage &message);
     void layoutsMoved(const QDBusMessage &message);
+    void actionsMoved(const QDBusMessage &message);
     void layoutOpened(const QString &id, int placed, int missed, const QStringList &missedNames,
                       const QDBusMessage &message);
 private:
     // A fact as it arrives, its choices read from the bus into plain maps.
     static QVariantMap readFact(const QVariantMap &fact);
     void ask();
+    // Asks Core for its upkeep cards.
+    void askActions();
     void askLayouts();
     void act(const QString &topic, const QString &action);
     // Asks Core about layouts, where it keeps them.

@@ -618,6 +618,7 @@ public:
         m_coreLayouts = std::move(layouts);
         m_openLayouts = std::move(openIsland);
         m_openLayout = std::move(open);
+        Q_EMIT helpersChanged();
     }
     // The pill a row carries at its end, such as Open on a saved layout's;
     // empty for a row with none.
@@ -628,22 +629,37 @@ public:
         return {};
     }
     // Every upkeep card Core lists, in Core's own order: its id, title, the
-    // line under it and its icon. None without Core.
+    // line under it, its icon and whether Core shows it behind the row's
+    // More. Layouts follows them, behind More, where Core keeps layouts.
+    // None without Core.
     QVariantList helpers() const {
         QVariantList listed;
         for (const auto &action : m_coreActions ? m_coreActions() : QList<QVariantMap>{}) {
             const auto id = action.value(QStringLiteral("id")).toString();
             const auto title = action.value(QStringLiteral("title")).toString();
-            if (id.isEmpty() || title.isEmpty()) continue;
+            if (id.isEmpty() || title.isEmpty() || id == QLatin1String("layouts")) continue;
             listed.append(QVariantMap{{QStringLiteral("id"), id}, {QStringLiteral("title"), title},
                                       {QStringLiteral("sub"), action.value(QStringLiteral("sub")).toString()},
-                                      {QStringLiteral("icon"), action.value(QStringLiteral("icon")).toString()}});
+                                      {QStringLiteral("icon"), action.value(QStringLiteral("icon")).toString()},
+                                      {QStringLiteral("more"), action.value(QStringLiteral("more")).toBool()}});
         }
+        if (!listed.isEmpty() && m_openLayouts && m_keepsLayouts && m_keepsLayouts())
+            listed.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("layouts")},
+                                      {QStringLiteral("title"), i18nc("@title the saved layouts", "Layouts")},
+                                      {QStringLiteral("sub"), i18nc("@info under Layouts", "Save what's open, reopen it in one tap")},
+                                      {QStringLiteral("icon"), QString()},
+                                      {QStringLiteral("more"), true}});
         return listed;
     }
     // Asks Core to open one on its own, as Enter on its row does; query goes
-    // only to Install an app, which searches for it.
+    // only to Install an app, which searches for it. Layouts opens its island
+    // in the band, as Layouts found by its words does.
     Q_INVOKABLE bool openHelper(const QString &id, const QString &query = QString()) {
+        if (id == QLatin1String("layouts")) {
+            if (!m_openLayouts || !m_keepsLayouts || !m_keepsLayouts()) return false;
+            m_openLayouts();
+            return true;
+        }
         if (!m_openCoreAction || id.isEmpty()) return false;
         m_openCoreAction(id, query);
         return true;

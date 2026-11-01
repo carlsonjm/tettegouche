@@ -64,9 +64,18 @@ each file it opens, and Plasma's privacy setting decides what is kept.
 
 The Helpers pill opens this first screen with only Split Rock's Helpers on it,
 so nobody has to remember a Helper's name to find it. Under the field, labelled
-Helpers, every upkeep card Core lists is a tile in Core's own order: its icon
-and its name on the subtle paper, 96 by 88 and 12 apart, narrower only when
-more than fit in one row. The field reads "Look over the computer, free up
+Helpers, every upkeep card Core lists is a tile in Core's own order: Lucide's
+glyph for that Helper, the same white line for each, and its name on the
+subtle paper, 96 by 88 and 12 apart, glyph and name centred together in the
+tile. The tiles stand as one block centred under the field, the label over
+its left edge. The first row holds what fits at that
+size; those Core marks for later, any the row has no room for and Layouts,
+where Core keeps layouts, wait behind a last tile, More. More adds rows of
+the same tiles under the first, from the block's left edge and 12 apart, as
+many as they take, and turns into Less; the sheet grows to hold them, and each time the
+Helpers show More starts closed. Layouts' tile opens its island in the band,
+as Layouts found by its words does. Core says when its Helpers change, as
+when the app store comes or goes, and the row follows. The field reads "Look over the computer, free up
 space…"; what is typed lists only Helpers, by the same words that find them
 on the first screen, best first, and never searches the web. A tap or Enter
 opens a Helper on its own, as its row does, and Search closes; Enter with

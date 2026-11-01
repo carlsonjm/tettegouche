@@ -4305,6 +4305,77 @@ TestCase {
         verify(!launcher.helpersShown)
         tryCompare(pill, "visible", false)
     }
+    // Six Helpers show at full size, then More, which adds rows of the same
+    // tiles under the first for the rest; each tile wears Lucide's glyph for
+    // its Helper, all drawn alike.
+    function test_helpersMoreAddsRowsOfTiles() {
+        controller.opened()
+        waitForOpen()
+        const tile = (id, title, more) => ({id: id, title: title, sub: "", icon: "preferences-system", more: more})
+        results.helpers = [
+            tile("install", "Install an app", false), tile("apps", "Your apps", false),
+            tile("update", "Check for updates", false), tile("space", "Free up space", false),
+            tile("health", "Health check", false), tile("changes", "What changed", false),
+            tile("tidy", "Tidy up Downloads", true), tile("restore", "Restore points", true),
+            tile("community", "Community apps", true), tile("layouts", "Layouts", true)
+        ]
+        const pill = findChild(launcher, "helpers-pill")
+        tryCompare(pill, "visible", true)
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        // The row places the pill once it shows, and makes room for it.
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
+        tryVerify(() => pill.x + pill.width <= pill.parent.width)
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.helpersShown)
+        const row = findChild(launcher, "helpers-row")
+        tryCompare(row, "opacity", 1)
+        const install = findChild(launcher, "helper-install")
+        const changes = findChild(launcher, "helper-changes")
+        const more = findChild(launcher, "helper-more")
+        verify(install.visible && changes.visible && more.visible)
+        compare(install.width, 96)
+        compare(left(more) - left(changes), 96 + 12)
+        // The block of tiles stands centred under the field, and each glyph
+        // and its name centred in their tile.
+        const first = findChild(launcher, "helpers-first-row")
+        const spare = row.width - (7 * 96 + 6 * 12)
+        verify(Math.abs(first.x - spare / 2) <= 1)
+        compare(findChild(launcher, "helpers-label").x, first.x)
+        for (const id of ["install", "update", "more"]) {
+            const face = findChild(launcher, "helper-" + id + "-face")
+            const tileOf = findChild(launcher, "helper-" + id)
+            verify(Math.abs(face.y + face.height / 2 - tileOf.height / 2) <= 0.5)
+            const glyphOf = findChild(launcher, "helper-" + id + "-glyph")
+            verify(Math.abs(glyphOf.mapToItem(tileOf, 0, 0).x + 12 - tileOf.width / 2) <= 0.5)
+        }
+        compare(findChild(launcher, "helper-install-glyph").glyph, "download")
+        compare(findChild(launcher, "helper-more-glyph").glyph, "chevron-down")
+        verify(!findChild(launcher, "helpers-more-rows").visible)
+        const sheet = findChild(launcher, "launcher-sheet")
+        const resting = 2 * launcher.contentInset + launcher.modeRowReach + launcher.fieldHeight + row.gap + row.labelHeight + 88
+        tryCompare(sheet, "height", resting)
+        mouseClick(more, more.width / 2, more.height / 2)
+        verify(row.expanded)
+        tryCompare(findChild(launcher, "helpers-more-rows"), "visible", true)
+        compare(findChild(launcher, "helper-more-glyph").glyph, "chevron-up")
+        const layouts = findChild(launcher, "helper-layouts")
+        verify(layouts.visible)
+        compare(findChild(launcher, "helper-layouts-glyph").glyph, "panels-top-left")
+        // One more row, the same tiles 12 under the first.
+        tryCompare(sheet, "height", resting + 12 + 88)
+        compare(layouts.mapToItem(row, 0, 0).y, row.labelHeight + 88 + 12)
+        compare(findChild(launcher, "helpers-more-rows").x, first.x)
+        mouseClick(layouts, layouts.width / 2, layouts.height / 2)
+        compare(results.helpersOpened[results.helpersOpened.length - 1], "layouts")
+        // Shown again, More starts closed.
+        launcher.showHelpers(false)
+        verify(!row.expanded)
+        launcher.showHelpers(true)
+        verify(launcher.helpersShown)
+        // Nothing behind More, no More.
+        results.helpers = [tile("install", "Install an app", false), tile("health", "Health check", false)]
+        tryCompare(findChild(launcher, "helper-more"), "visible", false)
+    }
     // With Split Rock's Ask installed the chip is named Ask: a question typed
     // there is handed to Ask, its answer shows above the Helpers it names,
     // and the first question without the model offers the download.
