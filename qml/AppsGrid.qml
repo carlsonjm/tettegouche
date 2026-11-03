@@ -178,10 +178,10 @@ Item {
                     visible: catalogDelegate.isFolder
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 7
                     anchors.rightMargin: 7
-                    anchors.bottomMargin: 8
+                    // On the line an application's name starts on.
+                    y: 10 + applicationGrid.tile.icon + 6
                     horizontalAlignment: TextInput.AlignHCenter
                     text: catalogDelegate.isFolder ? catalogDelegate.info.name : ""
                     color: launcher.primaryText
@@ -219,17 +219,24 @@ Item {
                 }
 
                 Text {
+                    objectName: "application-name"
                     visible: !catalogDelegate.isFolder
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
                     anchors.leftMargin: 7
                     anchors.rightMargin: 7
-                    anchors.bottomMargin: 8
+                    // From under the icon, so a name of one line and one of
+                    // two start on the same line.
+                    y: 10 + applicationGrid.tile.icon + 6
                     horizontalAlignment: Text.AlignHCenter
                     text: catalogDelegate.info.name
                     color: launcher.primaryText
                     font.pixelSize: 12
+                    // Two lines before a name is cut, as in Recent apps;
+                    // every tile size has the room under its icon.
+                    wrapMode: Text.Wrap
+                    maximumLineCount: 2
+                    lineHeight: 0.95
                     elide: Text.ElideRight
                 }
 

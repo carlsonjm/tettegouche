@@ -76,7 +76,7 @@ public:
         auto device = held(id);
         auto *access = device.as<Solid::StorageAccess>();
         if (!access || m_opening.contains(id) || m_removing.contains(id)) return;
-        m_removing.insert(id); m_labels[id] = device.description(); reload();
+        m_removing.insert(id); m_labels[id] = DriveRules::name(device); reload();
         bool started = false;
         auto opticalDevice = ancestor(device, Solid::DeviceInterface::OpticalDrive);
         if (auto *optical = opticalDevice.as<Solid::OpticalDrive>()) {
@@ -366,7 +366,7 @@ private:
             if (removable ? hidden.removable : hidden.fixed) continue;
             watch(device);
             const bool mounted = access->isAccessible();
-            drives.append(Drive{device.udi(), device.description(), device.icon(), mounted ? access->filePath() : QString(), mounted, removable,
+            drives.append(Drive{device.udi(), DriveRules::name(device), device.icon(), mounted ? access->filePath() : QString(), mounted, removable,
                 m_opening.contains(device.udi()), m_removing.contains(device.udi())});
         }
         for (const auto &phone : std::as_const(m_connected)) {

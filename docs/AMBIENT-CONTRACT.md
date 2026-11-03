@@ -149,7 +149,7 @@ application is not in front, and an application may raise it for itself. The
 list does not say which, so both show. The island shows the application's icon
 and name and, where its process has exactly one window kept off the task bar,
 that window's title, less the application's name, as the question; with none
-or several, it shows the icon and name alone. A tap on the island, or on the
+or several, it says Waiting for you there instead. A tap on the island, or on the
 bubble holding it, asks Plasma to activate the window, which brings the
 application and its dialog forward. It lasts while the flag does and leaves no
 line and no history. With several waiting, the island shows the newest. A

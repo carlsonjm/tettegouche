@@ -415,7 +415,7 @@ Item {
         x: 12
         y: firstRow.headHeight + (firstRow.appHeight - height) / 2
         visible: firstRow.appsShown && firstRow.appsOffered === 0
-        text: words.i18n("The apps you open show up here.")
+        text: words.i18n("Apps you used lately show up here when they aren't open or in the dock.")
         color: launcher.secondaryText
         font.pixelSize: 13
     }

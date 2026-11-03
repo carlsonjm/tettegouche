@@ -364,6 +364,10 @@ Item {
     readonly property var waitingShown: waitings.length > 0 ? waitings[waitings.length - 1] : null
     readonly property string waitingName: waitingShown ? waitingShown.title || words.i18n("An application") : ""
     readonly property string waitingQuestion: waitingShown && waitingShown.question ? waitingShown.question : ""
+    // The line under its name: its dialog's question, or with none to read,
+    // that it waits, so the island never reads as a second copy of the
+    // application's icon.
+    readonly property string waitingLine: waitingQuestion || (waitingShown ? words.i18n("Waiting for you") : "")
     readonly property string waitingIcon: waitingShown && waitingShown.icon ? waitingShown.icon : "application-x-executable"
 
     // A fact from Split Rock's Core that wants attention, such as the drive
@@ -464,7 +468,7 @@ Item {
     }
     function waitingWords(name, question) {
         return column(name ? textWidth(strongMetrics, waitingName) : 0,
-            question ? textWidth(smallMetrics, waitingQuestion) : 0, 180);
+            question ? textWidth(smallMetrics, waitingLine) : 0, 180);
     }
     function coreWords(name, detail) {
         return column(name ? textWidth(strongMetrics, coreName) : 0,
@@ -560,7 +564,7 @@ Item {
         case "screen.who": return screenWho !== "";
         case "screen.stop": return capability(screenShown, "stop");
         case "waiting.icon": case "waiting.name": return waitingShown !== null;
-        case "waiting.question": return tall && waitingQuestion !== "";
+        case "waiting.question": return tall && waitingLine !== "";
         case "core.icon": case "core.name": return coreShown !== null;
         case "core.detail": return tall && coreDetail !== "";
         case "core.never": return capability(coreShown, "never");
@@ -1512,7 +1516,11 @@ Item {
                     objectName: "ambient-waiting-question"
                     width: parent.width
                     visible: waitingIsland.has("question")
-                    text: surface.waitingQuestion
+                    text: surface.waitingLine
+                    // Waiting with no question, it says so in the
+                    // waiting colour.
+                    color: surface.waitingQuestion ? tone.text : tone.waitingText
+                    opacity: surface.waitingQuestion ? 0.66 : 1
                 }
             }
         }

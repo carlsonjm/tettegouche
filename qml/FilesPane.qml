@@ -868,8 +868,10 @@ Item {
                     hoverEnabled: true
                     text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold")
                     Accessible.name: pane.placesFolded ? text : words.i18n("Fold the places")
-                    C.ToolTip.visible: (pane.placesFolded || !parent.worded) && hovered
-                    C.ToolTip.text: text
+                    // Under a resting pointer it says what it does, open or
+                    // folded, worded or not.
+                    C.ToolTip.visible: hovered
+                    C.ToolTip.text: pane.placesFolded ? text : words.i18n("Fold the places to a row of icons")
                     C.ToolTip.delay: 600
                     onClicked: pane.placesOpen = !pane.placesOpen
                     background: Rectangle {
@@ -1737,8 +1739,11 @@ Item {
             RowLayout {
                 objectName: "files-open-row"
                 Layout.fillWidth: true
-                visible: !pane.compact
-                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? words.i18np("1 selected", "%1 selected", pane.selectedPaths.length) : pane.selectedPath.length ? pane.selectedPath.split("/").pop() : words.i18n("Select a file to open"); elide: Text.ElideMiddle; color: tone.secondaryText; font.pixelSize: 12 }
+                // Only once something is chosen: with nothing chosen, a tap
+                // or a double-click opens a file and the row would offer
+                // nothing.
+                visible: !pane.compact && (pane.selectedPath.length > 0 || (!!pane.selectedPaths && pane.selectedPaths.length > 0))
+                Text { Layout.fillWidth: true; text: pane.selectedPaths && pane.selectedPaths.length>1 ? words.i18np("1 selected", "%1 selected", pane.selectedPaths.length) : pane.selectedPath.split("/").pop(); elide: Text.ElideMiddle; color: tone.secondaryText; font.pixelSize: 12 }
                 PillAction {
                     objectName: "open-file"
                     text: pane.browser && pane.browser.opening ? words.i18n("Opening…") : words.i18n("Open")
