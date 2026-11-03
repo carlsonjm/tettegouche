@@ -78,6 +78,11 @@ announce_activity() {
 dbus-send --session --print-reply --reply-timeout=2000 --dest=io.github.carlsonjm.Tettegouche \
     /Launcher io.github.carlsonjm.Tettegouche.leaveFor array:string:--installed >/dev/null 2>&1 || true
 
+# The shell keeps compiled QML in its own cache and can load the widget's old
+# QML from it after an install, so the cache goes before the shell restarts;
+# the shell rebuilds it from the installed files.
+rm -rf -- "${XDG_CACHE_HOME:-${HOME}/.cache}/plasmashell/qmlcache"
+
 # The shell keeps the widget it loaded, so it restarts to run the new one.
 # Windows and the session stay as they are.
 widget="$(grep -m1 '/plasma/applets/co\.goodinput\.tettegouche\.so$' \
