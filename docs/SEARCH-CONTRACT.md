@@ -33,10 +33,15 @@ needs; with one, it is as tall as that
 section; with both, it is its full height. Floating, Search is one size
 on every display, 840 wide and at most as tall as both sections, so a large
 desktop screen shows it no bigger than a tablet does; only a smaller screen
-trims it. It stands where its full height is centred on the screen, above
-the keys while they are up, so typing, a drawer or a mode grows it to that
-height downward and the field stays where it is; with the field alone under
-the modes it is centred, and grows evenly up and down. Growing, shrinking or
+trims it. It stands where its full height is centred on the screen, so
+typing, a drawer or a mode grows it to that height downward and the field
+stays where it is; with the field alone under the modes it is centred, and
+grows evenly up and down. The on-screen keys never move it: while they are up
+its lower edge stops 24 above them, the space it keeps inside its own edges,
+and what it holds scrolls there, fading at its foot while more lies below.
+The modes stay too, so the field holds still as you type. Only keys that
+would leave less than 160 of it, the modes, the field and a little under
+them, lift it, by no more than that, as they rise. Growing, shrinking or
 Expand moves only the sheet's edge: what it holds is laid out once at the
 size the sheet is going to, which growing uncovers and shrinking closes in
 on, so nothing inside lays itself out again on each frame. It opens at its resting

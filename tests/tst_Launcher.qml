@@ -2735,23 +2735,35 @@ TestCase {
         // screen allows, and keeps that height for the results.
         tryCompare(sheet, "height", 700)
         tryCompare(sheet, "y", 20)
-        // The tallest keys: the sheet rises to the top and shortens to fit.
+        const fieldAt = field.mapToItem(launcher, 0, 0).y
+        const modes = findChild(launcher, "mode-row")
+        // The tallest keys: Search keeps its place, and its lower edge stops
+        // 24 above them; the field and the modes stay.
         launcher.keysRect = tallKeys
-        tryCompare(sheet, "height", 364)
-        compare(sheet.y, 10)
-        verify(bottomOf(sheet) <= 374.5)
-        verify(bottomOf(field) < 374)
-        verify(list.height >= 3 * 56)
-        verify(bottomOf(list) <= 374.5)
-        // The shortest keys: the sheet rises only as far as it must.
+        tryCompare(sheet, "height", 340)
+        compare(sheet.y, 20)
+        compare(field.mapToItem(launcher, 0, 0).y, fieldAt)
+        if (modes) verify(modes.opacity > 0)
+        verify(bottomOf(sheet) <= 360.5)
+        verify(bottomOf(field) < 360)
+        verify(list.height >= 2 * 56)
+        verify(bottomOf(list) <= 360.5)
+        // The shortest keys: the same place, a longer list.
         launcher.keysRect = shortKeys
-        tryCompare(sheet, "height", 524)
-        compare(sheet.y, 10)
-        verify(bottomOf(sheet) <= 534.5)
+        tryCompare(sheet, "height", 500)
+        compare(sheet.y, 20)
+        verify(bottomOf(sheet) <= 520.5)
+        // Keys that would leave less than the field and a little under it
+        // lift Search only by what they lack.
+        launcher.keysRect = Qt.rect(0, 200, 1000, 600)
+        tryCompare(sheet, "height", 160)
+        tryCompare(sheet, "y", 16)
+        verify(bottomOf(field) < 176)
         // The keys go down and the sheet returns.
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
         tryCompare(sheet, "height", 700)
         tryCompare(sheet, "y", 20)
+        compare(field.mapToItem(launcher, 0, 0).y, fieldAt)
         query.text = ""
         results.clear()
     }
@@ -2761,7 +2773,7 @@ TestCase {
         tryCompare(sheet, "y", controller.guestY)
         launcher.keysRect = tallKeys
         // A guest stays where Kadunce put it and shortens instead.
-        tryCompare(sheet, "height", 374 - controller.guestY)
+        tryCompare(sheet, "height", 360 - controller.guestY)
         compare(sheet.y, controller.guestY)
         compare(sheet.x, controller.guestX)
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
@@ -2774,12 +2786,12 @@ TestCase {
         controller.setDrawerExpanded(true, true)
         tryCompare(sheet, "height", 720)
         launcher.keysRect = tallKeys
-        tryCompare(sheet, "height", 364)
+        tryCompare(sheet, "height", 350)
         compare(sheet.y, 10)
         const grid = findChild(launcher, "application-grid")
         // At least a row of applications.
         verify(grid.height > 112)
-        verify(bottomOf(grid) <= 374.5)
+        verify(bottomOf(grid) <= 360.5)
         // Search, in the drawer's header, stays in view above the keys.
         tryCompare(launcher, "drawerProgress", 1)
         const field = findChild(launcher, "search-field")
@@ -2807,7 +2819,9 @@ TestCase {
         // One row under search: the path, then the actions at its end.
         compare(actionRow.mapToItem(launcher, 0, 0).y, navigation.mapToItem(launcher, 0, 0).y)
         launcher.keysRect = tallKeys
-        tryCompare(sheet, "height", 364)
+        // Files, not expanded, keeps its place too: only its foot rises.
+        tryCompare(sheet, "height", 340)
+        compare(sheet.y, 20)
         const pane = findChild(launcher, "files-pane")
         verify(pane.compact)
         verify(!tabs.visible && !openRow.visible)
@@ -2815,7 +2829,7 @@ TestCase {
         const actions = findChild(launcher, "new-folder")
         tryVerify(() => files.height >= 100)
         verify(actions.visible)
-        verify(bottomOf(files) <= 374.5)
+        verify(bottomOf(files) <= 360.5)
         verify(bottomOf(actions) < bottomOf(files))
         verify(field.mapToItem(launcher, 0, 0).y >= sheet.y)
         verify(bottomOf(field) < navigation.mapToItem(launcher, 0, 0).y)

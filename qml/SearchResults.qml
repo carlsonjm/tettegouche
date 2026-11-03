@@ -489,6 +489,20 @@ Item {
             }
         }
     }
+    // More below: the list's last row in view fades into the sheet, as when
+    // the keys cut the sheet short.
+    Rectangle {
+        objectName: "search-result-more"
+        anchors.left: resultList.left
+        anchors.right: resultList.right
+        anchors.bottom: resultList.bottom
+        height: 24
+        visible: resultList.contentHeight > resultList.height + 1 && !resultList.atYEnd
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(launcher.surfaceColor.r, launcher.surfaceColor.g, launcher.surfaceColor.b, 0) }
+            GradientStop { position: 1; color: launcher.surfaceColor }
+        }
+    }
 
     Text {
         anchors.centerIn: parent

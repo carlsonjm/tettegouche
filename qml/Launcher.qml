@@ -152,11 +152,9 @@ Item {
     readonly property int noteRadius: 12
     readonly property int contentInset: 24
     // The room the row of modes takes above the rest: its 40 pills and 16
-    // below them (Comfortable), within the 24 the sheet keeps all round.
-    // With the on-screen keys up over a search, the row gives its room to
-    // the results.
-    readonly property bool modeRowShown: !(keysUp && query.text.length > 0 && !drawerOpen && !modeOpen)
-    readonly property int modeRowReach: modeRowShown ? 56 : 0
+    // below them (Comfortable), within the 24 the sheet keeps all round. It
+    // stays with the on-screen keys up, so the field never moves as you type.
+    readonly property int modeRowReach: 56
     // Search's field, the same on every screen: 44, the height it first had
     // in use, and the touch target's.
     readonly property int fieldHeight: 44
@@ -1138,42 +1136,53 @@ Item {
         // field needs: 592 and the 24 on each side.
         readonly property real smallWidth: 640
         readonly property bool small: resting && firstRow.sections === 0 && !root.helpersShown
-        // With the keys up the sheet rises only as far as it must, never
-        // leaving the room Kadunce gave a guest, then shortens to fit.
+        // The line the sheet keeps above while the keys are up: as far from
+        // them as its own content is from its edges, 24, eased in with them.
         readonly property real keysLine: root.height - root.keysReach
-        // The room it is centred in: the work area, above the keys while
-        // they are up.
-        readonly property real room: Math.min(root.launcherController.availableArea.y
-            + root.launcherController.availableArea.height, keysLine) - root.launcherController.availableArea.y
+            - Math.min(root.contentInset - 10, root.keysReach)
         readonly property real highest: root.launcherController.guestMode
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + Math.min(10, Math.round((root.launcherController.availableArea.height - restHeight) / 2))
+        // Floating, Search has one place, worked out as if the keys were
+        // down: they never move it. Its height then, and the height it is
+        // placed by, its working height unless the field rests alone, so
+        // typing moves no edge but the lower one.
+        readonly property real freeHeight: Math.max(Math.min(restHeight, 160),
+            Math.min(restHeight, root.height - highest))
+        readonly property real placeHeight: small ? freeHeight
+            : Math.max(freeHeight, Math.max(Math.min(fullHeight, 160), Math.min(fullHeight, root.height - highest)))
+        readonly property real home: root.launcherController.availableArea.y
+            + (root.launcherController.drawerExpanded ? 10
+                : Math.max(0, Math.min(Math.round((root.launcherController.availableArea.height - placeHeight) / 2),
+                                       root.launcherController.availableArea.height - freeHeight - 10)))
+        // With the keys up, it keeps its place and its lower edge stops
+        // above them. Only keys that would leave less than the modes, the
+        // field and a little under it lift it, by no more than that, as they
+        // rise.
+        readonly property real holdHeight: Math.min(freeHeight, 160)
         x: root.launcherController.guestMode
             ? root.launcherController.guestX
             : root.launcherController.availableArea.x
                 + (root.launcherController.availableArea.width - width) / 2
-        y: Math.max(highest, Math.min(keysLine - height, root.launcherController.guestMode
-            ? root.launcherController.guestY
-            : root.launcherController.availableArea.y
-                + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((room - placeHeight) / 2), room - height - 10)))))
+        // A guest stays in the room Kadunce gave it and shortens to fit.
+        y: root.launcherController.guestMode
+            ? Math.max(highest, Math.min(keysLine - height, root.launcherController.guestY))
+            : Math.max(highest, Math.min(home, keysLine - holdHeight))
         // The size it is going to, which what it holds is laid out at.
         readonly property real targetWidth: root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
-        readonly property real targetHeight: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
-        // The height it is placed by: its working height, unless the field
-        // rests alone, so typing moves no edge but the lower one.
-        readonly property real placeHeight: small ? height
-            : Math.max(height, Math.max(Math.min(fullHeight, 160), Math.min(fullHeight, keysLine - highest)))
+        readonly property real targetHeight: root.launcherController.guestMode
+            ? Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+            : Math.min(freeHeight, Math.max(holdHeight, keysLine - y))
         width: targetWidth
         height: targetHeight
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Placed by its working height, so it grows downward with no motion
-        // of its own.
+        // of its own; the keys never move it.
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { enabled: root.sheetSettled; NumberAnimation { id: sheetWiden; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.

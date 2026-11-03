@@ -138,7 +138,7 @@ Item {
     y: -launcher.modeRowReach - 2
     width: parent.width + 2
     height: 44
-    opacity: launcher.applicationLaunchPending || !launcher.modeRowShown ? 0 : launcher.openingControls
+    opacity: launcher.applicationLaunchPending ? 0 : launcher.openingControls
     visible: opacity > 0
     enabled: opacity > 0.5 && !launcher.modeGrowing && !launcher.choosingFolder
     transform: Translate { y: (1 - launcher.openingControls) * 6 }
