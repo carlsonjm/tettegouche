@@ -64,6 +64,16 @@ Item {
     // Core lists, and what is typed there finds only Helpers. Offered only
     // while Core lists some.
     property bool helpersShown: false
+    // What Search shows in place of its first screen: "apps", "files",
+    // "notes", "helpers", or "" for the first screen itself.
+    readonly property string destination: helpersShown ? "helpers"
+        : drawerOpen ? (filesMode ? "files" : "apps")
+        : modeOpen ? modeShown : ""
+    // The destination a key, the dot's slide or an island opened straight,
+    // with no first screen before it; Esc there closes Search, as the key
+    // pressed again does. Anywhere else it is "".
+    property string openedStraight: ""
+    onDestinationChanged: if (destination !== openedStraight) openedStraight = ""
     readonly property var helpers: root.searchResults.helpers || []
     onHelpersShownChanged: root.searchResults.helpersOnly = root.helpersShown
     onHelpersChanged: {
@@ -365,6 +375,7 @@ Item {
         root.drawerOpen = false
         root.drawerProgress = 0
         root.sortMenuOpen = false
+        root.openedStraight = ""
         modeSettle.stop()
         modeTimeout.stop()
         modeExit.stop()
@@ -894,6 +905,13 @@ Item {
                 event.accepted = true
                 return
             }
+            // Opened straight by its key, there is no first screen to step
+            // back to: Search closes, and the next Meta opens it again.
+            if (root.openedStraight !== "" && root.destination === root.openedStraight) {
+                root.launcherController.close()
+                event.accepted = true
+                return
+            }
             if (root.modeOpen) {
                 root.closeMode()
                 event.accepted = true
@@ -983,6 +1001,7 @@ Item {
             if (mode === "note" || mode.startsWith("note:")) {
                 if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
                 root.openModeDirectly("notes", mode === "note" ? "new" : mode)
+                root.openedStraight = "notes"
                 return
             }
             // Back from a note handed to the notes application's card: Notes
@@ -1008,6 +1027,7 @@ Item {
                     root.helpersAwaited = true
                     helpersWait.restart()
                 }
+                root.openedStraight = "helpers"
                 return
             }
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
@@ -1016,6 +1036,7 @@ Item {
                 root.openModeDirectly(mode)
                 const coming = (root.modeOpen && root.modeShown === mode) || root.modeAwaited === mode
                 if (!shown && coming) root.launcherController.setDrawerExpanded(true, true)
+                if (coming) root.openedStraight = "notes"
                 return
             }
             const files = mode === "files"
@@ -1024,6 +1045,7 @@ Item {
             else {
                 root.setDrawerOpen(true, files ? "files" : "apps")
                 root.launcherController.setDrawerExpanded(true, true)
+                root.openedStraight = files ? "files" : "apps"
             }
         }
         function onGuestLaunchReady() {

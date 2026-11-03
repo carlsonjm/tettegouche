@@ -5,6 +5,12 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Esc in Files or Apps opened with Meta+E, Meta+G or the dot's slide closes
+  Search, as the key pressed again does. Before, it stepped back to Search's
+  first screen, so a Meta pressed next closed Search and what you typed went
+  into the window behind it.
+- The eye in the search field, and Fold in Files, say what they do when the
+  pointer rests on them.
 - Search's results no longer draw on top of each other as you type: rows
   left from the letters before are cleared, and the rows under the
   highlighted result move down to make room for its actions.

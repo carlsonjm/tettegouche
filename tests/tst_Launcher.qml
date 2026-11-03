@@ -3503,6 +3503,43 @@ TestCase {
         verify(!launcher.drawerOpen)
         compare(controller.closes, 2)
     }
+    // Esc in a drawer that Meta+G or Meta+E opened closes Search, as the
+    // key pressed again does, so the next Meta opens Search rather than
+    // closing a first screen nobody asked for. A drawer reached from the
+    // first screen steps back to it.
+    function test_escClosesWhatAKeyOpened() {
+        launcher.fileBrowser = filesMock
+        controller.opened()
+        waitForOpen()
+        controller.closes = 0
+        controller.drawerRequested("files")
+        tryCompare(launcher, "drawerOpen", true)
+        compare(launcher.openedStraight, "files")
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(controller.closes, 1)
+        controller.opened()
+        waitForOpen()
+        compare(launcher.openedStraight, "")
+        controller.drawerRequested("apps")
+        tryCompare(launcher, "drawerOpen", true)
+        // Moving to another drawer, it is one reached inside Search.
+        launcher.setDrawerOpen(true, "files")
+        compare(launcher.openedStraight, "")
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 1)
+        // From the first screen's own pill, Esc steps back to it.
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 1)
+        tryCompare(launcher, "drawerProgress", 0)
+        controller.drawerExpanded = false
+    }
     // The dot's slide asks for Notes as Meta+G asks for Apps: Notes opens,
     // and asked again, Search closes.
     function test_modeRequests() {
