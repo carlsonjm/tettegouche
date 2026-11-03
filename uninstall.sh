@@ -64,6 +64,7 @@ else
         /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche.png
         /usr/share/icons/hicolor/512x512/apps/co.goodinput.tettegouche-logo.png
         /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche-apps.svg
+        /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche-files.svg
         /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche.svg
         /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
     )

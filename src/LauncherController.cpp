@@ -867,7 +867,7 @@ bool LauncherController::popOutFilesWindow()
         made->view = std::make_unique<QQuickView>(m_view->engine(), nullptr);
         QQuickView *view = made->view.get();
         view->setTitle(i18n("Files"));
-        view->setIcon(QIcon::fromTheme(QStringLiteral("system-file-manager")));
+        view->setIcon(QIcon::fromTheme(QStringLiteral("co.goodinput.tettegouche-files"), QIcon::fromTheme(QStringLiteral("system-file-manager"))));
         view->setResizeMode(QQuickView::SizeRootObjectToView);
         view->setMinimumSize(QSize(420, 320));
         view->setInitialProperties({
