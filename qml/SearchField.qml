@@ -61,7 +61,7 @@ Rectangle {
     opacity: (launcher.applicationLaunchPending ? 0 : 1)
         * Math.max(0, 1 - launcher.modeProgress * 2)
         * launcher.openingControls
-    enabled: !launcher.applicationLaunchPending && !launcher.modeOpen
+    enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
     // A hairline of light along its upper edge, as on a raised
     // key, and a ring that comes up while it holds the keys.
@@ -191,6 +191,8 @@ Rectangle {
         onActiveFocusChanged: {
             if (activeFocus) {
                 launcher.searchEngaged = true
+            } else {
+                launcher.keysHandOver = false
             }
         }
 

@@ -426,8 +426,10 @@ Item {
         drawerSettle.to = open ? 1 : 0
         drawerSettle.restart()
         if (open) {
-            root.searchEngaged = false
-            root.forceActiveFocus()
+            // On-screen keys already up stay up: the field keeps them.
+            root.searchEngaged = root.keysUp
+            if (root.keysUp) query.forceActiveFocus()
+            else root.forceActiveFocus()
             if (!root.filesMode) {
                 root.applicationCatalog.refreshUse()
                 // An application installed a moment ago shows as Apps opens.
@@ -671,6 +673,7 @@ Item {
         root.showHelpers(false)
         if (view === "page") client.start()
         root.modeShown = name
+        root.keysHandOver = root.keysUp && query.activeFocus
         root.modeOpen = true
         root.sortMenuOpen = false
         modeSettle.to = 1
@@ -742,8 +745,13 @@ Item {
         ignoreUnknownSignals: true
         function onAvailableChanged() { root.settleAwaitedMode(false) }
     }
+    // Notes opened with the on-screen keys up: the search field keeps the
+    // cursor, and so the keys, until Find a note can take it from it, rather
+    // than letting it fall to the window on the way.
+    property bool keysHandOver: false
     function closeMode(keepSize) {
         if (!root.modeOpen || root.modeGrowing) return
+        root.keysHandOver = false
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
         // Search goes back to the size it had before Expand, unless a drawer
@@ -751,7 +759,9 @@ Item {
         if (!keepSize && root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
-        root.forceActiveFocus()
+        // Keys up stay up, the field taking them back from Find a note.
+        if (root.keysUp) query.forceActiveFocus()
+        else root.forceActiveFocus()
     }
     function closeNotes() { root.closeMode() }
     // Pop out grows the window as Apps does, and the application's own window
@@ -1428,6 +1438,7 @@ Item {
                 anchors.fill: parent
                 z: 5
                 quickNote: root.quickNote
+                keysUp: root.keysUp
                 progress: root.notesProgress
                 resizing: sheetResize.running
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)

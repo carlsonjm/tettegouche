@@ -5,11 +5,17 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Moving between Search, Apps, Files and Notes with the on-screen keys up
+  keeps them up, the cursor going straight to the new tab's field: Find a
+  note in Notes, the search field in the others. Before, they dropped away,
+  or went down and came back as Notes opened.
 - Search holds still when the on-screen keys come up. Before, it moved up to
   centre itself in the space above them, even when they would never have
   reached it, and typing with the keys up tucked away Apps, Files, Notes and
   Ask, so the field jumped again. Now only its lower edge stops above the
-  keys, and a long list scrolls there, fading at its foot.
+  keys, and a long list scrolls there, fading at its foot. On Shuffle, where
+  the dock steps aside for the keys, that no longer nudges Search down and
+  back up either.
 - After Tettegouche is updated by a package, the next time you open Search,
   Apps or Files, the updated Search opens. Before, the copy kept ready in the
   background went on answering until it was next closed or you signed out.
