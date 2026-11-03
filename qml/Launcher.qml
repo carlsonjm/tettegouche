@@ -673,6 +673,7 @@ Item {
         root.showHelpers(false)
         if (view === "page") client.start()
         root.modeShown = name
+        root.keysHandOver = root.keysUp && query.activeFocus
         root.modeOpen = true
         root.sortMenuOpen = false
         modeSettle.to = 1
@@ -744,8 +745,13 @@ Item {
         ignoreUnknownSignals: true
         function onAvailableChanged() { root.settleAwaitedMode(false) }
     }
+    // Notes opened with the on-screen keys up: the search field keeps the
+    // cursor, and so the keys, until Find a note can take it from it, rather
+    // than letting it fall to the window on the way.
+    property bool keysHandOver: false
     function closeMode(keepSize) {
         if (!root.modeOpen || root.modeGrowing) return
+        root.keysHandOver = false
         if (root.modeShown === "notes") root.quickNote.flush()
         root.modeOpen = false
         // Search goes back to the size it had before Expand, unless a drawer
