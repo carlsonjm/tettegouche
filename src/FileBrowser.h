@@ -1256,9 +1256,16 @@ private:
         return location == QDir::homePath() ? i18n("Home") : QDir(location).dirName();
     }
     static QVariantList folderCrumbs(const QString &folder) {
-        QVariantList result{QVariantMap{{QStringLiteral("label"), QStringLiteral("/")}, {QStringLiteral("path"), QStringLiteral("/")}}};
-        QString accumulated;
-        for (const auto &part : folder.split(QLatin1Char('/'), Qt::SkipEmptyParts)) {
+        // Inside the home folder the path starts at Home, as the places
+        // name it; anywhere else, at the system's root.
+        const QString home = QDir::cleanPath(QDir::homePath());
+        const bool inHome = home != QLatin1String("/")
+            && (folder == home || folder.startsWith(home + QLatin1Char('/')));
+        QVariantList result{inHome
+            ? QVariantMap{{QStringLiteral("label"), i18n("Home")}, {QStringLiteral("path"), home}}
+            : QVariantMap{{QStringLiteral("label"), QStringLiteral("/")}, {QStringLiteral("path"), QStringLiteral("/")}}};
+        QString accumulated = inHome ? home : QString();
+        for (const auto &part : (inHome ? folder.mid(home.size()) : folder).split(QLatin1Char('/'), Qt::SkipEmptyParts)) {
             accumulated += QLatin1Char('/') + part;
             result.append(QVariantMap{{QStringLiteral("label"), part}, {QStringLiteral("path"), accumulated}});
         }

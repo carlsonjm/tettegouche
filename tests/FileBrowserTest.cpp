@@ -109,6 +109,22 @@ private Q_SLOTS:
         QVERIFY(m_cache.isValid());
         qputenv("XDG_CACHE_HOME", m_cache.path().toUtf8());
     }
+    // Inside the home folder the path starts at Home; elsewhere at the root.
+    void crumbsStartAtHome() {
+        QTemporaryDir dir; QVERIFY(dir.isValid());
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,dir.path());
+        FileBrowser browser;
+        browser.navigate(QDir::homePath());
+        QCOMPARE(browser.crumbs().size(),1);
+        QCOMPARE(browser.crumbs().first().toMap().value(QStringLiteral("label")).toString(),QStringLiteral("Home"));
+        QCOMPARE(browser.crumbs().first().toMap().value(QStringLiteral("path")).toString(),QDir::cleanPath(QDir::homePath()));
+        browser.navigate(QStringLiteral("/usr/share"));
+        QStringList labels;
+        for(const auto &crumb:browser.crumbs()) labels<<crumb.toMap().value(QStringLiteral("label")).toString();
+        QCOMPARE(labels,(QStringList{QStringLiteral("/"),QStringLiteral("usr"),QStringLiteral("share")}));
+        QCOMPARE(browser.crumbs().last().toMap().value(QStringLiteral("path")).toString(),QStringLiteral("/usr/share"));
+    }
     void renameMoveTrash() {
         if(!qgetenv("XDG_DATA_HOME").contains("tette-trash-test."))QSKIP("Requires isolated tette-trash-test.* data directory on the home filesystem");
         QTemporaryDir dir; QVERIFY(dir.isValid());

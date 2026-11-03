@@ -2796,8 +2796,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         const tabs = findChild(launcher, "files-tabs")
         const openRow = findChild(launcher, "files-open-row")
-        // One tab gives its row back to the folder.
-        verify(!tabs.visible && openRow.visible)
+        // One tab gives its row back to the folder; Open shows only once a
+        // file is chosen.
+        verify(!tabs.visible && !openRow.visible)
+        filesMock.selectedPath = "/home/test/Notes.txt"
+        verify(openRow.visible)
+        filesMock.selectedPath = ""
         const navigation = findChild(launcher, "files-navigation")
         const actionRow = findChild(launcher, "files-actions")
         // One row under search: the path, then the actions at its end.
