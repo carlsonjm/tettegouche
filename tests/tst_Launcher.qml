@@ -2827,7 +2827,10 @@ TestCase {
         compare(findChild(launcher, "file-context-menu").bottomMargin, launcher.keysReach)
         compare(launcher.keysReach, 426)
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
-        tryVerify(() => openRow.visible)
+        tryVerify(() => !pane.compact)
+        filesMock.selectedPath = "/home/test/Notes.txt"
+        verify(openRow.visible)
+        filesMock.selectedPath = ""
         // A second tab brings the tab row back.
         filesMock.tabs = [{label:"Home",path:"/home/test"}, {label:"Downloads",path:"/home/test/Downloads"}]
         verify(tabs.visible)
