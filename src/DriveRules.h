@@ -1,8 +1,10 @@
 #pragma once
 
+#include <KLocalizedString>
 #include <Solid/Device>
 #include <Solid/Predicate>
 #include <Solid/StorageDrive>
+#include <Solid/StorageVolume>
 #include <QFile>
 #include <QSet>
 #include <QStandardPaths>
@@ -37,6 +39,17 @@ inline bool removable(const Solid::Device &device) {
     const auto driveDevice = ancestor(device, Solid::DeviceInterface::StorageDrive);
     const auto *drive = driveDevice.as<Solid::StorageDrive>();
     return drive && (drive->isRemovable() || drive->isHotpluggable());
+}
+
+// A drive's name as Files and Ambient show it: KDE's own, except a Mac's
+// disk with no label of its own, which KDE names by its size alone.
+inline QString name(const Solid::Device &device) {
+    if (const auto *volume = device.as<Solid::StorageVolume>(); volume && volume->label().isEmpty()) {
+        const auto type = volume->fsType();
+        if (type == QLatin1String("apfs") || type == QLatin1String("hfsplus") || type == QLatin1String("hfs"))
+            return i18n("macOS disk");
+    }
+    return device.description();
 }
 
 // What the person hid in Dolphin's places, by device and by group; read

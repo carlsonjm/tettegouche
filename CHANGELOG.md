@@ -5,6 +5,26 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Esc in Files or Apps opened with Meta+E, Meta+G or the dot's slide closes
+  Search, as the key pressed again does. Before, it stepped back to Search's
+  first screen, so a Meta pressed next closed Search and what you typed went
+  into the window behind it.
+- The eye in the search field, and Fold in Files, say what they do when the
+  pointer rests on them.
+- Search rests where its field will stay: typing, a drawer or Notes grows it
+  downward, so the field no longer jumps up under the pointer at the first
+  letter. With nothing set to show under the field, Search is still centred.
+- Apps gives a long name a second line before cutting it short.
+- Inside your home folder, Files' path starts at Home rather than at "/ ›
+  home › you". The Open row under the files shows only once a file is chosen.
+- A Mac's own disk with no name of its own is called macOS disk in Files and
+  the islands, rather than by its size.
+- An application waiting on you, with no question to show, says "Waiting for
+  you" under its name, so its island no longer looks like a second copy of
+  its dock icon.
+- The links under the search field say what they do: "Search all files" or
+  "Search everyday files only", and "Folders to skip…". With nothing to show,
+  Recent apps says that open apps and apps in the dock are left out.
 - Search's results no longer draw on top of each other as you type: rows
   left from the letters before are cleared, and the rows under the
   highlighted result move down to make room for its actions.

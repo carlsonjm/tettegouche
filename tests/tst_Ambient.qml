@@ -1178,11 +1178,12 @@ TestCase {
         surface.width = 60;
         settle();
         compare(shown(surface, "waiting"), ["icon"]);
-        // With no question to read, it names the application alone.
+        // With no question to read, it says that the application waits, so
+        // it never reads as a second copy of the application's icon.
         const plain = createSurface(460, [Object.assign({}, waiting, {question: ""})]);
         settle();
-        compare(shown(plain, "waiting"), ["icon", "name"]);
-        verify(!findChild(plain, "ambient-waiting-question").visible);
+        compare(shown(plain, "waiting"), ["icon", "name", "question"]);
+        compare(findChild(plain, "ambient-waiting-question").text, "Waiting for you");
     }
 
     // Beside music, a waiting application has the room first, and what does

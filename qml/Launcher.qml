@@ -64,6 +64,16 @@ Item {
     // Core lists, and what is typed there finds only Helpers. Offered only
     // while Core lists some.
     property bool helpersShown: false
+    // What Search shows in place of its first screen: "apps", "files",
+    // "notes", "helpers", or "" for the first screen itself.
+    readonly property string destination: helpersShown ? "helpers"
+        : drawerOpen ? (filesMode ? "files" : "apps")
+        : modeOpen ? modeShown : ""
+    // The destination a key, the dot's slide or an island opened straight,
+    // with no first screen before it; Esc there closes Search, as the key
+    // pressed again does. Anywhere else it is "".
+    property string openedStraight: ""
+    onDestinationChanged: if (destination !== openedStraight) openedStraight = ""
     readonly property var helpers: root.searchResults.helpers || []
     onHelpersShownChanged: root.searchResults.helpersOnly = root.helpersShown
     onHelpersChanged: {
@@ -365,6 +375,7 @@ Item {
         root.drawerOpen = false
         root.drawerProgress = 0
         root.sortMenuOpen = false
+        root.openedStraight = ""
         modeSettle.stop()
         modeTimeout.stop()
         modeExit.stop()
@@ -894,6 +905,13 @@ Item {
                 event.accepted = true
                 return
             }
+            // Opened straight by its key, there is no first screen to step
+            // back to: Search closes, and the next Meta opens it again.
+            if (root.openedStraight !== "" && root.destination === root.openedStraight) {
+                root.launcherController.close()
+                event.accepted = true
+                return
+            }
             if (root.modeOpen) {
                 root.closeMode()
                 event.accepted = true
@@ -983,6 +1001,7 @@ Item {
             if (mode === "note" || mode.startsWith("note:")) {
                 if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
                 root.openModeDirectly("notes", mode === "note" ? "new" : mode)
+                root.openedStraight = "notes"
                 return
             }
             // Back from a note handed to the notes application's card: Notes
@@ -1008,6 +1027,7 @@ Item {
                     root.helpersAwaited = true
                     helpersWait.restart()
                 }
+                root.openedStraight = "helpers"
                 return
             }
             if (root.modeOpen && root.modeShown !== mode) root.closeMode()
@@ -1016,6 +1036,7 @@ Item {
                 root.openModeDirectly(mode)
                 const coming = (root.modeOpen && root.modeShown === mode) || root.modeAwaited === mode
                 if (!shown && coming) root.launcherController.setDrawerExpanded(true, true)
+                if (coming) root.openedStraight = "notes"
                 return
             }
             const files = mode === "files"
@@ -1024,6 +1045,7 @@ Item {
             else {
                 root.setDrawerOpen(true, files ? "files" : "apps")
                 root.launcherController.setDrawerExpanded(true, true)
+                root.openedStraight = files ? "files" : "apps"
             }
         }
         function onGuestLaunchReady() {
@@ -1090,7 +1112,9 @@ Item {
         // Resting, the sheet is as tall as what its first screen shows: the
         // field alone, one section of what was used lately, or both, as far
         // as the screen allows. Typing, a drawer or a mode gives it its
-        // working height. Whatever its height, it stays centred.
+        // working height. With anything under the field it rests where its
+        // working height is centred, so the field stays where it is as the
+        // sheet grows downward; with the field alone it is centred at rest.
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
                 + (root.helpersShown ? helpersRow.gap + helpersRow.naturalHeight
@@ -1133,7 +1157,7 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((room - height) / 2), room - height - 10)))))
+                    : Math.max(0, Math.min(Math.round((room - placeHeight) / 2), room - height - 10)))))
         // The size it is going to, which what it holds is laid out at.
         readonly property real targetWidth: root.launcherController.guestMode
             ? root.launcherController.guestWidth
@@ -1141,11 +1165,15 @@ Item {
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         readonly property real targetHeight: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        // The height it is placed by: its working height, unless the field
+        // rests alone, so typing moves no edge but the lower one.
+        readonly property real placeHeight: small ? height
+            : Math.max(height, Math.max(Math.min(fullHeight, 160), Math.min(fullHeight, keysLine - highest)))
         width: targetWidth
         height: targetHeight
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        // Centred on its height as that moves, so it grows up and down
-        // evenly with no motion of its own.
+        // Placed by its working height, so it grows downward with no motion
+        // of its own.
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { enabled: root.sheetSettled; NumberAnimation { id: sheetWiden; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
@@ -1338,6 +1366,12 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: hiddenButton.toggle()
                     }
+                    // Named under a resting pointer, as Files' glyphs are.
+                    QQC2.ToolTip.visible: hiddenHover.hovered && hiddenButton.enabled
+                    QQC2.ToolTip.text: root.filesMode
+                        ? (showing ? words.i18n("Hide hidden files") : words.i18n("Show hidden files"))
+                        : (showing ? words.i18n("Hide hidden applications") : words.i18n("Show hidden applications"))
+                    QQC2.ToolTip.delay: 600
                 }
 
                 // The open drawer's header pulled down closes it.

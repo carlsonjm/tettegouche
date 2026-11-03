@@ -41,7 +41,9 @@ Item {
             objectName: "file-scope-toggle"
             Accessible.role: Accessible.Button
             Accessible.name: text
-            text: launcher.searchResults.allFiles ? words.i18n("All files ⇄") : words.i18n("Everyday search ⇄")
+            // What a tap does: everyday search leaves out what a person
+            // seldom means to find; all files lists every indexed file.
+            text: launcher.searchResults.allFiles ? words.i18n("Search everyday files only") : words.i18n("Search all files")
             color: launcher.primaryText
             font.pixelSize: 12
             height: resultsArea.scopeHeight
@@ -61,7 +63,7 @@ Item {
             Accessible.role: Accessible.Button
             Accessible.name: text
             Accessible.onPressAction: { quietPaths.text = launcher.searchResults.quietFolders || ""; quietPopup.open() }
-            text: words.i18n("Quiet folders…")
+            text: words.i18n("Folders to skip…")
             color: launcher.secondaryText
             font.pixelSize: 12
             height: resultsArea.scopeHeight
@@ -82,7 +84,7 @@ Item {
         background: Rectangle { color: launcher.surfaceColor; radius: launcher.paperRadius; border.color: launcher.surfaceOutline }
         contentItem: Column {
             spacing: 10
-            Text { text: words.i18n("Quiet folders"); color: launcher.primaryText; font.pixelSize: 16 }
+            Text { text: words.i18n("Folders to skip"); color: launcher.primaryText; font.pixelSize: 16 }
             Text {
                 text: words.i18n("One full folder path per line. All files includes these again.")
                 color: launcher.secondaryText

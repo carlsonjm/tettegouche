@@ -9,9 +9,10 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 out="${1:-${root}/po}"
 cd "${root}"
 
-launcher_cpp=(src/main.cpp src/LauncherController.cpp src/ApplicationCatalog.cpp src/FileBrowser.h src/PlaceBook.h src/FileDevices.h src/OmniResults.h src/RelatedInfo.cpp)
+launcher_cpp=(src/main.cpp src/LauncherController.cpp src/ApplicationCatalog.cpp src/FileBrowser.h src/PlaceBook.h src/FileDevices.h src/DriveRules.h src/OmniResults.h src/RelatedInfo.cpp)
 launcher_qml=(qml/*.qml)
-widget_cpp=(src/LauncherKeys.cpp src/MprisActivityProvider.cpp src/DriveActivityProvider.cpp
+# DriveRules.h names drives for Files and Ambient alike, so both ask for it.
+widget_cpp=(src/LauncherKeys.cpp src/MprisActivityProvider.cpp src/DriveActivityProvider.cpp src/DriveRules.h
     src/FinishNotices.cpp src/IncomingFileProvider.cpp src/TetteTransferProvider.cpp)
 widget_qml=(applet/*.qml)
 

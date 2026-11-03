@@ -60,9 +60,9 @@ than repeat it.
 | Tap or click Show in Folder, Open With… or Move to Trash, or Enter on one | Search moves to Files on the file's folder with the file chosen. Open With… then offers its applications, and Move to Trash asks first, as in Files. |
 | Turn the mouse wheel over the results | Scrolls 80 pixels a notch at Plasma's usual three lines a notch, in proportion to that setting. |
 | Tap or click "Search the web for …", in the middle with nothing found or as the last line after the results | Searches the web in the browser, which comes forward with the new tab. Enter reaches that last line only when every result is a document found by the words inside it; otherwise it opens the highlighted result. |
-| Tap or click "Everyday search ⇄" or "All files ⇄" | Switches between everyday results and every indexed file. |
-| Tap or click "Quiet folders…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
-| Esc | Closes an open menu, then an open drawer, then Search. |
+| Tap or click "Search all files" or "Search everyday files only" | Switches between everyday results and every indexed file. |
+| Tap or click "Folders to skip…" | Opens the list of folders everyday search leaves out, one path per line. Save keeps it; Cancel, Esc or a tap outside leaves it as it was. |
+| Esc | Closes an open menu, then an open drawer, then Search. A drawer, Notes or the Helpers opened straight by a key, the dot's slide or an island has no first screen behind it, so there Esc closes Search, as the key pressed again does. |
 | Tap or click outside Search | Closes it. Inside Kadunce's Spread, the space round Search belongs to Spread. |
 | Tap or click Close, last at the right of the row of modes, or of Notes' header | Closes Search, as a tap outside it does. |
 | Drag Search sideways inside Kadunce's Spread | Search follows and tells Spread how far it has moved. Let go: if Spread moves on, Search slides away to that side and closes; if not, it springs back. |
@@ -125,7 +125,7 @@ than repeat it.
 | Tap or click the eye, inside the search field beside its search icon | Shows hidden applications too, dimmed, so one can be unhidden from its sheet; again, hides them. |
 | Tap or click Expand, at the header's right | Apps fills the screen, or returns to Search's size when it already does; again, the other way. Apps, like every drawer and mode, opens at Search's size, a card in Spread, from the pills in Search; the dot's slide, Meta+G and Meta+E open it filling the screen; moving between Apps and Files keeps the size chosen. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
-| Esc | Closes the sort menu if it is open, otherwise the drawer. |
+| Esc | Closes the sort menu if it is open, otherwise the drawer; opened by Meta+G or the dot's slide, Search. |
 | Meta+G | Opens Search on Apps, filling the screen; pressed there again, closes it. It is listed under Tettegouche, or Search where Shuffle is installed, in System Settings' Shortcuts, where it can be changed. While another application holds Meta+G, such as KDE's Overview, KDE gives it to whichever had it first. |
 
 ## Files
@@ -139,7 +139,7 @@ than repeat it.
 | Tap or click a place | Opens that folder. |
 | Tap or click Recent | Shows the 30 files and folders used most recently, newest first, each with the folder it is in. The sort stays the order of use. |
 | Tap a folder in Recent or in a search's results | Opens it in place and clears the typed text. |
-| Tap or click a part of the path | Opens that folder. |
+| Tap or click a part of the path | Opens that folder. Inside your home folder the path starts at Home, as the places name it; elsewhere it starts at the system's root, /. |
 | Tap or click Back or Forward, or Alt+Left or Alt+Right | Goes back or forward in this tab's history. |
 | Alt+Up | Opens the folder that holds this one. |
 | Tap or click the empty end of the path, or Ctrl+L | Shows a field in the path's place for a folder's full path. Enter goes there; Esc hides the field. |
@@ -179,7 +179,7 @@ than repeat it.
 | Shift with an arrow, Home or End | Extends the selection. |
 | Ctrl with an arrow | Moves the focus outline without changing the selection. |
 | Ctrl+Shift with an arrow | Adds the range to the selection. |
-| Enter, or tap or click Open | Opens the selected file, as a double-click does. With nothing selected and text typed, Enter searches inside folders. |
+| Enter, or tap or click Open, which shows under the files once one is chosen | Opens the selected file, as a double-click does. With nothing selected and text typed, Enter searches inside folders. |
 | Right-click a file, or tap or click ⋯ with files chosen | Their action menu: Open, Open with, Copy, Cut, Rename, Move to Trash, Compress, Extract here for archives, Restore last trashed item, Select all, Hide or Unhide, Properties, and for a folder, Paste into it. |
 | Choose Open with | Lists the applications for the file's kind, the default first; Show all applications lists every one, with a filter. "Always use it" makes the pick KDE's default for that kind. A tap opens the file and closes Search. |
 | Choose Compress | Ark makes a zip beside the first: one item keeps its name, several make Archive.zip. Its progress shows in Ambient. |
@@ -207,7 +207,7 @@ than repeat it.
 | Pinch, Ctrl with + or −, or Ctrl and the scroll wheel | Makes the tiles larger or smaller, in four sizes. Ctrl+0 returns them to the usual size. The size is kept. |
 | Tap or click Pause, Resume or × on a running copy or move | Pauses, resumes or cancels that one alone. Other file actions stay available while it runs. |
 | Drag the drawer's top edge down | The drawer follows. Let go and it closes if pulled far enough, or stays open. |
-| Esc | Cancels a drag; otherwise clears the selection; otherwise closes Files. |
+| Esc | Cancels a drag; otherwise clears the selection; otherwise closes Files, and Search with it when Meta+E or the dot's slide opened Files. |
 | Meta+E | Opens Search on Files, filling the screen; pressed there again, closes it. It is listed and changed as Meta+G is. Dolphin holds Meta+E from its own install, so it opens Dolphin until Meta+E is taken from Dolphin in System Settings. |
 | With the on-screen keys up | The current folder, its path and its actions stay above them, and the tabs and the Open row step aside until the keys go down. Menus open above the keys. |
 | Drag the places' edge, the gap beside the rule, by finger or pointer | Sizes the places from their rail of icons up to 240; let go under 120 and they fold. The width is kept, apart from each window's own. |

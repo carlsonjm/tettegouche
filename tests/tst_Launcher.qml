@@ -610,6 +610,30 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
+    // A long name takes a second line before it is cut, and every name
+    // starts on the same line under its icon.
+    function test_applicationNamesWrap() {
+        controller.opened()
+        catalog.append({name: "Hardware Locality Topology Viewer Extended Edition", icon: "application-x-executable"})
+        catalog.append({name: "CachyOS Package Installer", icon: "application-x-executable"})
+        catalog.append({name: "Kate", icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        const grid = findChild(launcher, "application-grid")
+        const name = index => findChild(findChild(grid, "application-tile-" + index), "application-name")
+        tryVerify(() => name(0) && name(1) && name(2))
+        compare(name(0).lineCount, 2)
+        verify(name(0).truncated)
+        compare(name(1).lineCount, 2)
+        verify(!name(1).truncated)
+        compare(name(2).lineCount, 1)
+        compare(name(0).y, name(2).y)
+        const tile = findChild(grid, "application-tile-0")
+        verify(name(0).y + name(0).height <= tile.height)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        catalog.clear()
+    }
     // Holding an application, or right-clicking it, opens its sheet: its own
     // actions, which start afresh, Hide, Edit Application… where KDE's menu
     // editor can open it, and Uninstall once the software catalog can show it.
@@ -1580,6 +1604,19 @@ TestCase {
         tryCompare(sheet, "height", small + 24 + 40 + 116)
         verify(findChild(launcher, "recent-0").visible)
         verify(!findChild(launcher, "recent-files").visible)
+        // With something under the field, it rests where its full height is
+        // centred: typing grows it downward and the field stays where it is.
+        const restingY = sheet.y
+        const fieldY = field.mapToItem(null, 0, 0).y
+        verify(restingY < area.y + Math.round((area.height - sheet.height) / 2))
+        compare(restingY, area.y + Math.round((area.height - sheet.fullHeight) / 2))
+        query.text = "x"
+        tryCompare(sheet, "height", sheet.fullHeight)
+        compare(sheet.y, restingY)
+        compare(field.mapToItem(null, 0, 0).y, fieldY)
+        query.text = ""
+        tryCompare(sheet, "height", small + 24 + 40 + 116)
+        compare(sheet.y, restingY)
         launcher.recentFiles = true
         launcher.recentApps = false
         tryCompare(sheet, "height", Math.min(area.height - 40, small + 24 + 40 + 2 * 150 + 12))
@@ -2759,8 +2796,12 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         const tabs = findChild(launcher, "files-tabs")
         const openRow = findChild(launcher, "files-open-row")
-        // One tab gives its row back to the folder.
-        verify(!tabs.visible && openRow.visible)
+        // One tab gives its row back to the folder; Open shows only once a
+        // file is chosen.
+        verify(!tabs.visible && !openRow.visible)
+        filesMock.selectedPath = "/home/test/Notes.txt"
+        verify(openRow.visible)
+        filesMock.selectedPath = ""
         const navigation = findChild(launcher, "files-navigation")
         const actionRow = findChild(launcher, "files-actions")
         // One row under search: the path, then the actions at its end.
@@ -2786,7 +2827,10 @@ TestCase {
         compare(findChild(launcher, "file-context-menu").bottomMargin, launcher.keysReach)
         compare(launcher.keysReach, 426)
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
-        tryVerify(() => openRow.visible)
+        tryVerify(() => !pane.compact)
+        filesMock.selectedPath = "/home/test/Notes.txt"
+        verify(openRow.visible)
+        filesMock.selectedPath = ""
         // A second tab brings the tab row back.
         filesMock.tabs = [{label:"Home",path:"/home/test"}, {label:"Downloads",path:"/home/test/Downloads"}]
         verify(tabs.visible)
@@ -3502,6 +3546,43 @@ TestCase {
         wait(50)
         verify(!launcher.drawerOpen)
         compare(controller.closes, 2)
+    }
+    // Esc in a drawer that Meta+G or Meta+E opened closes Search, as the
+    // key pressed again does, so the next Meta opens Search rather than
+    // closing a first screen nobody asked for. A drawer reached from the
+    // first screen steps back to it.
+    function test_escClosesWhatAKeyOpened() {
+        launcher.fileBrowser = filesMock
+        controller.opened()
+        waitForOpen()
+        controller.closes = 0
+        controller.drawerRequested("files")
+        tryCompare(launcher, "drawerOpen", true)
+        compare(launcher.openedStraight, "files")
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        compare(controller.closes, 1)
+        controller.opened()
+        waitForOpen()
+        compare(launcher.openedStraight, "")
+        controller.drawerRequested("apps")
+        tryCompare(launcher, "drawerOpen", true)
+        // Moving to another drawer, it is one reached inside Search.
+        launcher.setDrawerOpen(true, "files")
+        compare(launcher.openedStraight, "")
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 1)
+        // From the first screen's own pill, Esc steps back to it.
+        launcher.setDrawerOpen(true, "files")
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        tryCompare(launcher, "drawerOpen", false)
+        compare(controller.closes, 1)
+        tryCompare(launcher, "drawerProgress", 0)
+        controller.drawerExpanded = false
     }
     // The dot's slide asks for Notes as Meta+G asks for Apps: Notes opens,
     // and asked again, Search closes.

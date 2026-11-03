@@ -47,7 +47,7 @@ void DriveActivityProvider::deviceAdded(const QString &udi) {
         if (accessible) mounted(udi);
     });
     const auto *volume = device.as<Solid::StorageVolume>();
-    plugged({udi, device.description(), device.icon(), volume ? qint64(volume->size()) : -1});
+    plugged({udi, DriveRules::name(device), device.icon(), volume ? qint64(volume->size()) : -1});
 }
 
 void DriveActivityProvider::plugged(const Drive &drive) {
