@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+<!-- Files: a folder, its tab faint behind it, drawn as Apps' tile is (co.goodinput.tettegouche-apps.svg). -->
+<defs><linearGradient id="pearl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset=".55" stop-color="#F4F4FA"/><stop offset="1" stop-color="#DCDCE4"/></linearGradient>
+<linearGradient id="tile" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2E2E30"/><stop offset="1" stop-color="#202022"/></linearGradient>
+</defs>
+<rect x="16" y="16" width="224" height="224" rx="35" fill="url(#tile)"/>
+<rect x="63" y="76" width="58.5" height="32.5" rx="16.25" fill="#F8F8FF" fill-opacity="0.5"/>
+<rect x="63" y="95.5" width="130" height="91" rx="22.75" fill="url(#pearl)"/>
+</svg>

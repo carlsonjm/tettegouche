@@ -224,9 +224,9 @@ install(FILES assets/co.goodinput.tettegouche-logo.png
         RENAME co.goodinput.tettegouche.png)
 install(FILES assets/co.goodinput.tettegouche-logo.png
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/512x512/apps)
-# Apps' launcher tile, drawn at any size; named apart from the widget's
+# Apps' and Files' tiles, drawn at any size; named apart from the widget's
 # plugin ID so the widget picker keeps the photo above.
-install(FILES assets/co.goodinput.tettegouche-apps.svg
+install(FILES assets/co.goodinput.tettegouche-apps.svg assets/co.goodinput.tettegouche-files.svg
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
 plasma_add_applet(co.goodinput.tettegouche
     CPP_SOURCES
