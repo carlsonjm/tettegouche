@@ -9,7 +9,9 @@ history carries the implementation detail.
   centre itself in the space above them, even when they would never have
   reached it, and typing with the keys up tucked away Apps, Files, Notes and
   Ask, so the field jumped again. Now only its lower edge stops above the
-  keys, and a long list scrolls there, fading at its foot.
+  keys, and a long list scrolls there, fading at its foot. On Shuffle, where
+  the dock steps aside for the keys, that no longer nudges Search down and
+  back up either.
 - After Tettegouche is updated by a package, the next time you open Search,
   Apps or Files, the updated Search opens. Before, the copy kept ready in the
   background went on answering until it was next closed or you signed out.

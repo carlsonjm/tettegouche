@@ -36,7 +36,8 @@ desktop screen shows it no bigger than a tablet does; only a smaller screen
 trims it. It stands where its full height is centred on the screen, so
 typing, a drawer or a mode grows it to that height downward and the field
 stays where it is; with the field alone under the modes it is centred, and
-grows evenly up and down. The on-screen keys never move it: while they are up
+grows evenly up and down. The on-screen keys never move it, nor does Shuffle's
+dock giving its band up to them: while they are up
 its lower edge stops 24 above them, the space it keeps inside its own edges,
 and what it holds scrolls there, fading at its foot while more lies below.
 The modes stay too, so the field holds still as you type. Only keys that

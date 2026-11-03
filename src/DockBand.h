@@ -9,15 +9,16 @@
 #include <algorithm>
 
 // The height Shuffle's dock reserves along the bottom of a display, read from
-// its dock-extent answer (version 1). Zero when the answer is not one, the
-// surface does not present there, or it has given its band up to the keys.
+// its dock-extent answer (version 1). Zero when the answer is not one or the
+// surface does not present there. A band given up to the on-screen keys still
+// counts: the keys cover it, and Search is placed as if they were down, so
+// their coming and going never moves it.
 inline int dockBandHeight(const QByteArray &payload)
 {
     const QJsonObject extent = QJsonDocument::fromJson(payload).object();
     if (extent.value(QStringLiteral("schema")).toString() != QStringLiteral("co.goodinput.shuffle.dock-extent")
         || extent.value(QStringLiteral("version")).toInt() != 1
-        || !extent.value(QStringLiteral("presenting")).toBool()
-        || !extent.value(QStringLiteral("reserving")).toBool(true)) return 0;
+        || !extent.value(QStringLiteral("presenting")).toBool()) return 0;
     return std::max(0, extent.value(QStringLiteral("band")).toObject().value(QStringLiteral("height")).toInt());
 }
 

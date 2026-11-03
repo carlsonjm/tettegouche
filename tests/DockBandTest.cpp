@@ -7,8 +7,10 @@ int main()
     if (dockBandHeight(presenting) != 56) return 1;
     // Without the reserving field, the band is still held.
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":true,"band":{"height":56}})") != 56) return 2;
-    // Given up to the keys, or not presenting, or another schema: nothing.
-    if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":true,"reserving":false,"band":{"height":56}})") != 0) return 3;
+    // Given up to the on-screen keys, the band still places Search, so the
+    // keys coming and going never move it.
+    if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":true,"reserving":false,"band":{"height":56}})") != 56) return 3;
+    // Not presenting, or another schema: nothing.
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":1,"presenting":false,"band":{"height":0}})") != 0) return 4;
     if (dockBandHeight(R"({"schema":"co.goodinput.shuffle.dock-extent","version":2,"presenting":true,"band":{"height":56}})") != 0) return 5;
     // A display the dock answers for as not presenting is an answer, so it
