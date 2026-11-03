@@ -610,6 +610,30 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
+    // A long name takes a second line before it is cut, and every name
+    // starts on the same line under its icon.
+    function test_applicationNamesWrap() {
+        controller.opened()
+        catalog.append({name: "Hardware Locality Topology Viewer Extended Edition", icon: "application-x-executable"})
+        catalog.append({name: "CachyOS Package Installer", icon: "application-x-executable"})
+        catalog.append({name: "Kate", icon: "application-x-executable"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        const grid = findChild(launcher, "application-grid")
+        const name = index => findChild(findChild(grid, "application-tile-" + index), "application-name")
+        tryVerify(() => name(0) && name(1) && name(2))
+        compare(name(0).lineCount, 2)
+        verify(name(0).truncated)
+        compare(name(1).lineCount, 2)
+        verify(!name(1).truncated)
+        compare(name(2).lineCount, 1)
+        compare(name(0).y, name(2).y)
+        const tile = findChild(grid, "application-tile-0")
+        verify(name(0).y + name(0).height <= tile.height)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        catalog.clear()
+    }
     // Holding an application, or right-clicking it, opens its sheet: its own
     // actions, which start afresh, Hide, Edit Application… where KDE's menu
     // editor can open it, and Uninstall once the software catalog can show it.
@@ -1580,6 +1604,19 @@ TestCase {
         tryCompare(sheet, "height", small + 24 + 40 + 116)
         verify(findChild(launcher, "recent-0").visible)
         verify(!findChild(launcher, "recent-files").visible)
+        // With something under the field, it rests where its full height is
+        // centred: typing grows it downward and the field stays where it is.
+        const restingY = sheet.y
+        const fieldY = field.mapToItem(null, 0, 0).y
+        verify(restingY < area.y + Math.round((area.height - sheet.height) / 2))
+        compare(restingY, area.y + Math.round((area.height - sheet.fullHeight) / 2))
+        query.text = "x"
+        tryCompare(sheet, "height", sheet.fullHeight)
+        compare(sheet.y, restingY)
+        compare(field.mapToItem(null, 0, 0).y, fieldY)
+        query.text = ""
+        tryCompare(sheet, "height", small + 24 + 40 + 116)
+        compare(sheet.y, restingY)
         launcher.recentFiles = true
         launcher.recentApps = false
         tryCompare(sheet, "height", Math.min(area.height - 40, small + 24 + 40 + 2 * 150 + 12))

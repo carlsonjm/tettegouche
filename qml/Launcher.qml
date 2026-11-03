@@ -1112,7 +1112,9 @@ Item {
         // Resting, the sheet is as tall as what its first screen shows: the
         // field alone, one section of what was used lately, or both, as far
         // as the screen allows. Typing, a drawer or a mode gives it its
-        // working height. Whatever its height, it stays centred.
+        // working height. With anything under the field it rests where its
+        // working height is centred, so the field stays where it is as the
+        // sheet grows downward; with the field alone it is centred at rest.
         readonly property real restingHeight: Math.min(root.launcherController.availableArea.height - 40,
             2 * root.contentInset + root.modeRowReach + root.fieldHeight
                 + (root.helpersShown ? helpersRow.gap + helpersRow.naturalHeight
@@ -1155,7 +1157,7 @@ Item {
             ? root.launcherController.guestY
             : root.launcherController.availableArea.y
                 + (root.launcherController.drawerExpanded ? 10
-                    : Math.max(0, Math.min(Math.round((room - height) / 2), room - height - 10)))))
+                    : Math.max(0, Math.min(Math.round((room - placeHeight) / 2), room - height - 10)))))
         // The size it is going to, which what it holds is laid out at.
         readonly property real targetWidth: root.launcherController.guestMode
             ? root.launcherController.guestWidth
@@ -1163,11 +1165,15 @@ Item {
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
         readonly property real targetHeight: Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
+        // The height it is placed by: its working height, unless the field
+        // rests alone, so typing moves no edge but the lower one.
+        readonly property real placeHeight: small ? height
+            : Math.max(height, Math.max(Math.min(fullHeight, 160), Math.min(fullHeight, keysLine - highest)))
         width: targetWidth
         height: targetHeight
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
-        // Centred on its height as that moves, so it grows up and down
-        // evenly with no motion of its own.
+        // Placed by its working height, so it grows downward with no motion
+        // of its own.
         Behavior on y { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         Behavior on width { enabled: root.sheetSettled; NumberAnimation { id: sheetWiden; duration: root.ms(220); easing.type: Easing.OutCubic } }
         // The keys' own easing already moves the sheet; chasing it would lag.
