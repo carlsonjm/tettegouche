@@ -17,6 +17,13 @@
 #include <KLocalizedString>
 #include <KShell>
 #include <KSycoca>
+#include <QCryptographicHash>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDateTime>
+#include <QGuiApplication>
+#include <QIcon>
+#include <QTimer>
 
 #include <QSettings>
 #include <QDir>
@@ -85,6 +92,20 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     connect(installs, &KDirWatch::dirty, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::created, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::deleted, settle, qOverload<>(&QTimer::start));
+    // An icon theme changes as a package adds or removes icons and its icon
+    // cache is rebuilt, which changes the theme's folder; that is checked
+    // too, as Apps opening checks it.
+    for (const QString &root : iconRoots()) {
+        installs->addDir(root);
+        const QFileInfoList themes = QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QFileInfo &theme : themes) installs->addDir(theme.absoluteFilePath());
+    }
+    m_iconStamp = iconStamp(iconRoots());
+    // Plasma's word that icons changed, as when the icon theme is chosen in
+    // System Settings: once the icon loader has read the themes again, the
+    // tiles are drawn afresh, so they look their icons up anew.
+    QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KIconLoader"),
+        QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged()));
     noteArrivals(m_entries);
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
@@ -185,6 +206,73 @@ void ApplicationCatalog::checkInstalled()
         }
     }
     KSycoca::self()->ensureCacheValid();
+    refreshIcons();
+}
+
+QStringList ApplicationCatalog::iconRoots()
+{
+    QStringList roots{QDir::homePath() + QStringLiteral("/.icons")};
+    roots += QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("icons"), QStandardPaths::LocateDirectory);
+    roots += QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("pixmaps"), QStandardPaths::LocateDirectory);
+    return roots;
+}
+
+QByteArray ApplicationCatalog::iconStamp(const QStringList &roots)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha1);
+    const auto note = [&hash](const QFileInfo &info) {
+        if (!info.exists()) return;
+        hash.addData(info.absoluteFilePath().toUtf8());
+        hash.addData(QByteArray::number(info.lastModified().toMSecsSinceEpoch()));
+        hash.addData(QByteArrayView("\n"));
+    };
+    for (const QString &root : roots) {
+        note(QFileInfo(root));
+        const QFileInfoList themes = QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+        for (const QFileInfo &theme : themes) {
+            note(theme);
+            note(QFileInfo(theme.absoluteFilePath() + QStringLiteral("/icon-theme.cache")));
+            // Themes keep application icons either as size/apps or as
+            // apps/size.
+            const QFileInfoList parts = QDir(theme.absoluteFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+            for (const QFileInfo &part : parts) {
+                if (part.fileName() == QStringLiteral("apps")) {
+                    note(part);
+                    const QFileInfoList sizes = QDir(part.absoluteFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+                    for (const QFileInfo &size : sizes) note(size);
+                } else {
+                    note(QFileInfo(part.absoluteFilePath() + QStringLiteral("/apps")));
+                }
+            }
+        }
+    }
+    return hash.result();
+}
+
+void ApplicationCatalog::refreshIcons()
+{
+    const QByteArray stamp = iconStamp(iconRoots());
+    if (stamp == m_iconStamp) return;
+    m_iconStamp = stamp;
+    // Qt's own icon lookup forgets what it found, and Plasma's icon loader
+    // is told, in Search alone, that icons changed; Apps is drawn afresh as
+    // that word arrives. Without Plasma's loader the word goes unheard, so
+    // Apps is drawn afresh here too.
+    if (qobject_cast<QGuiApplication *>(QCoreApplication::instance())) QIcon::setThemeSearchPaths(QIcon::themeSearchPaths());
+    QDBusConnection bus = QDBusConnection::sessionBus();
+    if (bus.isConnected()) {
+        QDBusMessage changed = QDBusMessage::createTargetedSignal(bus.baseService(), QStringLiteral("/KIconLoader"),
+            QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"));
+        changed << 0;
+        if (bus.send(changed)) return;
+    }
+    reload();
+}
+
+void ApplicationCatalog::iconsChanged()
+{
+    // After every other listener, Plasma's icon loader among them.
+    QTimer::singleShot(0, this, &ApplicationCatalog::reload);
 }
 
 void ApplicationCatalog::reload()

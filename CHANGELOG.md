@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- An application's icon that changes, as an update replaces or removes it,
+  shows changed in Apps the next time Apps opens. Before, Apps kept showing
+  the old icon until Search restarted. Choosing another icon theme in System
+  Settings now redraws Apps at once too.
 - Moving between Search, Apps, Files and Notes with the on-screen keys up
   keeps them up, the cursor going straight to the new tab's field: Find a
   note in Notes, the search field in the others. Before, they dropped away,
