@@ -42,7 +42,12 @@ process ready, so the next open shows at once; it releases its graphics
 resources, skips workspace updates while hidden, and tells the applet it hid.
 It ends instead when its program was replaced since it started, when
 `tettegoucherc` `[Launcher] StayReady=false`, or when an applet whose settings
-changed asks it to leave for them. An open Files window keeps it until the window closes. Each is an ordinary window beside
+changed asks it to leave for them. Asked to open while hidden and idle after
+its program was replaced, as by a package update that ran no install script,
+it gives up its name, starts the new program with its settings and the
+request, and leaves; the new one waits for its lock. An applet's request does
+the same through `leaveFor`, which a replaced program answers as it does
+other settings. An open Files window keeps it until the window closes. Each is an ordinary window beside
 the layer-shell surface, sharing its QML engine, with a `FileBrowser` of its own
 ([FILES-CONTRACT.md](FILES-CONTRACT.md) § Files' own window).
 
