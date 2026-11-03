@@ -66,7 +66,7 @@ than repeat it.
 | Tap or click outside Search | Closes it. Inside Kadunce's Spread, the space round Search belongs to Spread. |
 | Tap or click Close, last at the right of the row of modes, or of Notes' header | Closes Search, as a tap outside it does. |
 | Drag Search sideways inside Kadunce's Spread | Search follows and tells Spread how far it has moved. Let go: if Spread moves on, Search slides away to that side and closes; if not, it springs back. |
-| With the on-screen keys up | Search rises only as far as it must to stay above them, then shortens, so the search field and its results, or an open drawer, stay in view. Inside Kadunce's Spread it keeps its place and shortens instead. It returns as the keys go down. |
+| With the on-screen keys up | Search keeps its place: its lower edge stops above them and its results, or an open drawer, scroll there, so the search field and the modes never move. Only keys that would cover the field lift Search, by no more than they must. Inside Kadunce's Spread it keeps its place and shortens too. It grows back down as the keys go down. |
 
 ### The dot
 
