@@ -2819,7 +2819,9 @@ TestCase {
         // One row under search: the path, then the actions at its end.
         compare(actionRow.mapToItem(launcher, 0, 0).y, navigation.mapToItem(launcher, 0, 0).y)
         launcher.keysRect = tallKeys
-        tryCompare(sheet, "height", 350)
+        // Files, not expanded, keeps its place too: only its foot rises.
+        tryCompare(sheet, "height", 340)
+        compare(sheet.y, 20)
         const pane = findChild(launcher, "files-pane")
         verify(pane.compact)
         verify(!tabs.visible && !openRow.visible)
