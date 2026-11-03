@@ -15,8 +15,8 @@ than repeat it.
 
 | Input | What happens |
 | --- | --- |
-| Tap or click Apps or Files, in the row of modes above the search field | Opens that drawer. |
-| Tap or click Notes, after Files | Opens the notes board in the same window. Typing goes into Find a note; a tap on it brings the on-screen keys, and keys already up stay up in it, as in Apps and Files. Notes is there only while Gooseberry is installed. |
+| Tap or click Apps or Files, in the row of modes above the search field | Opens that drawer. On-screen keys already up stay up, typing into the search field. |
+| Tap or click Notes, after Files | Opens the notes board in the same window. Typing goes into Find a note; a tap on it brings the on-screen keys, and keys already up stay up and type into it, never going down on the way, and stay up back in Search, Apps or Files. Notes is there only while Gooseberry is installed. |
 | Type, on the notes board | Finds the notes with those words; a folder they name is listed under the notes. |
 | Tap or click a filter, on the notes board | Everything, the current day's filter, On windows, a folder or Tucked away narrows the notes to it. |
 | `Down` or `Up`, on the notes board | Picks a note; Enter opens it. |

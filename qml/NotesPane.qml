@@ -68,6 +68,7 @@ Item {
         closeOpen()
         fromBoard = false
         view = which
+        findAwaitsKeys = false
         if (which === "page") {
             // The note Start resumes is drawn at once; a new one once it
             // arrives.
@@ -160,11 +161,26 @@ Item {
     // field does, so opening Notes or picking a filter raises no on-screen
     // keys on a tablet. Typing goes into the field, and a tap on it focuses it.
     // With the on-screen keys already up, the field takes them, so they stay.
+    // As Notes opens the board can't hold the cursor until it has faded in;
+    // the field the keys type into keeps them until then and hands them
+    // straight to Find a note, so they never go down on the way.
     property bool keysUp: false
+    property bool findAwaitsKeys: false
     function focusFind() {
+        findAwaitsKeys = keysUp && !find.enabled
+        if (findAwaitsKeys) return
         if (keysUp) find.forceActiveFocus()
         else pane.forceActiveFocus()
     }
+    Connections {
+        target: find
+        function onEnabledChanged() {
+            if (!find.enabled || !pane.findAwaitsKeys) return
+            pane.findAwaitsKeys = false
+            find.forceActiveFocus()
+        }
+    }
+    onVisibleChanged: if (!visible) findAwaitsKeys = false
 
     // What is open over or under the page: "colour", "folder", "window",
     // "remind", "pick", "more" or nothing.

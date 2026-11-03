@@ -4011,22 +4011,52 @@ TestCase {
         launcher.quickNote = quickStub
         controller.opened()
         waitForOpen()
+        const query = findChild(launcher, "search-query")
+        const find = findChild(launcher, "notes-find")
+        query.forceActiveFocus()
         launcher.keysRect = tallKeys
+        // With the keys up, moving between the tabs never lets the cursor
+        // leave a field, so the keys never go down on the way: Search's
+        // field hands it to Find a note once Notes can hold it, and takes it
+        // back for Apps and Files.
+        const window = launcher.Window.window
+        const seen = []
+        const record = function() { seen.push(window.activeFocusItem) }
+        window.activeFocusItemChanged.connect(record)
         const notes = findChild(launcher, "notes-pill")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
-        const find = findChild(launcher, "notes-find")
-        verify(find.activeFocus)
+        tryVerify(function() { return find.activeFocus })
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        tryCompare(launcher, "drawerProgress", 1)
+        verify(query.activeFocus)
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        tryVerify(function() { return find.activeFocus })
+        mouseClick(files, files.width / 2, files.height / 2)
+        tryCompare(launcher, "drawerProgress", 1)
+        verify(query.activeFocus)
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        tryVerify(function() { return find.activeFocus })
+        window.activeFocusItemChanged.disconnect(record)
+        verify(seen.length > 0)
+        for (let i = 0; i < seen.length; ++i)
+            verify(seen[i] === query || seen[i] === find,
+                "the cursor left the fields for " + seen[i])
         // Back to Search's first screen and the keys going down: Notes opens
         // with no keys again.
         const dot = findChild(launcher, "home-dot")
         mouseClick(dot, dot.width / 2, dot.height / 2)
         tryCompare(launcher, "notesProgress", 0)
         launcher.keysRect = Qt.rect(0, 0, 0, 0)
+        launcher.forceActiveFocus()
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
+        tryVerify(function() { return findChild(launcher, "notes-pane").activeFocus })
         verify(!find.activeFocus)
-        verify(findChild(launcher, "notes-pane").activeFocus)
         mouseClick(dot, dot.width / 2, dot.height / 2)
         tryCompare(launcher, "notesProgress", 0)
     }

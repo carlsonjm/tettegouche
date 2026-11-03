@@ -426,8 +426,10 @@ Item {
         drawerSettle.to = open ? 1 : 0
         drawerSettle.restart()
         if (open) {
-            root.searchEngaged = false
-            root.forceActiveFocus()
+            // On-screen keys already up stay up: the field keeps them.
+            root.searchEngaged = root.keysUp
+            if (root.keysUp) query.forceActiveFocus()
+            else root.forceActiveFocus()
             if (!root.filesMode) {
                 root.applicationCatalog.refreshUse()
                 // An application installed a moment ago shows as Apps opens.
@@ -751,7 +753,9 @@ Item {
         if (!keepSize && root.launcherController.drawerExpanded) root.launcherController.setDrawerExpanded(false)
         modeSettle.to = 0
         modeSettle.restart()
-        root.forceActiveFocus()
+        // Keys up stay up, the field taking them back from Find a note.
+        if (root.keysUp) query.forceActiveFocus()
+        else root.forceActiveFocus()
     }
     function closeNotes() { root.closeMode() }
     // Pop out grows the window as Apps does, and the application's own window

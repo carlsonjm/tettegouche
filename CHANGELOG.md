@@ -5,8 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
-- Switching to Notes with the on-screen keys up keeps them up, in Find a
-  note, as Apps and Files do. Before, they dropped away.
+- Moving between Search, Apps, Files and Notes with the on-screen keys up
+  keeps them up, the cursor going straight to the new tab's field: Find a
+  note in Notes, the search field in the others. Before, they dropped away,
+  or went down and came back as Notes opened.
 - Search holds still when the on-screen keys come up. Before, it moved up to
   centre itself in the space above them, even when they would never have
   reached it, and typing with the keys up tucked away Apps, Files, Notes and
