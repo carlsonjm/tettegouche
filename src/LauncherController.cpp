@@ -48,6 +48,7 @@
 #include <QJsonObject>
 #include <QMimeData>
 #include <QMimeDatabase>
+#include <QProcess>
 #include <QQuickItem>
 #include <QQuickView>
 #include <QRegion>
@@ -86,8 +87,8 @@ LauncherController::LauncherController(QQuickView *view,
     , m_catalog(catalog)
     , m_shares(QDBusConnection::sessionBus())
     , m_guestAllowed(guestAllowed)
-    , m_programModified(QFileInfo(QCoreApplication::applicationFilePath()).lastModified())
 {
+    setProgram(QCoreApplication::applicationFilePath());
     connect(&m_related, &RelatedInfo::changed, this, [this]() { ++m_relatedRevision; Q_EMIT relatedChanged(); });
     m_lateQuit.setSingleShot(true);
     m_lateQuit.setInterval(1000);
@@ -437,12 +438,14 @@ void LauncherController::bridgeLost()
 
 void LauncherController::toggle()
 {
+    if (handOver({})) return;
     if (openOrOpening()) close();
     else open();
 }
 
 void LauncherController::toggleToType()
 {
+    if (handOver({QStringLiteral("--type")})) return;
     if (openOrOpening()) {
         close();
         return;
@@ -452,6 +455,7 @@ void LauncherController::toggleToType()
 
 void LauncherController::showDrive(const QString &id)
 {
+    if (handOver({QStringLiteral("--drive"), id})) return;
     if (!m_fileBrowser) { open(); return; }
     showFiles();
     whenShown([this, id] { filesTarget()->openDrive(id); });
@@ -459,6 +463,7 @@ void LauncherController::showDrive(const QString &id)
 
 void LauncherController::showFile(const QString &file)
 {
+    if (handOver({QStringLiteral("--show-file"), file})) return;
     const QFileInfo info(file);
     if (!m_fileBrowser || !info.isAbsolute() || !info.isFile() || info.isSymLink()) { open(); return; }
     if (filesWindowOpen()) {
@@ -480,6 +485,8 @@ void LauncherController::showFolder(const QString &location)
 
 void LauncherController::showFolders(const QStringList &locations)
 {
+    // The new program is given one folder; several stay with this one.
+    if (locations.size() == 1 && handOver({QStringLiteral("--folder"), locations.first()})) return;
     QStringList folders, phones;
     QList<QUrl> elsewhere;
     bool recent = false;
@@ -509,6 +516,8 @@ void LauncherController::showFolders(const QStringList &locations)
 
 void LauncherController::openFilesWindow()
 {
+    // --folder last and alone is Files' own window.
+    if (handOver({QStringLiteral("--folder")})) return;
     if (!m_fileBrowser) { open(); return; }
     if (openOrOpening()) close();
     showFilesWindow();
@@ -516,16 +525,19 @@ void LauncherController::openFilesWindow()
 
 void LauncherController::revealItems(const QStringList &locations)
 {
+    if (!locations.isEmpty() && handOver(QStringList{QStringLiteral("--reveal")} + locations)) return;
     reveal(locations, false);
 }
 
 void LauncherController::showItemProperties(const QStringList &locations)
 {
+    if (locations.size() == 1 && handOver({QStringLiteral("--properties"), locations.first()})) return;
     reveal(locations, true);
 }
 
 void LauncherController::openDrawer(const QString &drawer)
 {
+    if (handOver({QStringLiteral("--drawer"), drawer})) return;
     if (drawer == QLatin1String("files") && filesWindowOpen()) {
         if (openOrOpening()) close();
         showFilesWindow();
@@ -632,7 +644,8 @@ bool LauncherController::leaveFor(const QStringList &settings)
     mine.sort();
     theirs.sort();
     // Shown, or holding Files' window, a copy or a carry, it stays as it is.
-    if (mine == theirs || openOrOpening() || filesWindowOpen() || m_carrying
+    // With the same settings it stays too, unless its program was replaced.
+    if ((mine == theirs && !programReplaced()) || openOrOpening() || filesWindowOpen() || m_carrying
         || filesWorking())
         return false;
     // After this answer has gone.
@@ -1197,8 +1210,42 @@ bool LauncherController::stayReady() const
     if (qEnvironmentVariableIsSet("TETTEGOUCHE_QUIT_ON_CLOSE")) return false;
     if (!KSharedConfig::openConfig(QStringLiteral("tettegoucherc"))->group(QStringLiteral("Launcher"))
              .readEntry("StayReady", true)) return false;
-    const QFileInfo program(QCoreApplication::applicationFilePath());
+    const QFileInfo program(m_program);
     return program.exists() && program.lastModified() == m_programModified;
+}
+
+void LauncherController::setProgram(const QString &path)
+{
+    // Qt reads the program's path once, so it stays the installed program's
+    // even after the file this process runs from was replaced.
+    m_program = path;
+    m_programModified = QFileInfo(path).lastModified();
+}
+
+bool LauncherController::programReplaced() const
+{
+    const QFileInfo program(m_program);
+    return program.exists() && program.lastModified() != m_programModified;
+}
+
+bool LauncherController::handOver(const QStringList &request)
+{
+    // Shown, or holding Files' window, a copy or a carry, it keeps the
+    // request, and leaves once it closes.
+    if (openOrOpening() || filesWindowOpen() || m_carrying || filesWorking() || !programReplaced())
+        return false;
+    // Its name goes first, so the new program finds no launcher to hand the
+    // request back to and waits for this one's lock instead.
+    auto session = QDBusConnection::sessionBus();
+    const QString name = QStringLiteral("io.github.carlsonjm.Tettegouche");
+    const bool named = session.unregisterService(name);
+    if (!QProcess::startDetached(m_program, m_startedWith + request)) {
+        if (named) session.registerService(name);
+        return false;
+    }
+    // After this answer has gone.
+    QTimer::singleShot(0, qApp, &QCoreApplication::quit);
+    return true;
 }
 
 // The Context Bar along the top of Search's display, which a full Search

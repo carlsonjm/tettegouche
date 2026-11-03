@@ -122,6 +122,9 @@ public:
 
     // The settings this launcher started with, as the widget passes them.
     void setStartedWith(const QStringList &settings) { m_startedWith = settings; }
+    // The program this launcher runs, as it was when it started: one replaced
+    // since is started in its place. Set as the launcher is made.
+    void setProgram(const QString &path);
     void setFileBrowser(FileBrowser *browser);
     void setNotesDoor(NotesDoor *notes) { m_notes = notes; }
     // What was used lately leaves out what the dock holds, what is open and
@@ -298,6 +301,12 @@ private:
     // A launcher never shown, started only as the file manager, is not kept.
     void finishOrDeferQuit(bool keepReady = true);
     bool stayReady() const;
+    // The program was replaced on disk since this launcher started.
+    bool programReplaced() const;
+    // Asked to open while hidden and idle with its program replaced, the
+    // launcher starts the new program with its settings and the request, and
+    // leaves. True when it is leaving.
+    bool handOver(const QStringList &request);
     // The band Shuffle's dock reserves on Search's display, asked without
     // waiting; until it answers, the band last read stands.
     void readDockBand();
@@ -403,5 +412,6 @@ private:
     std::function<std::unique_ptr<FileBrowser>()> m_makeFileBrowser;
     QString m_launcherApplicationId;
     QStringList m_startedWith;
-    const QDateTime m_programModified;
+    QString m_program;
+    QDateTime m_programModified;
 };

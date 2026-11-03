@@ -5,6 +5,11 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- After Tettegouche is updated by a package, the next time you open Search,
+  Apps or Files, the updated Search opens. Before, the copy kept ready in the
+  background went on answering until it was next closed or you signed out.
+  One open on screen, or busy with a copy, carries on and updates when it
+  closes.
 - Esc in Files or Apps opened with Meta+E, Meta+G or the dot's slide closes
   Search, as the key pressed again does. Before, it stepped back to Search's
   first screen, so a Meta pressed next closed Search and what you typed went

@@ -19,6 +19,7 @@
 #include <KSycoca>
 
 #include <QDBusConnection>
+#include <QDateTime>
 #include <QDir>
 #include <QElapsedTimer>
 #include <QFile>
@@ -359,6 +360,57 @@ private Q_SLOTS:
         QVERIFY(!m_controller->leaveFor({}));
         m_controller->close();
         QVERIFY(m_controller->leaveFor({}));
+    }
+
+    // Asked to open while hidden after its program was replaced, the
+    // launcher starts the new program with its settings and the request and
+    // leaves; shown, it keeps the request. Asked to leave for its own
+    // settings, it leaves as well.
+    void handsOverOnceReplaced()
+    {
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        const QString program = dir.filePath(QStringLiteral("tettegouche"));
+        const QString heard = dir.filePath(QStringLiteral("heard"));
+        QFile script(program);
+        QVERIFY(script.open(QIODevice::WriteOnly));
+        script.write("#!/bin/sh\necho \"$@\" > \"$(dirname \"$0\")/heard\"\n");
+        script.close();
+        QVERIFY(script.setPermissions(script.permissions() | QFileDevice::ExeOwner));
+        m_controller->setProgram(program);
+        m_controller->setStartedWith({QStringLiteral("--no-recent")});
+
+        // Not replaced, the request stays here.
+        m_controller->openDrawer(QStringLiteral("apps"));
+        QTRY_VERIFY(m_view->isVisible());
+        m_controller->close();
+        QVERIFY(!m_controller->leaveFor({QStringLiteral("--no-recent")}));
+
+        QVERIFY(script.open(QIODevice::ReadOnly));
+        QVERIFY(script.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
+        script.close();
+
+        // Shown, it keeps the request.
+        m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
+        m_controller->openDrawer(QStringLiteral("apps"));
+        QVERIFY(m_view->isVisible());
+        QVERIFY(!QFile::exists(heard));
+        // Hidden, the new program takes it.
+        m_controller->close();
+        m_controller->openDrawer(QStringLiteral("files"));
+        QVERIFY(!m_view->isVisible());
+        const auto told = [&heard] {
+            QFile file(heard);
+            return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()).trimmed() : QString();
+        };
+        QTRY_COMPARE(told(), QStringLiteral("--no-recent --drawer files"));
+        QVERIFY(QFile::remove(heard));
+        m_controller->openFilesWindow();
+        QTRY_COMPARE(told(), QStringLiteral("--no-recent --folder"));
+        QVERIFY(m_controller->leaveFor({QStringLiteral("--no-recent")}));
+
+        m_controller->setProgram(QCoreApplication::applicationFilePath());
     }
 
     void cleanupTestCase()
