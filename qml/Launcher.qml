@@ -1428,6 +1428,7 @@ Item {
                 anchors.fill: parent
                 z: 5
                 quickNote: root.quickNote
+                keysUp: root.keysUp
                 progress: root.notesProgress
                 resizing: sheetResize.running
                 fieldRest: Qt.rect(searchField.x, searchField.y, searchField.width, searchField.height)

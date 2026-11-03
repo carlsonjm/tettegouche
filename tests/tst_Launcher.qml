@@ -4003,6 +4003,33 @@ TestCase {
         compare(controller.closes, 0)
         compare(field.mapToItem(sheet, 0, 0).y, fieldAt.y)
     }
+    // With the on-screen keys up, Notes' field takes them as Notes opens, so
+    // they stay up, as they do for Apps and Files.
+    function test_notesKeepsTheKeysUp() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        launcher.quickNote = quickStub
+        controller.opened()
+        waitForOpen()
+        launcher.keysRect = tallKeys
+        const notes = findChild(launcher, "notes-pill")
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        const find = findChild(launcher, "notes-find")
+        verify(find.activeFocus)
+        // Back to Search's first screen and the keys going down: Notes opens
+        // with no keys again.
+        const dot = findChild(launcher, "home-dot")
+        mouseClick(dot, dot.width / 2, dot.height / 2)
+        tryCompare(launcher, "notesProgress", 0)
+        launcher.keysRect = Qt.rect(0, 0, 0, 0)
+        mouseClick(notes, notes.width / 2, notes.height / 2)
+        tryCompare(launcher, "notesProgress", 1)
+        verify(!find.activeFocus)
+        verify(findChild(launcher, "notes-pane").activeFocus)
+        mouseClick(dot, dot.width / 2, dot.height / 2)
+        tryCompare(launcher, "notesProgress", 0)
+    }
     // A note tapped on the board, or a new one from New note or Enter with
     // the words typed, goes to Gooseberry's own card, and Search closes.
     function test_notesOnCard() {

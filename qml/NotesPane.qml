@@ -159,7 +159,12 @@ Item {
     // The board holds the keys itself rather than its field, as Search's own
     // field does, so opening Notes or picking a filter raises no on-screen
     // keys on a tablet. Typing goes into the field, and a tap on it focuses it.
-    function focusFind() { pane.forceActiveFocus() }
+    // With the on-screen keys already up, the field takes them, so they stay.
+    property bool keysUp: false
+    function focusFind() {
+        if (keysUp) find.forceActiveFocus()
+        else pane.forceActiveFocus()
+    }
 
     // What is open over or under the page: "colour", "folder", "window",
     // "remind", "pick", "more" or nothing.
