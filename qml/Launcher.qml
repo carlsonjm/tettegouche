@@ -1338,6 +1338,12 @@ Item {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: hiddenButton.toggle()
                     }
+                    // Named under a resting pointer, as Files' glyphs are.
+                    QQC2.ToolTip.visible: hiddenHover.hovered && hiddenButton.enabled
+                    QQC2.ToolTip.text: root.filesMode
+                        ? (showing ? words.i18n("Hide hidden files") : words.i18n("Show hidden files"))
+                        : (showing ? words.i18n("Hide hidden applications") : words.i18n("Show hidden applications"))
+                    QQC2.ToolTip.delay: 600
                 }
 
                 // The open drawer's header pulled down closes it.

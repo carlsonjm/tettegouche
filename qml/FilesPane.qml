@@ -868,8 +868,10 @@ Item {
                     hoverEnabled: true
                     text: pane.placesFolded ? words.i18n("Show the places") : words.i18n("Fold")
                     Accessible.name: pane.placesFolded ? text : words.i18n("Fold the places")
-                    C.ToolTip.visible: (pane.placesFolded || !parent.worded) && hovered
-                    C.ToolTip.text: text
+                    // Under a resting pointer it says what it does, open or
+                    // folded, worded or not.
+                    C.ToolTip.visible: hovered
+                    C.ToolTip.text: pane.placesFolded ? text : words.i18n("Fold the places to a row of icons")
                     C.ToolTip.delay: 600
                     onClicked: pane.placesOpen = !pane.placesOpen
                     background: Rectangle {
