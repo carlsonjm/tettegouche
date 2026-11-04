@@ -17,6 +17,9 @@
 #include <KLocalizedString>
 #include <KShell>
 #include <KSycoca>
+#include <KIconLoader>
+#include <KIconTheme>
+#include <QLoggingCategory>
 #include <KConfig>
 #include <KConfigGroup>
 #include <QCryptographicHash>
@@ -45,6 +48,9 @@
 
 namespace
 {
+// QT_LOGGING_RULES="tettegouche.icons.debug=true" reports how Apps follows
+// changes of icons and of the icon theme.
+Q_LOGGING_CATEGORY(lcIcons, "tettegouche.icons", QtWarningMsg)
 // The applications hidden from Apps, by desktop file id.
 const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
 const QString OrderKey = QStringLiteral("Browse/sortOrder");
@@ -103,19 +109,15 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
         for (const QFileInfo &theme : themes) installs->addDir(theme.absoluteFilePath());
     }
     m_iconStamp = iconStamp(iconRoots(), iconThemeName());
-    // Plasma's word that icons changed, as when the icon theme is chosen in
-    // System Settings: once the icon loader has read the themes again, the
-    // tiles are drawn afresh, so they look their icons up anew. The word can
-    // reach Plasma's icon loader before the new theme's name reaches Qt, and
-    // the loader then keeps the theme it had; so once the change has settled
-    // the themes are looked at again, and a theme found changed is read
-    // anew.
+    // Plasma's word that icons changed, sent once for each kind of icon as
+    // the icon theme is chosen in System Settings. Once the words have
+    // settled, the themes are looked at again; see refreshIcons.
     m_iconSettle = new QTimer(this);
     m_iconSettle->setSingleShot(true);
     m_iconSettle->setInterval(1500);
     connect(m_iconSettle, &QTimer::timeout, this, &ApplicationCatalog::refreshIcons);
     QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KIconLoader"),
-        QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged()));
+        QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged(int)));
     noteArrivals(m_entries);
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
@@ -268,30 +270,68 @@ QByteArray ApplicationCatalog::iconStamp(const QStringList &roots, const QString
     return hash.result();
 }
 
-void ApplicationCatalog::refreshIcons()
+QString ApplicationCatalog::probeIcon() const
 {
-    const QByteArray stamp = iconStamp(iconRoots(), iconThemeName());
-    if (stamp == m_iconStamp) return;
-    m_iconStamp = stamp;
-    // Qt's own icon lookup forgets what it found, and Plasma's icon loader
-    // is told, in Search alone, that icons changed; Apps is drawn afresh as
-    // that word arrives. Without Plasma's loader the word goes unheard, so
-    // Apps is drawn afresh here too.
-    if (qobject_cast<QGuiApplication *>(QCoreApplication::instance())) QIcon::setThemeSearchPaths(QIcon::themeSearchPaths());
-    QDBusConnection bus = QDBusConnection::sessionBus();
-    if (bus.isConnected()) {
-        QDBusMessage changed = QDBusMessage::createTargetedSignal(bus.baseService(), QStringLiteral("/KIconLoader"),
-            QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"));
-        changed << 0;
-        if (bus.send(changed)) return;
+    // An application to report on: Mail where it is installed, else the
+    // first one.
+    for (const Entry &entry : m_entries) {
+        if (entry.applicationId.contains(QStringLiteral("mail"), Qt::CaseInsensitive)) return entry.icon;
     }
-    reload();
+    return m_entries.isEmpty() ? QString() : m_entries.first().icon;
 }
 
-void ApplicationCatalog::iconsChanged()
+void ApplicationCatalog::reportIcons(const char *when) const
 {
-    // After every other listener, Plasma's icon loader among them.
-    QTimer::singleShot(0, this, &ApplicationCatalog::reload);
+    if (!lcIcons().isDebugEnabled()) return;
+    const bool gui = qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    KIconLoader *loader = gui ? KIconLoader::global() : nullptr;
+    const QString probe = probeIcon();
+    qCDebug(lcIcons).noquote() << when
+        << "| chosen in kdeglobals:" << iconThemeName()
+        << "| Qt:" << (gui ? QIcon::themeName() : QStringLiteral("-"))
+        << "| KIconLoader:" << (loader && loader->theme() ? loader->theme()->internalName() : QStringLiteral("-"))
+        << "| icon" << probe << "->" << (loader ? loader->iconPath(probe, KIconLoader::Desktop, true) : QStringLiteral("-"));
+}
+
+void ApplicationCatalog::refreshIcons()
+{
+    const QString chosen = iconThemeName();
+    const QByteArray stamp = iconStamp(iconRoots(), chosen);
+    const bool gui = qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    // Plasma's icon loader takes the theme's name from Qt, which learns it
+    // from Plasma's settings in its own time; the loader can so be left on
+    // a theme other than the one chosen. Then it is given the chosen theme
+    // outright.
+    KIconLoader *loader = gui ? KIconLoader::global() : nullptr;
+    const QString loaderTheme = loader && loader->theme() ? loader->theme()->internalName() : QString();
+    // A theme chosen but no longer installed is left to the loader's own
+    // fallback, and a theme given once is not given again.
+    const bool loaderBehind = loader && !chosen.isEmpty() && loaderTheme != chosen
+        && m_forcedIconTheme != chosen && KIconTheme::list().contains(chosen);
+    if (stamp == m_iconStamp && !loaderBehind) {
+        reportIcons("checked, nothing changed");
+        return;
+    }
+    m_iconStamp = stamp;
+    reportIcons(loaderBehind ? "loader on another theme" : "icons changed");
+    if (gui) {
+        // Qt's own icon lookup forgets what it found.
+        QIcon::setThemeSearchPaths(QIcon::themeSearchPaths());
+        if (loaderBehind) {
+            KIconTheme::forceThemeForTests(chosen);
+            m_forcedIconTheme = chosen;
+        }
+        // The loader reads the themes again, so icons are looked up anew.
+        loader->newIconLoader();
+    }
+    reload();
+    reportIcons("Apps drawn afresh");
+}
+
+void ApplicationCatalog::iconsChanged(int group)
+{
+    qCDebug(lcIcons) << "Plasma says icons changed, kind" << group;
+    reportIcons("as the word arrives");
     m_iconSettle->start();
 }
 

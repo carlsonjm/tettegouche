@@ -296,7 +296,10 @@ private:
     // the icons are looked up again and Apps is drawn afresh.
     QByteArray m_iconStamp;
     QTimer *m_iconSettle = nullptr;
+    QString m_forcedIconTheme;
     void refreshIcons();
+    QString probeIcon() const;
+    void reportIcons(const char *when) const;
 private Q_SLOTS:
-    void iconsChanged();
+    void iconsChanged(int group);
 };

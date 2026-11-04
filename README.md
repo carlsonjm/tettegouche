@@ -219,7 +219,7 @@ Then install what the build needs. Type your password when asked, and answer
 `Y`:
 
 ```bash
-sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules python ripgrep gettext qt6-base qt6-declarative qt6-svg qt6-tools kbookmarks kcoreaddons kfilemetadata kglobalaccel ki18n kio krunner kservice bluez-qt solid kirigami kpackage layer-shell-qt libplasma plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt kate okular ffmpegthumbs kdegraphics-thumbnailers
+sudo pacman -S --needed base-devel git cmake ninja extra-cmake-modules python ripgrep gettext qt6-base qt6-declarative qt6-svg qt6-tools kbookmarks kcoreaddons kfilemetadata kglobalaccel ki18n kiconthemes kio krunner kservice bluez-qt solid kirigami kpackage layer-shell-qt libplasma plasma-workspace plasma-activities-stats kactivitymanagerd appstream-qt kate okular ffmpegthumbs kdegraphics-thumbnailers
 ```
 
 If pacman says a package **is up to date -- skipping**, or **there is nothing
