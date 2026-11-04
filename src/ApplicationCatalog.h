@@ -24,6 +24,8 @@ namespace AppStream
 class Pool;
 }
 
+class QTimer;
+
 class ApplicationCatalog final : public QAbstractListModel
 {
     Q_OBJECT
@@ -128,6 +130,14 @@ public:
     // it when an application was installed or removed; called when Apps
     // opens and when a folder applications live in changes.
     Q_INVOKABLE void checkInstalled();
+    // The folders icon themes are read from, and a mark of when anything in
+    // them last changed that would change an application's icon: each
+    // theme's folder, its icon cache and its folders of application icons.
+    // Comparing marks is cheap enough to do each time Apps opens.
+    // The icon theme chosen in System Settings belongs to the mark too.
+    static QStringList iconRoots();
+    static QString iconThemeName();
+    static QByteArray iconStamp(const QStringList &roots, const QString &theme);
     // The row an application is drawn at, by its desktop file id, or -1.
     Q_INVOKABLE [[nodiscard]] int applicationRow(const QString &applicationId) const;
 
@@ -281,4 +291,15 @@ private:
     bool m_softwareReady = false;
     std::function<bool()> m_canRemove;
     std::function<void(const QString &, const QString &)> m_remove;
+    // Icons are looked up once and kept, so an icon a package removes or
+    // replaces would show until Search restarts. When the themes change,
+    // the icons are looked up again and Apps is drawn afresh.
+    QByteArray m_iconStamp;
+    QTimer *m_iconSettle = nullptr;
+    QString m_forcedIconTheme;
+    void refreshIcons();
+    QString probeIcon() const;
+    void reportIcons(const char *when) const;
+private Q_SLOTS:
+    void iconsChanged(int group);
 };

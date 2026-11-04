@@ -17,6 +17,18 @@
 #include <KLocalizedString>
 #include <KShell>
 #include <KSycoca>
+#include <KIconLoader>
+#include <KIconTheme>
+#include <QLoggingCategory>
+#include <KConfig>
+#include <KConfigGroup>
+#include <QCryptographicHash>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDateTime>
+#include <QGuiApplication>
+#include <QIcon>
+#include <QTimer>
 
 #include <QSettings>
 #include <QDir>
@@ -36,6 +48,9 @@
 
 namespace
 {
+// QT_LOGGING_RULES="tettegouche.icons.debug=true" reports how Apps follows
+// changes of icons and of the icon theme.
+Q_LOGGING_CATEGORY(lcIcons, "tettegouche.icons", QtWarningMsg)
 // The applications hidden from Apps, by desktop file id.
 const QString HiddenKey = QStringLiteral("Browse/hiddenApplications");
 const QString OrderKey = QStringLiteral("Browse/sortOrder");
@@ -85,6 +100,24 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     connect(installs, &KDirWatch::dirty, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::created, settle, qOverload<>(&QTimer::start));
     connect(installs, &KDirWatch::deleted, settle, qOverload<>(&QTimer::start));
+    // An icon theme changes as a package adds or removes icons and its icon
+    // cache is rebuilt, which changes the theme's folder; that is checked
+    // too, as Apps opening checks it.
+    for (const QString &root : iconRoots()) {
+        installs->addDir(root);
+        const QFileInfoList themes = QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+        for (const QFileInfo &theme : themes) installs->addDir(theme.absoluteFilePath());
+    }
+    m_iconStamp = iconStamp(iconRoots(), iconThemeName());
+    // Plasma's word that icons changed, sent once for each kind of icon as
+    // the icon theme is chosen in System Settings. Once the words have
+    // settled, the themes are looked at again; see refreshIcons.
+    m_iconSettle = new QTimer(this);
+    m_iconSettle->setSingleShot(true);
+    m_iconSettle->setInterval(1500);
+    connect(m_iconSettle, &QTimer::timeout, this, &ApplicationCatalog::refreshIcons);
+    QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KIconLoader"),
+        QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged(int)));
     noteArrivals(m_entries);
     const QStringList hidden = QSettings().value(HiddenKey).toStringList();
     m_hidden = QSet<QString>(hidden.cbegin(), hidden.cend());
@@ -185,6 +218,121 @@ void ApplicationCatalog::checkInstalled()
         }
     }
     KSycoca::self()->ensureCacheValid();
+    refreshIcons();
+}
+
+QStringList ApplicationCatalog::iconRoots()
+{
+    QStringList roots{QDir::homePath() + QStringLiteral("/.icons")};
+    roots += QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("icons"), QStandardPaths::LocateDirectory);
+    roots += QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, QStringLiteral("pixmaps"), QStandardPaths::LocateDirectory);
+    return roots;
+}
+
+QString ApplicationCatalog::iconThemeName()
+{
+    // Read afresh: the copy Search keeps may not have caught up yet.
+    const KConfig globals(QStringLiteral("kdeglobals"), KConfig::CascadeConfig);
+    return KConfigGroup(&globals, QStringLiteral("Icons")).readEntry("Theme", QString());
+}
+
+QByteArray ApplicationCatalog::iconStamp(const QStringList &roots, const QString &theme)
+{
+    QCryptographicHash hash(QCryptographicHash::Sha1);
+    hash.addData(theme.toUtf8());
+    hash.addData(QByteArrayView("\n"));
+    const auto note = [&hash](const QFileInfo &info) {
+        if (!info.exists()) return;
+        hash.addData(info.absoluteFilePath().toUtf8());
+        hash.addData(QByteArray::number(info.lastModified().toMSecsSinceEpoch()));
+        hash.addData(QByteArrayView("\n"));
+    };
+    for (const QString &root : roots) {
+        note(QFileInfo(root));
+        const QFileInfoList themes = QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+        for (const QFileInfo &theme : themes) {
+            note(theme);
+            note(QFileInfo(theme.absoluteFilePath() + QStringLiteral("/icon-theme.cache")));
+            // Themes keep application icons either as size/apps or as
+            // apps/size.
+            const QFileInfoList parts = QDir(theme.absoluteFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+            for (const QFileInfo &part : parts) {
+                if (part.fileName() == QStringLiteral("apps")) {
+                    note(part);
+                    const QFileInfoList sizes = QDir(part.absoluteFilePath()).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+                    for (const QFileInfo &size : sizes) note(size);
+                } else {
+                    note(QFileInfo(part.absoluteFilePath() + QStringLiteral("/apps")));
+                }
+            }
+        }
+    }
+    return hash.result();
+}
+
+QString ApplicationCatalog::probeIcon() const
+{
+    // An application to report on: Mail where it is installed, else the
+    // first one.
+    for (const Entry &entry : m_entries) {
+        if (entry.applicationId.contains(QStringLiteral("mail"), Qt::CaseInsensitive)) return entry.icon;
+    }
+    return m_entries.isEmpty() ? QString() : m_entries.first().icon;
+}
+
+void ApplicationCatalog::reportIcons(const char *when) const
+{
+    if (!lcIcons().isDebugEnabled()) return;
+    const bool gui = qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    KIconLoader *loader = gui ? KIconLoader::global() : nullptr;
+    const QString probe = probeIcon();
+    qCDebug(lcIcons).noquote() << when
+        << "| chosen in kdeglobals:" << iconThemeName()
+        << "| Qt:" << (gui ? QIcon::themeName() : QStringLiteral("-"))
+        << "| KIconLoader:" << (loader && loader->theme() ? loader->theme()->internalName() : QStringLiteral("-"))
+        << "| icon" << probe << "->" << (loader ? loader->iconPath(probe, KIconLoader::Desktop, true) : QStringLiteral("-"));
+}
+
+void ApplicationCatalog::refreshIcons()
+{
+    const QString chosen = iconThemeName();
+    const QByteArray stamp = iconStamp(iconRoots(), chosen);
+    const bool gui = qobject_cast<QGuiApplication *>(QCoreApplication::instance());
+    // Plasma's icon loader takes the theme's name from Qt, which learns it
+    // from Plasma's settings in its own time; the loader can so be left on
+    // a theme other than the one chosen. Then it is given the chosen theme
+    // outright.
+    KIconLoader *loader = gui ? KIconLoader::global() : nullptr;
+    const QString loaderTheme = loader && loader->theme() ? loader->theme()->internalName() : QString();
+    // A theme chosen but no longer installed is left to the loader's own
+    // fallback, and a theme given once is not given again.
+    const bool loaderBehind = loader && !chosen.isEmpty() && loaderTheme != chosen
+        && m_forcedIconTheme != chosen && KIconTheme::list().contains(chosen);
+    if (stamp == m_iconStamp && !loaderBehind) {
+        reportIcons("checked, nothing changed");
+        return;
+    }
+    m_iconStamp = stamp;
+    reportIcons(loaderBehind ? "loader on another theme" : "icons changed");
+    if (gui) {
+        // Qt's own icon lookup forgets what it found.
+        QIcon::setThemeSearchPaths(QIcon::themeSearchPaths());
+        if (loaderBehind) {
+            KIconTheme::forceThemeForTests(chosen);
+            m_forcedIconTheme = chosen;
+        }
+        // The loader reads the themes again, so icons are looked up anew.
+        loader->newIconLoader();
+    }
+    reload();
+    reportIcons("Apps drawn afresh");
+}
+
+void ApplicationCatalog::iconsChanged(int group)
+{
+    qCDebug(lcIcons) << "Plasma says icons changed, kind" << group;
+    reportIcons("as the word arrives");
+    m_iconSettle->start();
 }
 
 void ApplicationCatalog::reload()

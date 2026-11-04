@@ -440,6 +440,50 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(catalog.applicationRow(zulu) < 0, 15000);
     }
 
+    // An icon a package removes or replaces, its theme's icon cache rebuilt,
+    // shows in Apps as Apps next opens, not only once Search restarts.
+    void followsAnIconThemeChange()
+    {
+        const QString hicolor = qEnvironmentVariable("XDG_DATA_DIRS") + QStringLiteral("/icons/hicolor");
+        const QString icon = hicolor + QStringLiteral("/48x48/apps/mail.png");
+        write(icon, "old");
+        write(hicolor + QStringLiteral("/icon-theme.cache"), "old");
+        QVERIFY(ApplicationCatalog::iconRoots().contains(qEnvironmentVariable("XDG_DATA_DIRS") + QStringLiteral("/icons")));
+        const QByteArray before = ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName());
+        QCOMPARE(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName()), before);
+
+        ApplicationCatalog catalog;
+        QSignalSpy redrawn(&catalog, &QAbstractItemModel::modelReset);
+        catalog.checkInstalled();
+        QTest::qWait(50);
+        QCOMPARE(redrawn.count(), 0);
+
+        QTest::qWait(20);
+        QVERIFY(QFile::remove(icon));
+        QVERIFY(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName()) != before);
+        catalog.checkInstalled();
+        QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() >= 1, 5000);
+        // Once only: the next check finds nothing new.
+        const int seen = redrawn.count();
+        catalog.checkInstalled();
+        QTest::qWait(50);
+        QCOMPARE(redrawn.count(), seen);
+
+        // Another icon theme chosen in System Settings, and chosen back:
+        // each time Apps is drawn afresh.
+        const QString globals = qEnvironmentVariable("XDG_CONFIG_HOME") + QStringLiteral("/kdeglobals");
+        write(globals, "[Icons]\nTheme=Other\n");
+        QCOMPARE(ApplicationCatalog::iconThemeName(), QStringLiteral("Other"));
+        catalog.checkInstalled();
+        QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() > seen, 5000);
+        const int other = redrawn.count();
+        write(globals, "[Icons]\nTheme=First\n");
+        QCOMPARE(ApplicationCatalog::iconThemeName(), QStringLiteral("First"));
+        catalog.checkInstalled();
+        QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() > other, 5000);
+        QVERIFY(QFile::remove(globals));
+    }
+
     // An application arrives when Apps first finds it. One updated since,
     // its desktop file written anew, keeps when it arrived. Both happen while
     // Apps is open, as an install does, and Apps follows KDE's list to them.
