@@ -39,6 +39,10 @@ class ApplicationCatalog final : public QAbstractListModel
     Q_PROPERTY(bool softwareReady READ softwareReady NOTIFY softwareReadyChanged)
     // Whether any folder is drawn, so the sheet can offer one to put in.
     Q_PROPERTY(int folderCount READ folderCount NOTIFY foldersChanged)
+    // The looks a folder can be drawn in, each a paper folder of a kind:
+    // games, media, code, office, graphics, internet, system, tools, and
+    // plain for applications of any kind.
+    Q_PROPERTY(QStringList folderKinds READ folderKinds CONSTANT)
 
 public:
     enum Role {
@@ -57,6 +61,9 @@ public:
         OpenRole,
         // How many applications a folder's row holds.
         SizeRole,
+        // The look a folder's row is drawn in, one of folderKinds: the one
+        // chosen for it, else the kind its applications share, else plain.
+        FolderKindRole,
     };
     Q_ENUM(Role)
 
@@ -176,6 +183,10 @@ public:
     Q_INVOKABLE void renameFolder(const QString &folderId, const QString &name);
     // Ends a folder; its applications go back to Apps.
     Q_INVOKABLE void removeFolder(const QString &folderId);
+    // Draws a folder in one of folderKinds from now on, whatever its
+    // applications are.
+    Q_INVOKABLE void setFolderKind(const QString &folderId, const QString &kind);
+    [[nodiscard]] static QStringList folderKinds();
     // A folder's applications' desktop files, as a drop elsewhere takes them.
     [[nodiscard]] QList<QUrl> folderUrls(int row) const;
 
@@ -219,6 +230,9 @@ private:
         QString id;
         QString name;
         QStringList applications;
+        // The look chosen for it; empty draws the kind its applications
+        // share.
+        QString kind;
     };
 
     enum RowKind {
@@ -262,6 +276,11 @@ private:
     // The folders drawn, by index into m_folders, each with its entries.
     [[nodiscard]] QHash<int, QVector<int>> drawnFolders() const;
     [[nodiscard]] QString nameFor(const QStringList &applicationIds) const;
+    // The first kind every one of these applications belongs to, as an
+    // index into the shared kinds, or -1.
+    [[nodiscard]] int sharedKind(const QStringList &applicationIds) const;
+    // The look a folder is drawn in.
+    [[nodiscard]] QString folderLook(const Folder &folder) const;
     [[nodiscard]] const Entry *entryAt(int row) const;
     [[nodiscard]] QString softwareId(const Entry &entry) const;
 

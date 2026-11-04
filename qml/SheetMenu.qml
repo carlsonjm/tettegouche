@@ -16,8 +16,11 @@ C.Popup {
     // How far up from the window's bottom the on-screen keys reach; the
     // menu keeps above them.
     property real keysReach: 0
-    // The lines, in order.
+    // The lines, in order. A row of choices above them, one with
+    // isSheetMenuRow, takes Left and Right, which the menu passes on as
+    // sideways.
     default property alias entries: lines.data
+    signal sideways(int by)
     readonly property int edge: 8
 
     parent: bounds
@@ -30,7 +33,8 @@ C.Popup {
     implicitWidth: {
         let widest = 0
         for (const line of lines.children)
-            if (line.isSheetMenuItem && line.visible) widest = Math.max(widest, line.implicitWidth)
+            if ((line.isSheetMenuItem || line.isSheetMenuRow) && line.visible)
+                widest = Math.max(widest, line.implicitWidth)
         return Math.min(Math.max(180, widest + leftPadding + rightPadding), 340)
     }
 
@@ -96,6 +100,8 @@ C.Popup {
         focus: true
         Keys.onUpPressed: menu.step(-1)
         Keys.onDownPressed: menu.step(1)
+        Keys.onLeftPressed: menu.sideways(-1)
+        Keys.onRightPressed: menu.sideways(1)
         Keys.onReturnPressed: if (menu.current >= 0) lines.children[menu.current].choose()
         Keys.onEnterPressed: if (menu.current >= 0) lines.children[menu.current].choose()
     }

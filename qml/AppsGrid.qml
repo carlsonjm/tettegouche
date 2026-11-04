@@ -38,8 +38,8 @@ Item {
             required property var modelData
             readonly property int row: modelData
             readonly property var info: launcher.applicationCatalog.item(row)
-            // A folder is a tile of its own: up to four of its
-            // applications on one face, its name under it. A tap opens
+            // A folder is a tile of its own: a paper folder of its kind,
+            // its name under it. A tap opens
             // it in place, its applications on lines under its own.
             readonly property bool isFolder: info.kind === "folder"
             readonly property string folder: isFolder ? launcher.applicationCatalog.folderId(row) : ""
@@ -143,33 +143,28 @@ Item {
                     source: catalogDelegate.isFolder ? "" : catalogDelegate.info.icon
                 }
 
-                Rectangle {
+                // A paper folder of its kind, drawn in the room an
+                // application's icon has and keeping the margin a themed
+                // icon keeps, so it reads no bigger than the applications
+                // beside it and its tabs start where their tops do. A plain
+                // image, so an icon theme's own folder never stands in.
+                Image {
                     id: folderFace
                     objectName: "apps-folder-tile"
+                    readonly property string kind: catalogDelegate.isFolder
+                        ? (catalogDelegate.info.folderKind || "plain") : ""
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.top: parent.top
                     anchors.topMargin: 10
                     width: applicationGrid.tile.icon
                     height: width
-                    radius: width * 0.26
                     visible: catalogDelegate.isFolder
-                    color: launcher.controlColor
-                    border.width: 1
-                    border.color: launcher.surfaceOutline
-                    Grid {
-                        anchors.centerIn: parent
-                        columns: 2
-                        spacing: parent.width * 0.06
-                        Repeater {
-                            model: catalogDelegate.isFolder ? (catalogDelegate.info.folderIcons || []) : []
-                            delegate: Kirigami.Icon {
-                                required property var modelData
-                                width: folderFace.width * 0.36
-                                height: width
-                                source: modelData
-                            }
-                        }
-                    }
+                    source: kind ? Qt.resolvedUrl("../assets/folders/paper-" + kind + ".svg") : ""
+                    sourceSize.width: Math.ceil(width * Screen.devicePixelRatio)
+                    sourceSize.height: Math.ceil(height * Screen.devicePixelRatio)
+                    fillMode: Image.PreserveAspectFit
+                    smooth: true
+                    mipmap: true
                 }
 
                 TextInput {

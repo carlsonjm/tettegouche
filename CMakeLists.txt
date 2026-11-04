@@ -197,6 +197,15 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/panels-top-left.svg
         assets/icons/lucide/chevron-up.svg
         assets/icons/lucide/wrench.svg
+        assets/folders/paper-code.svg
+        assets/folders/paper-games.svg
+        assets/folders/paper-graphics.svg
+        assets/folders/paper-internet.svg
+        assets/folders/paper-media.svg
+        assets/folders/paper-office.svg
+        assets/folders/paper-plain.svg
+        assets/folders/paper-system.svg
+        assets/folders/paper-tools.svg
 )
 target_link_libraries(tettegouche PRIVATE
     tettegouche-core

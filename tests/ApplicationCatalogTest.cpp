@@ -297,6 +297,38 @@ private Q_SLOTS:
         QCOMPARE(catalog.folderCount(), 0);
     }
 
+    // A folder is drawn as a paper folder of the kind its applications
+    // share, plain when they share none; a look chosen for it stays, for the
+    // next catalog too, and only the looks there are can be chosen.
+    void drawsAFolderInTheLookChosen()
+    {
+        const QString alpha = QStringLiteral("alpha.desktop");
+        const QString beta = QStringLiteral("beta.desktop");
+        ApplicationCatalog catalog;
+        QCOMPARE(catalog.folderKinds(),
+                 (QStringList{QStringLiteral("games"), QStringLiteral("media"), QStringLiteral("code"),
+                              QStringLiteral("office"), QStringLiteral("graphics"), QStringLiteral("internet"),
+                              QStringLiteral("system"), QStringLiteral("tools"), QStringLiteral("plain")}));
+        const QString folder = catalog.makeFolder({alpha, beta});
+        const auto look = [](const ApplicationCatalog &of, const QString &id) {
+            return of.data(of.index(of.folderRow(id)), ApplicationCatalog::FolderKindRole).toString();
+        };
+        QCOMPARE(look(catalog, folder), QStringLiteral("plain"));
+        QCOMPARE(catalog.item(catalog.folderRow(folder)).value(QStringLiteral("folderKind")).toString(),
+                 QStringLiteral("plain"));
+        catalog.setFolderKind(folder, QStringLiteral("office"));
+        QCOMPARE(look(catalog, folder), QStringLiteral("office"));
+        catalog.setFolderKind(folder, QStringLiteral("nothing"));
+        QCOMPARE(look(catalog, folder), QStringLiteral("office"));
+        QVERIFY(catalog.data(catalog.index(rowOf(catalog, QStringLiteral("zulu.desktop"))),
+                             ApplicationCatalog::FolderKindRole).toString().isEmpty());
+
+        ApplicationCatalog next;
+        QCOMPARE(look(next, folder), QStringLiteral("office"));
+        next.removeFolder(folder);
+        QCOMPARE(next.folderCount(), 0);
+    }
+
     // Each order, over the same applications, divided its own way: by when
     // each was last used, the most used first inside each, or by when it
     // arrived, which for those here before Apps kept count is Older. A folder

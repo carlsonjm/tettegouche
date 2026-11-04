@@ -569,10 +569,11 @@ Item {
         root.renameFolder(folder)
     }
 
-    // A folder's sheet: Rename and Remove folder.
+    // A folder's sheet: its look, Rename and Remove folder.
     function showFolderSheet(index, tile, point) {
         folderSheet.row = index
         folderSheet.folder = root.applicationCatalog.folderId(index)
+        folderSheet.kind = root.applicationCatalog.item(index).folderKind || "plain"
         const at = tile.mapToItem(sheet, point.x, point.y)
         folderSheet.openNear(at.x, at.y)
     }
@@ -1728,8 +1729,11 @@ Item {
                 }
             }
 
-            // A folder's sheet. Rename readies its name to change on its row;
-            // Remove folder puts its applications back in Apps.
+            // A folder's sheet. Its looks, one paper folder for each kind, are
+            // in a row on top: a tap, or Left and Right, draws the folder in
+            // another, the one in use on a soft plate. Rename readies its
+            // name to change on its row; Remove folder puts its applications
+            // back in Apps.
             SheetMenu {
                 id: folderSheet
                 objectName: "apps-folder-sheet"
@@ -1738,6 +1742,66 @@ Item {
                 keysReach: root.keysReach
                 property int row: -1
                 property string folder: ""
+                property string kind: "plain"
+                readonly property var kinds: root.applicationCatalog.folderKinds || []
+                function chooseKind(next) {
+                    if (!folder || kinds.indexOf(next) < 0) return
+                    kind = next
+                    root.applicationCatalog.setFolderKind(folder, next)
+                }
+                onSideways: by => {
+                    const at = Math.max(0, kinds.indexOf(kind))
+                    chooseKind(kinds[(at + by + kinds.length) % kinds.length])
+                }
+                Row {
+                    id: folderLooks
+                    objectName: "apps-folder-looks"
+                    readonly property bool isSheetMenuRow: true
+                    spacing: 2
+                    bottomPadding: 4
+                    Repeater {
+                        model: folderSheet.kinds
+                        delegate: Rectangle {
+                            id: look
+                            required property string modelData
+                            readonly property bool current: folderSheet.kind === modelData
+                            objectName: "apps-folder-look-" + modelData
+                            width: 30
+                            height: 30
+                            radius: 8
+                            color: current ? tone.controlPressed
+                                : lookHover.hovered ? tone.controlHover : "transparent"
+                            Accessible.role: Accessible.RadioButton
+                            Accessible.checkable: true
+                            Accessible.checked: current
+                            Accessible.name: ({
+                                "games": words.i18nc("@label an Apps folder of games", "Games"),
+                                "media": words.i18nc("@label an Apps folder of media players", "Media"),
+                                "code": words.i18nc("@label an Apps folder of programming tools", "Code"),
+                                "office": words.i18nc("@label an Apps folder of office applications", "Office"),
+                                "graphics": words.i18nc("@label an Apps folder of graphics applications", "Graphics"),
+                                "internet": words.i18nc("@label an Apps folder of internet applications", "Internet"),
+                                "system": words.i18nc("@label an Apps folder of system tools", "System"),
+                                "tools": words.i18nc("@label an Apps folder of utilities", "Tools"),
+                                "plain": words.i18nc("@label an Apps folder's look for applications of any kind", "Plain")
+                            })[modelData] || ""
+                            Accessible.onPressAction: folderSheet.chooseKind(modelData)
+                            Image {
+                                anchors.centerIn: parent
+                                width: 24
+                                height: 24
+                                source: Qt.resolvedUrl("../assets/folders/paper-" + look.modelData + ".svg")
+                                sourceSize.width: Math.ceil(width * Screen.devicePixelRatio)
+                                sourceSize.height: Math.ceil(height * Screen.devicePixelRatio)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                            }
+                            HoverHandler { id: lookHover }
+                            TapHandler { onTapped: folderSheet.chooseKind(look.modelData) }
+                        }
+                    }
+                }
                 SheetMenuItem {
                     objectName: "apps-folder-sheet-rename"
                     text: words.i18n("Rename")
