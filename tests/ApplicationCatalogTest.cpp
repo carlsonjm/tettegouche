@@ -449,8 +449,8 @@ private Q_SLOTS:
         write(icon, "old");
         write(hicolor + QStringLiteral("/icon-theme.cache"), "old");
         QVERIFY(ApplicationCatalog::iconRoots().contains(qEnvironmentVariable("XDG_DATA_DIRS") + QStringLiteral("/icons")));
-        const QByteArray before = ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots());
-        QCOMPARE(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots()), before);
+        const QByteArray before = ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName());
+        QCOMPARE(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName()), before);
 
         ApplicationCatalog catalog;
         QSignalSpy redrawn(&catalog, &QAbstractItemModel::modelReset);
@@ -460,7 +460,7 @@ private Q_SLOTS:
 
         QTest::qWait(20);
         QVERIFY(QFile::remove(icon));
-        QVERIFY(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots()) != before);
+        QVERIFY(ApplicationCatalog::iconStamp(ApplicationCatalog::iconRoots(), ApplicationCatalog::iconThemeName()) != before);
         catalog.checkInstalled();
         QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() >= 1, 5000);
         // Once only: the next check finds nothing new.
@@ -468,6 +468,20 @@ private Q_SLOTS:
         catalog.checkInstalled();
         QTest::qWait(50);
         QCOMPARE(redrawn.count(), seen);
+
+        // Another icon theme chosen in System Settings, and chosen back:
+        // each time Apps is drawn afresh.
+        const QString globals = qEnvironmentVariable("XDG_CONFIG_HOME") + QStringLiteral("/kdeglobals");
+        write(globals, "[Icons]\nTheme=Other\n");
+        QCOMPARE(ApplicationCatalog::iconThemeName(), QStringLiteral("Other"));
+        catalog.checkInstalled();
+        QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() > seen, 5000);
+        const int other = redrawn.count();
+        write(globals, "[Icons]\nTheme=First\n");
+        QCOMPARE(ApplicationCatalog::iconThemeName(), QStringLiteral("First"));
+        catalog.checkInstalled();
+        QTRY_VERIFY_WITH_TIMEOUT(redrawn.count() > other, 5000);
+        QVERIFY(QFile::remove(globals));
     }
 
     // An application arrives when Apps first finds it. One updated since,

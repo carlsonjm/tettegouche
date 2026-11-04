@@ -17,6 +17,8 @@
 #include <KLocalizedString>
 #include <KShell>
 #include <KSycoca>
+#include <KConfig>
+#include <KConfigGroup>
 #include <QCryptographicHash>
 #include <QDBusConnection>
 #include <QDBusMessage>
@@ -100,10 +102,18 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
         const QFileInfoList themes = QDir(root).entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
         for (const QFileInfo &theme : themes) installs->addDir(theme.absoluteFilePath());
     }
-    m_iconStamp = iconStamp(iconRoots());
+    m_iconStamp = iconStamp(iconRoots(), iconThemeName());
     // Plasma's word that icons changed, as when the icon theme is chosen in
     // System Settings: once the icon loader has read the themes again, the
-    // tiles are drawn afresh, so they look their icons up anew.
+    // tiles are drawn afresh, so they look their icons up anew. The word can
+    // reach Plasma's icon loader before the new theme's name reaches Qt, and
+    // the loader then keeps the theme it had; so once the change has settled
+    // the themes are looked at again, and a theme found changed is read
+    // anew.
+    m_iconSettle = new QTimer(this);
+    m_iconSettle->setSingleShot(true);
+    m_iconSettle->setInterval(1500);
+    connect(m_iconSettle, &QTimer::timeout, this, &ApplicationCatalog::refreshIcons);
     QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KIconLoader"),
         QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged()));
     noteArrivals(m_entries);
@@ -217,9 +227,18 @@ QStringList ApplicationCatalog::iconRoots()
     return roots;
 }
 
-QByteArray ApplicationCatalog::iconStamp(const QStringList &roots)
+QString ApplicationCatalog::iconThemeName()
+{
+    // Read afresh: the copy Search keeps may not have caught up yet.
+    const KConfig globals(QStringLiteral("kdeglobals"), KConfig::CascadeConfig);
+    return KConfigGroup(&globals, QStringLiteral("Icons")).readEntry("Theme", QString());
+}
+
+QByteArray ApplicationCatalog::iconStamp(const QStringList &roots, const QString &theme)
 {
     QCryptographicHash hash(QCryptographicHash::Sha1);
+    hash.addData(theme.toUtf8());
+    hash.addData(QByteArrayView("\n"));
     const auto note = [&hash](const QFileInfo &info) {
         if (!info.exists()) return;
         hash.addData(info.absoluteFilePath().toUtf8());
@@ -251,7 +270,7 @@ QByteArray ApplicationCatalog::iconStamp(const QStringList &roots)
 
 void ApplicationCatalog::refreshIcons()
 {
-    const QByteArray stamp = iconStamp(iconRoots());
+    const QByteArray stamp = iconStamp(iconRoots(), iconThemeName());
     if (stamp == m_iconStamp) return;
     m_iconStamp = stamp;
     // Qt's own icon lookup forgets what it found, and Plasma's icon loader
@@ -273,6 +292,7 @@ void ApplicationCatalog::iconsChanged()
 {
     // After every other listener, Plasma's icon loader among them.
     QTimer::singleShot(0, this, &ApplicationCatalog::reload);
+    m_iconSettle->start();
 }
 
 void ApplicationCatalog::reload()

@@ -24,6 +24,8 @@ namespace AppStream
 class Pool;
 }
 
+class QTimer;
+
 class ApplicationCatalog final : public QAbstractListModel
 {
     Q_OBJECT
@@ -132,8 +134,10 @@ public:
     // them last changed that would change an application's icon: each
     // theme's folder, its icon cache and its folders of application icons.
     // Comparing marks is cheap enough to do each time Apps opens.
+    // The icon theme chosen in System Settings belongs to the mark too.
     static QStringList iconRoots();
-    static QByteArray iconStamp(const QStringList &roots);
+    static QString iconThemeName();
+    static QByteArray iconStamp(const QStringList &roots, const QString &theme);
     // The row an application is drawn at, by its desktop file id, or -1.
     Q_INVOKABLE [[nodiscard]] int applicationRow(const QString &applicationId) const;
 
@@ -291,6 +295,7 @@ private:
     // replaces would show until Search restarts. When the themes change,
     // the icons are looked up again and Apps is drawn afresh.
     QByteArray m_iconStamp;
+    QTimer *m_iconSettle = nullptr;
     void refreshIcons();
 private Q_SLOTS:
     void iconsChanged();

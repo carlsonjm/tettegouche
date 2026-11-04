@@ -309,7 +309,7 @@ if(BUILD_TESTING)
     qt_add_executable(application-catalog-test tests/ApplicationCatalogTest.cpp
         src/ApplicationCatalog.cpp src/ApplicationCatalog.h src/UseRecord.h)
     target_include_directories(application-catalog-test PRIVATE src)
-    target_link_libraries(application-catalog-test PRIVATE KF6::CoreAddons KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
+    target_link_libraries(application-catalog-test PRIVATE KF6::ConfigCore KF6::CoreAddons KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
     target_compile_definitions(application-catalog-test PRIVATE TRANSLATION_DOMAIN="tettegouche")
     add_test(NAME application-catalog-test COMMAND application-catalog-test)
     qt_add_executable(launcher-controller-test tests/LauncherControllerTest.cpp)
