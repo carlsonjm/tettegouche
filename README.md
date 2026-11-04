@@ -23,6 +23,11 @@ islands beside it show what is happening now. Search stays on this computer.
 </p>
 
 
+<p align="center">
+<b>Tettegouche is Search in <a href="https://shuffleplasma.com">Shuffle for Plasma</a></b>, a touch-first desktop for KDE Plasma that comes with every free part already set up to work together.
+</p>
+
+
 
 https://github.com/user-attachments/assets/bf570089-f795-42d4-8333-f2e6c63039b6
 
