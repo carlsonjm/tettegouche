@@ -5,6 +5,12 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- A folder in Apps is a paper folder of its kind, as the dock's are on
+  Shuffle: green for games, gold with a briefcase for office applications,
+  violet with a wrench for tools, teal for code, and so on, plain when its
+  applications share no kind. Its sheet has a row of the nine looks, so you
+  can draw it as any of them. Before, every folder was a grey tile of up to
+  four of its applications.
 - Moving between Search, Apps, Files and Notes with the on-screen keys up
   keeps them up, the cursor going straight to the new tab's field: Find a
   note in Notes, the search field in the others. Before, they dropped away,

@@ -101,6 +101,12 @@ msgctxt "@label an Apps folder with no name"
 msgid "Folder"
 msgstr "Ordner"
 
+#: qml/Launcher.qml
+#, kde-format
+msgctxt "@label an Apps folder's look for applications of any kind"
+msgid "Plain"
+msgstr "Schlicht"
+
 #: src/ApplicationCatalog.cpp:512
 #, kde-format
 msgctxt "@label an Apps folder of games"

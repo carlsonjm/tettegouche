@@ -197,6 +197,10 @@ TestCase {
         property var putIn: []
         property int takenOut: -1
         readonly property int folderCount: 0
+        readonly property var folderKinds: ["games", "media", "code", "office", "graphics", "internet",
+                                            "system", "tools", "plain"]
+        property var kindSet: []
+        function setFolderKind(id, kind) { kindSet = [id, kind] }
         function isFolder(row) { return row >= 0 && row < count && get(row).isFolder === true }
         function folderId(row) { return isFolder(row) ? get(row).folderId : "" }
         function folderName(row) { return isFolder(row) ? get(row).name : "" }
@@ -890,6 +894,21 @@ TestCase {
         const folderSheet = findChild(launcher, "apps-folder-sheet")
         mouseClick(header(), header().width / 2, header().height / 2, Qt.RightButton)
         tryCompare(folderSheet, "opened", true)
+        // Its looks, a paper folder for each kind, the one in use on a
+        // plate; a tap or Right draws it in another, and the sheet stays.
+        const looks = findChild(launcher, "apps-folder-looks")
+        verify(looks.visible)
+        compare(findChild(header(), "apps-folder-tile").source.toString().indexOf("paper-plain.svg") > 0, true)
+        compare(folderSheet.kind, "plain")
+        // A Repeater's looks are the row's children, not its objects'.
+        const office = Array.from(looks.children).find(look => look.objectName === "apps-folder-look-office")
+        compare(Array.from(looks.children).filter(look => look.objectName.startsWith("apps-folder-look-")).length, 9)
+        mouseClick(office, office.width / 2, office.height / 2)
+        compare(JSON.stringify(catalog.kindSet), JSON.stringify(["f1", "office"]))
+        compare(folderSheet.kind, "office")
+        verify(folderSheet.opened)
+        keyClick(Qt.Key_Right)
+        compare(JSON.stringify(catalog.kindSet), JSON.stringify(["f1", "graphics"]))
         const rename = findChild(launcher, "apps-folder-sheet-rename")
         mouseClick(rename, rename.width / 2, rename.height / 2)
         tryCompare(launcher, "renamingFolder", "f1")

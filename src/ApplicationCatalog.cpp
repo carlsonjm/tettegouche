@@ -98,7 +98,9 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     for (const QJsonValue &value : folders) {
         const QJsonObject folder = value.toObject();
         Folder kept{folder.value(QStringLiteral("id")).toString(),
-                    folder.value(QStringLiteral("name")).toString().trimmed(), {}};
+                    folder.value(QStringLiteral("name")).toString().trimmed(), {},
+                    folder.value(QStringLiteral("kind")).toString()};
+        if (!folderKinds().contains(kept.kind)) kept.kind.clear();
         for (const QJsonValue &application : folder.value(QStringLiteral("apps")).toArray()) {
             const QString id = application.toString();
             if (!id.isEmpty() && !kept.applications.contains(id)) {
@@ -251,6 +253,8 @@ QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
             return true;
         case FolderIdRole:
             return folder->id;
+        case FolderKindRole:
+            return folderLook(*folder);
         case FolderIconsRole: {
             QVector<int> members;
             for (const QString &id : folder->applications) {
@@ -291,6 +295,8 @@ QVariant ApplicationCatalog::data(const QModelIndex &index, int role) const
         return QString();
     case FolderIconsRole:
         return QStringList();
+    case FolderKindRole:
+        return QString();
     default:
         return {};
     }
@@ -309,6 +315,7 @@ QHash<int, QByteArray> ApplicationCatalog::roleNames() const
         {KindRole, QByteArrayLiteral("kind")},
         {OpenRole, QByteArrayLiteral("open")},
         {SizeRole, QByteArrayLiteral("size")},
+        {FolderKindRole, QByteArrayLiteral("folderKind")},
     };
 }
 
@@ -504,35 +511,84 @@ QVariantList ApplicationCatalog::folderList() const
     return list;
 }
 
-QString ApplicationCatalog::nameFor(const QStringList &applicationIds) const
+namespace
 {
-    // The freedesktop main categories, in the order a shared one is chosen,
-    // and the word a folder of them is called.
-    const QList<QPair<QStringList, QString>> names = {
-        {{QStringLiteral("Game")}, i18nc("@label an Apps folder of games", "Games")},
-        {{QStringLiteral("AudioVideo"), QStringLiteral("Audio"), QStringLiteral("Video")},
+// The freedesktop main categories, in the order a shared one is chosen, the
+// kind of folder they make and the word it is called. Several categories can
+// share a word: audio, video and the two together are all media.
+struct SharedKind {
+    QStringList categories;
+    QString kind;
+    QString name;
+};
+
+QList<SharedKind> sharedKinds()
+{
+    return {
+        {{QStringLiteral("Game")}, QStringLiteral("games"), i18nc("@label an Apps folder of games", "Games")},
+        {{QStringLiteral("AudioVideo"), QStringLiteral("Audio"), QStringLiteral("Video")}, QStringLiteral("media"),
          i18nc("@label an Apps folder of media players", "Media")},
-        {{QStringLiteral("Development")}, i18nc("@label an Apps folder of programming tools", "Code")},
-        {{QStringLiteral("Office")}, i18nc("@label an Apps folder of office applications", "Office")},
-        {{QStringLiteral("Graphics")}, i18nc("@label an Apps folder of graphics applications", "Graphics")},
-        {{QStringLiteral("Network")}, i18nc("@label an Apps folder of internet applications", "Internet")},
-        {{QStringLiteral("System"), QStringLiteral("Settings")}, i18nc("@label an Apps folder of system tools", "System")},
-        {{QStringLiteral("Utility")}, i18nc("@label an Apps folder of utilities", "Tools")},
+        {{QStringLiteral("Development")}, QStringLiteral("code"), i18nc("@label an Apps folder of programming tools", "Code")},
+        {{QStringLiteral("Office")}, QStringLiteral("office"), i18nc("@label an Apps folder of office applications", "Office")},
+        {{QStringLiteral("Graphics")}, QStringLiteral("graphics"), i18nc("@label an Apps folder of graphics applications", "Graphics")},
+        {{QStringLiteral("Network")}, QStringLiteral("internet"), i18nc("@label an Apps folder of internet applications", "Internet")},
+        {{QStringLiteral("System"), QStringLiteral("Settings")}, QStringLiteral("system"),
+         i18nc("@label an Apps folder of system tools", "System")},
+        {{QStringLiteral("Utility")}, QStringLiteral("tools"), i18nc("@label an Apps folder of utilities", "Tools")},
     };
+}
+
+const QString PlainKind = QStringLiteral("plain");
+}
+
+QStringList ApplicationCatalog::folderKinds()
+{
+    QStringList kinds;
+    for (const SharedKind &kind : sharedKinds()) kinds.append(kind.kind);
+    kinds.append(PlainKind);
+    return kinds;
+}
+
+int ApplicationCatalog::sharedKind(const QStringList &applicationIds) const
+{
     QList<QStringList> categories;
     for (const QString &id : applicationIds) {
         const int at = entryIndex(id);
-        categories.append(at >= 0 ? m_entries.at(at).service->categories() : QStringList());
+        if (at >= 0) categories.append(m_entries.at(at).service->categories());
     }
-    for (const auto &[keys, name] : names) {
+    if (categories.isEmpty()) return -1;
+    const QList<SharedKind> kinds = sharedKinds();
+    for (int i = 0; i < kinds.size(); ++i) {
+        const QStringList &keys = kinds.at(i).categories;
         const bool shared = std::all_of(categories.cbegin(), categories.cend(), [&keys](const QStringList &own) {
             return std::any_of(keys.cbegin(), keys.cend(), [&own](const QString &key) {
                 return own.contains(key);
             });
         });
-        if (shared) return name;
+        if (shared) return i;
     }
-    return i18nc("@label an Apps folder with no name", "Folder");
+    return -1;
+}
+
+QString ApplicationCatalog::nameFor(const QStringList &applicationIds) const
+{
+    const int found = sharedKind(applicationIds);
+    return found >= 0 ? sharedKinds().at(found).name : i18nc("@label an Apps folder with no name", "Folder");
+}
+
+QString ApplicationCatalog::folderLook(const Folder &folder) const
+{
+    if (!folder.kind.isEmpty()) return folder.kind;
+    const int found = sharedKind(folder.applications);
+    return found >= 0 ? sharedKinds().at(found).kind : PlainKind;
+}
+
+void ApplicationCatalog::setFolderKind(const QString &folderId, const QString &kind)
+{
+    const int at = folderIndex(folderId);
+    if (at < 0 || !folderKinds().contains(kind) || m_folders.at(at).kind == kind) return;
+    m_folders[at].kind = kind;
+    storeFolders();
 }
 
 QString ApplicationCatalog::gather(int row, const QString &applicationId)
@@ -660,9 +716,11 @@ void ApplicationCatalog::storeFolders()
                     m_folders.end());
     QJsonArray stored;
     for (const Folder &folder : m_folders) {
-        stored.append(QJsonObject{{QStringLiteral("id"), folder.id},
-                                  {QStringLiteral("name"), folder.name},
-                                  {QStringLiteral("apps"), QJsonArray::fromStringList(folder.applications)}});
+        QJsonObject kept{{QStringLiteral("id"), folder.id},
+                         {QStringLiteral("name"), folder.name},
+                         {QStringLiteral("apps"), QJsonArray::fromStringList(folder.applications)}};
+        if (!folder.kind.isEmpty()) kept.insert(QStringLiteral("kind"), folder.kind);
+        stored.append(kept);
     }
     QSettings().setValue(FoldersKey, QString::fromUtf8(QJsonDocument(stored).toJson(QJsonDocument::Compact)));
     storeOpenFolders();
