@@ -896,10 +896,13 @@ TestCase {
         tryCompare(folderSheet, "opened", true)
         // Its looks, a paper folder for each kind, the one in use on a
         // plate; a tap or Right draws it in another, and the sheet stays.
-        verify(findChild(launcher, "apps-folder-looks").visible)
+        const looks = findChild(launcher, "apps-folder-looks")
+        verify(looks.visible)
         compare(findChild(header(), "apps-folder-tile").source.toString().indexOf("paper-plain.svg") > 0, true)
         compare(folderSheet.kind, "plain")
-        const office = findChild(launcher, "apps-folder-look-office")
+        // A Repeater's looks are the row's children, not its objects'.
+        const office = Array.from(looks.children).find(look => look.objectName === "apps-folder-look-office")
+        compare(Array.from(looks.children).filter(look => look.objectName.startsWith("apps-folder-look-")).length, 9)
         mouseClick(office, office.width / 2, office.height / 2)
         compare(JSON.stringify(catalog.kindSet), JSON.stringify(["f1", "office"]))
         compare(folderSheet.kind, "office")
