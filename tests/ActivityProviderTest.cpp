@@ -77,9 +77,7 @@ public Q_SLOTS:
 class FakeNotifications : public QObject {
     Q_OBJECT
     Q_CLASSINFO("D-Bus Interface", "org.freedesktop.Notifications")
-    Q_PROPERTY(bool Inhibited MEMBER inhibited)
 public:
-    bool inhibited = false;
     struct Notice { QString application, summary, body; QStringList actions; QVariantMap hints; };
     QList<Notice> notices;
     QList<uint> closed;
@@ -973,29 +971,18 @@ private Q_SLOTS:
             QTRY_COMPARE(screen.activities().size(),1);
         }
         {
-            // Notifications kept quiet meanwhile, as the notification server
-            // says, and back when it says they are.
-            auto fakes=QDBusConnection::connectToBus(QDBusConnection::SessionBus,QStringLiteral("fake-quiet"));
-            FakeNotifications notifications;
-            notifications.inhibited=true;
-            QVERIFY(fakes.registerObject(QStringLiteral("/org/freedesktop/Notifications"),&notifications,
-                                         QDBusConnection::ExportAllSlots|QDBusConnection::ExportAllProperties));
-            QVERIFY(fakes.registerService(QStringLiteral("org.freedesktop.Notifications")));
+            // Notifications kept quiet meanwhile, as Plasma's own notification
+            // server says, and back when it says they are.
+            auto &server=NotificationManager::Server::self();
+            QVERIFY(server.init());
+            server.setInhibited(true);
             ScreenShareProvider screen(QDBusConnection::sessionBus());
             QTRY_COMPARE(screen.activities().size(),1);
             QTRY_VERIFY(screen.activities().first().toMap().value(QStringLiteral("quiet")).toBool());
             QSignalSpy changed(&screen,&ScreenShareProvider::changed);
-            notifications.inhibited=false;
-            auto told=QDBusMessage::createSignal(QStringLiteral("/org/freedesktop/Notifications"),
-                QStringLiteral("org.freedesktop.DBus.Properties"),QStringLiteral("PropertiesChanged"));
-            told.setArguments({QStringLiteral("org.freedesktop.Notifications"),
-                QVariantMap{{QStringLiteral("Inhibited"),false}},QStringList()});
-            QVERIFY(fakes.send(told));
+            server.setInhibited(false);
             QTRY_VERIFY(!screen.activities().first().toMap().value(QStringLiteral("quiet")).toBool());
             QVERIFY(changed.count()>=1);
-            fakes.unregisterService(QStringLiteral("org.freedesktop.Notifications"));
-            fakes.unregisterObject(QStringLiteral("/org/freedesktop/Notifications"));
-            QDBusConnection::disconnectFromBus(QStringLiteral("fake-quiet"));
         }
         peer.unregisterService(QStringLiteral("org.kde.StatusNotifierWatcher"));
         peer.unregisterObject(QStringLiteral("/"),QDBusConnection::UnregisterTree);
