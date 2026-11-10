@@ -272,6 +272,7 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/folder-open.svg
         assets/icons/lucide/sparkles.svg
         assets/icons/lucide/plus.svg
+        assets/icons/lucide/bell-off.svg
         assets/icons/suite/notes.svg
 )
 target_link_libraries(co.goodinput.tettegouche PRIVATE

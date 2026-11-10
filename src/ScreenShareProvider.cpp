@@ -12,6 +12,8 @@ const QString Properties = QStringLiteral("org.freedesktop.DBus.Properties");
 const QString Menu = QStringLiteral("com.canonical.dbusmenu");
 const QString PortalId = QStringLiteral("xdg-desktop-portal-kde");
 const QString Prefix = QStringLiteral("screen:");
+const QString Notifications = QStringLiteral("org.freedesktop.Notifications");
+const QString NotificationsPath = QStringLiteral("/org/freedesktop/Notifications");
 
 // A tooltip is (icon name, pixmaps, title, subtitle); the subtitle names who.
 QString subtitle(const QVariant &value) {
@@ -62,7 +64,40 @@ ScreenShareProvider::ScreenShareProvider(const QDBusConnection &bus, QObject *pa
     // Any item's change: the portal's own are picked out by sender.
     for (const auto *signal : {"NewTitle", "NewToolTip", "NewStatus", "NewIcon"})
         m_bus.connect(QString(), QString(), ItemInterface, QString::fromLatin1(signal), this, SLOT(itemChanged(QDBusMessage)));
+    m_bus.connect(Notifications, NotificationsPath, Properties, QStringLiteral("PropertiesChanged"), this,
+        SLOT(notificationsChanged(QString,QVariantMap,QStringList)));
     load();
+    readQuiet();
+}
+
+void ScreenShareProvider::notificationsChanged(const QString &interface, const QVariantMap &properties, const QStringList &invalidated) {
+    if (interface != Notifications) return;
+    const auto found = properties.constFind(QStringLiteral("Inhibited"));
+    if (found != properties.cend()) {
+        const bool quiet = found->toBool();
+        if (quiet == m_quiet) return;
+        m_quiet = quiet;
+        if (!m_shares.isEmpty()) Q_EMIT changed();
+    } else if (invalidated.contains(QStringLiteral("Inhibited"))) {
+        readQuiet();
+    }
+}
+
+// Whether notifications are quiet now; no notification server is not quiet.
+void ScreenShareProvider::readQuiet() {
+    auto call = QDBusMessage::createMethodCall(Notifications, NotificationsPath, Properties, QStringLiteral("Get"));
+    call.setArguments({Notifications, QStringLiteral("Inhibited")});
+    call.setAutoStartService(false);
+    auto *watcher = new QDBusPendingCallWatcher(m_bus.asyncCall(call), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher] {
+        watcher->deleteLater();
+        const auto reply = watcher->reply();
+        const bool quiet = reply.type() == QDBusMessage::ReplyMessage
+            && reply.arguments().value(0).value<QDBusVariant>().variant().toBool();
+        if (quiet == m_quiet) return;
+        m_quiet = quiet;
+        if (!m_shares.isEmpty()) Q_EMIT changed();
+    });
 }
 
 QPair<QString, QString> ScreenShareProvider::address(const QString &item) {
@@ -110,6 +145,7 @@ void ScreenShareProvider::read(const QString &item) {
             if (m_shares.remove(item)) Q_EMIT changed();
             return;
         }
+        if (!m_shares.contains(item)) readQuiet();
         auto &found = m_shares[item];
         if (!found.generation) found.generation = ++m_generation;
         found.item = item;
@@ -130,7 +166,7 @@ QVariantList ScreenShareProvider::activities() const {
     for (const auto &share : shares) {
         rows.append(QVariantMap{{QStringLiteral("id"), QString(Prefix + share.item)}, {QStringLiteral("generation"), share.generation},
             {QStringLiteral("kind"), QStringLiteral("screen")}, {QStringLiteral("state"), QStringLiteral("running")},
-            {QStringLiteral("title"), share.who}, {QStringLiteral("icon"), share.icon},
+            {QStringLiteral("title"), share.who}, {QStringLiteral("icon"), share.icon}, {QStringLiteral("quiet"), m_quiet},
             {QStringLiteral("capabilities"), QVariantMap{{QStringLiteral("stop"), !share.menu.isEmpty()}}}});
     }
     return rows;

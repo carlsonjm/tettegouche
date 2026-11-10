@@ -145,7 +145,8 @@ The islands beside the dot show what is happening now:
 - Copy and move operations started in Tettegouche
 - New files arriving in Downloads
 - A drive or memory card plugged in: one tap opens it in Files
-- A screen shared or recorded through Plasma's portal, with Stop
+- A screen shared or recorded through Plasma's portal, with Stop, and
+  Notifications quiet while notifications are kept quiet
 - An application waiting on you: one tap brings it and its dialog forward
 - Where Split Rock is installed, a fact that needs attention, such as a disk
   filling up

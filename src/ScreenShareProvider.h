@@ -12,6 +12,11 @@
 // portal session: Stop sends that action. The item is followed through the
 // StatusNotifierWatcher as it comes, changes and goes; nothing is asked on a
 // timer.
+//
+// Each share also says whether notifications are quiet, from the notification
+// server's Inhibited property: Plasma keeps them quiet while the screen is
+// shared when its setting for that is on, and the person's Do Not Disturb
+// does too.
 class ScreenShareProvider : public QObject {
     Q_OBJECT
 public:
@@ -24,7 +29,9 @@ private Q_SLOTS:
     void registered(const QString &item);
     void unregistered(const QString &item);
     void itemChanged(const QDBusMessage &message);
+    void notificationsChanged(const QString &interface, const QVariantMap &properties, const QStringList &invalidated);
 private:
+    void readQuiet();
     struct Share { QString item, service, path, menu, icon, who; int generation = 0; };
     void load();
     void read(const QString &item);
@@ -32,4 +39,5 @@ private:
     QDBusConnection m_bus;
     QHash<QString, Share> m_shares;
     int m_generation = 0;
+    bool m_quiet = false;
 };

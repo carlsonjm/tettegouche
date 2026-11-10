@@ -356,6 +356,10 @@ Item {
     readonly property var screenShown: screens.length > 0 ? screens[screens.length - 1] : null
     readonly property string screenWho: screenShown ? screenShown.title || words.i18n("Sharing your screen") : ""
     readonly property string stopLabel: words.i18n("Stop")
+    // Notifications are quiet while it lasts, as Plasma keeps them during a
+    // share when its setting for that is on.
+    readonly property bool screenQuiet: screenShown !== null && screenShown.quiet === true
+    readonly property string quietLabel: words.i18n("Notifications quiet")
     readonly property real dotWidth: 28
 
     // An application waiting on the person: its icon, its name, and its
@@ -488,6 +492,11 @@ Item {
     function screenWords(who) {
         return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
     }
+    // The struck-through bell and its words.
+    function quietWidth() {
+        return 12 + quietGlyph + 5 + textWidth(plainMetrics, quietLabel);
+    }
+    readonly property int quietGlyph: 15
     function skipWidth() {
         return reach * ((capability(player, "previous") ? 1 : 0) + (capability(player, "next") ? 1 : 0));
     }
@@ -527,7 +536,7 @@ Item {
                 + driveWords(has("name"), has("size"));
         if (kind === "screen")
             return 2 * inset + (has("dot") ? dotWidth : 0) + screenWords(has("who"))
-                + (has("stop") ? pillWidth(stopLabel) : 0);
+                + (has("quiet") ? quietWidth() : 0) + (has("stop") ? pillWidth(stopLabel) : 0);
         if (kind === "waiting")
             return 2 * inset + (has("icon") ? pictureLead : 0) + waitingWords(has("name"), has("question"));
         if (kind === "core")
@@ -563,6 +572,7 @@ Item {
         case "screen.dot": return screenShown !== null;
         case "screen.who": return screenWho !== "";
         case "screen.stop": return capability(screenShown, "stop");
+        case "screen.quiet": return screenQuiet;
         case "waiting.icon": case "waiting.name": return waitingShown !== null;
         case "waiting.question": return tall && waitingLine !== "";
         case "core.icon": case "core.name": return coreShown !== null;
@@ -648,7 +658,7 @@ Item {
     function spoken(kind) {
         if (kind === "media") return words.i18n("Media %1, open", mediaTitle);
         if (kind === "transfer") return words.i18np("1 transfer, open", "%1 transfers, open", running.length);
-        if (kind === "screen") return screenWho;
+        if (kind === "screen") return screenQuiet ? words.i18n("%1, notifications quiet", screenWho) : screenWho;
         if (kind === "waiting") return waitingQuestion
             ? words.i18n("%1 is waiting: %2, show it", waitingName, waitingQuestion)
             : words.i18n("%1 is waiting, show it", waitingName);
@@ -1403,8 +1413,9 @@ Item {
         }
     }
 
-    // The screen being shared or recorded: a red dot, who receives it, and
-    // Stop, which ends the share as the portal's own End does.
+    // The screen being shared or recorded: a red dot, who receives it, the
+    // notifications kept quiet meanwhile, and Stop, which ends the share as
+    // the portal's own End does.
     BandIsland {
         id: screenIsland
         kind: "screen"
@@ -1434,6 +1445,32 @@ Item {
                 width: screenWhoPiece.inner
                 anchors.verticalCenter: parent.verticalCenter
                 text: surface.screenWho
+            }
+        }
+        Piece {
+            id: quietPiece
+            island: screenIsland
+            name: "quiet"
+            size: surface.quietWidth()
+            Row {
+                objectName: "ambient-screen-quiet"
+                x: 6
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 5
+                Accessible.role: Accessible.StaticText
+                Accessible.name: surface.quietLabel
+                SuiteIcon {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: surface.quietGlyph
+                    height: surface.quietGlyph
+                    glyph: "bell-off"
+                    opacity: 0.66
+                }
+                Label {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: surface.quietLabel
+                    opacity: 0.66
+                }
             }
         }
         Piece {

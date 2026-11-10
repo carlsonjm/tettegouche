@@ -137,8 +137,12 @@ notice is closed.
 While a screen is shared or recorded, Plasma's portal shows a status notifier
 item; Ambient follows it through the StatusNotifierWatcher as it comes, changes
 and goes. The island shows a red dot, the portal's own line naming who receives
-the screen, and Stop, which clicks the item's End. A tap elsewhere on it opens
-nothing. It lasts while the share does and leaves nothing behind.
+the screen, and Stop, which clicks the item's End. While the notification
+server says notifications are quiet, by its `Inhibited` property, a struck-through
+bell and Notifications quiet sit before Stop: Plasma keeps notifications quiet
+during a share when its "Do not disturb while sharing the screen" is on, and
+the person's Do Not Disturb does too. A tap elsewhere on it opens nothing. It
+lasts while the share does and leaves nothing behind.
 
 ### Waiting applications
 
