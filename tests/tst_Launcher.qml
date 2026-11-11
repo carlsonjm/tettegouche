@@ -1387,9 +1387,9 @@ TestCase {
         tryVerify(function() { return findChild(launcher, "result-0") !== null })
         const result = findChild(launcher, "result-0")
         tryCompare(result, "height", 148)
-        // One fill holds the setting and its detail rows.
+        // The fill holds the setting's own row, not its detail rows.
         const highlight = findChild(launcher, "parent-highlight-0")
-        compare(highlight.height, 148)
+        compare(highlight.height, 56)
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""

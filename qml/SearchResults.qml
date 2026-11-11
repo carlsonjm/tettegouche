@@ -303,11 +303,11 @@ Item {
             visible: index >= 0
             radius: launcher.paperRadius
             color: "transparent"
-            // One fill for the result and the rows under it, so they read as
-            // one choice.
+            // The fill holds the result's own row only; the rows under it
+            // take a pill of their own once the keys go in among them.
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
-                width: parent.width; height: parent.height; radius: launcher.paperRadius
+                width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
                 color: resultDelegate.ListView.isCurrentItem
                     ? (resultDelegate.childrenEntered ? tone.hover : tone.current)
                     : (hover.hovered ? tone.hover : "transparent")
