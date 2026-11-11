@@ -296,7 +296,7 @@ Item {
             readonly property bool childrenEntered: ListView.isCurrentItem && launcher.selectedChildKey !== ""
 
             width: resultList.width
-            height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 8 : 0)
+            height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 14 : 0)
             onHeightChanged: resultList.relayoutSoon()
             // A row whose result is gone is never drawn, wherever it was
             // left.
@@ -417,7 +417,9 @@ Item {
             Column {
                 id: deviceChildren
                 x: 56
-                y: resultsArea.rowHeight
+                // A gap under the result's own fill, so the first row's pill
+                // stands apart from it.
+                y: resultsArea.rowHeight + 6
                 width: parent.width - x - 12
                 spacing: 4
                 Repeater {
