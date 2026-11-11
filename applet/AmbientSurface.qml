@@ -475,8 +475,9 @@ Item {
             question ? textWidth(smallMetrics, waitingLine) : 0, 180);
     }
     function coreWords(name, detail) {
+        // Room for "Focus · While you were sharing" whole.
         return column(name ? textWidth(strongMetrics, coreName) : 0,
-            detail ? textWidth(smallMetrics, coreDetail) : 0, 180);
+            detail ? textWidth(smallMetrics, coreDetail) : 0, 220);
     }
     // "Don't tell me again": 12 after the words, then the pill, its words with
     // 14 either side.
