@@ -296,18 +296,18 @@ Item {
             readonly property bool childrenEntered: ListView.isCurrentItem && launcher.selectedChildKey !== ""
 
             width: resultList.width
-            height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 8 : 0)
+            height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 14 : 0)
             onHeightChanged: resultList.relayoutSoon()
             // A row whose result is gone is never drawn, wherever it was
             // left.
             visible: index >= 0
             radius: launcher.paperRadius
             color: "transparent"
-            // One fill for the result and the rows under it, so they read as
-            // one choice.
+            // The fill holds the result's own row only; the rows under it
+            // take a pill of their own once the keys go in among them.
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
-                width: parent.width; height: parent.height; radius: launcher.paperRadius
+                width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
                 color: resultDelegate.ListView.isCurrentItem
                     ? (resultDelegate.childrenEntered ? tone.hover : tone.current)
                     : (hover.hovered ? tone.hover : "transparent")
@@ -417,7 +417,9 @@ Item {
             Column {
                 id: deviceChildren
                 x: 56
-                y: resultsArea.rowHeight
+                // A gap under the result's own fill, so the first row's pill
+                // stands apart from it.
+                y: resultsArea.rowHeight + 6
                 width: parent.width - x - 12
                 spacing: 4
                 Repeater {
