@@ -35,7 +35,7 @@ var PIECES = {
         { id: "mark" }, { id: "show" }, { id: "name", name: true }, { id: "words" },
     ],
     screen: [
-        { id: "stop" }, { id: "dot" }, { id: "who", name: true },
+        { id: "stop" }, { id: "dot" }, { id: "quiet" }, { id: "who", name: true },
     ],
     waiting: [
         { id: "icon" }, { id: "name" }, { id: "question" },

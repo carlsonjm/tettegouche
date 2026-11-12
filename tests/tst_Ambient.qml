@@ -690,8 +690,28 @@ TestCase {
         mouseClick(shape, 10, shape.height / 2);
         compare(opens.count, 0);
         compare(invoked.count, 1);
+        verify(!findChild(surface, "ambient-screen-quiet").visible);
         // Narrow, it keeps Stop longest.
         surface.width = 160;
+        verify(shown(surface, "screen").indexOf("stop") >= 0);
+    }
+
+    // While notifications are quiet, the island says so between who receives
+    // the screen and Stop; narrower, the name goes before it.
+    function test_a_shared_screen_says_notifications_are_quiet() {
+        const share = {id: "screen:x", generation: 4, kind: "screen", state: "running",
+            title: "Sharing contents to Zen Browser", icon: "zen-browser", capabilities: {stop: true}, quiet: true};
+        const surface = createSurface(700, [share]);
+        settle();
+        compare(shown(surface, "screen").indexOf("quiet") >= 0, true);
+        const quiet = findChild(surface, "ambient-screen-quiet");
+        verify(quiet.visible);
+        verify(leftOf(surface, quiet) > rightOf(surface, findChild(surface, "ambient-screen-who")) - 1);
+        verify(rightOf(surface, quiet) <= leftOf(surface, findChild(surface, "ambient-screen-stop")) + 1);
+        surface.width = surface.measure("screen", ["stop", "dot", "quiet"]) + surface.margin + 20;
+        settle();
+        verify(shown(surface, "screen").indexOf("who") < 0);
+        verify(shown(surface, "screen").indexOf("quiet") >= 0);
         verify(shown(surface, "screen").indexOf("stop") >= 0);
     }
 

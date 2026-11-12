@@ -944,6 +944,8 @@ private Q_SLOTS:
             QCOMPARE(row.value(QStringLiteral("title")).toString(),QStringLiteral("Sharing contents to Zen Browser"));
             QCOMPARE(row.value(QStringLiteral("icon")).toString(),QStringLiteral("zen-browser"));
             QVERIFY(row.value(QStringLiteral("capabilities")).toMap().value(QStringLiteral("stop")).toBool());
+            // No notification server: not quiet.
+            QVERIFY(!row.value(QStringLiteral("quiet")).toBool());
             screen.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt()+1,QStringLiteral("stop"));
             QTest::qWait(50); QVERIFY(tray.clicked.isEmpty());
             screen.invoke(row.value(QStringLiteral("id")).toString(),row.value(QStringLiteral("generation")).toInt(),QStringLiteral("stop"));
@@ -967,6 +969,20 @@ private Q_SLOTS:
             tray.id=QStringLiteral("xdg-desktop-portal-kde");
             ScreenShareProvider screen(QDBusConnection::sessionBus());
             QTRY_COMPARE(screen.activities().size(),1);
+        }
+        {
+            // Notifications kept quiet meanwhile, as Plasma's own notification
+            // server says, and back when it says they are.
+            auto &server=NotificationManager::Server::self();
+            QVERIFY(server.init());
+            server.setInhibited(true);
+            ScreenShareProvider screen(QDBusConnection::sessionBus());
+            QTRY_COMPARE(screen.activities().size(),1);
+            QTRY_VERIFY(screen.activities().first().toMap().value(QStringLiteral("quiet")).toBool());
+            QSignalSpy changed(&screen,&ScreenShareProvider::changed);
+            server.setInhibited(false);
+            QTRY_VERIFY(!screen.activities().first().toMap().value(QStringLiteral("quiet")).toBool());
+            QVERIFY(changed.count()>=1);
         }
         peer.unregisterService(QStringLiteral("org.kde.StatusNotifierWatcher"));
         peer.unregisterObject(QStringLiteral("/"),QDBusConnection::UnregisterTree);

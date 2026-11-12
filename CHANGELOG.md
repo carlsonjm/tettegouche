@@ -5,6 +5,9 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- While the screen is shared and notifications are kept quiet, the shared
+  screen's island says Notifications quiet, with a struck-through bell, before
+  Stop.
 - A folder in Apps is a paper folder of its kind, as the dock's are on
   Shuffle: green for games, gold with a briefcase for office applications,
   violet with a wrench for tools, teal for code, and so on, plain when its
