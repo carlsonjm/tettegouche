@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include "RelatedInfo.h"
 #include "ScreenShareProvider.h"
 #include "WorkspaceContext.h"
@@ -212,6 +214,13 @@ public Q_SLOTS:
     // Whether Search was last opened by its key, for the field to take the
     // cursor as it shows.
     Q_INVOKABLE bool openedToType() const { return m_openedToType; }
+    // Typing in Kadunce's Spread: Search opens ready to type with the text
+    // in its field. Text that arrives once Search is shown is added where the
+    // cursor is, so nothing typed while it opened is lost.
+    Q_SCRIPTABLE void typeToSearch(const QString &text);
+    // What was typed before Search showed, for the field to start with;
+    // taking it clears it.
+    Q_INVOKABLE QString takeTypedAhead() { return std::exchange(m_typedAhead, {}); }
     // A drive plugged in, chosen in Ambient: Files opens it, mounting it first.
     Q_SCRIPTABLE void showDrive(const QString &id);
     Q_SCRIPTABLE void showFile(const QString &file);
@@ -259,6 +268,8 @@ public Q_SLOTS:
 Q_SIGNALS:
     void filesRequested();
     void drawerRequested(const QString &drawer);
+    // Text typed in Spread for the field of the Search already shown.
+    void typedAhead(const QString &text);
     void relatedChanged();
     void pinnedChanged();
     // Search is about to show: its first screen is set out now.
@@ -281,6 +292,7 @@ Q_SIGNALS:
 private:
     void openFor(bool toType);
     bool m_openedToType = false;
+    QString m_typedAhead;
     QString m_showingMode;
     bool m_showingLoading = false;
     // Starts a carry while the press that began it is still held, which the
