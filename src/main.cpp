@@ -270,6 +270,8 @@ int main(int argc, char **argv)
     };
     const QString showFile = valueAfter(QStringLiteral("--show-file"));
     const QString drawer = valueAfter(QStringLiteral("--drawer"));
+    // Typed in Kadunce's Spread: Search opens with it in the field.
+    const QString typed = valueAfter(QStringLiteral("--typed"));
     // A folder another application asks to open, and the items it asks to
     // show, all given after --reveal, or whose Properties it asks for.
     const QString folder = valueAfter(QStringLiteral("--folder"));
@@ -306,6 +308,7 @@ int main(int argc, char **argv)
         else if (!reveal.isEmpty()) { method = QStringLiteral("revealItems"); request = {reveal}; }
         else if (!properties.isEmpty()) { method = QStringLiteral("showItemProperties"); request = {QStringList{properties}}; }
         else if (!drawer.isEmpty()) { method = QStringLiteral("openDrawer"); request = {drawer}; }
+        else if (!typed.isEmpty()) { method = QStringLiteral("typeToSearch"); request = {typed}; }
         // This forwarding process exits once its request is delivered: it
         // waits for delivery, not an asynchronous call whose connection may
         // disappear before dispatch. A launcher on its way out lets go of the
@@ -510,7 +513,7 @@ int main(int argc, char **argv)
         QTimer::singleShot(5000, &controller, &LauncherController::leaveIfUnused);
     }
 
-    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, filesWindow, drive, reveal, properties, fileManager, toType, ready] {
+    QTimer::singleShot(0, &controller, [&controller, showFile, drawer, folder, filesWindow, drive, reveal, properties, fileManager, toType, typed, ready] {
         if (!showFile.isEmpty()) controller.showFile(showFile);
         else if (!folder.isEmpty()) controller.showFolder(folder);
         else if (filesWindow) controller.openFilesWindow();
@@ -518,6 +521,7 @@ int main(int argc, char **argv)
         else if (!reveal.isEmpty()) controller.revealItems(reveal);
         else if (!properties.isEmpty()) controller.showItemProperties({properties});
         else if (!drawer.isEmpty()) controller.openDrawer(drawer);
+        else if (!typed.isEmpty()) controller.typeToSearch(typed);
         else if (toType) controller.toggleToType();
         else if (ready) controller.warmUp();
         else if (!fileManager) controller.open();

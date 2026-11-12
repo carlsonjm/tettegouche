@@ -453,6 +453,18 @@ void LauncherController::toggleToType()
     openFor(true);
 }
 
+void LauncherController::typeToSearch(const QString &text)
+{
+    if (text.isEmpty()) return;
+    if (handOver({QStringLiteral("--typed"), text})) return;
+    if (m_view->isVisible() && !m_opening) {
+        Q_EMIT typedAhead(text);
+        return;
+    }
+    m_typedAhead += text;
+    if (!m_opening) openFor(true);
+}
+
 void LauncherController::showDrive(const QString &id)
 {
     if (handOver({QStringLiteral("--drive"), id})) return;
@@ -658,6 +670,7 @@ void LauncherController::close()
     m_opening = false;
     m_guestWait.stop();
     m_whenShown.clear();
+    m_typedAhead.clear();
     m_shownAt.invalidate();
     endGuestLease();
     m_results->clear();

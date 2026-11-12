@@ -101,6 +101,9 @@ TestCase {
         function showInputMethod() { keyRequests++ }
         property bool toType: false
         function openedToType() { return toType }
+        property string typed: ""
+        function takeTypedAhead() { const text = typed; typed = ""; return text }
+        signal typedAhead(string text)
         function relatedOptionLabel(row) { return "Open Bluetooth settings" }
         function updateGuestDrag(value) {}
         function relatedItems(row) {
@@ -1141,7 +1144,7 @@ TestCase {
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""
-        tryCompare(findChild(launcher, "result-0"), "height", 56 + 2 * 40 + 4 + 8)
+        tryCompare(findChild(launcher, "result-0"), "height", 56 + 2 * 40 + 4 + 14)
         compare(findChild(launcher, "result-1").height, 56)
         // Right goes in among the highlighted row's actions; Down goes
         // through them, then on to the next row, whose actions take their
@@ -1158,7 +1161,7 @@ TestCase {
         compare(list.currentIndex, 1)
         compare(launcher.selectedChildKey, "")
         tryCompare(findChild(launcher, "result-0"), "height", 56)
-        tryCompare(findChild(launcher, "result-1"), "height", 56 + 4 * 40 + 3 * 4 + 8)
+        tryCompare(findChild(launcher, "result-1"), "height", 56 + 4 * 40 + 3 * 4 + 14)
         // Show in Folder goes on in Files: Search stays and nothing failed.
         controller.actionResult = 0
         list.positionViewAtIndex(1, ListView.End)
@@ -1376,6 +1379,25 @@ TestCase {
         verify(!query.activeFocus)
         compare(query.text, "")
     }
+    // Typed in Kadunce's Spread: Search opens with what was typed in the
+    // field, and what arrives once it shows goes after it, in order.
+    function test_typedInSpread() {
+        const query = findChild(launcher, "search-query")
+        controller.toType = true
+        controller.typed = "f"
+        controller.aboutToOpen()
+        controller.opened()
+        compare(query.text, "f")
+        compare(controller.typed, "")
+        verify(query.activeFocus)
+        controller.typedAhead("i")
+        compare(query.text, "fi")
+        keyClick("l")
+        compare(query.text, "fil")
+        controller.toType = false
+        controller.opened()
+        compare(query.text, "")
+    }
     function test_bluetoothChildrenCollapse() {
         controller.opened()
         controller.bluetoothResult = true
@@ -1386,10 +1408,10 @@ TestCase {
         controller.relatedRevision++
         tryVerify(function() { return findChild(launcher, "result-0") !== null })
         const result = findChild(launcher, "result-0")
-        tryCompare(result, "height", 148)
-        // One fill holds the setting and its detail rows.
+        tryCompare(result, "height", 154)
+        // The fill holds the setting's own row, not its detail rows.
         const highlight = findChild(launcher, "parent-highlight-0")
-        compare(highlight.height, 148)
+        compare(highlight.height, 56)
         const list = findChild(launcher, "search-result-list")
         list.currentIndex = 0
         launcher.selectedChildKey = ""

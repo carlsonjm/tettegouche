@@ -43,8 +43,8 @@ than repeat it.
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |
 | Tap or click the × at the field's end | Clears the search and raises the on-screen keys. |
-| Down or Up | Moves the highlight from one result to the next. A result and the rows under it, a setting's detail rows or the highlighted result's actions, are one choice under one highlight, with › at the right while there are rows to go into. |
-| Right, with the cursor at the end of what is typed | Goes in among the highlighted result's rows: the first takes the highlight and › turns to ‹. Down and Up then move one row; Up from the first, or Left, returns to the result, and Down from the last goes on to the next result. Anywhere else in the words, or with Shift, Ctrl, Alt or Meta, Right and Left move the cursor as usual. |
+| Down or Up | Moves the highlight from one result to the next. The highlight covers the result's own row; the rows under it, a setting's detail rows or the highlighted result's actions, go with it as one choice and are passed over together, with › at the right while there are rows to go into. |
+| Right, with the cursor at the end of what is typed | Goes in among the highlighted result's rows: the first takes a pill of its own, the result's row keeps a fainter fill, and › turns to ‹. Down and Up then move one row; Up from the first, or Left, returns to the result, and Down from the last goes on to the next result. Anywhere else in the words, or with Shift, Ctrl, Alt or Meta, Right and Left move the cursor as usual. |
 | Enter | Opens the highlighted result. With results still arriving, it opens the best once they settle; with no local result, or only documents found by the words inside them and none chosen, it searches the web in the browser. Under the Ask chip, with nothing listed, it sends the question to Ask at once, and never searches the web. |
 | Type a question under the Ask chip, where Split Rock's Ask is installed | Once typing pauses, Ask's answer comes above the Helpers it names. Nothing changes until a Helper is opened or Do it is tapped. Before the model is downloaded, the answer's place names the model and offers Download, Codex only where Codex is installed, and Not now; without llama.cpp it offers Install llama.cpp first. |
 | Tap Open on a note Ask's answer names | Notes opens that note on its own card, and Search closes. |
@@ -78,6 +78,7 @@ than repeat it.
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
 | Meta, or Alt+F1 | Opens or closes Search, ready to type: the cursor waits in the field, and on-screen keys that pressed Meta stay up. Tettegouche is an application launcher to Plasma, so Plasma's launcher key reaches it as it reaches Kickoff, Plasma's application menu. Where a screen's panels hold both, the first launcher Plasma finds opens. A shortcut set as the widget's own in Plasma opens Search too. |
+| Type in Kadunce's Spread | Opens Search inside Spread, ready to type, with what was typed already in the field. Kadunce sends it through `typeToSearch`; letters that arrive while Search opens go after it, in order. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |
