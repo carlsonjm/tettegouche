@@ -397,6 +397,10 @@ Item {
         // once the window is shown; its ring is up from the first frame.
         root.searchEngaged = root.launcherController.openedToType()
         root.typingAwaitsWindow = root.searchEngaged
+        // Typed in Spread before Search showed: the field starts with it,
+        // the cursor after it.
+        const typed = root.launcherController.takeTypedAhead()
+        if (typed.length > 0) query.text = typed
         root.guestDrag = 0
         root.guestExiting = false
         root.guestDragged = false
@@ -998,6 +1002,14 @@ Item {
             root.typingAwaitsWindow = root.searchEngaged && !(root.Window.window && root.Window.window.active)
         }
         function onFilesRequested() { root.setDrawerOpen(true, "files") }
+        // Typed in Spread while Search was already shown, before it had the
+        // keys: it goes in where the cursor is, in the order typed.
+        function onTypedAhead(text) {
+            if (query.selectedText.length > 0) query.remove(query.selectionStart, query.selectionEnd)
+            query.insert(query.cursorPosition, text)
+            root.searchEngaged = true
+            query.forceActiveFocus()
+        }
         // Meta+G, Meta+E or the dot's slide: that drawer opens filling the
         // screen, a single step to the whole view, or the launcher closes when
         // it is the one already open. Pills inside Search open at its size.

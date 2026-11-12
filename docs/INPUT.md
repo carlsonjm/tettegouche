@@ -78,6 +78,7 @@ than repeat it.
 | Slide to the door already open, and let go | Closes Search, as tapping the dot again does. |
 | With the dot focused, Enter or Space | Opens or closes Search. |
 | Meta, or Alt+F1 | Opens or closes Search, ready to type: the cursor waits in the field, and on-screen keys that pressed Meta stay up. Tettegouche is an application launcher to Plasma, so Plasma's launcher key reaches it as it reaches Kickoff, Plasma's application menu. Where a screen's panels hold both, the first launcher Plasma finds opens. A shortcut set as the widget's own in Plasma opens Search too. |
+| Type in Kadunce's Spread | Opens Search inside Spread, ready to type, with what was typed already in the field. Kadunce sends it through `typeToSearch`; letters that arrive while Search opens go after it, in order. |
 | Point at the dot | The dot grows slightly, and a tooltip says whether Search is open. |
 | Right-click the dot or the Ambient island | Plasma's own widget menu, which leads to the widget's settings, or to the Search page of Shuffle Settings where it is installed. |
 | Setting "Open inside Spread when available", off | Search always opens on its own, never inside Kadunce's Spread. |

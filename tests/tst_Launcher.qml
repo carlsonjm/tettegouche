@@ -101,6 +101,9 @@ TestCase {
         function showInputMethod() { keyRequests++ }
         property bool toType: false
         function openedToType() { return toType }
+        property string typed: ""
+        function takeTypedAhead() { const text = typed; typed = ""; return text }
+        signal typedAhead(string text)
         function relatedOptionLabel(row) { return "Open Bluetooth settings" }
         function updateGuestDrag(value) {}
         function relatedItems(row) {
@@ -1374,6 +1377,25 @@ TestCase {
         controller.toType = false
         controller.opened()
         verify(!query.activeFocus)
+        compare(query.text, "")
+    }
+    // Typed in Kadunce's Spread: Search opens with what was typed in the
+    // field, and what arrives once it shows goes after it, in order.
+    function test_typedInSpread() {
+        const query = findChild(launcher, "search-query")
+        controller.toType = true
+        controller.typed = "f"
+        controller.aboutToOpen()
+        controller.opened()
+        compare(query.text, "f")
+        compare(controller.typed, "")
+        verify(query.activeFocus)
+        controller.typedAhead("i")
+        compare(query.text, "fi")
+        keyClick("l")
+        compare(query.text, "fil")
+        controller.toType = false
+        controller.opened()
         compare(query.text, "")
     }
     function test_bluetoothChildrenCollapse() {
