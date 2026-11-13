@@ -385,7 +385,11 @@ no shortcut, takes no keyboard focus and opens nothing when Plasma's launcher
 key is pressed; its islands open as any island does. While the panel prefers
 an opaque background, an island takes the style's ground whatever
 `islandOutline` says. A host that places two widgets, one showing media and one
-the others, shows every island exactly once.
+the others, shows every island exactly once. Two widgets on one panel whose
+settings show the same island still show it once: the widget added to the
+panel first keeps it, and the other leaves it, for media, for the quick
+note's island and for the rest alike. Widgets on different panels share
+nothing.
 
 Without an outline, only room parts one island from the next: they stand
 24 px apart, three of Kirigami's large spacing, and the group keeps the same

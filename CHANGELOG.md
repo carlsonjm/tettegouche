@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Two Search widgets on one panel never show the same island twice, whatever
+  their settings say: the widget added first keeps it and the other leaves it.
 - While the screen is shared and notifications are kept quiet, the shared
   screen's island says Notifications quiet, with a struck-through bell, before
   Stop.

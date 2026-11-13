@@ -44,6 +44,11 @@ class TettegoucheApplet final : public Plasma::Applet
     // (`available`, `groups`), with the workspace's name (`workspaceName`)
     // where KWin gives it; empty until readCurrentLayout() is answered.
     Q_PROPERTY(QVariantMap currentLayout READ currentLayout NOTIFY currentLayoutChanged)
+    // The sorts of island this widget's settings show: "media", "others" and
+    // "note"; and those of them it leaves to a Search before it on the same
+    // panel, so no island shows twice there.
+    Q_PROPERTY(QStringList islandsShown READ islandsShown WRITE setIslandsShown NOTIFY islandsShownChanged)
+    Q_PROPERTY(QStringList islandsLeft READ islandsLeft NOTIFY islandsLeftChanged)
 
 public:
     TettegoucheApplet(QObject *parent, const KPluginMetaData &data,
@@ -84,6 +89,9 @@ public:
     bool keepsLayouts() const;
     QVariantList layouts() const;
     QVariantMap currentLayout() const { return m_currentLayout; }
+    QStringList islandsShown() const { return m_islandsShown; }
+    void setIslandsShown(const QStringList &sorts);
+    QStringList islandsLeft() const { return m_islandsLeft; }
     Q_INVOKABLE void readCurrentLayout();
     Q_INVOKABLE void saveLayout(const QString &name, const QVariantList &groups, bool atSignIn);
     Q_INVOKABLE void openLayout(const QString &id);
@@ -105,11 +113,17 @@ Q_SIGNALS:
     void pearlDoorsChanged();
     void layoutsChanged();
     void currentLayoutChanged();
+    void islandsShownChanged();
+    void islandsLeftChanged();
     // Search asked for an island in the band, such as Layouts, on the
     // display named (empty where Search could not say).
     void islandRequested(const QString &kind, const QString &output);
 
 private:
+    // Shares the islands out again among the Searches on each panel.
+    static void shareIslands();
+    QStringList m_islandsShown;
+    QStringList m_islandsLeft;
     // One of the widget's settings as main.xml declares it, read where its
     // settings page and Shuffle Settings both write it.
     bool setting(const QString &key, bool fallback);
