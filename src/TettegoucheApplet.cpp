@@ -2,6 +2,7 @@
 
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
+#include "IslandShare.h"
 #include "LauncherKeys.h"
 #include "NotesDoor.h"
 #include "NotesIslandProvider.h"
@@ -52,12 +53,23 @@ constexpr int WarmAfterMs = 1500;
 bool warmed = false;
 }
 
+namespace
+{
+// Every Search in this shell, for sharing the islands out on each panel.
+QList<TettegoucheApplet *> &everySearch()
+{
+    static QList<TettegoucheApplet *> widgets;
+    return widgets;
+}
+}
+
 TettegoucheApplet::TettegoucheApplet(QObject *parent,
                                      const KPluginMetaData &data,
                                      const QVariantList &args)
     : Plasma::Applet(parent, data, args)
     , m_productName(tettegouche::productName())
 {
+    everySearch().append(this);
     // Menus and the widget's title read the shown name; where Shuffle is
     // absent, the title stays the one metadata.json gives.
     if (tettegouche::shuffleInstalled()) {
@@ -256,8 +268,48 @@ void TettegoucheApplet::invokeActivity(const QString &id, int generation, const 
     } else m_activities->invoke(id, generation, action, value);
 }
 
+void TettegoucheApplet::setIslandsShown(const QStringList &sorts)
+{
+    if (sorts == m_islandsShown) {
+        return;
+    }
+    m_islandsShown = sorts;
+    Q_EMIT islandsShownChanged();
+    shareIslands();
+}
+
+void TettegoucheApplet::shareIslands()
+{
+    // Panel by panel, in the widgets' own order there: the order they were
+    // added in, which their ids keep.
+    QList<TettegoucheApplet *> pending = everySearch();
+    while (!pending.isEmpty()) {
+        const Plasma::Containment *panel = pending.first()->containment();
+        QList<TettegoucheApplet *> onPanel;
+        for (TettegoucheApplet *widget : std::as_const(pending)) {
+            if (widget->containment() == panel) onPanel.append(widget);
+        }
+        for (TettegoucheApplet *widget : std::as_const(onPanel)) pending.removeAll(widget);
+        std::sort(onPanel.begin(), onPanel.end(), [](const TettegoucheApplet *a, const TettegoucheApplet *b) {
+            return a->id() < b->id();
+        });
+        QList<QStringList> shown;
+        for (const TettegoucheApplet *widget : std::as_const(onPanel)) shown.append(widget->m_islandsShown);
+        // A widget with no panel yet shares with no one.
+        const QList<QStringList> left = panel ? islandsLeftToOthers(shown) : QList<QStringList>(shown.size());
+        for (qsizetype i = 0; i < onPanel.size(); ++i) {
+            if (onPanel.at(i)->m_islandsLeft != left.at(i)) {
+                onPanel.at(i)->m_islandsLeft = left.at(i);
+                Q_EMIT onPanel.at(i)->islandsLeftChanged();
+            }
+        }
+    }
+}
+
 TettegoucheApplet::~TettegoucheApplet()
 {
+    everySearch().removeAll(this);
+    shareIslands();
     if (m_activities) m_activities->showNoteIsland(this, false);
 }
 

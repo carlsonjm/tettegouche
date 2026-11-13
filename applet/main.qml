@@ -35,7 +35,18 @@ PlasmoidItem {
     // Which islands this widget shows: every kind, media alone, or every
     // kind but media.
     readonly property string ambientShows: Plasmoid.configuration.ambientShows || "all"
+    // The sorts of island the settings show here, and those of them left
+    // to a Search before this one on the same panel: two widgets set alike
+    // still show each island once.
+    readonly property var islandsShown: {
+        if (!showAmbient || vertical) return [];
+        const rest = Plasmoid.configuration.showQuickNote !== false ? ["others", "note"] : ["others"];
+        return ambientShows === "media" ? ["media"] : ambientShows === "others" ? rest : ["media"].concat(rest);
+    }
+    onIslandsShownChanged: Plasmoid.islandsShown = islandsShown
+    function leftToAnother(sort) { return Plasmoid.islandsLeft.indexOf(sort) >= 0; }
     function shows(activity) {
+        if (leftToAnother(activity.kind === "media" ? "media" : activity.kind === "note" ? "note" : "others")) return false;
         // The quick note's island, unless the widget's setting turns it off.
         if (activity.kind === "note" && Plasmoid.configuration.showQuickNote === false) return false;
         if (ambientShows === "media") return activity.kind === "media";
@@ -54,7 +65,7 @@ PlasmoidItem {
     // While this widget shows the quick note's island, folded notes are left
     // to it rather than to a dot over their window.
     readonly property bool showsNoteIsland: showAmbient && !vertical && ambientShows !== "media"
-        && Plasmoid.configuration.showQuickNote !== false
+        && Plasmoid.configuration.showQuickNote !== false && !leftToAnother("note")
     onShowsNoteIslandChanged: Plasmoid.showNoteIsland(showsNoteIsland)
     property int responsiveMeasuredWidth: endpointWidth
     // Plasma's own word for a panel drawn black, which Shuffle's band gives
@@ -132,6 +143,7 @@ PlasmoidItem {
     }
     Component.onCompleted: {
         Qt.callLater(refreshResponsiveWidth);
+        Plasmoid.islandsShown = islandsShown;
         Plasmoid.showNoteIsland(showsNoteIsland);
     }
 
