@@ -16,6 +16,16 @@ history carries the implementation detail.
   applications share no kind. Its sheet has a row of the nine looks, so you
   can draw it as any of them. Before, every folder was a grey tile of up to
   four of its applications.
+- An application's icon that changes, as an update replaces or removes it,
+  shows changed in Apps the next time Apps opens. Choosing another icon theme
+  in System Settings changes every icon Search and Files show within two
+  seconds, each time one is chosen. Before, an icon already drawn kept its
+  old picture until Search restarted.
+- An application an update renames shows its new name in Apps as Apps next
+  opens. Before, it kept the old name while the other applications stayed
+  where they were.
+- `tettegouche --help` lists the options Search takes and quits, rather than
+  opening Search.
 - Moving between Search, Apps, Files and Notes with the on-screen keys up
   keeps them up, the cursor going straight to the new tab's field: Find a
   note in Notes, the search field in the others. Before, they dropped away,

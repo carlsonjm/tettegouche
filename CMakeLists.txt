@@ -15,7 +15,7 @@ include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
 find_package(Qt6 6.10 REQUIRED COMPONENTS Core DBus Gui Qml Quick Test)
-find_package(KF6 6.26 REQUIRED COMPONENTS Bookmarks Config CoreAddons FileMetaData GlobalAccel I18n KIO Runner Service BluezQt Solid)
+find_package(KF6 6.26 REQUIRED COMPONENTS Bookmarks Config CoreAddons FileMetaData GlobalAccel I18n IconThemes KIO Runner Service BluezQt Solid)
 find_package(KF6Kirigami 6.26 REQUIRED)
 find_package(KF6KirigamiPlatform 6.26 REQUIRED)
 find_package(LayerShellQt 6.7 REQUIRED)
@@ -127,6 +127,7 @@ target_link_libraries(tettegouche-launcher PUBLIC
     KF6::FileMetaData
     KF6::I18n
     KF6::I18nQml
+    KF6::IconThemes
     KF6::KIOGui
     KF6::Runner
     KF6::Service
@@ -320,7 +321,7 @@ if(BUILD_TESTING)
     qt_add_executable(application-catalog-test tests/ApplicationCatalogTest.cpp
         src/ApplicationCatalog.cpp src/ApplicationCatalog.h src/UseRecord.h)
     target_include_directories(application-catalog-test PRIVATE src)
-    target_link_libraries(application-catalog-test PRIVATE KF6::CoreAddons KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
+    target_link_libraries(application-catalog-test PRIVATE KF6::ConfigCore KF6::CoreAddons KF6::IconThemes KF6::KIOGui KF6::Service KF6::I18n AppStreamQt Qt6::DBus Qt6::Test)
     target_compile_definitions(application-catalog-test PRIVATE TRANSLATION_DOMAIN="tettegouche")
     add_test(NAME application-catalog-test COMMAND application-catalog-test)
     qt_add_executable(launcher-controller-test tests/LauncherControllerTest.cpp)
@@ -412,6 +413,16 @@ if(BUILD_TESTING)
     add_test(NAME suite-icon-render-test COMMAND tettegouche-suite-icon-test)
     set_tests_properties(suite-icon-render-test PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
+        TIMEOUT 30)
+
+    # Kirigami's own Icon, drawn with Qt's icon lookup alone so the test
+    # reads its themes from a folder of its own.
+    qt_add_executable(theme-icons-test tests/ThemeIconsTest.cpp src/ThemeIcons.h)
+    target_include_directories(theme-icons-test PRIVATE src)
+    target_link_libraries(theme-icons-test PRIVATE Qt6::Quick Qt6::Test)
+    add_test(NAME theme-icons-test COMMAND theme-icons-test)
+    set_tests_properties(theme-icons-test PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;QT_QPA_PLATFORMTHEME=offscreen;QT_QUICK_CONTROLS_STYLE=Basic"
         TIMEOUT 30)
 
     qt_add_executable(workspace-context-test tests/WorkspaceContextTest.cpp)

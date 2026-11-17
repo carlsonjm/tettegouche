@@ -218,7 +218,8 @@ TestCase {
             const at = get(row)
             return at.kind ? at.kind : at.isFolder === true ? "folder" : "application"
         }
-        function item(row) { return row >= 0 && row < count ? get(row) : ({}) }
+        // A copy, as the catalog gives one: what a row held when it was read.
+        function item(row) { return row >= 0 && row < count ? Object.assign({}, get(row)) : ({}) }
         function isOpen(row) { return isFolder(row) && !!openSet[get(row).folderId] }
         function folderRow(id) {
             for (let i = 0; i < count; ++i) if (isFolder(i) && get(i).folderId === id) return i
@@ -637,6 +638,28 @@ TestCase {
         compare(name(0).y, name(2).y)
         const tile = findChild(grid, "application-tile-0")
         verify(name(0).y + name(0).height <= tile.height)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        catalog.clear()
+    }
+    // A row that holds another name while the rows are laid out as they
+    // were, as an update renames an application, keeps its tile, and the
+    // tile shows the new name.
+    function test_appsTileReadsItsRowAgain() {
+        controller.opened()
+        catalog.append({name: "Kate", icon: "application-x-executable", appId: "kate.desktop"})
+        catalog.append({name: "Okular", icon: "application-x-executable", appId: "okular.desktop"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        const grid = findChild(launcher, "application-grid")
+        const name = index => findChild(findChild(grid, "application-tile-" + index), "application-name")
+        tryVerify(() => name(0) && name(1))
+        compare(name(0).text, "Kate")
+        const tile = findChild(grid, "application-tile-0")
+        catalog.setProperty(0, "name", "Kate Editor")
+        compare(findChild(grid, "application-tile-0"), tile)
+        tryCompare(name(0), "text", "Kate Editor")
+        compare(name(1).text, "Okular")
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
         catalog.clear()

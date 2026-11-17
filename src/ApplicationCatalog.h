@@ -24,6 +24,8 @@ namespace AppStream
 class Pool;
 }
 
+class QTimer;
+
 class ApplicationCatalog final : public QAbstractListModel
 {
     Q_OBJECT
@@ -135,6 +137,14 @@ public:
     // it when an application was installed or removed; called when Apps
     // opens and when a folder applications live in changes.
     Q_INVOKABLE void checkInstalled();
+    // The folders icon themes are read from, and a mark of when anything in
+    // them last changed that would change an application's icon: each
+    // theme's folder, its icon cache and its folders of application icons.
+    // Comparing marks is cheap enough to do each time Apps opens.
+    // The icon theme chosen in System Settings belongs to the mark too.
+    static QStringList iconRoots();
+    static QString iconThemeName();
+    static QByteArray iconStamp(const QStringList &roots, const QString &theme);
     // The row an application is drawn at, by its desktop file id, or -1.
     Q_INVOKABLE [[nodiscard]] int applicationRow(const QString &applicationId) const;
 
@@ -214,6 +224,11 @@ Q_SIGNALS:
     void hiddenCountChanged();
     void softwareReadyChanged();
     void foldersChanged();
+    // The icons Apps draws may have changed: an icon theme was chosen, or a
+    // theme's icons were added to, replaced or removed. The list was read
+    // again; icons already on screen are for whoever draws them to look up
+    // again.
+    void iconsRefreshed();
 
 private:
     struct Entry {
@@ -300,4 +315,17 @@ private:
     bool m_softwareReady = false;
     std::function<bool()> m_canRemove;
     std::function<void(const QString &, const QString &)> m_remove;
+    // An icon a package removes or replaces, or another icon theme chosen,
+    // is noticed by the mark of the themes changing or by Plasma saying so.
+    // Then the icon loader reads the themes again, the list is read again
+    // and iconsRefreshed says the icons on screen are to be looked up again.
+    // Told by Plasma, that is said even where the mark has not changed.
+    QByteArray m_iconStamp;
+    QTimer *m_iconSettle = nullptr;
+    QString m_forcedIconTheme;
+    void refreshIcons(bool told = false);
+    QString probeIcon() const;
+    void reportIcons(const char *when) const;
+private Q_SLOTS:
+    void iconsChanged(int group);
 };
