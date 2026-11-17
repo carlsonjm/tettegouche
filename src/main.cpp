@@ -43,6 +43,7 @@
 #include <QThread>
 #include <QTimer>
 
+#include <cstdio>
 #include <functional>
 #include <memory>
 
@@ -224,8 +225,41 @@ int answerForRunningLauncher(QGuiApplication &application)
 }
 }
 
+// What --help prints: the options Search takes, as Plasma, the widget and
+// other applications start it.
+const char HelpText[] =
+    "Usage: tettegouche [options]\n"
+    "\n"
+    "Opens Search, or asks the Search already running to.\n"
+    "\n"
+    "  --type                 Open ready to type.\n"
+    "  --drawer apps|files    Open on Apps or Files.\n"
+    "  --folder [folder]      Open a folder in Files; with no folder, Files in a window of its own.\n"
+    "  --show-file <file>     Open Files on the folder holding the file, the file chosen.\n"
+    "  --reveal <items...>    Show these items in their folder in Files.\n"
+    "  --properties <item>    Show an item's properties.\n"
+    "  --drive <device>       Open a drive in Files.\n"
+    "  --ready                Start hidden, ready for the first press.\n"
+    "  --file-manager         Start to answer as the file manager.\n"
+    "  --standalone           Open on its own, never as a card in Spread.\n"
+    "  --no-recent            Offer nothing used lately.\n"
+    "  --no-recent-apps       Offer no applications used lately.\n"
+    "  --no-recent-files      Offer no files used lately.\n"
+    "  --no-notes             Leave Notes out.\n"
+    "  --no-notes-pill        Leave the Notes pill off the first screen.\n"
+    "  --no-helpers-pill      Leave the Helpers pill off the first screen.\n"
+    "  -h, --help             Show this help and quit.\n"
+    "\n"
+    "Logging: QT_LOGGING_RULES=\"tettegouche.icons.debug=true\" reports how Apps follows icon theme changes.\n";
+
 int main(int argc, char **argv)
 {
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--help") == 0 || qstrcmp(argv[i], "-h") == 0) {
+            fputs(HelpText, stdout);
+            return 0;
+        }
+    }
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("wayland"));
     }
