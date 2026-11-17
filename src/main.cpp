@@ -17,6 +17,7 @@
 #include "QuickNote.h"
 #include "RecentUse.h"
 #include "RunnerIdentity.h"
+#include "ThemeIcons.h"
 #include "TransferActivityBridge.h"
 
 #include <KIO/ApplicationLauncherJob>
@@ -363,6 +364,9 @@ int main(int argc, char **argv)
     results.setLimit(0);
     ApplicationCatalog catalog;
     catalog.setUseReader(&RecentUse::readApplicationUse);
+    // Icons already drawn, in Apps and everywhere else Search and Files draw
+    // one, keep their pictures until asked to look them up again.
+    QObject::connect(&catalog, &ApplicationCatalog::iconsRefreshed, &application, [] { tettegouche::lookUpIconsAgain(); });
     FileDevices fileDevices;
     // Search's Files and each Files window's own are set up alike.
     const auto prepareFiles = [&fileDevices](FileBrowser &files) {

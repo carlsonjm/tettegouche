@@ -224,6 +224,11 @@ Q_SIGNALS:
     void hiddenCountChanged();
     void softwareReadyChanged();
     void foldersChanged();
+    // The icons Apps draws may have changed: an icon theme was chosen, or a
+    // theme's icons were added to, replaced or removed. The list was read
+    // again; icons already on screen are for whoever draws them to look up
+    // again.
+    void iconsRefreshed();
 
 private:
     struct Entry {
@@ -310,13 +315,15 @@ private:
     bool m_softwareReady = false;
     std::function<bool()> m_canRemove;
     std::function<void(const QString &, const QString &)> m_remove;
-    // Icons are looked up once and kept, so an icon a package removes or
-    // replaces would show until Search restarts. When the themes change,
-    // the icons are looked up again and Apps is drawn afresh.
+    // An icon a package removes or replaces, or another icon theme chosen,
+    // is noticed by the mark of the themes changing or by Plasma saying so.
+    // Then the icon loader reads the themes again, the list is read again
+    // and iconsRefreshed says the icons on screen are to be looked up again.
+    // Told by Plasma, that is said even where the mark has not changed.
     QByteArray m_iconStamp;
     QTimer *m_iconSettle = nullptr;
     QString m_forcedIconTheme;
-    void refreshIcons();
+    void refreshIcons(bool told = false);
     QString probeIcon() const;
     void reportIcons(const char *when) const;
 private Q_SLOTS:

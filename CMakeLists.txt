@@ -415,6 +415,16 @@ if(BUILD_TESTING)
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
         TIMEOUT 30)
 
+    # Kirigami's own Icon, drawn with Qt's icon lookup alone so the test
+    # reads its themes from a folder of its own.
+    qt_add_executable(theme-icons-test tests/ThemeIconsTest.cpp src/ThemeIcons.h)
+    target_include_directories(theme-icons-test PRIVATE src)
+    target_link_libraries(theme-icons-test PRIVATE Qt6::Quick Qt6::Test)
+    add_test(NAME theme-icons-test COMMAND theme-icons-test)
+    set_tests_properties(theme-icons-test PROPERTIES
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software;QT_QPA_PLATFORMTHEME=offscreen;QT_QUICK_CONTROLS_STYLE=Basic"
+        TIMEOUT 30)
+
     qt_add_executable(workspace-context-test tests/WorkspaceContextTest.cpp)
     target_link_libraries(workspace-context-test PRIVATE
         tettegouche-context Qt6::Test)

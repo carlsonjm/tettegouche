@@ -641,6 +641,28 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
         catalog.clear()
     }
+    // A row that holds another name while the rows are laid out as they
+    // were, as an update renames an application, keeps its tile, and the
+    // tile shows the new name.
+    function test_appsTileReadsItsRowAgain() {
+        controller.opened()
+        catalog.append({name: "Kate", icon: "application-x-executable", appId: "kate.desktop"})
+        catalog.append({name: "Okular", icon: "application-x-executable", appId: "okular.desktop"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        const grid = findChild(launcher, "application-grid")
+        const name = index => findChild(findChild(grid, "application-tile-" + index), "application-name")
+        tryVerify(() => name(0) && name(1))
+        compare(name(0).text, "Kate")
+        const tile = findChild(grid, "application-tile-0")
+        catalog.setProperty(0, "name", "Kate Editor")
+        compare(findChild(grid, "application-tile-0"), tile)
+        tryCompare(name(0), "text", "Kate Editor")
+        compare(name(1).text, "Okular")
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        catalog.clear()
+    }
     // Holding an application, or right-clicking it, opens its sheet: its own
     // actions, which start afresh, Hide, Edit Application… where KDE's menu
     // editor can open it, and Uninstall once the software catalog can show it.

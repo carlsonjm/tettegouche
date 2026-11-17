@@ -37,13 +37,19 @@ Item {
             id: catalogDelegate
             required property var modelData
             readonly property int row: modelData
-            readonly property var info: launcher.applicationCatalog.item(row)
+            // Read again at each reading of the catalog: a tile whose row
+            // draws as it did is kept, and would otherwise keep what the row
+            // held when the tile was made.
+            readonly property var info: applicationGrid.revision >= 0
+                ? launcher.applicationCatalog.item(row) : ({})
             // A folder is a tile of its own: a paper folder of its kind,
             // its name under it. A tap opens
             // it in place, its applications on lines under its own.
             readonly property bool isFolder: info.kind === "folder"
-            readonly property string folder: isFolder ? launcher.applicationCatalog.folderId(row) : ""
-            readonly property bool open: isFolder && launcher.applicationCatalog.isOpen(row)
+            readonly property string folder: isFolder && applicationGrid.revision >= 0
+                ? launcher.applicationCatalog.folderId(row) : ""
+            readonly property bool open: isFolder && applicationGrid.revision >= 0
+                && launcher.applicationCatalog.isOpen(row)
             readonly property bool renaming: isFolder && launcher.renamingFolder !== ""
                 && launcher.renamingFolder === folder
             objectName: (isFolder ? "apps-folder-" : "application-tile-") + row
@@ -310,6 +316,12 @@ Item {
     // Enter opens: it shows, and stays in view.
     property bool keyChosen: false
     property var lines: []
+    // Lines that come out as they were leave the list and its tiles
+    // untouched, though a row may now hold another name or icon. This counts
+    // those readings of the catalog, and each tile reads its row again by
+    // the count. Lines that differ make every tile anew, which reads its row
+    // as it is made.
+    property int revision: 0
     // Each choosable row, in order, and the line each row lies on.
     property var choices: []
     property var lineOf: ({})
@@ -393,7 +405,9 @@ Item {
         count = total
         choices = chosen
         lineOf = where
+        const asBefore = JSON.stringify(built) === JSON.stringify(lines)
         lines = built
+        if (asBefore) revision += 1
         if (keep) {
             applicationLines.forceLayout()
             applicationLines.contentY = applicationLines.originY

@@ -115,7 +115,7 @@ ApplicationCatalog::ApplicationCatalog(QObject *parent)
     m_iconSettle = new QTimer(this);
     m_iconSettle->setSingleShot(true);
     m_iconSettle->setInterval(1500);
-    connect(m_iconSettle, &QTimer::timeout, this, &ApplicationCatalog::refreshIcons);
+    connect(m_iconSettle, &QTimer::timeout, this, [this] { refreshIcons(true); });
     QDBusConnection::sessionBus().connect(QString(), QStringLiteral("/KIconLoader"),
         QStringLiteral("org.kde.KIconLoader"), QStringLiteral("iconChanged"), this, SLOT(iconsChanged(int)));
     noteArrivals(m_entries);
@@ -295,7 +295,7 @@ void ApplicationCatalog::reportIcons(const char *when) const
         << "| icon" << probe << "->" << (loader ? loader->iconPath(probe, KIconLoader::Desktop, true) : QStringLiteral("-"));
 }
 
-void ApplicationCatalog::refreshIcons()
+void ApplicationCatalog::refreshIcons(bool told)
 {
     const QString chosen = iconThemeName();
     const QByteArray stamp = iconStamp(iconRoots(), chosen);
@@ -312,6 +312,8 @@ void ApplicationCatalog::refreshIcons()
         && m_forcedIconTheme != chosen && KIconTheme::list().contains(chosen);
     if (stamp == m_iconStamp && !loaderBehind) {
         reportIcons("checked, nothing changed");
+        // Plasma's own loader has read the themes again all the same.
+        if (told) Q_EMIT iconsRefreshed();
         return;
     }
     m_iconStamp = stamp;
@@ -327,6 +329,9 @@ void ApplicationCatalog::refreshIcons()
         loader->newIconLoader();
     }
     reload();
+    // Reading the list again leaves the icons already drawn as they are;
+    // whoever draws them is told to look them up again.
+    Q_EMIT iconsRefreshed();
     reportIcons("Apps drawn afresh");
 }
 
