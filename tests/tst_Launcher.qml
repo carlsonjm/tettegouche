@@ -218,7 +218,8 @@ TestCase {
             const at = get(row)
             return at.kind ? at.kind : at.isFolder === true ? "folder" : "application"
         }
-        function item(row) { return row >= 0 && row < count ? get(row) : ({}) }
+        // A copy, as the catalog gives one: what a row held when it was read.
+        function item(row) { return row >= 0 && row < count ? Object.assign({}, get(row)) : ({}) }
         function isOpen(row) { return isFolder(row) && !!openSet[get(row).folderId] }
         function folderRow(id) {
             for (let i = 0; i < count; ++i) if (isFolder(i) && get(i).folderId === id) return i

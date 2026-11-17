@@ -37,18 +37,26 @@ Item {
             id: catalogDelegate
             required property var modelData
             readonly property int row: modelData
-            // Read again at each reading of the catalog: a tile whose row
-            // draws as it did is kept, and would otherwise keep what the row
-            // held when the tile was made.
-            readonly property var info: applicationGrid.revision >= 0
-                ? launcher.applicationCatalog.item(row) : ({})
+            // A tile whose line comes out as it was is kept, and would keep
+            // what its row held when the tile was made. Such a tile is told
+            // the catalog was read again and reads its row once more; a tile
+            // of lines since replaced is on its way out and is left alone.
+            property int made: -1
+            property int read: 0
+            Connections {
+                target: applicationGrid
+                function onRowsReadAgain() {
+                    if (catalogDelegate.made === applicationGrid.generation) catalogDelegate.read += 1
+                }
+            }
+            readonly property var info: read >= 0 ? launcher.applicationCatalog.item(row) : ({})
             // A folder is a tile of its own: a paper folder of its kind,
             // its name under it. A tap opens
             // it in place, its applications on lines under its own.
             readonly property bool isFolder: info.kind === "folder"
-            readonly property string folder: isFolder && applicationGrid.revision >= 0
+            readonly property string folder: isFolder && read >= 0
                 ? launcher.applicationCatalog.folderId(row) : ""
-            readonly property bool open: isFolder && applicationGrid.revision >= 0
+            readonly property bool open: isFolder && read >= 0
                 && launcher.applicationCatalog.isOpen(row)
             readonly property bool renaming: isFolder && launcher.renamingFolder !== ""
                 && launcher.renamingFolder === folder
@@ -71,7 +79,10 @@ Item {
                 folderName.selectAll()
             }
             onRenamingChanged: if (renaming) Qt.callLater(catalogDelegate.startRename)
-            Component.onCompleted: if (renaming) Qt.callLater(catalogDelegate.startRename)
+            Component.onCompleted: {
+                made = applicationGrid.generation
+                if (renaming) Qt.callLater(catalogDelegate.startRename)
+            }
             Accessible.onPressAction: launcher.runCatalogApplication(row, info.name)
             Accessible.checkable: launcher.choosingFolder && !isFolder
             Accessible.checked: picked
@@ -317,11 +328,12 @@ Item {
     property bool keyChosen: false
     property var lines: []
     // Lines that come out as they were leave the list and its tiles
-    // untouched, though a row may now hold another name or icon. This counts
-    // those readings of the catalog, and each tile reads its row again by
-    // the count. Lines that differ make every tile anew, which reads its row
-    // as it is made.
-    property int revision: 0
+    // untouched, though a row may now hold another name or icon; the tiles
+    // are then told to read their rows again. Lines that differ make every
+    // tile anew, which reads its row as it is made, and start a generation,
+    // by which a tile knows whether it is still one of the list's.
+    property int generation: 0
+    signal rowsReadAgain()
     // Each choosable row, in order, and the line each row lies on.
     property var choices: []
     property var lineOf: ({})
@@ -406,8 +418,9 @@ Item {
         choices = chosen
         lineOf = where
         const asBefore = JSON.stringify(built) === JSON.stringify(lines)
+        if (!asBefore) generation += 1
         lines = built
-        if (asBefore) revision += 1
+        if (asBefore) rowsReadAgain()
         if (keep) {
             applicationLines.forceLayout()
             applicationLines.contentY = applicationLines.originY
