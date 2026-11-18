@@ -20,6 +20,24 @@ KCMUtils.SimpleKCM {
     property bool cfg_showNotesPillDefault
     property bool cfg_showHelpersPill
     property bool cfg_showHelpersPillDefault
+    property bool cfg_quickActions
+    property bool cfg_quickActionsDefault
+    property string cfg_quickActionsPlace
+    property string cfg_quickActionsPlaceDefault
+    property bool cfg_quickSwitchesOpenPage
+    property bool cfg_quickSwitchesOpenPageDefault
+    property string cfg_quickReminderTime
+    property string cfg_quickReminderTimeDefault
+    property bool cfg_quickActionReminder
+    property bool cfg_quickActionReminderDefault
+    property bool cfg_quickActionNote
+    property bool cfg_quickActionNoteDefault
+    property bool cfg_quickActionKeepAwake
+    property bool cfg_quickActionKeepAwakeDefault
+    property bool cfg_quickActionDoNotDisturb
+    property bool cfg_quickActionDoNotDisturbDefault
+    property bool cfg_quickActionBluetooth
+    property bool cfg_quickActionBluetoothDefault
     property bool cfg_showAmbient
     property bool cfg_showAmbientDefault
     property bool cfg_showQuickNote
@@ -80,6 +98,79 @@ KCMUtils.SimpleKCM {
             text: i18n("Show the Helpers pill when Split Rock is installed")
             checked: cfg_showHelpersPill
             onToggled: cfg_showHelpersPill = checked
+        }
+
+        // Quick actions: whether typed words such as "remind me to call the
+        // bank at 3" are offered as something to do, where, and which.
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Quick actions:")
+            text: i18n("Offer to do what the typed words say")
+            checked: cfg_quickActions
+            onToggled: cfg_quickActions = checked
+        }
+
+        QQC2.ComboBox {
+            Kirigami.FormData.label: i18n("The action shows:")
+            enabled: cfg_quickActions
+            model: [i18n("Above the results"), i18n("Among the results")]
+            currentIndex: cfg_quickActionsPlace === "among" ? 1 : 0
+            onActivated: index => cfg_quickActionsPlace = index === 1 ? "among" : "above"
+        }
+
+        QQC2.ComboBox {
+            Kirigami.FormData.label: i18n("Switches such as Bluetooth:")
+            enabled: cfg_quickActions
+            model: [i18n("Change in Search"), i18n("Open the switch's page")]
+            currentIndex: cfg_quickSwitchesOpenPage ? 1 : 0
+            onActivated: index => cfg_quickSwitchesOpenPage = index === 1
+        }
+
+        // The time a reminder for a day with no time, "tomorrow" or "on
+        // Friday", is set for, as hours and minutes on a 24-hour clock.
+        QQC2.TextField {
+            Kirigami.FormData.label: i18n("Default reminder time:")
+            enabled: cfg_quickActions
+            text: cfg_quickReminderTime
+            placeholderText: "09:00"
+            inputMask: "99:99"
+            validator: RegularExpressionValidator { regularExpression: /^([01][0-9]|2[0-3]):[0-5][0-9]$/ }
+            onEditingFinished: if (acceptableInput) cfg_quickReminderTime = text
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("Actions:")
+            enabled: cfg_quickActions
+            text: i18n("Reminder")
+            checked: cfg_quickActionReminder
+            onToggled: cfg_quickActionReminder = checked
+        }
+
+        QQC2.CheckBox {
+            enabled: cfg_quickActions
+            text: i18n("Note")
+            checked: cfg_quickActionNote
+            onToggled: cfg_quickActionNote = checked
+        }
+
+        QQC2.CheckBox {
+            enabled: cfg_quickActions
+            text: i18n("Keep awake")
+            checked: cfg_quickActionKeepAwake
+            onToggled: cfg_quickActionKeepAwake = checked
+        }
+
+        QQC2.CheckBox {
+            enabled: cfg_quickActions
+            text: i18n("Do not disturb")
+            checked: cfg_quickActionDoNotDisturb
+            onToggled: cfg_quickActionDoNotDisturb = checked
+        }
+
+        QQC2.CheckBox {
+            enabled: cfg_quickActions
+            text: i18n("Bluetooth")
+            checked: cfg_quickActionBluetooth
+            onToggled: cfg_quickActionBluetooth = checked
         }
 
         QQC2.CheckBox {

@@ -33,6 +33,42 @@
       <label>Show the Helpers pill on Search's first screen and a Helpers door on the dot's slide, while Split Rock's Core is installed; Helpers still show among the results</label>
       <default>true</default>
     </entry>
+    <entry name="quickActions" type="Bool">
+      <label>Offer quick actions in Search: typed words such as "remind me to call the bank at 3" name something Search offers to do</label>
+      <default>true</default>
+    </entry>
+    <entry name="quickActionsPlace" type="String">
+      <label>Where a quick action shows: above, leading the results, where Enter does it; or among, as the first row of the results, where the best match keeps Enter</label>
+      <default>above</default>
+    </entry>
+    <entry name="quickSwitchesOpenPage" type="Bool">
+      <label>A quick action for a switch, such as Bluetooth or Keep awake, opens the switch's settings page instead of changing it in Search</label>
+      <default>false</default>
+    </entry>
+    <entry name="quickReminderTime" type="String">
+      <label>The time, as HH:mm, a reminder for a day named with no time is set for</label>
+      <default>09:00</default>
+    </entry>
+    <entry name="quickActionReminder" type="Bool">
+      <label>Offer the reminder quick action</label>
+      <default>true</default>
+    </entry>
+    <entry name="quickActionNote" type="Bool">
+      <label>Offer the note quick action</label>
+      <default>true</default>
+    </entry>
+    <entry name="quickActionKeepAwake" type="Bool">
+      <label>Offer the Keep awake quick action</label>
+      <default>true</default>
+    </entry>
+    <entry name="quickActionDoNotDisturb" type="Bool">
+      <label>Offer the Do not disturb quick action</label>
+      <default>true</default>
+    </entry>
+    <entry name="quickActionBluetooth" type="Bool">
+      <label>Offer the Bluetooth quick action</label>
+      <default>true</default>
+    </entry>
     <entry name="showAmbient" type="Bool">
       <label>Show Ambient's islands beside the launcher in the panel</label>
       <default>true</default>

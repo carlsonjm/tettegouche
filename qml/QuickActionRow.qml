@@ -31,6 +31,7 @@ Item {
     readonly property bool isSwitch: action !== null && launcher.quickActionSwitch
     readonly property bool done: launcher.quickActionDone !== null
     readonly property bool moot: launcher.quickActionMoot
+    readonly property bool opens: launcher.quickActionOpens
     readonly property string switchName: !isSwitch ? ""
         : action.kind === "bluetooth" ? words.i18n("Bluetooth")
         : action.kind === "keepAwake" ? words.i18n("Keep awake") : words.i18n("Do not disturb")
@@ -39,6 +40,7 @@ Item {
         if (action === null) return ""
         if (reminder) return words.i18n("Remind me: %1", action.text)
         if (!isSwitch) return words.i18n("New note: %1", action.text)
+        if (opens) return switchName
         if (moot) return action.on ? words.i18nc("%1 is a switch's name", "%1 is already on", switchName)
             : words.i18nc("%1 is a switch's name", "%1 is already off", switchName)
         if (done) return action.on ? words.i18nc("%1 is a switch's name", "%1 is on", switchName)
@@ -51,9 +53,11 @@ Item {
     }
     function subText() {
         if (launcher.quickActionFailed)
-            return isSwitch ? words.i18n("That could not be changed this time")
+            return opens ? words.i18n("Its settings page could not be opened this time")
+                : isSwitch ? words.i18n("That could not be changed this time")
                 : words.i18n("Notes could not take it this time")
         if (isSwitch) {
+            if (opens) return words.i18n("Opens its settings page")
             if (moot) return words.i18n("Nothing to change")
             if (!done) return words.i18n("Happens right here, nothing opens")
             if (!action.on) return words.i18n("Changed right here")
@@ -231,9 +235,11 @@ Item {
                     Accessible.onPressAction: quick.act()
                     Text {
                         id: openLabel
+                        objectName: "quick-action-pill-label"
                         anchors.centerIn: parent
                         text: quick.done ? quick.words.i18nc("a pill: take back what was just changed", "Undo")
                             : !quick.isSwitch ? quick.words.i18nc("a pill: open the note", "Open")
+                            : quick.opens ? quick.words.i18nc("a pill: open a switch's page", "Open")
                             : quick.action !== null && quick.action.on ? quick.words.i18nc("a pill: turn a switch on", "Turn on")
                             : quick.words.i18nc("a pill: turn a switch off", "Turn off")
                         color: quick.done ? quick.launcher.primaryText : quick.tone.surface

@@ -414,6 +414,31 @@ private Q_SLOTS:
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), true);
+        // Quick actions as they are set go in one argument: where the row
+        // shows, what a switch's row does, the time a day alone means and
+        // the actions left out.
+        configure(QStringLiteral("quickActionsPlace"), QStringLiteral("among"));
+        configure(QStringLiteral("quickSwitchesOpenPage"), true);
+        configure(QStringLiteral("quickReminderTime"), QStringLiteral("14:30"));
+        configure(QStringLiteral("quickActionKeepAwake"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 9);
+        QCOMPARE(launches().constLast(), QStringLiteral("--quick-actions=among,open,at14:30,noKeepAwake --type"));
+        // A time no clock shows is left as the usual one, and off is off
+        // whatever else is set.
+        configure(QStringLiteral("quickActionsPlace"), QStringLiteral("above"));
+        configure(QStringLiteral("quickSwitchesOpenPage"), false);
+        configure(QStringLiteral("quickActionKeepAwake"), true);
+        configure(QStringLiteral("quickReminderTime"), QStringLiteral("25:00"));
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 10);
+        QCOMPARE(launches().constLast(), QStringLiteral("--type"));
+        configure(QStringLiteral("quickActions"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 11);
+        QCOMPARE(launches().constLast(), QStringLiteral("--quick-actions=off --type"));
+        configure(QStringLiteral("quickActions"), true);
+        configure(QStringLiteral("quickReminderTime"), QStringLiteral("09:00"));
     }
 
     // A running launcher is known by its name on the bus, whoever started

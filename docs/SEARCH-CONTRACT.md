@@ -366,6 +366,27 @@ Notes or under the Helpers chip. A reminder or a note is offered only while
 Gooseberry answers on the bus. Typing alone changes nothing: the note is
 made, or the switch set, on Enter or a tap.
 
+The widget's settings say how quick actions are offered, and the launcher is
+started with them:
+
+- `quickActions`, on as it comes: off, no quick action is offered.
+- `quickActionsPlace`: `above`, as described; or `among`, where the row is
+  drawn in the same place but the first result keeps the highlight and
+  Enter, and Up from the first result reaches the row. With no result
+  listed the row holds the highlight either way.
+- `quickSwitchesOpenPage`, off as it comes: on, a switch's row sets nothing.
+  It names the switch, says it opens its settings page, and Enter or Open
+  opens that page and closes Search: Shuffle Settings' Bluetooth,
+  Notifications or Power page where Shuffle Settings is installed, and
+  otherwise System Settings' Bluetooth, Notifications or Power Management.
+- `quickReminderTime`, `09:00` as it comes: the time a reminder takes when
+  its words name a day with no time, or no time at all, and the next
+  morning's time among the ones Tab offers. A part of the day in the words,
+  "tomorrow morning" or "this evening", keeps its own hour.
+- `quickActionReminder`, `quickActionNote`, `quickActionKeepAwake`,
+  `quickActionDoNotDisturb` and `quickActionBluetooth`, each on as it comes:
+  off, that action's phrases are a search like any other words.
+
 ## Eligibility and confidence
 
 1. Scope decides eligibility, not authorship. Everyday hides quiet collections,

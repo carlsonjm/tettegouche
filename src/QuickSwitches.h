@@ -3,14 +3,21 @@
 #include <BluezQt/Adapter>
 #include <BluezQt/InitManagerJob>
 #include <BluezQt/Manager>
+#include <KIO/CommandLauncherJob>
+#include <KService>
+#include <KShell>
 #include <QDBusConnection>
 #include <QDBusConnectionInterface>
 #include <QDBusMessage>
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
+#include <QDBusReply>
 #include <QDBusServiceWatcher>
 #include <QDateTime>
+#include <QDir>
 #include <QObject>
+#include <QProcess>
+#include <QStandardPaths>
 #include <notificationmanager/settings.h>
 
 // The switches a quick action sets from Search: Do not disturb, Bluetooth and
@@ -19,7 +26,8 @@
 // stay open: Do not disturb is Plasma's own timed setting, Bluetooth is the
 // adapters' own power, and Keep awake is Temperance's, asked at its door on
 // the session bus (Temperance's docs/PANELS.md, Keep awake) and offered only
-// while that door is there. The last change can be taken back.
+// while that door is there. The last change can be taken back. Each switch
+// also has a settings page, which can be opened instead.
 class QuickSwitches final : public QObject
 {
     Q_OBJECT
@@ -109,6 +117,38 @@ public:
             return true;
         }
         return false;
+    }
+
+    // Opens the settings page where the switch `kind` is kept: Shuffle
+    // Settings' where that is installed, looked for at each asking, and
+    // otherwise System Settings', in one already open or a new one.
+    Q_INVOKABLE bool openPage(const QString &kind)
+    {
+        const KService::Ptr suite = KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
+        const QString program = suite ? KShell::splitArgs(suite->exec()).value(0) : QString();
+        const QString page = kind == QLatin1String("bluetooth") ? QStringLiteral("bluetooth")
+            : kind == QLatin1String("doNotDisturb") ? QStringLiteral("notifications")
+            : kind == QLatin1String("keepAwake") ? QStringLiteral("power") : QString();
+        if (!program.isEmpty() && !page.isEmpty()) {
+            auto *job = new KIO::CommandLauncherJob(program, {page});
+            job->setDesktopName(suite->desktopEntryName());
+            job->start();
+            return true;
+        }
+        const QString module = kind == QLatin1String("bluetooth") ? QStringLiteral("kcm_bluetooth")
+            : kind == QLatin1String("doNotDisturb") ? QStringLiteral("kcm_notifications")
+            : kind == QLatin1String("keepAwake") ? QStringLiteral("kcm_powerdevilprofilesconfig") : QString();
+        if (module.isEmpty()) return false;
+        QDBusConnection bus = QDBusConnection::sessionBus();
+        if (bus.interface() && bus.interface()->isServiceRegistered(QStringLiteral("org.kde.systemsettings")).value()) {
+            QDBusMessage request = QDBusMessage::createMethodCall(QStringLiteral("org.kde.systemsettings"),
+                QStringLiteral("/org/kde/systemsettings"), QStringLiteral("org.kde.KDBusService"), QStringLiteral("CommandLine"));
+            request.setArguments({QStringList{QStringLiteral("systemsettings"), module}, QDir::currentPath(), QVariantMap{}});
+            const QDBusReply<int> reply = bus.call(request, QDBus::Block, 1000);
+            if (reply.isValid() && reply.value() == 0) return true;
+        }
+        const QString executable = QStandardPaths::findExecutable(QStringLiteral("systemsettings"));
+        return !executable.isEmpty() && QProcess::startDetached(executable, {module});
     }
 
     // Puts the last switch back as it was before `set`.

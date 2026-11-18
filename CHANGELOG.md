@@ -5,6 +5,10 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Quick actions have settings: off altogether or one action at a time,
+  shown above the results or among them, a switch changed in Search or its
+  settings page opened instead, and the time a reminder for "tomorrow" is
+  set for.
 - Type "keep awake 1h" in Search and a quick action turns on Status's Keep
   awake for that long, or until sign-out with no time named, with Undo.
 - People in Search, where a people provider is installed: a pill after Notes

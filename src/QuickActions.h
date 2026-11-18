@@ -48,7 +48,10 @@ inline int weekday(const QString &name)
 struct When {
     bool hasDay = false, hasClock = false, hasSpan = false;
     QDate day;
-    int dayHour = Morning;
+    // The hour a part of the day means; Usual, the time a day named alone
+    // is given; Soon, "today".
+    static constexpr int Usual = -2, Soon = -1;
+    int dayHour = Usual;
     int hour = -1, minute = 0;
     // 0 for a bare hour, 1 for am, 2 for pm.
     int half = 0;
@@ -84,7 +87,8 @@ inline void readDay(const QString &words, const QDateTime &now, When &when)
     if (words == QLatin1String("tonight") || words.endsWith(QLatin1String("evening"))
         || words.endsWith(QLatin1String("night"))) when.dayHour = Evening;
     else if (words.endsWith(QLatin1String("afternoon"))) when.dayHour = Afternoon;
-    else if (words == QLatin1String("today")) when.dayHour = -1;
+    else if (words.endsWith(QLatin1String("morning"))) when.dayHour = Morning;
+    else if (words == QLatin1String("today")) when.dayHour = When::Soon;
     if (words.startsWith(QLatin1String("tomorrow"))) {
         when.day = when.day.addDays(1);
         return;
@@ -140,7 +144,9 @@ inline int hourOn(const When &when)
     return when.hour >= 1 && when.hour <= 6 ? when.hour + 12 : when.hour;
 }
 
-inline QDateTime resolve(const When &when, const QDateTime &now)
+// `usual` is the time a day named with no time is given, "tomorrow" or "on
+// Friday", and tomorrow's when no day is named either.
+inline QDateTime resolve(const When &when, const QDateTime &now, const QTime &usual = QTime(Morning, 0))
 {
     if (when.hasSpan) {
         QDateTime due = now.addSecs(when.spanSeconds);
@@ -175,8 +181,9 @@ inline QDateTime resolve(const When &when, const QDateTime &now)
         return at(now.date().addDays(1), hours.first(), when.minute);
     }
     if (when.hasDay) {
-        if (when.dayHour >= 0) {
-            const QDateTime due = at(when.day, when.dayHour, 0);
+        if (when.dayHour != When::Soon) {
+            const QDateTime due = when.dayHour == When::Usual ? at(when.day, usual.hour(), usual.minute())
+                                                              : at(when.day, when.dayHour, 0);
             if (due > now) return due;
         }
         // "today", or a part of the day already gone: the evening while it
@@ -186,7 +193,7 @@ inline QDateTime resolve(const When &when, const QDateTime &now)
         const QDateTime later = now.addSecs(3600);
         return at(later.date(), later.time().hour(), later.time().minute());
     }
-    return at(now.date().addDays(1), Morning, 0);
+    return at(now.date().addDays(1), usual.hour(), usual.minute());
 }
 
 // Takes the words that say when off one end of what is to be remembered.
@@ -291,7 +298,8 @@ inline Action parseSwitch(const QString &phrase, const QDateTime &now)
 
 // The action a phrase names at `now`, or none. A reminder with nothing to
 // remember, a note with no words and a time no clock shows are no action.
-inline Action parse(const QString &typed, const QDateTime &now)
+// `usual` is the time a reminder for a day with no time is set for.
+inline Action parse(const QString &typed, const QDateTime &now, const QTime &usual = QTime(Detail::Morning, 0))
 {
     const QString phrase = typed.simplified();
     static const QRegularExpression note(QStringLiteral("^(?:new )?note(?: ?: ?| )(.+)$"),
@@ -322,7 +330,7 @@ inline Action parse(const QString &typed, const QDateTime &now)
     }
     const QString words = Detail::sentence(body);
     if (words.isEmpty() || !Detail::validClock(when)) return {};
-    return {Action::Reminder, words, Detail::resolve(when, now), when.hasDay || when.hasClock || when.hasSpan};
+    return {Action::Reminder, words, Detail::resolve(when, now, usual), when.hasDay || when.hasClock || when.hasSpan};
 }
 
 // A time as Search's row words it: `when` as ISO 8601 with its offset, `day`
@@ -343,12 +351,13 @@ inline QVariantMap describeWhen(const QDateTime &when, const QDateTime &now, con
 // The action as the row draws it, or an empty map for none: `kind` ("note"
 // or "reminder"), `text`, `typed` (the words to remember as they were typed,
 // the day among them) and, for a reminder, `choices`: the time the phrase
-// named first, then this evening while it is ahead and tomorrow morning.
+// named first, then this evening while it is ahead and tomorrow at `usual`.
 // A switch is `kind` ("keepAwake", "doNotDisturb" or "bluetooth"), `on`,
 // and `until`, worded as a choice is, when the phrase named an end.
-inline QVariantMap describe(const QString &typed, const QDateTime &now, const QLocale &locale = QLocale())
+inline QVariantMap describe(const QString &typed, const QDateTime &now, const QLocale &locale = QLocale(),
+                            const QTime &usual = QTime(Detail::Morning, 0))
 {
-    const Action action = parse(typed, now);
+    const Action action = parse(typed, now, usual);
     if (!action) return {};
     if (action.kind >= Action::KeepAwake) {
         QVariantMap row{
@@ -371,7 +380,7 @@ inline QVariantMap describe(const QString &typed, const QDateTime &now, const QL
     QDateTime evening = now, tomorrow = now;
     evening.setTime(QTime(Detail::Evening, 0));
     tomorrow.setDate(now.date().addDays(1));
-    tomorrow.setTime(QTime(Detail::Morning, 0));
+    tomorrow.setTime(usual);
     for (const QDateTime &time : {evening, tomorrow})
         if (time > now && !times.contains(time)) times.append(time);
     QVariantList choices;

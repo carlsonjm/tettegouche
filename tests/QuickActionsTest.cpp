@@ -137,6 +137,26 @@ private Q_SLOTS:
         QVERIFY(!QuickActions::parse(typed, morning()));
     }
 
+    // A day named with no time takes the usual time, which can be set; a
+    // part of the day or a clock time in the phrase stands.
+    void aDayAloneTakesTheUsualTime()
+    {
+        const QTime usual(14, 30);
+        const auto when = [&usual](const char *typed) {
+            return QuickActions::parse(QString::fromLatin1(typed), morning(), usual).when;
+        };
+        QCOMPARE(when("remind me to check the build tomorrow"), on(19, 14, 30));
+        QCOMPARE(when("remind me to pay rent on friday"), on(20, 14, 30));
+        QCOMPARE(when("remind me to check the build"), on(19, 14, 30));
+        QCOMPARE(when("remind me to check the build tomorrow morning"), on(19, 9));
+        QCOMPARE(when("remind me to check the build tomorrow evening"), on(19, 19));
+        QCOMPARE(when("remind me to check the build tomorrow at 8"), on(19, 8));
+        const QVariantList choices = QuickActions::describe(QStringLiteral("remind me to call at 3"), morning(),
+            QLocale::c(), usual).value(QStringLiteral("choices")).toList();
+        QCOMPARE(choices.last().toMap().value(QStringLiteral("when")).toString(),
+            on(19, 14, 30).toOffsetFromUtc(on(19, 14, 30).offsetFromUtc()).toString(Qt::ISODate));
+    }
+
     // What the row is given: the words, and the times Tab offers, the
     // phrase's own first.
     void describesTheRow()

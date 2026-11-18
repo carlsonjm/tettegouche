@@ -433,7 +433,11 @@ TestCase {
             else doNotDisturbOn = before
         }
         function forget() { forgets++ }
+        property var pages: []
+        property bool opens: true
+        function openPage(kind) { if (opens) pages = pages.concat([kind]); return opens }
         function reset() {
+            pages = []; opens = true
             bluetoothThere = true; bluetoothOn = true; doNotDisturbOn = false; takes = true
             keepAwakeThere = true; keepAwakeOn = false
             sets = []; undos = 0; forgets = 0
@@ -5139,6 +5143,66 @@ TestCase {
         keyClick(Qt.Key_Return)
         compare(switchStub.sets, [])
         compare(controller.closes, 1)
+        endQuickAction()
+    }
+    function test_quickActionsAsSet() {
+        // Among the results, the best match keeps the highlight and Enter;
+        // Up reaches the row.
+        launcher.quickActionsAmong = true
+        typeSwitch("bluetooth off")
+        tryVerify(() => !launcher.quickActionLeads)
+        keyClick(Qt.Key_Up)
+        verify(launcher.quickActionLeads)
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets, [["bluetooth", false, ""]])
+        // What was done keeps the highlight, so it can be taken back.
+        verify(launcher.quickActionLeads)
+        endQuickAction()
+        // With nothing found, the row is all there is and Enter does it.
+        switchStub.reset()
+        launcher.quickSwitches = switchStub
+        findChild(launcher, "search-query").text = "bluetooth off"
+        verify(launcher.quickActionLeads)
+        endQuickAction()
+        launcher.quickActionsAmong = false
+
+        // A switch's row opens its page instead, and Search closes.
+        launcher.quickSwitchesOpenPage = true
+        typeSwitch("dnd")
+        compare(findChild(launcher, "quick-action-title").text, "Do not disturb")
+        compare(findChild(launcher, "quick-action-sub").text, "Opens its settings page")
+        compare(findChild(launcher, "quick-action-pill-label").text, "Open")
+        keyClick(Qt.Key_Return)
+        compare(switchStub.pages, ["doNotDisturb"])
+        compare(switchStub.sets, [])
+        compare(controller.closes, 1)
+        // A page that does not open says so and Search stays.
+        switchStub.opens = false
+        controller.closes = 0
+        findChild(launcher, "search-query").text = "keep awake 1h"
+        keyClick(Qt.Key_Return)
+        compare(findChild(launcher, "quick-action-sub").text, "Its settings page could not be opened this time")
+        compare(controller.closes, 0)
+        endQuickAction()
+        launcher.quickSwitchesOpenPage = false
+
+        // An action left out is no row; the others still are.
+        launcher.quickActionsLeftOut = ["bluetooth", "note"]
+        switchStub.reset()
+        launcher.quickSwitches = switchStub
+        launcher.quickNote = quickStub
+        const query = findChild(launcher, "search-query")
+        query.text = "bluetooth off"
+        compare(launcher.quickAction, null)
+        query.text = "note: milk"
+        compare(launcher.quickAction, null)
+        query.text = "keep awake"
+        verify(launcher.quickAction !== null)
+        launcher.quickActionsLeftOut = []
+        // All of them off is no row at all.
+        launcher.quickActionsOffered = false
+        compare(launcher.quickAction, null)
+        launcher.quickActionsOffered = true
         endQuickAction()
     }
     function test_quickSwitchAbsent() {
