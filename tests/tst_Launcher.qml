@@ -145,6 +145,9 @@ TestCase {
             if (typed === "dnd") return { kind: "doNotDisturb", on: true }
             if (typed === "bluetooth off") return { kind: "bluetooth", on: false }
             if (typed === "keep awake") return { kind: "keepAwake", on: true }
+            if (typed === "keep awake 1h")
+                return { kind: "keepAwake", on: true,
+                         until: { when: "2026-11-18T11:00:00-06:00", day: "today", time: "11:00 AM", date: "Wed 18 Nov" } }
             return {}
         }
         function resultActions(row) { return actionsByRow[row] || [] }
@@ -407,6 +410,8 @@ TestCase {
         property bool bluetoothThere: true
         property bool bluetoothOn: true
         property bool doNotDisturbOn: false
+        property bool keepAwakeThere: true
+        property bool keepAwakeOn: false
         property bool takes: true
         property var sets: []
         property int undos: 0
@@ -416,6 +421,7 @@ TestCase {
             if (!takes) return false
             sets = sets.concat([[kind, on, until]])
             if (kind === "bluetooth") { before = bluetoothOn; bluetoothOn = on }
+            else if (kind === "keepAwake") { before = keepAwakeOn; keepAwakeOn = on }
             else { before = doNotDisturbOn; doNotDisturbOn = on }
             return true
         }
@@ -423,11 +429,13 @@ TestCase {
             undos++
             const last = sets[sets.length - 1]
             if (last[0] === "bluetooth") bluetoothOn = before
+            else if (last[0] === "keepAwake") keepAwakeOn = before
             else doNotDisturbOn = before
         }
         function forget() { forgets++ }
         function reset() {
             bluetoothThere = true; bluetoothOn = true; doNotDisturbOn = false; takes = true
+            keepAwakeThere = true; keepAwakeOn = false
             sets = []; undos = 0; forgets = 0
         }
     }
@@ -5066,6 +5074,25 @@ TestCase {
         compare(switchStub.undos, 0)
         endQuickAction()
     }
+    function test_quickSwitchKeepAwake() {
+        typeSwitch("keep awake 1h")
+        const title = findChild(launcher, "quick-action-title")
+        compare(title.text, "Turn on Keep awake until 11:00 AM")
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets, [["keepAwake", true, "2026-11-18T11:00:00-06:00"]])
+        compare(controller.closes, 0)
+        compare(title.text, "Keep awake is on")
+        compare(findChild(launcher, "quick-action-sub").text, "Until 11:00 AM")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(switchStub.keepAwakeOn, false)
+        compare(title.text, "Turn on Keep awake until 11:00 AM")
+        // With no time it lasts until sign-out.
+        findChild(launcher, "search-query").text = "keep awake"
+        compare(title.text, "Turn on Keep awake")
+        keyClick(Qt.Key_Return)
+        compare(findChild(launcher, "quick-action-sub").text, "Until you sign out")
+        endQuickAction()
+    }
     function test_quickSwitchUndo() {
         typeSwitch("bluetooth off")
         const title = findChild(launcher, "quick-action-title")
@@ -5115,7 +5142,7 @@ TestCase {
         endQuickAction()
     }
     function test_quickSwitchAbsent() {
-        // No Bluetooth on this computer, and a switch Search does not set.
+        // No Bluetooth on this computer, and no Status to keep it awake.
         switchStub.reset()
         switchStub.bluetoothThere = false
         launcher.quickSwitches = switchStub
@@ -5123,6 +5150,7 @@ TestCase {
         const query = findChild(launcher, "search-query")
         query.text = "bluetooth off"
         compare(launcher.quickAction, null)
+        switchStub.keepAwakeThere = false
         query.text = "keep awake"
         compare(launcher.quickAction, null)
         // Without the switches there is no row for one.

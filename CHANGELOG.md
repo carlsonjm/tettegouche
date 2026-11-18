@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Type "keep awake 1h" in Search and a quick action turns on Status's Keep
+  awake for that long, or until sign-out with no time named, with Undo.
 - People in Search, where a people provider is installed: a pill after Notes
   lists the provider's people, each once, and typing finds them by name,
   number or address. A person's page has every number and address, with
