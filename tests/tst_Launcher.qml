@@ -4937,6 +4937,9 @@ TestCase {
         const join = findChild(launcher, "person-join")
         // Its row places it, beside the other answer and inside the page.
         waitForOpen()
+        const match = findChild(launcher, "person-match")
+        tryVerify(() => match.visible && match.y > 0, 2000,
+                  "the question is not placed under the numbers: y " + match.y + ", column " + match.parent.height)
         tryVerify(() => join.x > 0 && join.x + join.width <= join.parent.width)
         tryVerify(() => join.mapToItem(page, 0, 0).x + join.width <= page.width
                         && join.mapToItem(page, 0, 0).y + join.height <= page.height)
@@ -4955,6 +4958,8 @@ TestCase {
             }
             const ways = findChild(launcher, "person-ways")
             const sheet = findChild(launcher, "launcher-sheet")
+            const hit = peopleStub.copied !== ""
+            path.push("copy hit by it: " + hit + ", match y " + match.y + ", column " + match.parent.height)
             const copy = findChild(launcher, "person-copy")
             mouseClick(copy, copy.width / 2, copy.height / 2)
             const back = findChild(launcher, "person-back")
