@@ -212,16 +212,50 @@ Item {
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
 
-    // The quick action the typed words name, where Notes can take it, or
-    // null: a reminder or a note, drawn above the results. It holds the
-    // highlight, and Enter, until Down moves into the results.
+    // The switches a quick action sets, Do not disturb and Bluetooth; null
+    // where there are none to set.
+    property var quickSwitches: null
+    // The quick action the typed words name, or null, drawn above the
+    // results: a reminder or a note where Notes can take it, or a switch,
+    // set right here. It holds the highlight, and Enter, until Down moves
+    // into the results. A switch just set stays as the row until the words
+    // change, so it can be taken back.
     property bool quickActionsOffered: true
     readonly property var quickAction: {
+        if (root.quickActionDone !== null) return root.quickActionDone
         if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.peopleShown || root.modeOpen
-                || !root.quickNote || !root.quickNote.available
                 || typeof root.launcherController.quickAction !== "function") return null
         const action = root.launcherController.quickAction(query.text)
-        return action && action.kind ? action : null
+        if (!action || !action.kind) return null
+        if (action.kind === "note" || action.kind === "reminder")
+            return root.quickNote && root.quickNote.available ? action : null
+        if (action.kind === "doNotDisturb") return root.quickSwitches ? action : null
+        if (action.kind === "bluetooth")
+            return root.quickSwitches && root.quickSwitches.bluetoothThere ? action : null
+        return null
+    }
+    readonly property bool quickActionSwitch: root.quickAction !== null
+        && (root.quickAction.kind === "doNotDisturb" || root.quickAction.kind === "bluetooth")
+    // The switch as it was set, while it can be taken back.
+    property var quickActionDone: null
+    // The switch already stands as the words ask: there is nothing to do.
+    readonly property bool quickActionMoot: root.quickActionSwitch && root.quickActionDone === null
+        && !root.quickAction.until && root.quickSwitches !== null
+        && (root.quickAction.kind === "bluetooth" ? root.quickSwitches.bluetoothOn
+            : root.quickSwitches.doNotDisturbOn) === root.quickAction.on
+    // A change of the words leaves what was set as it stands.
+    Connections {
+        target: query
+        function onTextChanged() {
+            if (root.quickActionDone === null) return
+            root.quickActionDone = null
+            if (root.quickSwitches) root.quickSwitches.forget()
+        }
+    }
+    function undoQuickAction() {
+        if (root.quickActionDone === null) return
+        root.quickSwitches.undo()
+        root.quickActionDone = null
     }
     property bool quickActionChosen: true
     // Tab opens the times a reminder may be due instead; the phrase's own
@@ -242,6 +276,12 @@ Item {
         root.quickActionChoice = 0
         root.quickActionFailed = false
     }
+    // When a switch goes back by itself, after "until".
+    function quickUntilLabel(when) {
+        return when.day === "today" || when.day === "evening" ? when.time
+            : when.day === "tomorrow" ? words.i18nc("a time the next day", "tomorrow %1", when.time)
+            : words.i18nc("a date, then a time", "%1 %2", when.date, when.time)
+    }
     function quickWhenLabel(when) {
         return when.day === "today" ? words.i18n("Today %1", when.time)
             : when.day === "evening" ? words.i18n("This evening %1", when.time)
@@ -258,6 +298,11 @@ Item {
     // Left move back, and Esc closes them with the phrase's own time.
     function quickActionKey(event) {
         if (!root.quickActionLeads) return false
+        // Ctrl+Z takes back the switch just set.
+        if (root.quickActionDone !== null && event.key === Qt.Key_Z && (event.modifiers & Qt.ControlModifier)) {
+            root.undoQuickAction()
+            return true
+        }
         const count = (root.quickAction.choices || []).length
         if (count < 2) return false
         if (!root.quickActionEditing) {
@@ -284,7 +329,18 @@ Item {
     // here; Search closes once the card has it.
     function runQuickAction() {
         const action = root.quickAction
-        if (action === null || !root.quickNote || root.quickActionHanding) return
+        if (action === null || root.quickActionHanding) return
+        if (root.quickActionSwitch) {
+            // Set here, with Search left open on what was done.
+            if (root.quickActionDone !== null || root.quickActionMoot) return
+            root.quickActionFailed = false
+            if (root.quickSwitches.set(action.kind, action.on, action.until ? action.until.when : ""))
+                root.quickActionDone = action
+            else
+                root.quickActionFailed = true
+            return
+        }
+        if (!root.quickNote) return
         root.quickActionHanding = true
         root.quickActionFailed = false
         root.quickActionWords = query.text
@@ -983,7 +1039,10 @@ Item {
             return
         }
         if (root.quickActionLeads) {
-            root.runQuickAction()
+            // Enter on a switch already set, or with nothing to change,
+            // is done with Search.
+            if (root.quickActionDone !== null || root.quickActionMoot) root.launcherController.close()
+            else root.runQuickAction()
             return
         }
         if (root.drawerOpen && root.filesMode) {

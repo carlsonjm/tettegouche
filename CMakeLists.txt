@@ -105,6 +105,8 @@ add_library(tettegouche-launcher STATIC
     src/PeopleClient.h
     src/QuickNote.cpp
     src/QuickNote.h
+    src/QuickActions.h
+    src/QuickSwitches.h
     src/BusValue.h
     src/UseRecord.h
     src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h
@@ -134,6 +136,7 @@ target_link_libraries(tettegouche-launcher PUBLIC
     KF6::Service
     KF6::BluezQt
     KF6::Solid
+    PW::LibNotificationManager
     AppStreamQt
     KF6Kirigami
     KF6::KirigamiPlatform

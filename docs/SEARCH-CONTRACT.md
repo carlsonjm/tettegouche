@@ -320,9 +320,37 @@ beneath names the time chosen; Esc closes them with the words' own time.
 Down leaves the quick action for the first result, and Up from the first
 result returns to it. Typing on reads the words again.
 
+Two more phrases name a switch, which is set in Search itself and opens
+nothing:
+
+- **Do not disturb:** "do not disturb", "don't disturb" or "dnd", alone or
+  with "on" or "off", or with when it ends: a length ("1h", "for 20
+  minutes", "for half an hour") or a time ("until 3", "until 9am", "until
+  noon"). It is Plasma's own timed setting, so the notification bell and
+  System Settings show it and it ends by itself with Search closed; with no
+  end named it stays until it is turned off.
+- **Bluetooth:** "bluetooth on", "bluetooth off", or "turn" before either or
+  around it. It powers the computer's adapters as Plasma's own switch does,
+  and is offered only where the computer has Bluetooth. "bluetooth" alone
+  still finds its settings.
+
+A switch's row carries a symbol of the switch, what Enter does ("Turn on Do
+not disturb until 3:00 PM"), "Happens right here, nothing opens" beneath, and
+Turn on or Turn off as its light pill. Enter, a tap on the row or the pill
+sets it, and Search stays open on the same row, now saying what was done
+("Do not disturb is on", "Until 3:00 PM" beneath) with a tick, the keys
+Ctrl+Z and a grey Undo pill. Ctrl+Z or Undo puts the switch back exactly as
+it was, an earlier end time included, and the row offers the change again.
+Enter on a row already done closes Search. Changing the words leaves the
+switch as set, with nothing more to take back. Where the switch already
+stands as asked, the row says so ("Bluetooth is already off", "Nothing to
+change"), carries no pill, and Enter closes Search. A switch that could not
+be changed leaves the row as it was, and the line beneath says so.
+
 A quick action is offered on the first screen only, never in Apps, Files,
-Notes or under the Helpers chip, and only while Gooseberry answers on the
-bus. Typing alone changes nothing: the note is made on Enter or a tap.
+Notes or under the Helpers chip. A reminder or a note is offered only while
+Gooseberry answers on the bus. Typing alone changes nothing: the note is
+made, or the switch set, on Enter or a tap.
 
 ## Eligibility and confidence
 
@@ -363,7 +391,9 @@ bus. Typing alone changes nothing: the note is made on Enter or a tap.
    installed.
 6. Matching ignores punctuation and case and uses word boundaries rather than
    arbitrary scattered letters.
-7. Typing alone never opens the browser or changes a setting. The web fallback
+7. Typing alone never opens the browser or changes a setting. A setting
+   changes from Search only by a quick action's own Enter or tap, on a row
+   that says beforehand what it will do and offers Undo after. The web fallback
    appears only when the person submits a search with no eligible result, or
    with only documents found by the words inside them and no row chosen; the
    line after the results offers it whatever was found.

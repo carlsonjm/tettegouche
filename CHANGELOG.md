@@ -14,6 +14,9 @@ history carries the implementation detail.
   a quick action leads the results: Enter opens Gooseberry's card on a new
   note with those words, a reminder's time already set. Tab offers other
   times for a reminder, and the card's Search leads back to the words typed.
+- Type "do not disturb until 3" or "bluetooth off" in Search and a quick
+  action sets it right there, with nothing opened: the row then says what was
+  done, and Undo, or Ctrl+Z, puts it back as it was.
 - Two Search widgets on one panel never show the same island twice, whatever
   their settings say: the widget added first keeps it and the other leaves it.
 - While the screen is shared and notifications are kept quiet, the shared
