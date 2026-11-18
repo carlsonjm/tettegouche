@@ -27,6 +27,7 @@
 #include <QDBusVariant>
 #include <QElapsedTimer>
 #include <QQuickItem>
+#include <QTime>
 #include <QTimer>
 #include <Plasma/Containment>
 #include <PlasmaQuick/AppletQuickItem>
@@ -534,6 +535,14 @@ bool TettegoucheApplet::setting(const QString &key, bool fallback)
     return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
 }
 
+QString TettegoucheApplet::setting(const QString &key, const QString &fallback)
+{
+    if (KConfigLoader *scheme = configScheme()) {
+        if (KConfigSkeletonItem *item = static_cast<KCoreConfigSkeleton *>(scheme)->findItem(key)) return item->property().toString();
+    }
+    return config().group(QStringLiteral("Configuration")).group(QStringLiteral("General")).readEntry(key, fallback);
+}
+
 QStringList TettegoucheApplet::launchFlags()
 {
     QStringList flags = setting(QStringLiteral("useKadunce"), true) ? QStringList{} : QStringList{QStringLiteral("--standalone")};
@@ -552,6 +561,26 @@ QStringList TettegoucheApplet::launchFlags()
     else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
     // The Helpers pill can be left out; Helpers still answer a search.
     if (!setting(QStringLiteral("showHelpersPill"), true)) flags << QStringLiteral("--no-helpers-pill");
+    // Quick actions, where they are not as they come: off altogether, or
+    // where the row shows, what a switch's row does, the time a day alone
+    // means and the actions left out, in one argument.
+    if (!setting(QStringLiteral("quickActions"), true)) {
+        flags << QStringLiteral("--quick-actions=off");
+    } else {
+        QStringList quick;
+        if (setting(QStringLiteral("quickActionsPlace"), QStringLiteral("above")) == QLatin1String("among"))
+            quick << QStringLiteral("among");
+        if (setting(QStringLiteral("quickSwitchesOpenPage"), false)) quick << QStringLiteral("open");
+        const QString time = setting(QStringLiteral("quickReminderTime"), QStringLiteral("09:00"));
+        if (time != QLatin1String("09:00") && QTime::fromString(time, QStringLiteral("HH:mm")).isValid())
+            quick << QStringLiteral("at") + time;
+        for (const QString &kind : {QStringLiteral("Reminder"), QStringLiteral("Note"), QStringLiteral("KeepAwake"),
+                                    QStringLiteral("DoNotDisturb"), QStringLiteral("Bluetooth")}) {
+            if (!setting(QStringLiteral("quickAction") + kind, true))
+                quick << QStringLiteral("no") + kind;
+        }
+        if (!quick.isEmpty()) flags << QStringLiteral("--quick-actions=") + quick.join(QLatin1Char(','));
+    }
     return flags;
 }
 

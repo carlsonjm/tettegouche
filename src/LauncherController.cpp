@@ -954,7 +954,7 @@ void LauncherController::showInputMethod()
 
 QVariantMap LauncherController::quickAction(const QString &typed) const
 {
-    return QuickActions::describe(typed, QDateTime::currentDateTime());
+    return QuickActions::describe(typed, QDateTime::currentDateTime(), QLocale(), m_quickReminderTime);
 }
 
 bool LauncherController::searchWeb(const QString &query, bool chosen)

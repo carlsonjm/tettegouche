@@ -193,6 +193,8 @@ public:
     // The quick action the typed words name now, as the row draws it
     // (QuickActions::describe), or an empty map for none.
     Q_INVOKABLE QVariantMap quickAction(const QString &typed) const;
+    // The time a reminder for a day with no time is set for.
+    void setQuickReminderTime(const QTime &time) { if (time.isValid()) m_quickReminderTime = time; }
     Q_INVOKABLE bool beginGuestWebLaunch();
     Q_INVOKABLE void completeGuestHandoff();
 
@@ -366,6 +368,7 @@ private:
     bool m_quitAfterFiles = false;
     // The second a failed copy is given to reach Ambient; reopening stops it.
     QTimer m_lateQuit;
+    QTime m_quickReminderTime{9, 0};
     // Files carried out are offered until the other application takes them.
     bool m_carrying = false;
     QSet<QString> m_pinned;

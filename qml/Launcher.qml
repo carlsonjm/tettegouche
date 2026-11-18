@@ -222,12 +222,19 @@ Item {
     // into the results. A switch just set stays as the row until the words
     // change, so it can be taken back.
     property bool quickActionsOffered: true
+    // The settings beside that one: the row among the results, where the
+    // best match keeps the highlight and Enter until Up reaches the row; a
+    // switch's row opening the switch's page instead of setting it; and the
+    // actions left out, by kind.
+    property bool quickActionsAmong: false
+    property bool quickSwitchesOpenPage: false
+    property var quickActionsLeftOut: []
     readonly property var quickAction: {
         if (root.quickActionDone !== null) return root.quickActionDone
         if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.peopleShown || root.modeOpen
                 || typeof root.launcherController.quickAction !== "function") return null
         const action = root.launcherController.quickAction(query.text)
-        if (!action || !action.kind) return null
+        if (!action || !action.kind || root.quickActionsLeftOut.indexOf(action.kind) >= 0) return null
         if (action.kind === "note" || action.kind === "reminder")
             return root.quickNote && root.quickNote.available ? action : null
         if (action.kind === "doNotDisturb") return root.quickSwitches ? action : null
@@ -240,11 +247,14 @@ Item {
     readonly property bool quickActionSwitch: root.quickAction !== null
         && (root.quickAction.kind === "doNotDisturb" || root.quickAction.kind === "bluetooth"
             || root.quickAction.kind === "keepAwake")
+    // The switch's row opens its page: nothing is set here.
+    readonly property bool quickActionOpens: root.quickActionSwitch && root.quickSwitchesOpenPage
+        && root.quickActionDone === null
     // The switch as it was set, while it can be taken back.
     property var quickActionDone: null
     // The switch already stands as the words ask: there is nothing to do.
     readonly property bool quickActionMoot: root.quickActionSwitch && root.quickActionDone === null
-        && !root.quickAction.until && root.quickSwitches !== null
+        && !root.quickActionOpens && !root.quickAction.until && root.quickSwitches !== null
         && (root.quickAction.kind === "bluetooth" ? root.quickSwitches.bluetoothOn
             : root.quickAction.kind === "keepAwake" ? root.quickSwitches.keepAwakeOn
             : root.quickSwitches.doNotDisturbOn) === root.quickAction.on
@@ -272,11 +282,13 @@ Item {
     // back puts them in the field again.
     property string quickActionWords: ""
     property bool quickActionHanding: false
-    readonly property bool quickActionLeads: root.quickAction !== null && root.quickActionChosen
+    // Among the results it still leads while there is no result to lead.
+    readonly property bool quickActionLeads: root.quickAction !== null
+        && (root.quickActionChosen || (root.quickActionsAmong && resultList.count === 0))
     // Notes' own way back is Notes' again once Notes has been shown.
     onModeShownChanged: if (root.modeShown === "notes") root.quickActionWords = ""
     onQuickActionChanged: {
-        root.quickActionChosen = true
+        root.quickActionChosen = !root.quickActionsAmong || root.quickActionDone !== null
         root.quickActionEditing = false
         root.quickActionChoice = 0
         root.quickActionFailed = false
@@ -335,6 +347,11 @@ Item {
     function runQuickAction() {
         const action = root.quickAction
         if (action === null || root.quickActionHanding) return
+        if (root.quickActionOpens) {
+            root.quickActionFailed = !root.quickSwitches.openPage(action.kind)
+            if (!root.quickActionFailed) root.launcherController.finishLaunch()
+            return
+        }
         if (root.quickActionSwitch) {
             // Set here, with Search left open on what was done.
             if (root.quickActionDone !== null || root.quickActionMoot) return

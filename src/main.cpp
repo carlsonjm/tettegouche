@@ -43,6 +43,7 @@
 #include <QScreen>
 #include <QStandardPaths>
 #include <QThread>
+#include <QTime>
 #include <QTimer>
 
 #include <functional>
@@ -194,7 +195,8 @@ QStringList settingsIn(const QStringList &arguments)
                                QStringLiteral("--no-helpers-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
-        if (settings.contains(argument) && !given.contains(argument))
+        if ((settings.contains(argument) || argument.startsWith(QLatin1String("--quick-actions=")))
+                && !given.contains(argument))
             given.append(argument);
     }
     return given;
@@ -428,6 +430,22 @@ int main(int argc, char **argv)
     }
     // The switches a quick action sets: Do not disturb and Bluetooth.
     QuickSwitches quickSwitches;
+    // Quick actions as the setting has them: "off", or any of "among",
+    // "open", "atHH:mm" and "no" with an action's name.
+    QStringList quickSettings;
+    for (const QString &argument : arguments) {
+        if (argument.startsWith(QLatin1String("--quick-actions=")))
+            quickSettings = argument.mid(16).split(QLatin1Char(','), Qt::SkipEmptyParts);
+    }
+    QStringList quickActionsLeftOut;
+    for (const QString &word : std::as_const(quickSettings)) {
+        if (word.startsWith(QLatin1String("at"))) {
+            controller.setQuickReminderTime(QTime::fromString(word.mid(2), QStringLiteral("HH:mm")));
+        } else if (word.startsWith(QLatin1String("no")) && word.size() > 2) {
+            // "noKeepAwake" leaves out the action the row calls "keepAwake".
+            quickActionsLeftOut << word.at(2).toLower() + word.mid(3);
+        }
+    }
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     const auto openFrom = [&controller](FileBrowser *files) {
@@ -478,6 +496,10 @@ int main(int argc, char **argv)
          !application.arguments().contains(QStringLiteral("--no-helpers-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
         {QStringLiteral("quickSwitches"), QVariant::fromValue<QObject *>(&quickSwitches)},
+        {QStringLiteral("quickActionsOffered"), !quickSettings.contains(QStringLiteral("off"))},
+        {QStringLiteral("quickActionsAmong"), quickSettings.contains(QStringLiteral("among"))},
+        {QStringLiteral("quickSwitchesOpenPage"), quickSettings.contains(QStringLiteral("open"))},
+        {QStringLiteral("quickActionsLeftOut"), quickActionsLeftOut},
         {QStringLiteral("askClient"), QVariant::fromValue<QObject *>(&ask)},
         {QStringLiteral("peopleClient"), QVariant::fromValue<QObject *>(&people)},
     });
