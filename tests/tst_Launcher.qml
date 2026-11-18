@@ -4935,7 +4935,11 @@ TestCase {
         compare(findChild(launcher, "person-name").text, "Ana Reyes")
         // The likely match is asked about once; Join goes to the provider.
         const join = findChild(launcher, "person-join")
-        tryVerify(() => join.width > 0)
+        // Its row places it, beside the other answer and inside the page.
+        waitForOpen()
+        tryVerify(() => join.x > 0 && join.x + join.width <= join.parent.width)
+        tryVerify(() => join.mapToItem(page, 0, 0).x + join.width <= page.width
+                        && join.mapToItem(page, 0, 0).y + join.height <= page.height)
         mouseClick(join, join.width / 2, join.height / 2)
         compare(peopleStub.asked[peopleStub.asked.length - 1], "join 3")
         tryCompare(findChild(launcher, "person-match"), "visible", false)
@@ -4960,7 +4964,8 @@ TestCase {
         peopleStub.open("1")
         tryCompare(page, "visible", true)
         const text = findChild(launcher, "person-text")
-        tryVerify(() => text.visible && text.width > 0)
+        tryVerify(() => text.visible && text.parent.width > text.width)
+        tryVerify(() => text.mapToItem(page, 0, 0).x + text.width <= page.width)
         mouseClick(text, text.width / 2, text.height / 2)
         compare(peopleStub.reached, ["text +16125550100"])
         peopleStub.available = false
