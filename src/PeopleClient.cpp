@@ -6,24 +6,38 @@
 #include "PeopleClient.h"
 
 #include <KApplicationTrader>
+#include <KIO/ApplicationLauncherJob>
 
 #include <QClipboard>
-#include <QDesktopServices>
+#include <QDBusConnection>
+#include <QDBusMessage>
+#include <QDBusPendingCallWatcher>
+#include <QDBusPendingReply>
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
 
-namespace
+KService::Ptr PeopleClient::takerAmong(const KService::List &services, const QString &scheme)
 {
-bool taken(const char *scheme)
-{
-    return bool(KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/") + QLatin1String(scheme)));
+    for (const auto &service : services) {
+        if (service && !service->exec().isEmpty() && service->schemeHandlers().contains(scheme)) return service;
+    }
+    return {};
 }
+
+// The application that takes a kind of address: the one chosen for it, or
+// one that says it takes it although it keeps out of the menus, as KDE
+// Connect's does for a number to text or call.
+KService::Ptr PeopleClient::taker(const QString &scheme)
+{
+    if (auto chosen = KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/") + scheme)) return chosen;
+    return takerAmong(KService::allServices(), scheme);
 }
 
 PeopleClient::PeopleClient(QObject *parent)
@@ -51,7 +65,8 @@ void PeopleClient::refresh()
             program = QStandardPaths::findExecutable(QString::fromLatin1(Command),
                                                      {QDir::homePath() + QStringLiteral("/.local/bin")});
     }
-    const bool text = taken("sms"), call = taken("tel"), email = taken("mailto");
+    const bool text = bool(taker(QStringLiteral("sms"))), call = bool(taker(QStringLiteral("tel"))),
+               email = bool(taker(QStringLiteral("mailto")));
     if (program == m_program && text == m_canText && call == m_canCall && email == m_canEmail) return;
     m_program = program;
     m_canText = text;
@@ -129,6 +144,17 @@ void PeopleClient::separate()
     decide(QStringLiteral("separate"), QString());
 }
 
+bool PeopleClient::throughPhone(const KService::Ptr &service)
+{
+    return service && service->desktopEntryName() == QLatin1String("org.kde.kdeconnect.handler");
+}
+
+QString PeopleClient::onlyPhone(const QStringList &phones)
+{
+    static const QRegularExpression plain(QStringLiteral("^[A-Za-z0-9_]+$"));
+    return phones.size() == 1 && plain.match(phones.first()).hasMatch() ? phones.first() : QString();
+}
+
 QString PeopleClient::address(const QString &kind, const QString &value)
 {
     const QString to = value.trimmed();
@@ -144,8 +170,48 @@ bool PeopleClient::reach(const QString &kind, const QString &value)
     const QString to = address(kind, value);
     if (to.isEmpty()) return false;
     const bool offered = kind == QLatin1String("text") ? m_canText : kind == QLatin1String("call") ? m_canCall : m_canEmail;
+    if (!offered) return false;
     // The address is handed over as an address; nothing typed is run.
-    return offered && QDesktopServices::openUrl(QUrl(to));
+    const QUrl url(to);
+    const auto service = taker(url.scheme());
+    if (!service) return false;
+    const auto hand = [this, service, url] {
+        auto *job = new KIO::ApplicationLauncherJob(service, this);
+        job->setUrls({url});
+        job->start();
+    };
+    if (!throughPhone(service)) {
+        hand();
+        return true;
+    }
+    // KDE Connect asks which phone before it passes a number on. With one
+    // phone paired and in reach there is nothing to ask, so the number goes
+    // to that phone as KDE Connect's own window would send it; with none or
+    // several, its window asks as it always does.
+    auto phones = QDBusMessage::createMethodCall(QStringLiteral("org.kde.kdeconnect"), QStringLiteral("/modules/kdeconnect"),
+                                                 QStringLiteral("org.kde.kdeconnect.daemon"), QStringLiteral("devices"));
+    phones.setArguments({true, true});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(phones, 2000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [hand, url](QDBusPendingCallWatcher *done) {
+        done->deleteLater();
+        const QDBusPendingReply<QStringList> reply = *done;
+        const QString phone = reply.isValid() ? onlyPhone(reply.value()) : QString();
+        if (phone.isEmpty()) {
+            hand();
+            return;
+        }
+        auto share = QDBusMessage::createMethodCall(QStringLiteral("org.kde.kdeconnect"),
+                                                    QStringLiteral("/modules/kdeconnect/devices/") + phone + QStringLiteral("/share"),
+                                                    QStringLiteral("org.kde.kdeconnect.device.share"), QStringLiteral("shareUrl"));
+        share.setArguments({url.toString()});
+        auto *sent = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(share, 2000), done->parent());
+        connect(sent, &QDBusPendingCallWatcher::finished, sent, [hand](QDBusPendingCallWatcher *answer) {
+            answer->deleteLater();
+            // A phone that would not take it leaves KDE Connect's window to say so.
+            if (answer->isError()) hand();
+        });
+    });
+    return true;
 }
 
 void PeopleClient::copy(const QString &value)
