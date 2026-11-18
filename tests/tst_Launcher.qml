@@ -129,6 +129,16 @@ TestCase {
         property var webChosen: []
         function searchWeb(text, chosen) { webSearches++; webChosen = webChosen.concat([!!chosen]); return true }
         property var actionsByRow: ({})
+        // The quick action the typed words name, as the phrases read them.
+        readonly property var quickTimes: [
+            { when: "2026-11-19T09:00:00-06:00", day: "tomorrow", time: "9:00 AM", date: "Thu 19 Nov" },
+            { when: "2026-11-18T19:00:00-06:00", day: "evening", time: "7:00 PM", date: "Wed 18 Nov" }]
+        function quickAction(typed) {
+            if (typed === "remind me to check the build tomorrow")
+                return { kind: "reminder", text: "Check the build", typed: "Check the build tomorrow", choices: quickTimes }
+            if (typed === "note: milk") return { kind: "note", text: "Milk" }
+            return {}
+        }
         function resultActions(row) { return actionsByRow[row] || [] }
         property var actionRuns: []
         property int actionResult: 1
@@ -377,6 +387,11 @@ TestCase {
         signal cardAnswered(bool opened)
         function openOnCard(noteId, back) { cards = cards.concat(["id:" + noteId]); backs = backs.concat([back]); cardAnswered(cardTakes) }
         function startOnCard(words, back) { cards = cards.concat(["text:" + words]); backs = backs.concat([back]); cardAnswered(cardTakes) }
+        property var reminds: []
+        function remindOnCard(words, when, typed, back) {
+            reminds = reminds.concat([[words, when, typed, back]])
+            cardAnswered(cardTakes)
+        }
         readonly property var store: [
             { id: "note-1", title: "Plan the kitchen", excerpt: "", colour: "yellow", colourHex: "#F2D98A",
               folder: "Kitchen", folderLabel: "Kitchen", stuck: true, window: "plan.txt", app: "org.kde.kate",
@@ -395,7 +410,7 @@ TestCase {
             offersFolders = true; folderSets = []; stucks = []
             kept = false; offersReminders = true; remindLabel = ""; reminders = []; checklist = false; lines = []; ticks = []
             notes = []; notesWords = ""; finds = []; edits = []; startsWith = []
-            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []; backs = []
+            offersPin = true; pinned = false; pins = []; cardTakes = false; cards = []; backs = []; reminds = []
             folder = "Kitchen"; folderLabel = "Kitchen"
             folders = [{ name: "Kitchen", label: "Kitchen", chosen: true, workspace: true },
                        { name: "", label: "Inbox", chosen: false, workspace: false },
@@ -4830,5 +4845,159 @@ TestCase {
         tryCompare(newNote, "opacity", 1)
         controller.drawerExpanded = false
         launcher.quickNote = null
+    }
+    // A phrase that names a quick action puts it above the results, where
+    // it holds the highlight: Enter hands the note to the card with its
+    // reminder, and Search closes.
+    function typeQuickAction(words) {
+        launcher.quickNote = quickStub
+        quickStub.cardTakes = true
+        controller.closes = 0
+        controller.opened()
+        launcher.setDrawerOpen(false)
+        results.clear()
+        const query = findChild(launcher, "search-query")
+        query.forceActiveFocus()
+        query.text = words
+        results.append({display: "Build checklist.pdf", decoration: "application-pdf", subtext: "Documents"})
+        results.append({display: "Builder", decoration: "builder", subtext: "Application"})
+        tryVerify(() => findChild(launcher, "quick-action") !== null && findChild(launcher, "quick-action").visible)
+        return query
+    }
+    function endQuickAction() {
+        launcher.quickNote = null
+        results.clear()
+        findChild(launcher, "search-query").text = ""
+        launcher.quickActionWords = ""
+        controller.closes = 0
+    }
+    function test_quickActionLeads() {
+        typeQuickAction("remind me to check the build tomorrow")
+        verify(launcher.quickActionLeads)
+        compare(findChild(launcher, "quick-action-title").text, "Remind me: Check the build")
+        verify(findChild(launcher, "quick-action-sub").text.indexOf("Tomorrow 9:00 AM") >= 0)
+        // No result is highlighted while the action holds it.
+        const list = findChild(launcher, "search-result-list")
+        tryVerify(() => findChild(list, "parent-highlight-0") !== null)
+        verify(Qt.colorEqual(findChild(list, "parent-highlight-0").color, "transparent"))
+        const launches = results.launches
+        keyClick(Qt.Key_Return)
+        compare(quickStub.reminds, [["Check the build", "2026-11-19T09:00:00-06:00", "Check the build tomorrow", "Search"]])
+        compare(controller.closes, 1)
+        compare(results.launches, launches)
+        endQuickAction()
+    }
+    // Tab opens the times; Tab and Right move on, Left and Shift+Tab back,
+    // Esc closes them with the phrase's own time, and Enter takes the one
+    // chosen.
+    function test_quickActionTabChoosesTime() {
+        typeQuickAction("remind me to check the build tomorrow")
+        verify(findChild(launcher, "quick-action-change").visible)
+        keyClick(Qt.Key_Tab)
+        verify(launcher.quickActionEditing)
+        compare(launcher.quickActionChoice, 0)
+        tryVerify(() => findChild(launcher, "quick-action-time-1") !== null)
+        keyClick(Qt.Key_Right)
+        compare(launcher.quickActionChoice, 1)
+        verify(findChild(launcher, "quick-action-sub").text.indexOf("This evening 7:00 PM") >= 0)
+        keyClick(Qt.Key_Left)
+        compare(launcher.quickActionChoice, 0)
+        keyClick(Qt.Key_Tab)
+        compare(launcher.quickActionChoice, 1)
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.quickActionEditing)
+        compare(launcher.quickActionChoice, 0)
+        compare(controller.closes, 0)
+        // A tap on a time chooses it.
+        const change = findChild(launcher, "quick-action-change")
+        // Shown again, it takes its place in the row, and the list settles
+        // round the shorter row, before the tap.
+        tryVerify(() => change.x > 100)
+        const shown = findChild(launcher, "search-result-list")
+        tryVerify(() => shown.headerItem.height < 150 && shown.contentY === -shown.headerItem.height)
+        mouseClick(change, change.width / 2, change.height / 2)
+        verify(launcher.quickActionEditing)
+        compare(quickStub.reminds, [])
+        compare(controller.closes, 0)
+        tryVerify(() => findChild(launcher, "quick-action-time-1") !== null)
+        const evening = findChild(launcher, "quick-action-time-1")
+        tryVerify(() => evening.x > 0)
+        mouseClick(evening, evening.width / 2, evening.height / 2)
+        compare(launcher.quickActionChoice, 1)
+        keyClick(Qt.Key_Return)
+        compare(quickStub.reminds.length, 1)
+        compare(quickStub.reminds[0][1], "2026-11-18T19:00:00-06:00")
+        compare(controller.closes, 1)
+        endQuickAction()
+    }
+    // Down leaves the action for the first result, whose Enter it then is;
+    // Up from the first result comes back.
+    function test_quickActionDownReachesResults() {
+        typeQuickAction("remind me to check the build tomorrow")
+        const list = findChild(launcher, "search-result-list")
+        keyClick(Qt.Key_Down)
+        verify(!launcher.quickActionLeads)
+        compare(list.currentIndex, 0)
+        keyClick(Qt.Key_Down)
+        compare(list.currentIndex, 1)
+        keyClick(Qt.Key_Up)
+        compare(list.currentIndex, 0)
+        verify(!launcher.quickActionLeads)
+        const launches = results.launches
+        controller.activationResult = 0
+        keyClick(Qt.Key_Return)
+        controller.activationResult = 1
+        compare(quickStub.reminds, [])
+        compare(results.launches, launches + 1)
+        keyClick(Qt.Key_Up)
+        verify(launcher.quickActionLeads)
+        // Typing on gives the highlight back to the action it then names.
+        keyClick(Qt.Key_Down)
+        verify(!launcher.quickActionLeads)
+        endQuickAction()
+    }
+    // A note has no times, and a card that cannot take it leaves Search
+    // open and says so.
+    function test_quickActionNote() {
+        typeQuickAction("note: milk")
+        compare(findChild(launcher, "quick-action-title").text, "New note: Milk")
+        verify(!findChild(launcher, "quick-action-change").visible)
+        quickStub.cardTakes = false
+        keyClick(Qt.Key_Return)
+        compare(quickStub.cards, ["text:Milk"])
+        compare(quickStub.backs, ["Search"])
+        compare(controller.closes, 0)
+        verify(launcher.quickActionFailed)
+        compare(findChild(launcher, "quick-action-sub").text, "Notes could not take it this time")
+        quickStub.cardTakes = true
+        keyClick(Qt.Key_Return)
+        compare(controller.closes, 1)
+        endQuickAction()
+    }
+    // Without Notes, or for words that name no action, there is no row and
+    // Enter is the first result's.
+    function test_quickActionAbsent() {
+        const query = typeQuickAction("note: milk")
+        query.text = "build"
+        results.append({display: "Builder", decoration: "builder", subtext: "Application"})
+        verify(launcher.quickAction === null)
+        verify(!findChild(launcher, "quick-action").visible)
+        launcher.quickNote = null
+        query.text = "note: milk"
+        verify(launcher.quickAction === null)
+        endQuickAction()
+    }
+    // The card's way back opens Search on the words that made the note.
+    function test_quickActionBack() {
+        const query = typeQuickAction("remind me to check the build tomorrow")
+        keyClick(Qt.Key_Return)
+        compare(controller.closes, 1)
+        controller.opened()
+        controller.drawerRequested("notes-back")
+        verify(!launcher.modeOpen)
+        compare(query.text, "remind me to check the build tomorrow")
+        verify(launcher.quickActionLeads)
+        compare(launcher.quickActionWords, "")
+        endQuickAction()
     }
 }

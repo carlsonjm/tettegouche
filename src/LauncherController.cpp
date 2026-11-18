@@ -4,6 +4,7 @@
 */
 
 #include "LauncherController.h"
+#include "QuickActions.h"
 
 #include "ApplicationCatalog.h"
 #include "DockBand.h"
@@ -949,6 +950,11 @@ void LauncherController::showInputMethod()
     if (QInputMethod *inputMethod = QGuiApplication::inputMethod()) {
         inputMethod->show();
     }
+}
+
+QVariantMap LauncherController::quickAction(const QString &typed) const
+{
+    return QuickActions::describe(typed, QDateTime::currentDateTime());
 }
 
 bool LauncherController::searchWeb(const QString &query, bool chosen)

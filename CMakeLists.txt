@@ -145,7 +145,7 @@ qt_add_executable(tettegouche
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml qml/HelpersRow.qml
-        qml/SearchResults.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
+        qml/SearchResults.qml qml/QuickActionRow.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml qml/AskAnswer.qml
         assets/icons/lucide/ellipsis-vertical.svg
@@ -371,6 +371,10 @@ if(BUILD_TESTING)
     qt_add_executable(related-info-test tests/RelatedInfoTest.cpp)
     target_link_libraries(related-info-test PRIVATE tettegouche-related Qt6::Test)
     add_test(NAME related-info-test COMMAND related-info-test)
+    qt_add_executable(quick-actions-test tests/QuickActionsTest.cpp src/QuickActions.h)
+    target_include_directories(quick-actions-test PRIVATE src)
+    target_link_libraries(quick-actions-test PRIVATE Qt6::Test)
+    add_test(NAME quick-actions-test COMMAND quick-actions-test)
     qt_add_executable(omni-results-test tests/OmniResultsTest.cpp src/OmniResults.h)
     target_include_directories(omni-results-test PRIVATE src)
     target_link_libraries(omni-results-test PRIVATE KF6::Runner KF6::I18n Qt6::Gui Qt6::DBus)
