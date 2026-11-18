@@ -13,7 +13,8 @@ pragma ComponentBehavior: Bound
 // Search's modes along its top, on every screen, as one row: the
 // dot for Search's first screen, then Apps, Files, where
 // Gooseberry is installed Notes, and where Split Rock's Core lists
-// them the Helpers. The grey pill marks the one
+// them the Helpers, and where a people provider is installed People,
+// before the Helpers. The grey pill marks the one
 // shown, the dot while none is, and a tap moves between them. The
 // field and whatever the mode shows sit below it.
 Item {
@@ -99,7 +100,8 @@ Item {
     // the first screen.
     readonly property string current: launcher.notesOpen ? "notes"
         : launcher.drawerOpen ? (launcher.filesMode ? "files" : "apps")
-        : launcher.helpersShown ? "helpers" : ""
+        : launcher.helpersShown ? "helpers"
+        : launcher.peopleShown ? "people" : ""
     readonly property real pillGap: 4
     function show(mode) {
         if (mode === current) return
@@ -113,6 +115,11 @@ Item {
             if (launcher.drawerOpen) launcher.setDrawerOpen(false)
             if (launcher.modeOpen) launcher.closeMode()
             launcher.showHelpers(true)
+            return
+        }
+        // People are a first screen of their own, as the Helpers are.
+        if (mode === "people") {
+            launcher.showPeople(true)
             return
         }
         // From one to another, Search keeps the size chosen.
@@ -204,9 +211,10 @@ Item {
                     // right sets it in the middle of the ring to the eye.
                     anchors.horizontalCenterOffset: modeRow.current === "files" ? 0.5 : 0
                     visible: modeRow.current === "files" || modeRow.current === "notes"
-                        || modeRow.current === "helpers"
+                        || modeRow.current === "helpers" || modeRow.current === "people"
                     glyph: modeRow.current === "notes" ? "notes"
-                        : modeRow.current === "helpers" ? "sparkles" : "folder-open"
+                        : modeRow.current === "helpers" ? "sparkles"
+                        : modeRow.current === "people" ? "users" : "folder-open"
                     width: 12
                     height: 12
                 }
@@ -255,6 +263,14 @@ Item {
             selected: modeRow.current === "notes"
             visible: launcher.notesPillShown && !!launcher.notesDoor && launcher.notesDoor.available
             onActivated: modeRow.show("notes")
+        }
+        FirstPill {
+            id: peoplePill
+            objectName: "people-pill"
+            label: words.i18n("People")
+            selected: modeRow.current === "people"
+            visible: launcher.peopleOffered
+            onActivated: modeRow.show("people")
         }
         FirstPill {
             id: helpersPill

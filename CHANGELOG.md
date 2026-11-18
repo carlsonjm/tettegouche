@@ -5,6 +5,11 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- People in Search, where a people provider is installed: a pill after Notes
+  lists the provider's people, each once, and typing finds them by name,
+  number or address. A person's page has every number and address, with
+  Text, Call and Email handed to the application that takes them, and it
+  asks about a likely match, which Join and Not the same answer.
 - Two Search widgets on one panel never show the same island twice, whatever
   their settings say: the widget added first keeps it and the other leaves it.
 - While the screen is shared and notifications are kept quiet, the shared

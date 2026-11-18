@@ -41,7 +41,7 @@ Rectangle {
     // taller than it needs, with nothing under it, it rests in
     // the middle, and rises as a drawer or a mode opens. The
     // Helpers' row sits under it, so it stays at the top for them.
-    readonly property real restY: idle && !firstRow.fits && !launcher.helpersShown
+    readonly property real restY: idle && !firstRow.fits && !launcher.helpersShown && !launcher.peopleShown
         ? Math.max(0, Math.round((parent.height - height) / 2)) : 0
     x: 0
     y: Math.round(restY * (1 - launcher.drawerProgress) * (1 - launcher.modeProgress))
@@ -210,6 +210,9 @@ Rectangle {
                 // From the filter into the files: the keys move there.
                 filesLoader.item.focusFiles()
                 event.accepted = true
+            } else if (launcher.peopleShown && (event.key === Qt.Key_Down || event.key === Qt.Key_Up)) {
+                launcher.movePerson(event.key === Qt.Key_Down ? 1 : -1)
+                event.accepted = true
             } else if (event.key === Qt.Key_Down
                        && resultList.count > 0) {
                 launcher.moveResultSelection(1)
@@ -243,6 +246,7 @@ Rectangle {
                 ? (launcher.filesMode ? words.i18n("Find a file") : words.i18n("Find an app"))
                 : launcher.askShown ? words.i18n("Ask a question, or find a Helper")
                 : launcher.helpersShown ? words.i18n("Look over the computer, free up space…")
+                : launcher.peopleShown ? words.i18n("Find a person")
                 : words.i18n("Just type")
             // As large as what is typed, so typing changes nothing but
             // the words.

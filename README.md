@@ -73,8 +73,8 @@ Kickoff is.
 ## Search
 
 Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
-and Files, Notes where Gooseberry is installed, Helpers where Split Rock is
-installed, and below them what you used lately: files, and applications that
+and Files, Notes where Gooseberry is installed, People where a people
+provider is installed, Helpers where Split Rock is installed, and below them what you used lately: files, and applications that
 are not already open or pinned in the dock. To go straight to one of them,
 press the dot and slide toward the islands. Search stays ready after you close
 it, so it opens at once next time, and Tettegouche adds no background service
