@@ -82,10 +82,6 @@ public:
     // the menus or not.
     static KService::Ptr taker(const QString &scheme);
     static KService::Ptr takerAmong(const KService::List &services, const QString &scheme);
-    // Whether an application is KDE Connect's, which passes a number to a
-    // phone; and the one phone among those paired and in reach, or none.
-    static bool throughPhone(const KService::Ptr &service);
-    static QString onlyPhone(const QStringList &phones);
 
 Q_SIGNALS:
     void availableChanged();

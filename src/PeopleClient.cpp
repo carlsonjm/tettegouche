@@ -9,17 +9,12 @@
 #include <KIO/ApplicationLauncherJob>
 
 #include <QClipboard>
-#include <QDBusConnection>
-#include <QDBusMessage>
-#include <QDBusPendingCallWatcher>
-#include <QDBusPendingReply>
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
-#include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
 
@@ -144,17 +139,6 @@ void PeopleClient::separate()
     decide(QStringLiteral("separate"), QString());
 }
 
-bool PeopleClient::throughPhone(const KService::Ptr &service)
-{
-    return service && service->desktopEntryName() == QLatin1String("org.kde.kdeconnect.handler");
-}
-
-QString PeopleClient::onlyPhone(const QStringList &phones)
-{
-    static const QRegularExpression plain(QStringLiteral("^[A-Za-z0-9_]+$"));
-    return phones.size() == 1 && plain.match(phones.first()).hasMatch() ? phones.first() : QString();
-}
-
 QString PeopleClient::address(const QString &kind, const QString &value)
 {
     const QString to = value.trimmed();
@@ -175,42 +159,9 @@ bool PeopleClient::reach(const QString &kind, const QString &value)
     const QUrl url(to);
     const auto service = taker(url.scheme());
     if (!service) return false;
-    const auto hand = [this, service, url] {
-        auto *job = new KIO::ApplicationLauncherJob(service, this);
-        job->setUrls({url});
-        job->start();
-    };
-    if (!throughPhone(service)) {
-        hand();
-        return true;
-    }
-    // KDE Connect asks which phone before it passes a number on. With one
-    // phone paired and in reach there is nothing to ask, so the number goes
-    // to that phone as KDE Connect's own window would send it; with none or
-    // several, its window asks as it always does.
-    auto phones = QDBusMessage::createMethodCall(QStringLiteral("org.kde.kdeconnect"), QStringLiteral("/modules/kdeconnect"),
-                                                 QStringLiteral("org.kde.kdeconnect.daemon"), QStringLiteral("devices"));
-    phones.setArguments({true, true});
-    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(phones, 2000), this);
-    connect(watcher, &QDBusPendingCallWatcher::finished, this, [hand, url](QDBusPendingCallWatcher *done) {
-        done->deleteLater();
-        const QDBusPendingReply<QStringList> reply = *done;
-        const QString phone = reply.isValid() ? onlyPhone(reply.value()) : QString();
-        if (phone.isEmpty()) {
-            hand();
-            return;
-        }
-        auto share = QDBusMessage::createMethodCall(QStringLiteral("org.kde.kdeconnect"),
-                                                    QStringLiteral("/modules/kdeconnect/devices/") + phone + QStringLiteral("/share"),
-                                                    QStringLiteral("org.kde.kdeconnect.device.share"), QStringLiteral("shareUrl"));
-        share.setArguments({url.toString()});
-        auto *sent = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(share, 2000), done->parent());
-        connect(sent, &QDBusPendingCallWatcher::finished, sent, [hand](QDBusPendingCallWatcher *answer) {
-            answer->deleteLater();
-            // A phone that would not take it leaves KDE Connect's window to say so.
-            if (answer->isError()) hand();
-        });
-    });
+    auto *job = new KIO::ApplicationLauncherJob(service, this);
+    job->setUrls({url});
+    job->start();
     return true;
 }
 
