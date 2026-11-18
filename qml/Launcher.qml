@@ -217,7 +217,7 @@ Item {
     // highlight, and Enter, until Down moves into the results.
     property bool quickActionsOffered: true
     readonly property var quickAction: {
-        if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.modeOpen
+        if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.peopleShown || root.modeOpen
                 || !root.quickNote || !root.quickNote.available
                 || typeof root.launcherController.quickAction !== "function") return null
         const action = root.launcherController.quickAction(query.text)
