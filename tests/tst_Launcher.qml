@@ -4910,10 +4910,16 @@ TestCase {
         verify(!pill.visible)
         launcher.peopleClient = peopleStub
         tryCompare(pill, "visible", true)
-        // The row makes room for it, or a tap on it lands outside the row.
+        // The row places it once it shows, after Apps, and makes room for
+        // it, or a tap on it lands outside the row.
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
         tryVerify(() => pill.x + pill.width <= pill.parent.width)
         mouseClick(pill, pill.width / 2, pill.height / 2)
-        tryVerify(() => launcher.peopleShown)
+        tryVerify(() => launcher.peopleShown, 1000,
+                  "people not shown: pill at " + pill.x + " wide " + pill.width + " in " + pill.parent.width
+                  + ", asked " + peopleStub.asked.join("|") + ", offered " + launcher.peopleOffered
+                  + ", destination " + launcher.destination)
         verify(pill.selected)
         verify(!findChild(launcher, "home-dot").selected)
         const list = findChild(launcher, "people-list")
