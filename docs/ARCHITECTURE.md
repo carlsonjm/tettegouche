@@ -192,6 +192,14 @@ service each start. Edit Application… hands the application's desktop file id 
 KDE's menu editor, which keeps the person's copy of the entry; Apps reads it
 from KDE's application list like any other. Existing-window matching runs before launch.
 
+`PeopleClient` speaks to a people provider: a command named
+`good-input-people`, on the path or in `~/.local/bin`. It runs the command
+once for each question and reads one JSON object back: `people` with the
+words typed, `person` with an id, and `join`, `not-same` and `separate` for
+what is decided on a person's page. The newest question wins, and an answer
+to an older one is dropped. A number or an address is handed on as an `sms:`,
+`tel:` or `mailto:` address to the application KDE names for it.
+
 `NotesDoor` looks for Gooseberry's Capture action in KDE's application list
 each time Search opens. `QuickNote` speaks Gooseberry's quick-note interface on
 the session bus, and `NotesPane` draws the board of notes and the note's page

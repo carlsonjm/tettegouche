@@ -101,6 +101,8 @@ add_library(tettegouche-launcher STATIC
     src/RecentUse.h
     src/NotesDoor.cpp
     src/NotesDoor.h
+    src/PeopleClient.cpp
+    src/PeopleClient.h
     src/QuickNote.cpp
     src/QuickNote.h
     src/QuickActions.h
@@ -148,7 +150,7 @@ qt_add_executable(tettegouche
 qt_add_resources(tettegouche "tettegouche_qml"
     PREFIX "/"
     FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml qml/HelpersRow.qml
-        qml/SearchResults.qml qml/QuickActionRow.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/ModePill.qml qml/SuiteIcon.qml
+        qml/SearchResults.qml qml/QuickActionRow.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/PeoplePane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
         qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml qml/AskAnswer.qml
         assets/icons/lucide/ellipsis-vertical.svg
@@ -349,6 +351,13 @@ if(BUILD_TESTING)
     add_test(NAME notes-door-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:notes-door-test>)
     set_tests_properties(notes-door-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
+    # People, over a stand-in for the people provider in a temporary folder.
+    qt_add_executable(people-client-test tests/PeopleClientTest.cpp src/PeopleClient.cpp src/PeopleClient.h)
+    target_include_directories(people-client-test PRIVATE src)
+    target_link_libraries(people-client-test PRIVATE KF6::Service Qt6::Gui Qt6::Test)
+    add_test(NAME people-client-test COMMAND dbus-run-session
+        --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:people-client-test>)
+    set_tests_properties(people-client-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
     qt_add_executable(quick-note-test tests/QuickNoteTest.cpp src/QuickNote.cpp src/QuickNote.h src/BusValue.h)
     target_include_directories(quick-note-test PRIVATE src)
     target_link_libraries(quick-note-test PRIVATE Qt6::DBus Qt6::Test)

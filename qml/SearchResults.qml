@@ -31,7 +31,7 @@ Item {
     width: parent.width
     height: parent.height - y
     opacity: launcher.applicationLaunchPending ? 0 : 1
-    visible: query.text.length > 0 && !launcher.drawerOpen
+    visible: query.text.length > 0 && !launcher.drawerOpen && !launcher.peopleShown
 
     // The files' scope, which the Helpers have no use for.
     Row {

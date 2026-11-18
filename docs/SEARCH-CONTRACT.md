@@ -157,6 +157,31 @@ answered when the download ends if Search is still open. Leaving the chip, or
 Search closing, stops the question. Without
 Ask, the chip is Helpers, as above, and nothing is asked.
 
+### People
+
+People is offered while a people provider is installed, looked for each time
+Search opens. The provider keeps the people and decides who is who; Search
+keeps none, and Tettegouche works the same without it.
+
+- The People pill sits after Notes. It opens Search's first screen with only
+  people on it, at Search's working height: the field reads Find a person,
+  and under it the people the provider lists, by name, each a row with the
+  first letters of the name, the name and how many numbers and addresses
+  reach them.
+- What is typed goes to the provider alone, which finds people by the start
+  of a name, by a number or by an address. Applications, files and the web
+  are not searched from here.
+- A tap, or Enter, opens a person's page over the field, the row of modes
+  staying above it: the name, then each number and address with Text, Call
+  or Email and Copy. Text, Call and Email hand the number or address to the
+  application that takes it, each offered only where one does, and Search
+  closes. Search sends nothing itself and runs nothing typed.
+- Where the provider names a likely match, the page asks whether it is the
+  same person; Join and Not the same go back to the provider, which keeps
+  them. A person made of several contact cards has Separate these cards.
+- ‹ People and Esc return from the page to the people, and Esc there to the
+  first screen.
+
 ### Notes
 
 Notes is one of Search's modes. Gooseberry keeps the note; Search draws it in

@@ -64,9 +64,31 @@ Item {
     // Core lists, and what is typed there finds only Helpers. Offered only
     // while Core lists some.
     property bool helpersShown: false
+    // Search's People chip, offered only while a people provider is
+    // installed: its first screen lists the people the provider knows, what
+    // is typed there finds only people, and a person opens on a page.
+    property var peopleClient: null
+    readonly property bool peopleOffered: !!root.peopleClient && root.peopleClient.available
+    property bool peopleShown: false
+    readonly property string peopleTyped: root.peopleShown ? query.text : ""
+    onPeopleTypedChanged: if (root.peopleShown) root.peopleClient.find(root.peopleTyped)
+    onPeopleOfferedChanged: if (!root.peopleOffered) root.showPeople(false)
+    function showPeople(shown) {
+        if (shown && !root.peopleOffered) return
+        if (shown) {
+            if (root.drawerOpen) root.setDrawerOpen(false)
+            if (root.modeOpen) root.closeMode()
+            root.showHelpers(false)
+        }
+        if (root.peopleClient) root.peopleClient.close()
+        root.peopleShown = shown
+        root.selectedChildKey = ""
+        if (shown) root.peopleClient.find(query.text)
+    }
     // What Search shows in place of its first screen: "apps", "files",
-    // "notes", "helpers", or "" for the first screen itself.
+    // "notes", "helpers", "people", or "" for the first screen itself.
     readonly property string destination: helpersShown ? "helpers"
+        : peopleShown ? "people"
         : drawerOpen ? (filesMode ? "files" : "apps")
         : modeOpen ? modeShown : ""
     // The destination a key, the dot's slide or an island opened straight,
@@ -114,6 +136,7 @@ Item {
     }
     function showHelpers(shown) {
         if (shown && root.helpers.length === 0) return
+        if (shown) root.showPeople(false)
         root.helpersShown = shown
         root.selectedChildKey = ""
     }
@@ -201,7 +224,7 @@ Item {
     property bool quickActionsOffered: true
     readonly property var quickAction: {
         if (root.quickActionDone !== null) return root.quickActionDone
-        if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.modeOpen
+        if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.peopleShown || root.modeOpen
                 || typeof root.launcherController.quickAction !== "function") return null
         const action = root.launcherController.quickAction(query.text)
         if (!action || !action.kind) return null
@@ -558,6 +581,11 @@ Item {
         root.modeAwaited = ""
         root.modeOpen = false
         root.helpersShown = false
+        root.peopleShown = false
+        if (root.peopleClient) {
+            root.peopleClient.close()
+            root.peopleClient.refresh()
+        }
         helpersWait.stop()
         root.helpersAwaited = false
         root.modeShown = ""
@@ -590,6 +618,7 @@ Item {
         // Files windows of their own stay as they are; Files opens here too.
         if (open) root.filesMode = mode === "files"
         if (open) root.showHelpers(false)
+        if (open) root.showPeople(false)
         root.guestDrag = 0
         // Every drawer opens at Search's own size, a card in Spread; Expand
         // fills the screen. Moving between drawers and Notes keeps the size
@@ -715,6 +744,7 @@ Item {
             root.setDrawerOpen(false)
             if (root.modeOpen) root.closeMode()
             root.showHelpers(false)
+            root.showPeople(false)
         }
     }
 
@@ -853,6 +883,7 @@ Item {
         const client = name === "notes" ? root.quickNote : null
         if (!client || !client.available || root.modeGrowing) return false
         root.showHelpers(false)
+        root.showPeople(false)
         if (view === "page") client.start()
         root.modeShown = name
         root.keysHandOver = root.keysUp && query.activeFocus
@@ -1002,7 +1033,12 @@ Item {
         return false
     }
 
+    function movePerson(direction) { peoplePane.move(direction) }
     function submit() {
+        if (root.peopleShown) {
+            peoplePane.submit()
+            return
+        }
         if (root.helpersShown && !root.drawerOpen && query.text.trim().length === 0) {
             if (root.helpers.length > 0) root.openHelper(root.helpers[0].id)
             return
@@ -1122,6 +1158,16 @@ Item {
             if (root.helpersShown) {
                 query.text = ""
                 root.showHelpers(false)
+                event.accepted = true
+                return
+            }
+            // A person's page steps back to the people, and they to the
+            // first screen.
+            if (root.peopleShown) {
+                if (!peoplePane.back()) {
+                    query.text = ""
+                    root.showPeople(false)
+                }
                 event.accepted = true
                 return
             }
@@ -1338,6 +1384,7 @@ Item {
         readonly property real fullHeight: Math.max(restingHeight,
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
+            && !root.peopleShown
         readonly property real restHeight: root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
@@ -1502,6 +1549,15 @@ Item {
                 tone: tone
                 words: words
                 searchField: searchField
+            }
+
+            PeoplePane {
+                id: peoplePane
+                launcher: root
+                tone: tone
+                words: words
+                searchField: searchField
+                z: 7
             }
 
             SearchResults {
