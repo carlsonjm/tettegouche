@@ -4941,7 +4941,33 @@ TestCase {
         tryVerify(() => join.mapToItem(page, 0, 0).x + join.width <= page.width
                         && join.mapToItem(page, 0, 0).y + join.height <= page.height)
         mouseClick(join, join.width / 2, join.height / 2)
-        compare(peopleStub.asked[peopleStub.asked.length - 1], "join 3")
+        if (peopleStub.asked[peopleStub.asked.length - 1] !== "join 3") {
+            // What lies over the answer, from the launcher down to the
+            // item a tap there reaches first.
+            const at = join.mapToItem(launcher, join.width / 2, join.height / 2)
+            let item = launcher, x = at.x, y = at.y, path = []
+            for (let depth = 0; depth < 40; depth++) {
+                const child = item.childAt(x, y)
+                if (!child) break
+                const p = item.mapToItem(child, x, y)
+                x = p.x; y = p.y; item = child
+                path.push((child.objectName || String(child).split("(")[0]) + "@" + Math.round(child.z))
+            }
+            const ways = findChild(launcher, "person-ways")
+            const sheet = findChild(launcher, "launcher-sheet")
+            const copy = findChild(launcher, "person-copy")
+            mouseClick(copy, copy.width / 2, copy.height / 2)
+            const back = findChild(launcher, "person-back")
+            mouseClick(back, back.width / 2, back.height / 2)
+            fail("Join took no tap at " + Math.round(at.x) + "," + Math.round(at.y)
+                 + " in launcher " + launcher.width + "x" + launcher.height
+                 + ", sheet " + Math.round(sheet.x) + "," + Math.round(sheet.y) + " " + Math.round(sheet.width) + "x" + Math.round(sheet.height)
+                 + ", page " + Math.round(page.width) + "x" + Math.round(page.height) + " enabled " + page.enabled
+                 + ", ways y " + ways.y + " h " + ways.height + " content " + ways.contentHeight + " moving " + ways.moving
+                 + ", join enabled " + join.enabled + " opacity " + join.opacity
+                 + ", copy took a tap: " + (peopleStub.copied !== "") + ", back took a tap: " + !peopleStub.personOpen
+                 + ", over it: " + path.join(" > "))
+        }
         tryCompare(findChild(launcher, "person-match"), "visible", false)
         // Escape: the page, then the people, then Search stays on its first
         // screen.
