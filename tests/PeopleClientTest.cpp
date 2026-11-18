@@ -136,6 +136,31 @@ esac
         client.setProgram(m_program);
         if (!client.canText()) QVERIFY(!client.reach(QStringLiteral("text"), QStringLiteral("+16125550100")));
     }
+
+    // KDE Connect takes numbers to text and call from an entry kept out of
+    // the menus: it counts, and an entry that takes neither does not.
+    void anApplicationOutOfTheMenusStillTakesANumber()
+    {
+        const auto entry = [this](const QString &name, const QByteArray &body) {
+            const QString path = m_folder.filePath(name);
+            QFile file(path);
+            if (file.open(QIODevice::WriteOnly)) file.write("[Desktop Entry]\nType=Application\n" + body);
+            file.close();
+            return KService::Ptr(new KService(path));
+        };
+        const auto mail = entry(QStringLiteral("mail.desktop"),
+                                "Name=Mail\nExec=mail %u\nMimeType=x-scheme-handler/mailto;\n");
+        const auto phone = entry(QStringLiteral("phone.desktop"),
+                                 "Name=Phone\nExec=phone-handler %U\nNoDisplay=true\n"
+                                 "MimeType=x-scheme-handler/tel;x-scheme-handler/sms;\n");
+        const auto empty = entry(QStringLiteral("empty.desktop"),
+                                 "Name=Empty\nMimeType=x-scheme-handler/sms;\n");
+        const KService::List all{mail, empty, phone};
+        QVERIFY(PeopleClient::takerAmong(all, QStringLiteral("sms")) == phone);
+        QVERIFY(PeopleClient::takerAmong(all, QStringLiteral("tel")) == phone);
+        QVERIFY(PeopleClient::takerAmong(all, QStringLiteral("mailto")) == mail);
+        QVERIFY(!PeopleClient::takerAmong({mail}, QStringLiteral("sms")));
+    }
 };
 
 QTEST_MAIN(PeopleClientTest)

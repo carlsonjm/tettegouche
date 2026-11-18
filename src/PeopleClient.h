@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <KService>
+
 #include <QObject>
 #include <QString>
 #include <QVariantList>
@@ -75,6 +77,11 @@ public:
 
     // The address handed over for a kind and a value; empty for neither.
     static QString address(const QString &kind, const QString &value);
+    // The application that takes sms, tel or mailto addresses, or none; and
+    // the first among some applications that says it takes one, shown in
+    // the menus or not.
+    static KService::Ptr taker(const QString &scheme);
+    static KService::Ptr takerAmong(const KService::List &services, const QString &scheme);
 
 Q_SIGNALS:
     void availableChanged();

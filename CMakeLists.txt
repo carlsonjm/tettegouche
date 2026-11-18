@@ -354,7 +354,7 @@ if(BUILD_TESTING)
     # People, over a stand-in for the people provider in a temporary folder.
     qt_add_executable(people-client-test tests/PeopleClientTest.cpp src/PeopleClient.cpp src/PeopleClient.h)
     target_include_directories(people-client-test PRIVATE src)
-    target_link_libraries(people-client-test PRIVATE KF6::Service Qt6::Gui Qt6::Test)
+    target_link_libraries(people-client-test PRIVATE KF6::KIOGui KF6::Service Qt6::Gui Qt6::Test)
     add_test(NAME people-client-test COMMAND dbus-run-session
         --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/panel-test-bus.conf -- $<TARGET_FILE:people-client-test>)
     set_tests_properties(people-client-test PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 60)
