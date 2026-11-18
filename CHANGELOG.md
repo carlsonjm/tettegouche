@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Type "keep awake 1h" in Search and a quick action turns on Status's Keep
+  awake for that long, or until sign-out with no time named, with Undo.
 - Type "remind me to check the build tomorrow" or "note: milk" in Search and
   a quick action leads the results: Enter opens Gooseberry's card on a new
   note with those words, a reminder's time already set. Tab offers other

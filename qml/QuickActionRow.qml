@@ -32,7 +32,8 @@ Item {
     readonly property bool done: launcher.quickActionDone !== null
     readonly property bool moot: launcher.quickActionMoot
     readonly property string switchName: !isSwitch ? ""
-        : action.kind === "bluetooth" ? words.i18n("Bluetooth") : words.i18n("Do not disturb")
+        : action.kind === "bluetooth" ? words.i18n("Bluetooth")
+        : action.kind === "keepAwake" ? words.i18n("Keep awake") : words.i18n("Do not disturb")
 
     function titleText() {
         if (action === null) return ""
@@ -57,6 +58,7 @@ Item {
             if (!done) return words.i18n("Happens right here, nothing opens")
             if (!action.on) return words.i18n("Changed right here")
             return action.until ? words.i18nc("%1 is a time", "Until %1", launcher.quickUntilLabel(action.until))
+                : action.kind === "keepAwake" ? words.i18n("Until you sign out")
                 : words.i18n("Until you turn it off")
         }
         return chosenTime ? words.i18n("Notes · %1 · opens the note for you to look over", launcher.quickWhenLabel(chosenTime))
@@ -120,7 +122,9 @@ Item {
                     height: 32
                     source: !quick.isSwitch ? "io.github.carlsonjm.Gooseberry"
                         : quick.done ? "emblem-ok-symbolic"
-                        : quick.action !== null && quick.action.kind === "bluetooth" ? "network-bluetooth-symbolic" : "notifications-disabled-symbolic"
+                        : quick.action !== null && quick.action.kind === "bluetooth" ? "network-bluetooth-symbolic"
+                        : quick.action !== null && quick.action.kind === "keepAwake" ? "system-suspend-inhibited-symbolic"
+                        : "notifications-disabled-symbolic"
                     fallback: quick.isSwitch ? "preferences-system" : "knotes"
                     color: quick.launcher.primaryText
                 }

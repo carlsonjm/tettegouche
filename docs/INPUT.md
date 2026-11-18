@@ -48,7 +48,7 @@ than repeat it.
 | Type "remind me to check the build tomorrow", or "note: milk" | A quick action leads the results, under Quick action: what it will do in a sentence, and Open. It is there only while Gooseberry is installed, and it holds the highlight. |
 | Enter, or tap or click the quick action or its Open | Hands Gooseberry's own card a new note with those words, a reminder's time already set, and Search closes. The card's Search, on top, comes back here with the words typed. |
 | `Tab`, or tap or click Tab change, on a reminder | Opens the times it may be due instead: the one typed, the coming evening and the next morning. `Tab` or `Right` moves on, `Shift+Tab` or `Left` back, and a tap chooses one; `Esc` closes them with the time typed. |
-| Type "do not disturb until 3", or "bluetooth off" | A quick action leads the results that says what it will change, with Turn on or Turn off. Bluetooth's is there only where the computer has Bluetooth. |
+| Type "do not disturb until 3", "bluetooth off", or "keep awake 1h" | A quick action leads the results that says what it will change, with Turn on or Turn off. Bluetooth's is there only where the computer has Bluetooth, and Keep awake's only beside Temperance. |
 | Enter, or tap or click a switch's quick action or its pill | Sets the switch right here; nothing opens and Search stays open on the row, which now says what was done. Enter again closes Search. |
 | `Ctrl+Z`, or tap or click Undo, on a switch just set | Puts the switch back as it was, and the row offers the change again. |
 | `Down`, on a quick action | Leaves it for the first result, whose Enter it then is; `Up` from the first result comes back. |

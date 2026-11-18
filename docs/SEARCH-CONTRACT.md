@@ -295,7 +295,7 @@ beneath names the time chosen; Esc closes them with the words' own time.
 Down leaves the quick action for the first result, and Up from the first
 result returns to it. Typing on reads the words again.
 
-Two more phrases name a switch, which is set in Search itself and opens
+Three more phrases name a switch, which is set in Search itself and opens
 nothing:
 
 - **Do not disturb:** "do not disturb", "don't disturb" or "dnd", alone or
@@ -308,6 +308,15 @@ nothing:
   around it. It powers the computer's adapters as Plasma's own switch does,
   and is offered only where the computer has Bluetooth. "bluetooth" alone
   still finds its settings.
+
+- **Keep awake:** "keep awake", "keep the screen awake", "keep the computer
+  awake" or "stay awake", alone or with "on" or "off", or with when it ends,
+  as Do not disturb takes it ("keep awake 1h", "keep awake until 5"). It is
+  Temperance's Keep awake, asked at its door on the session bus
+  (`co.goodinput.Temperance`, `/KeepAwake`; Temperance's `docs/PANELS.md`),
+  so Status's own switch shows it, with its time, and it holds with Search
+  closed. With no end named it lasts until sign-out. It is offered only
+  while that door is there.
 
 A switch's row carries a symbol of the switch, what Enter does ("Turn on Do
 not disturb until 3:00 PM"), "Happens right here, nothing opens" beneath, and

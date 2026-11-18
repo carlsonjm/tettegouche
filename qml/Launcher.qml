@@ -189,7 +189,8 @@ Item {
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
 
-    // The switches a quick action sets, Do not disturb and Bluetooth; null
+    // The switches a quick action sets, Do not disturb, Bluetooth and Keep
+    // awake; null
     // where there are none to set.
     property var quickSwitches: null
     // The quick action the typed words name, or null, drawn above the
@@ -209,16 +210,20 @@ Item {
         if (action.kind === "doNotDisturb") return root.quickSwitches ? action : null
         if (action.kind === "bluetooth")
             return root.quickSwitches && root.quickSwitches.bluetoothThere ? action : null
+        if (action.kind === "keepAwake")
+            return root.quickSwitches && root.quickSwitches.keepAwakeThere ? action : null
         return null
     }
     readonly property bool quickActionSwitch: root.quickAction !== null
-        && (root.quickAction.kind === "doNotDisturb" || root.quickAction.kind === "bluetooth")
+        && (root.quickAction.kind === "doNotDisturb" || root.quickAction.kind === "bluetooth"
+            || root.quickAction.kind === "keepAwake")
     // The switch as it was set, while it can be taken back.
     property var quickActionDone: null
     // The switch already stands as the words ask: there is nothing to do.
     readonly property bool quickActionMoot: root.quickActionSwitch && root.quickActionDone === null
         && !root.quickAction.until && root.quickSwitches !== null
         && (root.quickAction.kind === "bluetooth" ? root.quickSwitches.bluetoothOn
+            : root.quickAction.kind === "keepAwake" ? root.quickSwitches.keepAwakeOn
             : root.quickSwitches.doNotDisturbOn) === root.quickAction.on
     // A change of the words leaves what was set as it stands.
     Connections {
