@@ -101,6 +101,8 @@ private Q_SLOTS:
     // phrase's own first.
     void describesTheRow()
     {
+        // Newer locale data puts a narrow no-break space before AM and PM.
+        const auto plain = [](const QVariant &time) { return time.toString().replace(QChar(0x202F), QLatin1Char(' ')); };
         const QLocale english(QLocale::English, QLocale::UnitedStates);
         QVariantMap row = QuickActions::describe(QStringLiteral("remind me to check the build tomorrow"), morning(), english);
         QCOMPARE(row.value(QStringLiteral("kind")).toString(), QStringLiteral("reminder"));
@@ -109,10 +111,11 @@ private Q_SLOTS:
         QVariantList choices = row.value(QStringLiteral("choices")).toList();
         QCOMPARE(choices.size(), 2);
         QCOMPARE(choices.at(0).toMap().value(QStringLiteral("day")).toString(), QStringLiteral("tomorrow"));
-        QCOMPARE(choices.at(0).toMap().value(QStringLiteral("time")).toString(), QStringLiteral("9:00 AM"));
-        QCOMPARE(QDateTime::fromString(choices.at(0).toMap().value(QStringLiteral("when")).toString(), Qt::ISODate), on(19, 9));
+        QCOMPARE(plain(choices.at(0).toMap().value(QStringLiteral("time"))), QStringLiteral("9:00 AM"));
+        QCOMPARE(choices.at(0).toMap().value(QStringLiteral("when")).toString(),
+            on(19, 9).toOffsetFromUtc(on(19, 9).offsetFromUtc()).toString(Qt::ISODate));
         QCOMPARE(choices.at(1).toMap().value(QStringLiteral("day")).toString(), QStringLiteral("evening"));
-        QCOMPARE(choices.at(1).toMap().value(QStringLiteral("time")).toString(), QStringLiteral("7:00 PM"));
+        QCOMPARE(plain(choices.at(1).toMap().value(QStringLiteral("time"))), QStringLiteral("7:00 PM"));
 
         row = QuickActions::describe(QStringLiteral("remind me to pay rent on friday"), morning(), english);
         choices = row.value(QStringLiteral("choices")).toList();

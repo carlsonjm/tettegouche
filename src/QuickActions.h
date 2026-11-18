@@ -5,7 +5,6 @@
 #include <QRegularExpression>
 #include <QString>
 #include <QStringList>
-#include <QTimeZone>
 #include <QVariantMap>
 #include <utility>
 
@@ -142,10 +141,15 @@ inline QDateTime resolve(const When &when, const QDateTime &now)
 {
     if (when.hasSpan) {
         QDateTime due = now.addSecs(when.spanSeconds);
-        return QDateTime(due.date(), QTime(due.time().hour(), due.time().minute()), now.timeZone());
+        due.setTime(QTime(due.time().hour(), due.time().minute()));
+        return due;
     }
+    // On the clock `now` is read from, whichever that is.
     const auto at = [&now](const QDate &day, int hour, int minute) {
-        return QDateTime(day, QTime(hour, minute), now.timeZone());
+        QDateTime due = now;
+        due.setDate(day);
+        due.setTime(QTime(hour, minute));
+        return due;
     };
     if (when.hasClock) {
         if (when.hasDay) return at(when.day, hourOn(when), when.minute);
@@ -281,8 +285,10 @@ inline QVariantMap describe(const QString &typed, const QDateTime &now, const QL
     row.insert(QStringLiteral("kind"), QStringLiteral("reminder"));
     row.insert(QStringLiteral("typed"), Detail::sentence(typed.simplified().remove(lead)));
     QList<QDateTime> times{action.when};
-    const QDateTime evening(now.date(), QTime(Detail::Evening, 0), now.timeZone());
-    const QDateTime tomorrow(now.date().addDays(1), QTime(Detail::Morning, 0), now.timeZone());
+    QDateTime evening = now, tomorrow = now;
+    evening.setTime(QTime(Detail::Evening, 0));
+    tomorrow.setDate(now.date().addDays(1));
+    tomorrow.setTime(QTime(Detail::Morning, 0));
     for (const QDateTime &time : {evening, tomorrow})
         if (time > now && !times.contains(time)) times.append(time);
     QVariantList choices;
