@@ -36,9 +36,18 @@ than repeat it.
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below the search field | Opens it, an application or a file in its usual application, and Search closes. |
-| Tap or click Apps, Files, Notes or Helpers in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
+| Tap or click Apps, Files, Notes, People or Helpers in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
 | Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files, Notes or the Helpers while that mode shows. |
-| Tab, with nothing typed | Moves along the dot, Apps, Files, Notes and Helpers, then what was used lately; Enter or Space opens the one focused. |
+| Tap or click People, after Notes, where a people provider is installed | Lists the people the provider knows, by name, each person once. The field reads Find a person, and the sheet takes its working height. |
+| Type, under People | Finds people by the start of a name, by a number or by an address. Nothing else is searched, and nothing is sent online. |
+| `Down` or `Up`, under People | Picks a person; Enter opens the one picked, or the first. |
+| Tap or click a person | Opens the person's page over the field: the name, then every number and address. |
+| Tap or click Text, Call or Email on a number or an address | Hands it to the application that takes texts, calls or email, and Search closes. Each is offered only where an application takes it. Search sends nothing itself. |
+| Tap or click Copy on a number or an address | Copies it, and the pill reads Copied for a moment. |
+| Tap or click Join or Not the same, where the page asks about a likely match | Join makes the two one person. Not the same is kept, and the page does not ask about them again. |
+| Tap or click Separate these cards, on a person made of several contact cards | Takes the person apart into its cards again. |
+| Tap or click ‹ People, or `Esc`, on a person's page | Returns to the people. `Esc` there returns to Search's first screen. |
+| Tab, with nothing typed | Moves along the dot, Apps, Files, Notes, People and Helpers, then what was used lately; Enter or Space opens the one focused. |
 | Type | The letters go into the search wherever the focus is, and results follow each keystroke. Nothing is sent online. What was used lately gives way to the results. |
 | Tap the search field or its magnifier | Raises the on-screen keys. |
 | Touch the on-screen keys | Types into the search. It never closes Search. |

@@ -11,6 +11,7 @@
 #include "FileThumbnails.h"
 #include "LauncherController.h"
 #include "NotesDoor.h"
+#include "PeopleClient.h"
 #include "OmniResults.h"
 #include "OpenWindows.h"
 #include "ProductName.h"
@@ -386,6 +387,8 @@ int main(int argc, char **argv)
     // Split Rock's Ask, where installed, answers a question typed under the
     // Helpers chip, which is then named Ask.
     AskClient ask(QDBusConnection::sessionBus());
+    // People, offered only while a people provider is installed.
+    PeopleClient people;
     results.setCoreFacts([&core] { return core.facts(); }, [&core](const QString &topic) { core.open(topic); });
     results.setCoreActions([&core] { return core.actions(); },
                            [&core](const QString &id, const QString &query) { core.openAction(id, query); });
@@ -476,6 +479,7 @@ int main(int argc, char **argv)
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
         {QStringLiteral("quickSwitches"), QVariant::fromValue<QObject *>(&quickSwitches)},
         {QStringLiteral("askClient"), QVariant::fromValue<QObject *>(&ask)},
+        {QStringLiteral("peopleClient"), QVariant::fromValue<QObject *>(&people)},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {

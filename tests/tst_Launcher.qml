@@ -27,6 +27,8 @@ TestCase {
         launcher.notesDoor = null
         launcher.askClient = null
         askStub.reset()
+        launcher.peopleClient = null
+        peopleStub.reset()
         notesStub.available = true
         notesStub.opened = 0
         launcher.quickNote = null
@@ -273,6 +275,72 @@ TestCase {
         // The rows before the files, as the launcher's model counts them.
         property int applicationCount: 0
         function open(row) { opened = opened.concat([row]); return true }
+    }
+    // A people provider, as Search's client of it shows it, with made-up
+    // people.
+    QtObject {
+        id: peopleStub
+        property bool available: true
+        property var people: []
+        property int count: 0
+        property var person: ({})
+        property bool personOpen: false
+        property bool canText: true
+        property bool canCall: true
+        property bool canEmail: true
+        property var asked: []
+        property var reached: []
+        property string copied: ""
+        readonly property var everyone: [
+            {id: "1", name: "Ana Reyes", initials: "AR", summary: "2 numbers"},
+            {id: "4", name: "Ben Okafor", initials: "BO", summary: "1 number"},
+            {id: "5", name: "Joanna Lind", initials: "JL", summary: "1 number"}
+        ]
+        function page(joined) {
+            return {id: "1", name: "Ana Reyes", initials: "AR", summary: "2 numbers", cards: joined ? 2 : 1,
+                joined: joined ? "hand" : "",
+                handles: [{kind: "tel", value: "+16125550100", shown: "(612) 555-0100", label: "Mobile"}],
+                match: joined ? null : {id: "3", name: "Ana R.", initials: "AR", summary: "1 number", why: "name"}}
+        }
+        function refresh() {}
+        function find(words) {
+            asked = asked.concat(["find " + words])
+            people = everyone.filter(p => p.name.toLowerCase().startsWith(words.toLowerCase()))
+            count = everyone.length
+        }
+        function open(id) {
+            asked = asked.concat(["open " + id])
+            person = page(false)
+            personOpen = true
+        }
+        function close() {
+            personOpen = false
+            person = ({})
+        }
+        function join(other) {
+            asked = asked.concat(["join " + other])
+            person = page(true)
+        }
+        function notSame(other) { asked = asked.concat(["not-same " + other]) }
+        function separate() {
+            asked = asked.concat(["separate"])
+            person = page(false)
+        }
+        function reach(kind, value) {
+            reached = reached.concat([kind + " " + value])
+            return true
+        }
+        function copy(value) { copied = value }
+        function reset() {
+            available = true
+            people = []
+            count = 0
+            person = ({})
+            personOpen = false
+            asked = []
+            reached = []
+            copied = ""
+        }
     }
     // Split Rock's Ask, as Search's client of it shows it.
     QtObject {
@@ -4881,6 +4949,80 @@ TestCase {
         tryCompare(newNote, "opacity", 1)
         controller.drawerExpanded = false
         launcher.quickNote = null
+    }
+
+    // The People chip: offered only while a people provider is installed, it
+    // lists the provider's people, what is typed finds only people, Enter
+    // opens a person's page, and Escape steps back a screen at a time.
+    function test_peopleChipFindsAPersonAndOpensThePage() {
+        controller.opened()
+        waitForOpen()
+        const pill = findChild(launcher, "people-pill")
+        verify(!pill.visible)
+        launcher.peopleClient = peopleStub
+        tryCompare(pill, "visible", true)
+        // The row places it once it shows, after Apps, and makes room for
+        // it, or a tap on it lands outside the row.
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        tryVerify(() => left(findChild(launcher, "apps-pill")) < left(pill))
+        tryVerify(() => pill.x + pill.width <= pill.parent.width)
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        tryVerify(() => launcher.peopleShown)
+        verify(pill.selected)
+        verify(!findChild(launcher, "home-dot").selected)
+        const list = findChild(launcher, "people-list")
+        tryCompare(list, "count", 3)
+        // Typing asks the provider alone; Search's own results stay away.
+        launcher.query.text = "an"
+        tryCompare(list, "count", 1)
+        compare(peopleStub.asked[peopleStub.asked.length - 1], "find an")
+        launcher.submit()
+        compare(peopleStub.asked[peopleStub.asked.length - 1], "open 1")
+        const page = findChild(launcher, "person-page")
+        tryCompare(page, "visible", true)
+        compare(findChild(launcher, "person-name").text, "Ana Reyes")
+        // The likely match is asked about once; Join goes to the provider.
+        const join = findChild(launcher, "person-join")
+        // Its row places it, beside the other answer and inside the page.
+        waitForOpen()
+        const match = findChild(launcher, "person-match")
+        // The page's column places the question under the numbers a frame
+        // after the person arrives.
+        tryVerify(() => match.visible && match.y > 0)
+        tryVerify(() => join.x > 0 && join.x + join.width <= join.parent.width)
+        tryVerify(() => join.mapToItem(page, 0, 0).x + join.width <= page.width
+                        && join.mapToItem(page, 0, 0).y + join.height <= page.height)
+        mouseClick(join, join.width / 2, join.height / 2)
+        compare(peopleStub.asked[peopleStub.asked.length - 1], "join 3")
+        tryCompare(findChild(launcher, "person-match"), "visible", false)
+        // Escape: the page, then the people, then Search stays on its first
+        // screen.
+        launcher.forceActiveFocus()
+        keyClick(Qt.Key_Escape)
+        verify(!peopleStub.personOpen)
+        verify(launcher.peopleShown)
+        keyClick(Qt.Key_Escape)
+        verify(!launcher.peopleShown)
+        compare(launcher.query.text, "")
+        // Apps closes People, and the provider's leaving takes the chip.
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        verify(launcher.peopleShown)
+        const apps = findChild(launcher, "apps-pill")
+        mouseClick(apps, apps.width / 2, apps.height / 2)
+        verify(!launcher.peopleShown && launcher.drawerOpen)
+        launcher.goBack()
+        // A number is handed on, never sent from here.
+        mouseClick(pill, pill.width / 2, pill.height / 2)
+        peopleStub.open("1")
+        tryCompare(page, "visible", true)
+        const text = findChild(launcher, "person-text")
+        tryVerify(() => text.visible && text.parent.width > text.width)
+        tryVerify(() => text.mapToItem(page, 0, 0).x + text.width <= page.width)
+        mouseClick(text, text.width / 2, text.height / 2)
+        compare(peopleStub.reached, ["text +16125550100"])
+        peopleStub.available = false
+        verify(!launcher.peopleShown)
+        tryCompare(pill, "visible", false)
     }
     // A phrase that names a quick action puts it above the results, where
     // it holds the highlight: Enter hands the note to the card with its
