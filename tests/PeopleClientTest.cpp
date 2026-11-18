@@ -161,6 +161,17 @@ esac
         QVERIFY(PeopleClient::takerAmong(all, QStringLiteral("mailto")) == mail);
         QVERIFY(!PeopleClient::takerAmong({mail}, QStringLiteral("sms")));
     }
+
+    // One phone in reach is the phone; none or several leave KDE Connect to
+    // ask, and so does a name that is no device's.
+    void onePhoneNeedsNoQuestion()
+    {
+        QCOMPARE(PeopleClient::onlyPhone({QStringLiteral("780baff359744abd")}), QStringLiteral("780baff359744abd"));
+        QVERIFY(PeopleClient::onlyPhone({}).isEmpty());
+        QVERIFY(PeopleClient::onlyPhone({QStringLiteral("a1"), QStringLiteral("b2")}).isEmpty());
+        QVERIFY(PeopleClient::onlyPhone({QStringLiteral("../share")}).isEmpty());
+        QVERIFY(!PeopleClient::throughPhone({}));
+    }
 };
 
 QTEST_MAIN(PeopleClientTest)
