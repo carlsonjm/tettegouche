@@ -201,6 +201,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/history.svg
         assets/icons/lucide/users.svg
         assets/icons/lucide/panels-top-left.svg
+        assets/icons/lucide/zap.svg
         assets/icons/lucide/chevron-up.svg
         assets/icons/lucide/wrench.svg
         assets/folders/paper-code.svg

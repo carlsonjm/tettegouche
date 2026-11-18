@@ -185,6 +185,21 @@ inline bool layoutsFit(const QString &query) {
     return false;
 }
 
+// Whether a query asks for Quick actions: the start of the words, three
+// letters at least, or the words themselves.
+inline bool quickActionsFit(const QString &query) {
+    const auto asked = query.trimmed().toLower();
+    if (asked.size() < 3) return false;
+    QStringList words{QStringLiteral("quick actions")};
+    words.append(i18nc("@info words Search finds Quick actions by, comma separated", "quick actions")
+                     .split(QLatin1Char(','), Qt::SkipEmptyParts));
+    for (const auto &word : std::as_const(words)) {
+        const auto known = word.trimmed().toLower();
+        if (!known.isEmpty() && known.startsWith(asked)) return true;
+    }
+    return false;
+}
+
 // Whether a query names a saved layout: the start of its name or of a word
 // in it, three letters at least, or the whole name however short.
 inline bool layoutNamed(const QString &name, const QString &query) {
@@ -625,6 +640,14 @@ public:
         m_openLayout = std::move(open);
         Q_EMIT helpersChanged();
     }
+    // The page where quick actions are set, where there is one to open:
+    // Quick actions is the last Helper, behind More, and is found by its
+    // words; either opens the page in a window of its own.
+    void setQuickActionsPage(std::function<bool()> there, std::function<void()> open) {
+        m_quickActionsPageThere = std::move(there);
+        m_openQuickActionsPage = std::move(open);
+        Q_EMIT helpersChanged();
+    }
     // The pill a row carries at its end, such as Open on a saved layout's;
     // empty for a row with none.
     Q_INVOKABLE QString resultPill(int row) const {
@@ -654,6 +677,12 @@ public:
                                       {QStringLiteral("sub"), i18nc("@info under Layouts", "Save what's open, reopen it in one tap")},
                                       {QStringLiteral("icon"), QString()},
                                       {QStringLiteral("more"), true}});
+        if (!listed.isEmpty() && m_openQuickActionsPage && m_quickActionsPageThere && m_quickActionsPageThere())
+            listed.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("quickActions")},
+                                      {QStringLiteral("title"), i18nc("@title what Search does from typed words", "Quick actions")},
+                                      {QStringLiteral("sub"), i18nc("@info under Quick actions", "What to type to get things done")},
+                                      {QStringLiteral("icon"), QString()},
+                                      {QStringLiteral("more"), true}});
         return listed;
     }
     // Asks Core to open one on its own, as Enter on its row does; query goes
@@ -663,6 +692,11 @@ public:
         if (id == QLatin1String("layouts")) {
             if (!m_openLayouts || !m_keepsLayouts || !m_keepsLayouts()) return false;
             m_openLayouts();
+            return true;
+        }
+        if (id == QLatin1String("quickActions")) {
+            if (!m_openQuickActionsPage || !m_quickActionsPageThere || !m_quickActionsPageThere()) return false;
+            m_openQuickActionsPage();
             return true;
         }
         if (!m_openCoreAction || id.isEmpty()) return false;
@@ -739,6 +773,20 @@ public:
             auto *item = new QStandardItem(QIcon::fromTheme(fact.value(QStringLiteral("icon")).toString()), text);
             item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
             item->setData(match.subtext(), KRunner::ResultsModel::SubtextRole);
+            item->setData(true, KRunner::ResultsModel::EnabledRole);
+            m_core.appendRow(item);
+        }
+        if (m_openQuickActionsPage && m_quickActionsPageThere && m_quickActionsPageThere() && quickActionsFit(query)) {
+            const auto title = i18nc("@title what Search does from typed words", "Quick actions");
+            const auto sub = i18nc("@info under Quick actions", "What to type to get things done");
+            KRunner::QueryMatch match(&m_coreRunner);
+            match.setId(QStringLiteral("quickActions"));
+            match.setText(title);
+            match.setSubtext(sub);
+            match.setData(QStringLiteral("quickActions"));
+            auto *item = new QStandardItem(QIcon::fromTheme(QStringLiteral("preferences-system")), title);
+            item->setData(QVariant::fromValue(match), KRunner::ResultsModel::QueryMatchRole);
+            item->setData(sub, KRunner::ResultsModel::SubtextRole);
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
@@ -866,6 +914,11 @@ public:
             if (target == QLatin1String("layouts")) {
                 if (!m_openLayouts) return false;
                 m_openLayouts();
+                return true;
+            }
+            if (target == QLatin1String("quickActions")) {
+                if (!m_openQuickActionsPage) return false;
+                m_openQuickActionsPage();
                 return true;
             }
             if (target.startsWith(QLatin1String("layout:"))) {
@@ -1129,6 +1182,8 @@ private:
     std::function<bool()> m_keepsLayouts;
     std::function<QList<QVariantMap>()> m_coreLayouts;
     std::function<void()> m_openLayouts;
+    std::function<bool()> m_quickActionsPageThere;
+    std::function<void()> m_openQuickActionsPage;
     std::function<void(const QString &)> m_openLayout;
     SearchSource m_results;
     QStandardItemModel m_aliases;

@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Quick actions is the last Helper in Search, after Layouts, where Shuffle
+  Settings is installed: it opens the Quick actions page.
 - Quick actions have settings: off altogether or one action at a time,
   shown above the results or among them, a switch changed in Search or its
   settings page opened instead, and the time a reminder for "tomorrow" is

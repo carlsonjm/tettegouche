@@ -68,7 +68,8 @@ Item {
         "tidy": "folder-down",
         "restore": "history",
         "community": "users",
-        "layouts": "panels-top-left"
+        "layouts": "panels-top-left",
+        "quickActions": "zap"
     })
     function glyphFor(id) {
         return glyphs[id] || "wrench"
