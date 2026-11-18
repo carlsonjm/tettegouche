@@ -10,6 +10,10 @@ history carries the implementation detail.
   number or address. A person's page has every number and address, with
   Text, Call and Email handed to the application that takes them, and it
   asks about a likely match, which Join and Not the same answer.
+- Type "remind me to check the build tomorrow" or "note: milk" in Search and
+  a quick action leads the results: Enter opens Gooseberry's card on a new
+  note with those words, a reminder's time already set. Tab offers other
+  times for a reminder, and the card's Search leads back to the words typed.
 - Two Search widgets on one panel never show the same island twice, whatever
   their settings say: the widget added first keeps it and the other leaves it.
 - While the screen is shared and notifications are kept quiet, the shared

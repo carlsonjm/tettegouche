@@ -190,6 +190,9 @@ public:
     Q_INVOKABLE void showInputMethod();
     // Without chosen, only while nothing local is listed.
     Q_INVOKABLE bool searchWeb(const QString &query, bool chosen = false);
+    // The quick action the typed words name now, as the row draws it
+    // (QuickActions::describe), or an empty map for none.
+    Q_INVOKABLE QVariantMap quickAction(const QString &typed) const;
     Q_INVOKABLE bool beginGuestWebLaunch();
     Q_INVOKABLE void completeGuestHandoff();
 

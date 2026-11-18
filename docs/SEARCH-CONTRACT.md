@@ -277,6 +277,53 @@ Notes had when the note left. A
   pill and the dot's Helpers door; Helpers still answer a search. The door is
   offered where Split Rock's Core is running or ready to start.
 
+### Quick actions
+
+Typed words that say what to do, rather than what to find, are offered as a
+quick action above the results, under the label Quick action; the results
+keep their places beneath, under Results. Two phrases are read, by their
+words alone, with no model and nothing asked of the network, so each reads
+the same on every computer:
+
+- **A reminder:** "remind me", or "reminder", then what to remember, after
+  "to", "about" or "that" or without them. When it is due is read from either
+  end of the words: a day ("today", "tonight", "this afternoon", "tomorrow",
+  "tomorrow evening", "on Friday"), a clock time ("at 3", "at 4:30pm", "at
+  17:45", "at noon"), both, or a span ("in 20 minutes", "in an hour", "in 2
+  days"). A day alone is nine in the morning, three for an afternoon and
+  seven for an evening; a bare hour from one to six is the afternoon's, and
+  a time with no day is the next time the clock reads it. With no time
+  named, it is nine the next morning. A day's name in the middle of the words
+  stays part of them.
+- **A note:** "note" or "new note", then the words, after a colon or as two
+  words or more, so "note taking" still finds applications.
+
+The row is 64 tall on paper's 10 px corners: Gooseberry's icon at 32, a
+sentence at 16 of what Enter does ("Remind me: Check the build"), beneath at
+12 where it goes and when
+("Notes · Tomorrow 9:00 AM · opens the note for you to look over"), and Open at its end, the light pill, 32 tall. It holds the
+highlight from the moment it shows, and no result is highlighted meanwhile:
+Enter, a tap on the row or Open hands the words to Gooseberry's own card
+(`RemindOnCard`, or `OpenOnCard` for a note; Gooseberry's `docs/DESKTOP.md`)
+with Search as its way back, and Search closes once the card has the note. A
+Gooseberry without `RemindOnCard` gets the words as they were typed, the day
+among them, on its card, where the note itself offers to remind. A card
+that cannot take the note leaves Search open, and the row says so. The
+card's way back opens Search on the first screen with the words that made
+the note.
+
+A reminder's row carries Tab change before Open. Tab, or a tap on it, opens
+the times under the sentence, each a pill 32 tall: the one the words named
+first, then the coming evening while it is ahead, and the next morning. Tab or
+Right moves on and Shift+Tab or Left back, a tap chooses, and the line
+beneath names the time chosen; Esc closes them with the words' own time.
+Down leaves the quick action for the first result, and Up from the first
+result returns to it. Typing on reads the words again.
+
+A quick action is offered on the first screen only, never in Apps, Files,
+Notes or under the Helpers chip, and only while Gooseberry answers on the
+bus. Typing alone changes nothing: the note is made on Enter or a tap.
+
 ## Eligibility and confidence
 
 1. Scope decides eligibility, not authorship. Everyday hides quiet collections,

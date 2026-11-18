@@ -152,6 +152,28 @@ private Q_SLOTS:
         QTRY_VERIFY_WITH_TIMEOUT(!note.isOpen(), 3000);
     }
 
+    // A quick action's reminder goes to the application's card: with the
+    // time set where the application takes it, and as the words typed
+    // where it is an older one. Either way the card has the note.
+    void remindsOnTheCard()
+    {
+        QuickNote note;
+        QTRY_VERIFY_WITH_TIMEOUT(note.available(), 10000);
+        QSignalSpy answered(&note, &QuickNote::cardAnswered);
+        note.remindOnCard(QStringLiteral("Check the kiln"), QStringLiteral("2031-03-04T09:00:00+00:00"),
+            QStringLiteral("Check the kiln tomorrow"), QStringLiteral("Search"));
+        QTRY_COMPARE_WITH_TIMEOUT(answered.size(), 1, 10000);
+        QVERIFY(answered.first().first().toBool());
+        note.findNotes(QStringLiteral("kiln"));
+        QTRY_COMPARE_WITH_TIMEOUT(note.notesWords(), QStringLiteral("kiln"), 5000);
+        QCOMPARE(note.notes().size(), 1);
+        const QVariantMap found = note.notes().first().toMap();
+        QVERIFY(found.value(QStringLiteral("title")).toString().startsWith(QStringLiteral("Check the kiln")));
+        if (found.value(QStringLiteral("title")).toString() == QStringLiteral("Check the kiln"))
+            QCOMPARE(QDateTime::fromString(found.value(QStringLiteral("remind")).toString(), Qt::ISODate),
+                QDateTime::fromString(QStringLiteral("2031-03-04T09:00:00+00:00"), Qt::ISODate));
+    }
+
 private:
     QTemporaryDir m_home{QDir::tempPath() + QStringLiteral("/tettegouche-notes-XXXXXX")};
     QProcess m_notes;

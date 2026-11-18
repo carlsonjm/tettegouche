@@ -110,9 +110,12 @@ def check_current_facts() -> None:
             errors.append(f"{path} contains a commit hash")
         if re.search(r"\b20\d{2}-\d{2}-\d{2}\b", text):
             errors.append(f"{path} contains dated progress")
+        # Words a person types or reads on screen are quoted, and are the
+        # software's own: only the prose around them can narrate progress.
+        unquoted = re.sub(r"\"[^\"\n]*\"|“[^”\n]*”", "", text)
         if re.search(
             r"\b(?:today|yesterday|tomorrow|this morning|this afternoon|this evening)\b",
-            text,
+            unquoted,
             flags=re.IGNORECASE,
         ):
             errors.append(f"{path} contains relative progress narration")

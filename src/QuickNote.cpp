@@ -223,6 +223,24 @@ void QuickNote::startOnCard(const QString &text, const QString &back)
     askCard({{QStringLiteral("text"), text}, {QStringLiteral("back"), back}});
 }
 
+void QuickNote::remindOnCard(const QString &text, const QString &when, const QString &typed, const QString &back)
+{
+    flush();
+    QDBusMessage message = method(QStringLiteral("RemindOnCard"));
+    message.setArguments({QVariantMap{{QStringLiteral("text"), text}, {QStringLiteral("remind"), when},
+        {QStringLiteral("back"), back}}});
+    auto *watcher = new QDBusPendingCallWatcher(QDBusConnection::sessionBus().asyncCall(message, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, typed, back] {
+        const QDBusPendingReply<bool> opened = *watcher;
+        watcher->deleteLater();
+        if (opened.isError() && opened.error().type() == QDBusError::UnknownMethod) {
+            startOnCard(typed, back);
+            return;
+        }
+        Q_EMIT cardAnswered(!opened.isError() && opened.value());
+    });
+}
+
 void QuickNote::askCard(const QVariantMap &request)
 {
     flush();
