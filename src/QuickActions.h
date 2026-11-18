@@ -14,7 +14,7 @@
 // action, and Search lists what it finds as before.
 namespace QuickActions {
 struct Action {
-    enum Kind { None, Note, Reminder };
+    enum Kind { None, Note, Reminder, KeepAwake, DoNotDisturb, Bluetooth };
     Kind kind = None;
     // The note's words, as they will be written.
     QString text;
@@ -22,6 +22,9 @@ struct Action {
     // the default, the next morning, stands in.
     QDateTime when;
     bool timed = false;
+    // A switch only: the way it is to be set. `when` is then the time it
+    // goes back by itself, and `timed` whether the phrase named one.
+    bool on = true;
     explicit operator bool() const { return kind != None; }
 };
 
@@ -215,6 +218,75 @@ inline bool takeWhen(QString &body, bool fromEnd, const QDateTime &now, When &wh
     }
     return took;
 }
+
+// The end a switch phrase names: "1h", "for 20 minutes", "until 3". No words
+// are no end; any other words are not a switch phrase at all.
+inline bool readEnd(const QString &words, const QDateTime &now, QDateTime &end)
+{
+    if (words.isEmpty()) return true;
+    static const QRegularExpression span(
+        QStringLiteral("^(?:for )?(\\d{1,3}|an?|half an) ?(m(?:in(?:ute)?s?)?|h(?:(?:ou)?rs?)?)$"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression until(
+        QStringLiteral("^(?:until|till|til) (noon|midnight|\\d{1,2}(?::\\d{2})? ?(?:am|pm|a\\.m\\.|p\\.m\\.)?)$"),
+        QRegularExpression::CaseInsensitiveOption);
+    if (const auto match = span.match(words); match.hasMatch()) {
+        bool numbered = false;
+        const int count = match.captured(1).toInt(&numbered);
+        const qint64 each = match.captured(2).startsWith(QLatin1Char('m'), Qt::CaseInsensitive) ? 60 : 3600;
+        const qint64 seconds = match.captured(1).startsWith(QLatin1String("half"), Qt::CaseInsensitive)
+            ? each / 2 : each * (numbered ? count : 1);
+        if (seconds == 0) return false;
+        end = now.addSecs(seconds);
+        end.setTime(QTime(end.time().hour(), end.time().minute()));
+        return true;
+    }
+    if (const auto match = until.match(words); match.hasMatch()) {
+        const QString clock = match.captured(1).toLower();
+        When when;
+        readClock(clock.at(0).isDigit() ? clock : QStringLiteral("at ") + clock, when);
+        if (!validClock(when)) return false;
+        end = resolve(when, now);
+        return true;
+    }
+    return false;
+}
+
+// A switch a phrase sets: keep awake, do not disturb, Bluetooth. The name
+// alone turns the first two on; Bluetooth alone is a search for its page.
+inline Action parseSwitch(const QString &phrase, const QDateTime &now)
+{
+    static const QRegularExpression awake(
+        QStringLiteral("^(?:keep (?:(?:the )?(?:computer|screen) )?awake|stay awake)(?: (.+))?$"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression quiet(QStringLiteral("^(?:do not disturb|don[\u2019']?t disturb|dnd)(?: (.+))?$"),
+        QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression bluetooth(
+        QStringLiteral("^(?:(?:turn )?bluetooth (on|off)|turn (on|off) bluetooth)$"),
+        QRegularExpression::CaseInsensitiveOption);
+
+    if (const auto match = bluetooth.match(phrase); match.hasMatch()) {
+        Action action;
+        action.kind = Action::Bluetooth;
+        action.on = (match.captured(1) + match.captured(2)).toLower() == QLatin1String("on");
+        return action;
+    }
+    for (const auto &[pattern, kind] : {std::pair{&awake, Action::KeepAwake}, std::pair{&quiet, Action::DoNotDisturb}}) {
+        const auto match = pattern->match(phrase);
+        if (!match.hasMatch()) continue;
+        Action action;
+        action.kind = kind;
+        const QString rest = match.captured(1).toLower();
+        if (rest == QLatin1String("off")) {
+            action.on = false;
+        } else if (rest != QLatin1String("on")) {
+            if (!readEnd(rest, now, action.when)) return {};
+            action.timed = !rest.isEmpty();
+        }
+        return action;
+    }
+    return {};
+}
 }
 
 // The action a phrase names at `now`, or none. A reminder with nothing to
@@ -229,6 +301,7 @@ inline Action parse(const QString &typed, const QDateTime &now)
     static const QRegularExpression joiner(QStringLiteral("^(?:to|about|that) "),
         QRegularExpression::CaseInsensitiveOption);
 
+    if (const Action action = Detail::parseSwitch(phrase, now)) return action;
     if (const auto match = note.match(phrase); match.hasMatch()) {
         const QString words = Detail::sentence(match.captured(1));
         // "note taking" is as likely a search for an app as a note: a note
@@ -271,10 +344,20 @@ inline QVariantMap describeWhen(const QDateTime &when, const QDateTime &now, con
 // or "reminder"), `text`, `typed` (the words to remember as they were typed,
 // the day among them) and, for a reminder, `choices`: the time the phrase
 // named first, then this evening while it is ahead and tomorrow morning.
+// A switch is `kind` ("keepAwake", "doNotDisturb" or "bluetooth"), `on`,
+// and `until`, worded as a choice is, when the phrase named an end.
 inline QVariantMap describe(const QString &typed, const QDateTime &now, const QLocale &locale = QLocale())
 {
     const Action action = parse(typed, now);
     if (!action) return {};
+    if (action.kind >= Action::KeepAwake) {
+        QVariantMap row{
+            {QStringLiteral("kind"), action.kind == Action::KeepAwake ? QStringLiteral("keepAwake")
+                : action.kind == Action::DoNotDisturb ? QStringLiteral("doNotDisturb") : QStringLiteral("bluetooth")},
+            {QStringLiteral("on"), action.on}};
+        if (action.timed) row.insert(QStringLiteral("until"), describeWhen(action.when, now, locale));
+        return row;
+    }
     QVariantMap row{{QStringLiteral("text"), action.text}};
     if (action.kind == Action::Note) {
         row.insert(QStringLiteral("kind"), QStringLiteral("note"));

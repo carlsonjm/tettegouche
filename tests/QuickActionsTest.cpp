@@ -52,6 +52,42 @@ private Q_SLOTS:
         QCOMPARE(action.timed, timed);
     }
 
+    void switches_data()
+    {
+        QTest::addColumn<QString>("typed");
+        QTest::addColumn<int>("kind");
+        QTest::addColumn<bool>("on");
+        QTest::addColumn<QDateTime>("until");
+        const QDateTime none;
+        QTest::newRow("keep awake") << "keep awake" << int(Action::KeepAwake) << true << none;
+        QTest::newRow("keep awake 1h") << "keep awake 1h" << int(Action::KeepAwake) << true << on(18, 11);
+        QTest::newRow("keep awake for") << "Keep the screen awake for 90 minutes" << int(Action::KeepAwake) << true << on(18, 11, 30);
+        QTest::newRow("keep awake until") << "keep awake until 5" << int(Action::KeepAwake) << true << on(18, 17);
+        QTest::newRow("keep awake off") << "keep awake off" << int(Action::KeepAwake) << false << none;
+        QTest::newRow("do not disturb") << "do not disturb" << int(Action::DoNotDisturb) << true << none;
+        QTest::newRow("until 3") << "do not disturb until 3" << int(Action::DoNotDisturb) << true << on(18, 15);
+        QTest::newRow("until gone is tomorrow") << "dnd until 9am" << int(Action::DoNotDisturb) << true << on(19, 9);
+        QTest::newRow("half an hour") << "don't disturb for half an hour" << int(Action::DoNotDisturb) << true << on(18, 10, 30);
+        QTest::newRow("dnd off") << "dnd off" << int(Action::DoNotDisturb) << false << none;
+        QTest::newRow("bluetooth off") << "bluetooth off" << int(Action::Bluetooth) << false << none;
+        QTest::newRow("turn on bluetooth") << "Turn on Bluetooth" << int(Action::Bluetooth) << true << none;
+    }
+    void switches()
+    {
+        QFETCH(QString, typed);
+        QFETCH(int, kind);
+        QFETCH(bool, on);
+        QFETCH(QDateTime, until);
+        const Action action = QuickActions::parse(typed, morning());
+        QCOMPARE(int(action.kind), kind);
+        QCOMPARE(action.on, on);
+        QCOMPARE(action.timed, until.isValid());
+        if (until.isValid()) QCOMPARE(action.when, until);
+        const QVariantMap row = QuickActions::describe(typed, morning(), QLocale::c());
+        QCOMPARE(row.value(QStringLiteral("on")).toBool(), on);
+        QCOMPARE(row.contains(QStringLiteral("until")), until.isValid());
+    }
+
     void lateInTheDay()
     {
         const QDateTime late(QDate(2026, 11, 18), QTime(22, 40));
@@ -90,6 +126,10 @@ private Q_SLOTS:
         QTest::newRow("no such hour") << "remind me to nap at 31";
         QTest::newRow("no such minute") << "remind me to nap at 3:75";
         QTest::newRow("in the middle") << "please remind me to nap";
+        QTest::newRow("bluetooth alone") << "bluetooth";
+        QTest::newRow("a switch with other words") << "keep awake settings";
+        QTest::newRow("no time at all") << "keep awake for 0 minutes";
+        QTest::newRow("no such hour to end") << "do not disturb until 31";
     }
     void notActions()
     {
