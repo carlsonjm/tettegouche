@@ -137,6 +137,12 @@ TestCase {
             if (typed === "remind me to check the build tomorrow")
                 return { kind: "reminder", text: "Check the build", typed: "Check the build tomorrow", choices: quickTimes }
             if (typed === "note: milk") return { kind: "note", text: "Milk" }
+            if (typed === "do not disturb until 3")
+                return { kind: "doNotDisturb", on: true,
+                         until: { when: "2026-11-18T15:00:00-06:00", day: "today", time: "3:00 PM", date: "Wed 18 Nov" } }
+            if (typed === "dnd") return { kind: "doNotDisturb", on: true }
+            if (typed === "bluetooth off") return { kind: "bluetooth", on: false }
+            if (typed === "keep awake") return { kind: "keepAwake", on: true }
             return {}
         }
         function resultActions(row) { return actionsByRow[row] || [] }
@@ -326,6 +332,36 @@ TestCase {
         property bool available: true
         property int opened: 0
         function open() { if (!available) return false; opened++; return true }
+    }
+    // The switches a quick action sets.
+    QtObject {
+        id: switchStub
+        property bool bluetoothThere: true
+        property bool bluetoothOn: true
+        property bool doNotDisturbOn: false
+        property bool takes: true
+        property var sets: []
+        property int undos: 0
+        property int forgets: 0
+        property var before: null
+        function set(kind, on, until) {
+            if (!takes) return false
+            sets = sets.concat([[kind, on, until]])
+            if (kind === "bluetooth") { before = bluetoothOn; bluetoothOn = on }
+            else { before = doNotDisturbOn; doNotDisturbOn = on }
+            return true
+        }
+        function undo() {
+            undos++
+            const last = sets[sets.length - 1]
+            if (last[0] === "bluetooth") bluetoothOn = before
+            else doNotDisturbOn = before
+        }
+        function forget() { forgets++ }
+        function reset() {
+            bluetoothThere = true; bluetoothOn = true; doNotDisturbOn = false; takes = true
+            sets = []; undos = 0; forgets = 0
+        }
     }
     // Gooseberry's quick-note interface, as Search speaks it.
     QtObject {
@@ -4864,8 +4900,106 @@ TestCase {
         tryVerify(() => findChild(launcher, "quick-action") !== null && findChild(launcher, "quick-action").visible)
         return query
     }
+    function typeSwitch(words) {
+        switchStub.reset()
+        launcher.quickSwitches = switchStub
+        return typeQuickAction(words)
+    }
+    function test_quickSwitchSetsHere() {
+        typeSwitch("do not disturb until 3")
+        const title = findChild(launcher, "quick-action-title")
+        const pill = findChild(launcher, "quick-action-pill")
+        compare(title.text, "Turn on Do not disturb until 3:00 PM")
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets, [["doNotDisturb", true, "2026-11-18T15:00:00-06:00"]])
+        // Search stays open on what was done.
+        compare(controller.closes, 0)
+        compare(title.text, "Do not disturb is on")
+        compare(findChild(launcher, "quick-action-sub").text, "Until 3:00 PM")
+        verify(findChild(launcher, "quick-action-undo-key").visible)
+        // Enter again is done with Search and sets nothing twice.
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets.length, 1)
+        compare(controller.closes, 1)
+        compare(switchStub.undos, 0)
+        endQuickAction()
+    }
+    function test_quickSwitchUndo() {
+        typeSwitch("bluetooth off")
+        const title = findChild(launcher, "quick-action-title")
+        compare(title.text, "Turn off Bluetooth")
+        keyClick(Qt.Key_Return)
+        compare(switchStub.bluetoothOn, false)
+        compare(title.text, "Bluetooth is off")
+        keyClick(Qt.Key_Z, Qt.ControlModifier)
+        compare(switchStub.undos, 1)
+        compare(switchStub.bluetoothOn, true)
+        compare(title.text, "Turn off Bluetooth")
+        compare(findChild(launcher, "search-query").text, "bluetooth off")
+        // The pill takes it back as well.
+        keyClick(Qt.Key_Return)
+        compare(title.text, "Bluetooth is off")
+        const pill = findChild(launcher, "quick-action-pill")
+        tryVerify(() => pill.width > 0 && pill.mapToItem(launcher, 0, 0).x > 100)
+        mouseClick(pill)
+        compare(switchStub.undos, 2)
+        compare(switchStub.bluetoothOn, true)
+        compare(controller.closes, 0)
+        endQuickAction()
+    }
+    function test_quickSwitchWordsChange() {
+        const query = typeSwitch("dnd")
+        keyClick(Qt.Key_Return)
+        compare(findChild(launcher, "quick-action-title").text, "Do not disturb is on")
+        compare(findChild(launcher, "quick-action-sub").text, "Until you turn it off")
+        // New words leave it set, with nothing left to take back.
+        query.text = "dn"
+        compare(launcher.quickAction, null)
+        compare(switchStub.forgets, 1)
+        compare(switchStub.undos, 0)
+        compare(switchStub.doNotDisturbOn, true)
+        endQuickAction()
+    }
+    function test_quickSwitchNothingToChange() {
+        switchStub.reset()
+        switchStub.bluetoothOn = false
+        launcher.quickSwitches = switchStub
+        typeQuickAction("bluetooth off")
+        compare(findChild(launcher, "quick-action-title").text, "Bluetooth is already off")
+        verify(!findChild(launcher, "quick-action-pill").visible)
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets, [])
+        compare(controller.closes, 1)
+        endQuickAction()
+    }
+    function test_quickSwitchAbsent() {
+        // No Bluetooth on this computer, and a switch Search does not set.
+        switchStub.reset()
+        switchStub.bluetoothThere = false
+        launcher.quickSwitches = switchStub
+        launcher.quickNote = quickStub
+        const query = findChild(launcher, "search-query")
+        query.text = "bluetooth off"
+        compare(launcher.quickAction, null)
+        query.text = "keep awake"
+        compare(launcher.quickAction, null)
+        // Without the switches there is no row for one.
+        launcher.quickSwitches = null
+        query.text = "dnd"
+        compare(launcher.quickAction, null)
+        endQuickAction()
+    }
+    function test_quickSwitchRefused() {
+        typeSwitch("dnd")
+        switchStub.takes = false
+        keyClick(Qt.Key_Return)
+        compare(findChild(launcher, "quick-action-sub").text, "That could not be changed this time")
+        compare(findChild(launcher, "quick-action-title").text, "Turn on Do not disturb")
+        endQuickAction()
+    }
     function endQuickAction() {
         launcher.quickNote = null
+        launcher.quickSwitches = null
         results.clear()
         findChild(launcher, "search-query").text = ""
         launcher.quickActionWords = ""

@@ -15,6 +15,7 @@
 #include "OpenWindows.h"
 #include "ProductName.h"
 #include "QuickNote.h"
+#include "QuickSwitches.h"
 #include "RecentUse.h"
 #include "RunnerIdentity.h"
 #include "TransferActivityBridge.h"
@@ -422,6 +423,8 @@ int main(int argc, char **argv)
         QObject::connect(quickNote.get(), &QuickNote::backRequested, &controller,
                          [&controller] { controller.openDrawer(QStringLiteral("notes-back")); });
     }
+    // The switches a quick action sets: Do not disturb and Bluetooth.
+    QuickSwitches quickSwitches;
     QObject::connect(&application, &QGuiApplication::lastWindowClosed,
                      &controller, &LauncherController::close);
     const auto openFrom = [&controller](FileBrowser *files) {
@@ -471,6 +474,7 @@ int main(int argc, char **argv)
         {QStringLiteral("helpersPillShown"),
          !application.arguments().contains(QStringLiteral("--no-helpers-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
+        {QStringLiteral("quickSwitches"), QVariant::fromValue<QObject *>(&quickSwitches)},
         {QStringLiteral("askClient"), QVariant::fromValue<QObject *>(&ask)},
     });
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
