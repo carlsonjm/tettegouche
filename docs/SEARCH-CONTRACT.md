@@ -175,7 +175,10 @@ keeps none, and Tettegouche works the same without it.
   staying above it: the name, then each number and address with Text, Call
   or Email and Copy. Text, Call and Email hand the number or address to the
   application that takes it, each offered only where one does, and Search
-  closes. Search sends nothing itself and runs nothing typed.
+  closes. An application that takes one counts whether or not it shows in
+  the menus, as KDE Connect's does not: a number to text or call goes to the
+  paired phone through it. Search sends nothing itself and runs nothing
+  typed.
 - Where the provider names a likely match, the page asks whether it is the
   same person; Join and Not the same go back to the provider, which keeps
   them. A person made of several contact cards has Separate these cards.

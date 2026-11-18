@@ -6,9 +6,9 @@
 #include "PeopleClient.h"
 
 #include <KApplicationTrader>
+#include <KIO/ApplicationLauncherJob>
 
 #include <QClipboard>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QGuiApplication>
@@ -18,12 +18,21 @@
 #include <QStandardPaths>
 #include <QUrl>
 
-namespace
+KService::Ptr PeopleClient::takerAmong(const KService::List &services, const QString &scheme)
 {
-bool taken(const char *scheme)
-{
-    return bool(KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/") + QLatin1String(scheme)));
+    for (const auto &service : services) {
+        if (service && !service->exec().isEmpty() && service->schemeHandlers().contains(scheme)) return service;
+    }
+    return {};
 }
+
+// The application that takes a kind of address: the one chosen for it, or
+// one that says it takes it although it keeps out of the menus, as KDE
+// Connect's does for a number to text or call.
+KService::Ptr PeopleClient::taker(const QString &scheme)
+{
+    if (auto chosen = KApplicationTrader::preferredService(QStringLiteral("x-scheme-handler/") + scheme)) return chosen;
+    return takerAmong(KService::allServices(), scheme);
 }
 
 PeopleClient::PeopleClient(QObject *parent)
@@ -51,7 +60,8 @@ void PeopleClient::refresh()
             program = QStandardPaths::findExecutable(QString::fromLatin1(Command),
                                                      {QDir::homePath() + QStringLiteral("/.local/bin")});
     }
-    const bool text = taken("sms"), call = taken("tel"), email = taken("mailto");
+    const bool text = bool(taker(QStringLiteral("sms"))), call = bool(taker(QStringLiteral("tel"))),
+               email = bool(taker(QStringLiteral("mailto")));
     if (program == m_program && text == m_canText && call == m_canCall && email == m_canEmail) return;
     m_program = program;
     m_canText = text;
@@ -144,8 +154,15 @@ bool PeopleClient::reach(const QString &kind, const QString &value)
     const QString to = address(kind, value);
     if (to.isEmpty()) return false;
     const bool offered = kind == QLatin1String("text") ? m_canText : kind == QLatin1String("call") ? m_canCall : m_canEmail;
+    if (!offered) return false;
     // The address is handed over as an address; nothing typed is run.
-    return offered && QDesktopServices::openUrl(QUrl(to));
+    const QUrl url(to);
+    const auto service = taker(url.scheme());
+    if (!service) return false;
+    auto *job = new KIO::ApplicationLauncherJob(service, this);
+    job->setUrls({url});
+    job->start();
+    return true;
 }
 
 void PeopleClient::copy(const QString &value)
