@@ -175,6 +175,15 @@ Item {
             }
         }
 
+        // The quick action the typed words name leads the results.
+        header: QuickActionRow {
+            width: resultList.width
+            launcher: resultsArea.launcher
+            tone: resultsArea.tone
+            words: resultsArea.words
+            resultsListed: resultList.count > 0
+        }
+
         // Ask Codex, after the Helpers an answer names: a bigger fix goes on
         // to Codex's own window only on this tap, and Search closes, as from
         // a Helper's row.
@@ -269,17 +278,20 @@ Item {
             Accessible.role: Accessible.ListItem
             Accessible.name: model.display || ""
             Accessible.description: model.subtext || ""
-            Accessible.selected: ListView.isCurrentItem
+            Accessible.selected: current
             Accessible.onPressAction: launcher.runResult(index)
             required property int index
             required property var model
+            // The highlighted row, unless a quick action above the results
+            // holds the highlight.
+            readonly property bool current: ListView.isCurrentItem && !launcher.quickActionLeads
             readonly property var connectedDevices: {
                 const revision = launcher.launcherController.relatedRevision
                 return launcher.launcherController.relatedItems(index)
             }
             // An application's or a file's own actions, only while its row
             // is the highlighted one, so other rows stay one line.
-            readonly property var resultActions: ListView.isCurrentItem
+            readonly property var resultActions: current
                 ? launcher.launcherController.resultActions(index) : []
             readonly property var childRows: connectedDevices.concat(resultActions)
             readonly property bool alreadyOpen:
@@ -293,7 +305,7 @@ Item {
             readonly property bool hasChildren: childRows.length > 0
             // Gone in among its rows with Right: the result keeps a lighter
             // fill and the row the keys are on takes the full one.
-            readonly property bool childrenEntered: ListView.isCurrentItem && launcher.selectedChildKey !== ""
+            readonly property bool childrenEntered: current && launcher.selectedChildKey !== ""
 
             width: resultList.width
             height: resultsArea.rowHeight + deviceChildren.height + (hasChildren ? 14 : 0)
@@ -308,7 +320,7 @@ Item {
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
                 width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
-                color: resultDelegate.ListView.isCurrentItem
+                color: resultDelegate.current
                     ? (resultDelegate.childrenEntered ? tone.hover : tone.current)
                     : (hover.hovered ? tone.hover : "transparent")
             }
@@ -408,7 +420,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 16
                     height: 16
-                    visible: resultDelegate.ListView.isCurrentItem && resultDelegate.hasChildren
+                    visible: resultDelegate.current && resultDelegate.hasChildren
                     glyph: resultDelegate.childrenEntered ? "chevron-left" : "chevron-right"
                     opacity: resultDelegate.childrenEntered ? 0.66 : 1
                 }
@@ -435,7 +447,7 @@ Item {
                         width: deviceChildren.width
                         height: 40
                         radius: height / 2
-                        color: resultDelegate.ListView.isCurrentItem && launcher.selectedChildKey === launcher.childKey(modelData)
+                        color: resultDelegate.current && launcher.selectedChildKey === launcher.childKey(modelData)
                             ? tone.current : (childHover.hovered ? tone.hover : "transparent")
                         Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: launcher.secondaryText }
                         Text {

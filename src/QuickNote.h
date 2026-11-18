@@ -137,6 +137,12 @@ public:
     // one that has only OpenNote takes a kept note without the way back.
     Q_INVOKABLE void openOnCard(const QString &noteId, const QString &back = {});
     Q_INVOKABLE void startOnCard(const QString &text, const QString &back = {});
+    // Hands the card a new note with this text and its reminder set to
+    // when, an ISO 8601 time. An application without that method gets
+    // typed on its card instead, the words as they were typed with the day
+    // among them, where the note itself offers to remind.
+    Q_INVOKABLE void remindOnCard(const QString &text, const QString &when, const QString &typed,
+        const QString &back = {});
 
 Q_SIGNALS:
     void availableChanged();

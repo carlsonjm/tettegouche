@@ -197,6 +197,10 @@ Rectangle {
         }
 
         Keys.onPressed: event => {
+            if (launcher.quickActionKey(event)) {
+                event.accepted = true
+                return
+            }
             if (launcher.drawerOpen && !launcher.filesMode && event.key === Qt.Key_Down
                     && applicationGrid.choices.length > 0) {
                 applicationGrid.step(0, 1)

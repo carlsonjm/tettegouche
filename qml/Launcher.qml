@@ -189,6 +189,104 @@ Item {
     property string selectedChildKey: ""
     property bool childLaunchFailed: false
 
+    // The quick action the typed words name, where Notes can take it, or
+    // null: a reminder or a note, drawn above the results. It holds the
+    // highlight, and Enter, until Down moves into the results.
+    property bool quickActionsOffered: true
+    readonly property var quickAction: {
+        if (!root.quickActionsOffered || root.drawerOpen || root.helpersShown || root.modeOpen
+                || !root.quickNote || !root.quickNote.available
+                || typeof root.launcherController.quickAction !== "function") return null
+        const action = root.launcherController.quickAction(query.text)
+        return action && action.kind ? action : null
+    }
+    property bool quickActionChosen: true
+    // Tab opens the times a reminder may be due instead; the phrase's own
+    // is the first.
+    property bool quickActionEditing: false
+    property int quickActionChoice: 0
+    property bool quickActionFailed: false
+    // The words typed, while the note they made is on the card: its way
+    // back puts them in the field again.
+    property string quickActionWords: ""
+    property bool quickActionHanding: false
+    readonly property bool quickActionLeads: root.quickAction !== null && root.quickActionChosen
+    // Notes' own way back is Notes' again once Notes has been shown.
+    onModeShownChanged: if (root.modeShown === "notes") root.quickActionWords = ""
+    onQuickActionChanged: {
+        root.quickActionChosen = true
+        root.quickActionEditing = false
+        root.quickActionChoice = 0
+        root.quickActionFailed = false
+    }
+    function quickWhenLabel(when) {
+        return when.day === "today" ? words.i18n("Today %1", when.time)
+            : when.day === "evening" ? words.i18n("This evening %1", when.time)
+            : when.day === "tomorrow" ? words.i18n("Tomorrow %1", when.time)
+            : words.i18nc("a date, then a time", "%1 %2", when.date, when.time)
+    }
+    function editQuickAction(on) {
+        if (root.quickAction === null) return
+        root.quickActionChosen = true
+        root.quickActionEditing = on
+    }
+    // The keys the quick action takes while it holds the highlight: Tab
+    // opens its times and moves through them as Right does, Shift+Tab and
+    // Left move back, and Esc closes them with the phrase's own time.
+    function quickActionKey(event) {
+        if (!root.quickActionLeads) return false
+        const count = (root.quickAction.choices || []).length
+        if (count < 2) return false
+        if (!root.quickActionEditing) {
+            if (event.key !== Qt.Key_Tab) return false
+            root.quickActionEditing = true
+            return true
+        }
+        if (event.key === Qt.Key_Tab || (event.key === Qt.Key_Right && !root.arrowModified(event))) {
+            root.quickActionChoice = (root.quickActionChoice + 1) % count
+            return true
+        }
+        if (event.key === Qt.Key_Backtab || (event.key === Qt.Key_Left && !root.arrowModified(event))) {
+            root.quickActionChoice = (root.quickActionChoice + count - 1) % count
+            return true
+        }
+        if (event.key === Qt.Key_Escape) {
+            root.quickActionEditing = false
+            root.quickActionChoice = 0
+            return true
+        }
+        return false
+    }
+    // Hands the note to the notes application's card, which leads back
+    // here; Search closes once the card has it.
+    function runQuickAction() {
+        const action = root.quickAction
+        if (action === null || !root.quickNote || root.quickActionHanding) return
+        root.quickActionHanding = true
+        root.quickActionFailed = false
+        root.quickActionWords = query.text
+        const back = words.i18n("Search")
+        if (action.kind === "reminder") {
+            const choices = action.choices || []
+            const time = choices[Math.min(root.quickActionChoice, choices.length - 1)]
+            root.quickNote.remindOnCard(action.text, time.when, action.typed, back)
+        } else {
+            root.quickNote.startOnCard(action.text, back)
+        }
+    }
+    Connections {
+        target: root.quickActionHanding ? root.quickNote : null
+        ignoreUnknownSignals: true
+        function onCardAnswered(opened) {
+            root.quickActionHanding = false
+            if (opened) {
+                root.launcherController.finishLaunch()
+            } else {
+                root.quickActionWords = ""
+                root.quickActionFailed = true
+            }
+        }
+    }
     function childKey(child) { return JSON.stringify([child.label, child.status || "", child.action || ""]) }
     function currentChildren() {
         const row = root.searchResults.selectionPinned()
@@ -201,6 +299,24 @@ Item {
     // Down and Up move one at a time; Left, or Up from the first, comes back
     // to the result, and Down from the last goes on to the next result.
     function moveResultSelection(direction) {
+        if (root.quickAction !== null) {
+            if (root.quickActionChosen) {
+                // Down leaves the quick action for the first result.
+                if (direction > 0 && resultList.count > 0) {
+                    root.quickActionChosen = false
+                    root.quickActionEditing = false
+                    resultList.currentIndex = 0
+                    root.selectedChildKey = ""
+                    resultList.positionViewAtIndex(0, ListView.Contain)
+                }
+                return
+            }
+            if (direction < 0 && root.selectedChildKey === "" && resultList.currentIndex <= 0) {
+                root.quickActionChosen = true
+                resultList.positionViewAtBeginning()
+                return
+            }
+        }
         if (root.selectedChildKey !== "") {
             const children = currentChildren()
             const child = children.findIndex(function(item) { return root.childKey(item) === root.selectedChildKey })
@@ -830,6 +946,10 @@ Item {
             if (root.helpers.length > 0) root.openHelper(root.helpers[0].id)
             return
         }
+        if (root.quickActionLeads) {
+            root.runQuickAction()
+            return
+        }
         if (root.drawerOpen && root.filesMode) {
             // With nothing chosen, Enter searches inside the folder as its
             // pill does; otherwise it opens what is chosen.
@@ -1028,6 +1148,17 @@ Item {
             // Back from a note handed to the notes application's card: Notes
             // again, at the size it had when the note left.
             if (mode === "notes-back") {
+                // From a note a quick action made: the first screen, with
+                // the words that made it.
+                if (root.quickActionWords !== "") {
+                    const typed = root.quickActionWords
+                    root.quickActionWords = ""
+                    if (root.modeOpen) root.closeMode()
+                    root.searchEngaged = true
+                    query.forceActiveFocus()
+                    query.text = typed
+                    return
+                }
                 if (root.modeOpen && root.modeShown !== "notes") root.closeMode()
                 root.openModeDirectly("notes")
                 if (root.notesLeftExpanded) root.launcherController.setDrawerExpanded(true, true)
