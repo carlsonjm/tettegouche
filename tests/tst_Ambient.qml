@@ -107,6 +107,7 @@ TestCase {
             function openLayout(id) { calls.push(["open", id]); }
             function removeLayout(id) { calls.push(["remove", id]); }
             function setLayoutAtSignIn(id, on) { calls.push(["atSignIn", id, on]); }
+            function typeInSearch(words) { calls.push(["type", words]); }
         }
     }
     function openLayouts(host) {
@@ -865,6 +866,35 @@ TestCase {
         const gone = spyOn(reopened, "closed");
         surface.activities = [];
         tryCompare(gone, "count", 1);
+    }
+
+    // Quick actions opens as Layouts does, an island from the band: each
+    // action with what to type and a Try pill, those left out left out,
+    // then Close. Try asks for Search with those words and closes it.
+    function test_quick_actions_island() {
+        const host = createTemporaryObject(layoutsComponent, testCase);
+        const opened = createTemporaryObject(islandComponent, testCase,
+            {surface: createSurface(460, []), layouts: host, kind: "quickActions", quickLeftOut: ["bluetooth"],
+             start: Qt.rect(40, 540, 44, 44), sideLeft: 0, sideRight: 460});
+        verify(opened !== null);
+        opened.show();
+        tryVerify(() => opened.expanded);
+        wait(360);
+        verify(findChild(opened.contentItem, "ambient-island-quick-actions").visible);
+        verify(!findChild(opened.contentItem, "ambient-island-layouts").visible);
+        verify(!findChild(opened.contentItem, "ambient-island-kinds").visible);
+        compare(findChild(opened.contentItem, "ambient-island-quick-actions-title").text, "Quick actions");
+        for (const kind of ["reminder", "note", "keepAwake", "doNotDisturb"])
+            verify(findChild(opened.contentItem, "ambient-island-quick-action-" + kind) !== null);
+        verify(findChild(opened.contentItem, "ambient-island-quick-action-bluetooth") === null);
+        compare(findChild(opened.contentItem, "ambient-island-quick-action-keepAwake-typed").text, "“keep awake 1h”");
+        verify(!findChild(opened.contentItem, "ambient-island-quick-actions-none").visible);
+        // It fits the room above the band, and scrolls where it does not.
+        verify(opened.openHeight <= opened.openRoom);
+        const closed = spyOn(opened, "closed");
+        tap(findChild(opened.contentItem, "ambient-island-quick-action-keepAwake-try"));
+        compare(host.calls[host.calls.length - 1], ["type", "keep awake 1h"]);
+        tryCompare(closed, "count", 1);
     }
 
     // Layouts opens in place: its title and count, each saved layout drawn

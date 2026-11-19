@@ -5,7 +5,6 @@
 
 import QtQuick
 import org.kde.ki18n
-import org.kde.kirigami as Kirigami
 
 pragma ComponentBehavior: Bound
 
@@ -15,9 +14,7 @@ pragma ComponentBehavior: Bound
 // fits at full size; the rest, those Core marks for it and Layouts among
 // them, wait behind More, which adds rows of the same tiles under the first,
 // as many as they take. A tap opens that Helper on its own, as Enter on its
-// row in Search does. Quick actions, the last tile, opens nothing: a tap
-// lists under the tiles each action Search offers with what to type for it,
-// and a tap on one puts those words in the field.
+// row in Search does.
 Item {
     id: helpersRow
     objectName: "helpers-row"
@@ -55,38 +52,8 @@ Item {
     readonly property int columns: Math.max(firstCount, expanded ? Math.min(perRow, behindMore.length) : 0)
     readonly property real blockWidth: Math.max(0, columns * (tileWidth + tileGap) - tileGap)
     readonly property real blockX: Math.max(0, Math.round((width - blockWidth) / 2))
-    // Quick actions' list: each action Search offers, by its name, with
-    // what to type for it, those the settings leave out left out here too.
-    property bool quickShown: false
-    readonly property var quickExamples: [
-        {kind: "reminder", title: words.i18nc("@title a quick action", "Reminder"),
-         typed: words.i18nc("@info what to type for a reminder", "remind me to call the bank at 3"),
-         icon: "io.github.carlsonjm.Gooseberry", fallback: "knotes"},
-        {kind: "note", title: words.i18nc("@title a quick action", "Note"),
-         typed: words.i18nc("@info what to type for a note", "note router password is on the box"),
-         icon: "io.github.carlsonjm.Gooseberry", fallback: "knotes"},
-        {kind: "keepAwake", title: words.i18nc("@title a quick action", "Keep awake"),
-         typed: words.i18nc("@info what to type to keep the computer awake", "keep awake 1h"),
-         icon: "system-suspend-inhibited-symbolic", fallback: "preferences-system"},
-        {kind: "doNotDisturb", title: words.i18nc("@title a quick action", "Do not disturb"),
-         typed: words.i18nc("@info what to type for do not disturb", "do not disturb until 3"),
-         icon: "notifications-disabled-symbolic", fallback: "preferences-system"},
-        {kind: "bluetooth", title: words.i18nc("@title a quick action", "Bluetooth"),
-         typed: words.i18nc("@info what to type to turn Bluetooth off", "bluetooth off"),
-         icon: "network-bluetooth-symbolic", fallback: "preferences-system"}
-    ].filter(example => (launcher.quickActionsLeftOut || []).indexOf(example.kind) < 0)
-    readonly property real quickGap: 16
-    readonly property real quickRowHeight: 48
-    readonly property real quickRowGap: 4
-    readonly property real quickHeight: quickShown
-        ? quickGap + labelHeight + quickExamples.length * (quickRowHeight + quickRowGap) - quickRowGap : 0
-    readonly property real tilesHeight: labelHeight + tileHeight + moreRows * (tileGap + tileHeight)
     // How tall it is, which sizes the sheet at rest.
-    readonly property real naturalHeight: tilesHeight + quickHeight
-    function activate(id) {
-        if (id === "quickActions") quickShown = !quickShown
-        else launcher.openHelper(id)
-    }
+    readonly property real naturalHeight: labelHeight + tileHeight + moreRows * (tileGap + tileHeight)
 
     // Lucide's glyph for each Helper, all drawn alike; one Core lists that
     // has none of its own takes the wrench.
@@ -122,15 +89,10 @@ Item {
     Connections {
         target: helpersRow.launcher
         function onHelpersShownChanged() {
-            if (helpersRow.launcher.helpersShown) return
-            helpersRow.expanded = false
-            helpersRow.quickShown = false
+            if (!helpersRow.launcher.helpersShown) helpersRow.expanded = false
         }
     }
     onBehindMoreChanged: if (behindMore.length === 0) expanded = false
-    // The list goes with its tile: More closed over it, or no tile at all.
-    onExpandedChanged: if (!expanded && behindMore.some(h => h.id === "quickActions")) quickShown = false
-    onHelpersChanged: if (!helpers.some(h => h.id === "quickActions")) quickShown = false
 
     // One tile: a Helper, or More itself.
     component Tile: Item {
@@ -238,8 +200,7 @@ Item {
                 title: modelData.title
                 sub: modelData.sub || ""
                 glyph: helpersRow.glyphFor(modelData.id)
-                selected: modelData.id === "quickActions" && helpersRow.quickShown
-                onActivated: helpersRow.activate(modelData.id)
+                onActivated: helpersRow.launcher.openHelper(modelData.id)
             }
         }
         Tile {
@@ -275,105 +236,7 @@ Item {
                 title: modelData.title
                 sub: modelData.sub || ""
                 glyph: helpersRow.glyphFor(modelData.id)
-                selected: modelData.id === "quickActions" && helpersRow.quickShown
-                onActivated: helpersRow.activate(modelData.id)
-            }
-        }
-    }
-
-    // Quick actions' list, under the tiles at their left edge and as wide
-    // as they stand.
-    Item {
-        id: quickList
-        objectName: "helpers-quick-actions"
-        x: helpersRow.blockX
-        y: helpersRow.tilesHeight + helpersRow.quickGap
-        width: Math.max(helpersRow.blockWidth, helpersRow.tileWidth)
-        height: helpersRow.quickHeight - helpersRow.quickGap
-        visible: helpersRow.quickShown
-        Text {
-            objectName: "helpers-quick-actions-label"
-            width: parent.width
-            height: helpersRow.labelHeight
-            verticalAlignment: Text.AlignTop
-            elide: Text.ElideRight
-            text: helpersRow.words.i18nc("@title:group over what to type for each quick action",
-                                         "Quick actions, each with what to type")
-            color: helpersRow.launcher.secondaryText
-            font.pixelSize: 12
-        }
-        Repeater {
-            model: helpersRow.quickExamples
-            Item {
-                id: example
-                required property var modelData
-                required property int index
-                objectName: "quick-example-" + modelData.kind
-                y: helpersRow.labelHeight + index * (helpersRow.quickRowHeight + helpersRow.quickRowGap)
-                width: quickList.width
-                height: helpersRow.quickRowHeight
-                activeFocusOnTab: helpersRow.visible && helpersRow.quickShown
-                function activated() { helpersRow.launcher.tryQuickAction(example.modelData.typed) }
-                Accessible.role: Accessible.Button
-                Accessible.name: example.modelData.title
-                Accessible.description: helpersRow.words.i18nc("@info what a tap on a quick action's example does",
-                                                               "Puts “%1” in Search", example.modelData.typed)
-                Accessible.onPressAction: example.activated()
-                Keys.onReturnPressed: example.activated()
-                Keys.onEnterPressed: example.activated()
-                Keys.onSpacePressed: example.activated()
-                Rectangle {
-                    anchors.fill: parent
-                    radius: helpersRow.launcher.paperRadius
-                    color: exampleTap.pressed ? helpersRow.tone.tilePressed
-                        : exampleHover.hovered ? helpersRow.tone.tileHover : helpersRow.tone.subtle
-                    border.width: example.activeFocus ? 1.5 : 0
-                    border.color: helpersRow.tone.focusRing
-                    Behavior on color { ColorAnimation { duration: helpersRow.launcher.ms(120) } }
-                }
-                Kirigami.Icon {
-                    id: exampleIcon
-                    x: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 24
-                    height: 24
-                    source: example.modelData.icon
-                    fallback: example.modelData.fallback
-                    color: helpersRow.launcher.primaryText
-                }
-                Column {
-                    x: exampleIcon.x + exampleIcon.width + 12
-                    width: parent.width - x - 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 2
-                    Text {
-                        width: parent.width
-                        elide: Text.ElideRight
-                        text: example.modelData.title
-                        color: helpersRow.launcher.primaryText
-                        font.pixelSize: 14
-                        font.weight: Font.Medium
-                    }
-                    Text {
-                        objectName: example.objectName + "-typed"
-                        width: parent.width
-                        elide: Text.ElideRight
-                        text: helpersRow.words.i18nc("@info what to type, in quotation marks", "“%1”", example.modelData.typed)
-                        color: helpersRow.launcher.secondaryText
-                        font.pixelSize: 12
-                    }
-                }
-                HoverHandler {
-                    id: exampleHover
-                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                    cursorShape: Qt.PointingHandCursor
-                }
-                TapHandler {
-                    id: exampleTap
-                    enabled: !helpersRow.launcher.guestDragged && !helpersRow.launcher.applicationLaunchPending
-                    gesturePolicy: TapHandler.ReleaseWithinBounds
-                    onTapped: example.activated()
-                }
+                onActivated: helpersRow.launcher.openHelper(modelData.id)
             }
         }
     }

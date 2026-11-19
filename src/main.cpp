@@ -404,9 +404,13 @@ int main(int argc, char **argv)
     results.setCoreLayouts([&core] { return core.keepsLayouts(); }, [&core] { return core.layouts(); },
                            [&controller] { controller.requestIsland(QStringLiteral("layouts")); },
                            [&core](const QString &id) { core.openLayout(id); });
+    // Quick actions, the last Helper, opens its island in the band through
+    // the widget there, as Layouts does, and Search closes.
+    results.setQuickActionsIsland([&controller] { controller.requestIsland(QStringLiteral("quickActions")); });
     // Quick actions' settings page, where Shuffle Settings is installed to
-    // show it, looked for at each asking: the last Helper opens it in its
-    // own window. Elsewhere the widget's own settings page has them.
+    // show it, looked for at each asking: Quick actions found by its words
+    // opens it in its own window. Elsewhere the widget's own settings page
+    // has them.
     const auto suiteSettings = [] {
         const KService::Ptr settings = KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
         return settings ? KShell::splitArgs(settings->exec()).value(0) : QString();

@@ -142,14 +142,6 @@ Item {
         root.helpersShown = shown
         root.selectedChildKey = ""
     }
-    // What a quick action's example reads, put in the field as if typed:
-    // the Helpers step aside and the action it names leads, so Enter does it
-    // and the words can be changed first.
-    function tryQuickAction(typed) {
-        root.showHelpers(false)
-        query.text = typed
-        query.forceActiveFocus()
-    }
     // Core opens the Helper on its own; Search closes, as from its row.
     function openHelper(id) {
         if (!root.searchResults.openHelper(id)) return false

@@ -67,6 +67,27 @@ Window {
     // readCurrentLayout(), and saves, opens, and removes them.
     property var layouts: null
     readonly property var savedLayouts: kind === "layouts" && layouts && layouts.layouts ? layouts.layouts : []
+    // Quick actions, asked for from Search's Helpers: each action Search
+    // offers by its name, with what to type for it; the kinds the settings
+    // leave out are left out here. Try asks the keeper to open Search with
+    // those words in its field.
+    property var quickLeftOut: []
+    readonly property var quickExamples: [
+        {kind: "reminder", title: words.i18nc("@title a quick action", "Reminder"),
+         typed: words.i18nc("@info what to type for a reminder", "remind me to call the bank at 3")},
+        {kind: "note", title: words.i18nc("@title a quick action", "Note"),
+         typed: words.i18nc("@info what to type for a note", "note router password is on the box")},
+        {kind: "keepAwake", title: words.i18nc("@title a quick action", "Keep awake"),
+         typed: words.i18nc("@info what to type to keep the computer awake", "keep awake 1h")},
+        {kind: "doNotDisturb", title: words.i18nc("@title a quick action", "Do not disturb"),
+         typed: words.i18nc("@info what to type for do not disturb", "do not disturb until 3")},
+        {kind: "bluetooth", title: words.i18nc("@title a quick action", "Bluetooth"),
+         typed: words.i18nc("@info what to type to turn Bluetooth off", "bluetooth off")}
+    ].filter(example => (quickLeftOut || []).indexOf(example.kind) < 0)
+    function tryQuickAction(typed) {
+        if (layouts) layouts.typeInSearch(typed);
+        dismiss();
+    }
     // Layouts shows the saved layouts, or the form that saves what's open.
     property bool savingLayout: false
     // The saved layout whose Remove shows, by its id.
@@ -419,7 +440,8 @@ Window {
                 // With more than one kind going on, a row to move between them.
                 Row {
                     objectName: "ambient-island-kinds"
-                    visible: overlay.kind !== "core" && overlay.kind !== "layouts" && overlay.surface !== null
+                    visible: overlay.kind !== "core" && overlay.kind !== "layouts" && overlay.kind !== "quickActions"
+                        && overlay.surface !== null
                         && overlay.surface.kinds.length > 1
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 6
@@ -769,6 +791,104 @@ Window {
                             label: overlay.surface ? overlay.surface.coreNotNow : ""
                             onActivated: overlay.answer("not-now")
                         }
+                    }
+                }
+
+                // Quick actions, asked for from Search: each action with
+                // what to type for it and a Try pill, then Close.
+                Column {
+                    objectName: "ambient-island-quick-actions"
+                    visible: overlay.kind === "quickActions"
+                    width: parent.width
+                    spacing: 12
+                    Row {
+                        spacing: 0
+                        Label {
+                            id: quickTitle
+                            objectName: "ambient-island-quick-actions-title"
+                            text: words.i18nc("@title what Search does from typed words", "Quick actions")
+                            font.pixelSize: 15
+                            font.weight: Font.DemiBold
+                        }
+                        Label {
+                            anchors.baseline: quickTitle.baseline
+                            text: words.i18nc("@title after Quick actions", " · what to type in Search")
+                            opacity: 0.66
+                        }
+                    }
+                    Label {
+                        objectName: "ambient-island-quick-actions-none"
+                        width: parent.width
+                        visible: overlay.quickExamples.length === 0
+                        text: words.i18n("Every quick action is turned off in Search's settings.")
+                        opacity: 0.66
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 3
+                    }
+                    Column {
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: overlay.kind === "quickActions" ? overlay.quickExamples : []
+                            delegate: Rectangle {
+                                id: example
+                                required property var modelData
+                                objectName: "ambient-island-quick-action-" + modelData.kind
+                                width: parent.width
+                                height: exampleWords.implicitHeight + 24
+                                radius: 10
+                                color: tone.wash(exampleArea.pressed ? 0.12 : 0.075)
+                                Accessible.role: Accessible.ListItem
+                                Accessible.name: modelData.title
+                                Accessible.description: exampleTyped.text
+                                // A tap anywhere on the row tries it, as
+                                // its pill does.
+                                MouseArea {
+                                    id: exampleArea
+                                    anchors.fill: parent
+                                    onClicked: overlay.tryQuickAction(example.modelData.typed)
+                                }
+                                Column {
+                                    id: exampleWords
+                                    x: 12
+                                    y: 12
+                                    width: parent.width - 24 - tryExample.width - 12
+                                    spacing: 2
+                                    Label {
+                                        width: parent.width
+                                        text: example.modelData.title
+                                        font.pixelSize: 15
+                                        elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        id: exampleTyped
+                                        objectName: example.objectName + "-typed"
+                                        width: parent.width
+                                        text: words.i18nc("@info what to type, in quotation marks", "“%1”", example.modelData.typed)
+                                        opacity: 0.66
+                                        wrapMode: Text.Wrap
+                                        maximumLineCount: 2
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                                PillButton {
+                                    id: tryExample
+                                    objectName: example.objectName + "-try"
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 12
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    height: 32
+                                    label: words.i18nc("@action:button puts a quick action's words in Search", "Try")
+                                    Accessible.name: words.i18nc("@action:button a quick action's name", "Try %1", example.modelData.title)
+                                    onActivated: overlay.tryQuickAction(example.modelData.typed)
+                                }
+                            }
+                        }
+                    }
+                    PillButton {
+                        objectName: "ambient-island-quick-actions-close"
+                        label: words.i18n("Close")
+                        onActivated: overlay.dismiss()
                     }
                 }
 

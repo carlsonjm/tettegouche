@@ -642,11 +642,17 @@ public:
     }
     // The page where quick actions are set, where there is one to open:
     // Quick actions found by its words opens the page in a window of its
-    // own. The Quick actions Helper needs no page: Search itself lists what
-    // to type.
+    // own.
     void setQuickActionsPage(std::function<bool()> there, std::function<void()> open) {
         m_quickActionsPageThere = std::move(there);
         m_openQuickActionsPage = std::move(open);
+        Q_EMIT helpersChanged();
+    }
+    // Quick actions' island in the band, which lists what to type: Quick
+    // actions is the last Helper, behind More, and its tile opens the
+    // island as Layouts' opens its own.
+    void setQuickActionsIsland(std::function<void()> open) {
+        m_openQuickActionsIsland = std::move(open);
         Q_EMIT helpersChanged();
     }
     // The pill a row carries at its end, such as Open on a saved layout's;
@@ -678,7 +684,7 @@ public:
                                       {QStringLiteral("sub"), i18nc("@info under Layouts", "Save what's open, reopen it in one tap")},
                                       {QStringLiteral("icon"), QString()},
                                       {QStringLiteral("more"), true}});
-        if (!listed.isEmpty())
+        if (!listed.isEmpty() && m_openQuickActionsIsland)
             listed.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("quickActions")},
                                       {QStringLiteral("title"), i18nc("@title what Search does from typed words", "Quick actions")},
                                       {QStringLiteral("sub"), i18nc("@info under Quick actions", "What to type to get things done")},
@@ -688,15 +694,19 @@ public:
     }
     // Asks Core to open one on its own, as Enter on its row does; query goes
     // only to Install an app, which searches for it. Layouts opens its island
-    // in the band, as Layouts found by its words does.
+    // in the band, as Layouts found by its words does, and Quick actions its
+    // own.
     Q_INVOKABLE bool openHelper(const QString &id, const QString &query = QString()) {
         if (id == QLatin1String("layouts")) {
             if (!m_openLayouts || !m_keepsLayouts || !m_keepsLayouts()) return false;
             m_openLayouts();
             return true;
         }
-        // Quick actions opens nothing: its tile lists what to type, in Search.
-        if (id == QLatin1String("quickActions")) return false;
+        if (id == QLatin1String("quickActions")) {
+            if (!m_openQuickActionsIsland) return false;
+            m_openQuickActionsIsland();
+            return true;
+        }
         if (!m_openCoreAction || id.isEmpty()) return false;
         m_openCoreAction(id, query);
         return true;
@@ -1181,6 +1191,7 @@ private:
     std::function<QList<QVariantMap>()> m_coreLayouts;
     std::function<void()> m_openLayouts;
     std::function<bool()> m_quickActionsPageThere;
+    std::function<void()> m_openQuickActionsIsland;
     std::function<void()> m_openQuickActionsPage;
     std::function<void(const QString &)> m_openLayout;
     SearchSource m_results;

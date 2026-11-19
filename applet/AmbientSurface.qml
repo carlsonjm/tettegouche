@@ -649,9 +649,10 @@ Item {
     }
     // Where the open island grows from.
     function islandFor(kind) {
-        // Layouts, asked for from Search, grows from the band's end.
+        // Layouts and Quick actions, asked for from Search, grow from the
+        // band's end.
         const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
-            : kind === "layouts" ? [] : [transferIsland, arrivedIsland];
+            : kind === "layouts" || kind === "quickActions" ? [] : [transferIsland, arrivedIsland];
         for (const island of candidates)
             if (island.present) return island.shape;
         return bubble;
