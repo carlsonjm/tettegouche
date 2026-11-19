@@ -350,8 +350,13 @@ int main(int argc, char **argv)
         // The Helpers chip: every upkeep card as a tile, opened on its own
         // with nothing typed, and while it shows, what is typed finds only
         // the cards, never a fact.
+        // Quick actions follows them as the last tile; it opens nothing,
+        // since Search itself lists what to type.
         const auto helpers = core.helpers();
-        if (helpers.size() != 1) return 107;
+        if (helpers.size() != 2) return 107;
+        if (helpers.last().toMap().value(QStringLiteral("id")).toString() != QStringLiteral("quickActions")
+            || !helpers.last().toMap().value(QStringLiteral("more")).toBool()
+            || core.openHelper(QStringLiteral("quickActions"))) return 407;
         const auto tile = helpers.first().toMap();
         if (tile.value(QStringLiteral("id")).toString() != QStringLiteral("install")
             || tile.value(QStringLiteral("title")).toString() != QStringLiteral("Install an app")
@@ -436,7 +441,8 @@ int main(int argc, char **argv)
         core.setCoreActions([&health, &tidy] { return QList<QVariantMap>{health, tidy}; },
                             [&helpersOpened](const QString &id, const QString &) { helpersOpened.append(id); });
         const auto tiles = core.helpers();
-        if (tiles.size() != 3) return 402;
+        if (tiles.size() != 4 || tiles.at(3).toMap().value(QStringLiteral("id")).toString() != QStringLiteral("quickActions"))
+            return 402;
         if (tiles.at(0).toMap().value(QStringLiteral("more")).toBool() || !tiles.at(1).toMap().value(QStringLiteral("more")).toBool())
             return 403;
         const auto layoutsTile = tiles.at(2).toMap();
@@ -445,7 +451,7 @@ int main(int argc, char **argv)
             || !layoutsTile.value(QStringLiteral("more")).toBool()) return 404;
         if (!core.openHelper(QStringLiteral("layouts")) || islands != 2 || !helpersOpened.isEmpty()) return 405;
         keeps = false;
-        if (core.helpers().size() != 2 || core.openHelper(QStringLiteral("layouts")) || islands != 2) return 406;
+        if (core.helpers().size() != 3 || core.openHelper(QStringLiteral("layouts")) || islands != 2) return 406;
         keeps = true;
         core.setCoreActions({}, {});
         // With none saved, Layouts still offers to save what's open.
