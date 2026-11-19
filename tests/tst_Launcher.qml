@@ -4641,7 +4641,8 @@ TestCase {
             tile("update", "Check for updates", false), tile("space", "Free up space", false),
             tile("health", "Health check", false), tile("changes", "What changed", false),
             tile("tidy", "Tidy up Downloads", true), tile("restore", "Restore points", true),
-            tile("community", "Community apps", true), tile("layouts", "Layouts", true)
+            tile("community", "Community apps", true), tile("layouts", "Layouts", true),
+            tile("quickActions", "Quick actions", true)
         ]
         const pill = findChild(launcher, "helpers-pill")
         tryCompare(pill, "visible", true)
@@ -4691,6 +4692,28 @@ TestCase {
         compare(findChild(launcher, "helpers-more-rows").x, first.x)
         mouseClick(layouts, layouts.width / 2, layouts.height / 2)
         compare(results.helpersOpened[results.helpersOpened.length - 1], "layouts")
+        // Quick actions is the last tile, after Layouts, with its own glyph,
+        // and opens as Layouts does: its island in the band, Search closed.
+        controller.opened()
+        launcher.showHelpers(true)
+        mouseClick(more, more.width / 2, more.height / 2)
+        const quick = findChild(launcher, "helper-quickActions")
+        tryVerify(() => quick.visible)
+        compare(findChild(launcher, "helper-quickActions-glyph").glyph, "zap")
+        verify(quick.mapToItem(row, 0, 0).y > layouts.mapToItem(row, 0, 0).y
+               || quick.mapToItem(row, 0, 0).x > layouts.mapToItem(row, 0, 0).x)
+        mouseClick(quick, quick.width / 2, quick.height / 2)
+        compare(results.helpersOpened[results.helpersOpened.length - 1], "quickActions")
+        // With quick actions off there is no such tile.
+        controller.opened()
+        launcher.quickActionsOffered = false
+        launcher.showHelpers(true)
+        mouseClick(more, more.width / 2, more.height / 2)
+        tryCompare(findChild(launcher, "helpers-more-rows"), "visible", true)
+        tryVerify(() => !findChild(launcher, "helper-quickActions"))
+        verify(findChild(launcher, "helper-layouts").visible)
+        launcher.quickActionsOffered = true
+        tryVerify(() => findChild(launcher, "helper-quickActions") !== null)
         // Shown again, More starts closed.
         launcher.showHelpers(false)
         verify(!row.expanded)

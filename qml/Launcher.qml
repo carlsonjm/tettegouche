@@ -96,7 +96,9 @@ Item {
     // pressed again does. Anywhere else it is "".
     property string openedStraight: ""
     onDestinationChanged: if (destination !== openedStraight) openedStraight = ""
-    readonly property var helpers: root.searchResults.helpers || []
+    // Quick actions is a Helper only while quick actions are offered.
+    readonly property var helpers: (root.searchResults.helpers || [])
+        .filter(helper => helper.id !== "quickActions" || root.quickActionsOffered)
     onHelpersShownChanged: root.searchResults.helpersOnly = root.helpersShown
     onHelpersChanged: {
         if (root.helpersShown && root.helpers.length === 0) root.helpersShown = false

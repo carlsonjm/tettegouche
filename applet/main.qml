@@ -150,10 +150,12 @@ PlasmoidItem {
     Connections {
         target: Plasmoid
         function onPanelGeometryChanged() { Qt.callLater(root.refreshResponsiveWidth); }
-        // Search asked for an island in the band, such as Layouts: one
-        // widget on Search's display opens it, islands shown or not.
+        // Search asked for an island in the band, Layouts or Quick
+        // actions: one widget on Search's display opens it, islands shown
+        // or not.
         function onIslandRequested(kind, output) {
-            if (kind !== "layouts" || !Plasmoid.keepsLayouts) return;
+            if (kind === "quickActions" ? Plasmoid.configuration.quickActions === false
+                    : kind !== "layouts" || !Plasmoid.keepsLayouts) return;
             if (output.length > 0 && Plasmoid.screenName(root) !== output) return;
             // One widget opens it, however many hear the request.
             if (!Plasmoid.claimIsland(kind)) return;
@@ -190,7 +192,8 @@ PlasmoidItem {
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
         onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
-        onKindsChanged: if (root.island && root.island.kind !== "layouts" && kinds.length === 0) root.island.dismiss()
+        onKindsChanged: if (root.island && root.island.kind !== "layouts" && root.island.kind !== "quickActions"
+                            && kinds.length === 0) root.island.dismiss()
     }
 
     // A slide from the dot: press it and move away from the dot's edge,
@@ -320,6 +323,11 @@ PlasmoidItem {
         AmbientIsland {}
     }
 
+    // The quick actions the settings leave out, as Search's row names them.
+    readonly property var quickLeftOut: ["Reminder", "Note", "KeepAwake", "DoNotDisturb", "Bluetooth"]
+        .filter(kind => Plasmoid.configuration["quickAction" + kind] === false)
+        .map(kind => kind.charAt(0).toLowerCase() + kind.slice(1))
+
     function openIsland(kind) {
         if (island) {
             island.kind = kind;
@@ -333,6 +341,7 @@ PlasmoidItem {
         const opened = islandComponent.createObject(null, {
             surface: ambient,
             layouts: Plasmoid,
+            quickLeftOut: root.quickLeftOut,
             kind: kind,
             start: Plasmoid.screenRect(from),
             sideLeft: side.x,

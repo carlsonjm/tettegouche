@@ -81,7 +81,19 @@ where Core keeps layouts, wait behind a last tile, More. More adds rows of
 the same tiles under the first, from the block's left edge and 12 apart, as
 many as they take, and turns into Less; the sheet grows to hold them, and each time the
 Helpers show More starts closed. Layouts' tile opens its island in the band,
-as Layouts found by its words does. Core says when its Helpers change, as
+as Layouts found by its words does. Quick actions is the last tile, after
+Layouts and behind More, while quick actions are offered, and opens as
+Layouts does: Search closes and the Quick actions island grows from the
+band's end, titled "Quick actions · what to type in Search". Each action
+Search offers is a row with its name, its example beneath, such as Keep
+awake and "keep awake 1h", and a Try pill, leaving out those the settings
+leave out; the island is no taller than the room above the band, and what
+does not fit scrolls. Try, or a tap on the row, opens Search with those
+words in the field, where the action they name leads as if typed: Enter
+does it, and the words can be changed first. Close, or a tap off the island,
+puts it away. Where Shuffle Settings is installed, Quick actions found by
+its words opens Shuffle Settings' Quick actions page in its own window, and
+Search closes; the widget's own settings page has the same settings. Core says when its Helpers change, as
 when the app store comes or goes, and the row follows. The field reads "Look over the computer, free up
 space…"; what is typed lists only Helpers, by the same words that find them
 on the first screen, best first, and never searches the web. A tap or Enter

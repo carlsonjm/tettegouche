@@ -350,8 +350,16 @@ int main(int argc, char **argv)
         // The Helpers chip: every upkeep card as a tile, opened on its own
         // with nothing typed, and while it shows, what is typed finds only
         // the cards, never a fact.
+        // Quick actions follows them as the last tile, behind More, where
+        // its island can open, and its tile opens the island.
+        if (core.helpers().size() != 1 || core.openHelper(QStringLiteral("quickActions"))) return 407;
+        int quickIslands = 0;
+        core.setQuickActionsIsland([&quickIslands] { ++quickIslands; });
         const auto helpers = core.helpers();
-        if (helpers.size() != 1) return 107;
+        if (helpers.size() != 2) return 107;
+        if (helpers.last().toMap().value(QStringLiteral("id")).toString() != QStringLiteral("quickActions")
+            || !helpers.last().toMap().value(QStringLiteral("more")).toBool()
+            || !core.openHelper(QStringLiteral("quickActions")) || quickIslands != 1) return 408;
         const auto tile = helpers.first().toMap();
         if (tile.value(QStringLiteral("id")).toString() != QStringLiteral("install")
             || tile.value(QStringLiteral("title")).toString() != QStringLiteral("Install an app")

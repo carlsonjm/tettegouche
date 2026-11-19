@@ -86,6 +86,9 @@ public:
     // for; another widget on the same display, or one the request named no
     // display for, hears it within the second and leaves it.
     Q_INVOKABLE bool claimIsland(const QString &kind);
+    // Opens Search with these words in its field, as if typed there: what
+    // the Quick actions island's Try asks for.
+    Q_INVOKABLE void typeInSearch(const QString &words);
     bool keepsLayouts() const;
     QVariantList layouts() const;
     QVariantMap currentLayout() const { return m_currentLayout; }

@@ -352,6 +352,19 @@ bool TettegoucheApplet::claimIsland(const QString &kind)
     return true;
 }
 
+void TettegoucheApplet::typeInSearch(const QString &words)
+{
+    const QString executable = QStandardPaths::findExecutable(QStringLiteral("tettegouche"));
+    if (executable.isEmpty() || words.trimmed().isEmpty()) return;
+    // A launcher already running takes the words from this one, which then
+    // leaves; otherwise this one opens with them.
+    QStringList flags = launchFlags();
+    flags << QStringLiteral("--typed") << words;
+    auto *job = new KIO::CommandLauncherJob(executable, flags, this);
+    job->setDesktopName(QStringLiteral("io.github.carlsonjm.Tettegouche"));
+    job->start();
+}
+
 void TettegoucheApplet::launcherIslandRequested(const QString &kind, const QString &output)
 {
     Q_EMIT islandRequested(kind, output);
