@@ -64,11 +64,13 @@ Item {
     // Core lists, and what is typed there finds only Helpers. Offered only
     // while Core lists some.
     property bool helpersShown: false
-    // Search's People chip, offered only while a people provider is
-    // installed: its first screen lists the people the provider knows, what
-    // is typed there finds only people, and a person opens on a page.
+    // Search's People chip, offered once its pill is turned on and while a
+    // people provider is installed: its first screen lists the people the
+    // provider knows, what is typed there finds only people, and a person
+    // opens on a page.
     property var peopleClient: null
-    readonly property bool peopleOffered: !!root.peopleClient && root.peopleClient.available
+    property bool peoplePillShown: false
+    readonly property bool peopleOffered: root.peoplePillShown && !!root.peopleClient && root.peopleClient.available
     property bool peopleShown: false
     readonly property string peopleTyped: root.peopleShown ? query.text : ""
     onPeopleTypedChanged: if (root.peopleShown) root.peopleClient.find(root.peopleTyped)

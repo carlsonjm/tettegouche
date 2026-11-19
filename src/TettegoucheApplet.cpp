@@ -574,6 +574,8 @@ QStringList TettegoucheApplet::launchFlags()
     else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
     // The Helpers pill can be left out; Helpers still answer a search.
     if (!setting(QStringLiteral("showHelpersPill"), true)) flags << QStringLiteral("--no-helpers-pill");
+    // The People pill is off until it is turned on.
+    if (setting(QStringLiteral("showPeoplePill"), false)) flags << QStringLiteral("--people-pill");
     // Quick actions, where they are not as they come: off altogether, or
     // where the row shows, what a switch's row does, the time a day alone
     // means and the actions left out, in one argument.

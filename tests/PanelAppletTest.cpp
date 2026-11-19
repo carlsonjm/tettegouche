@@ -439,6 +439,12 @@ private Q_SLOTS:
         QCOMPARE(launches().constLast(), QStringLiteral("--quick-actions=off --type"));
         configure(QStringLiteral("quickActions"), true);
         configure(QStringLiteral("quickReminderTime"), QStringLiteral("09:00"));
+        // The People pill is off until it is turned on; on, Search is told.
+        configure(QStringLiteral("showPeoplePill"), true);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 12);
+        QCOMPARE(launches().constLast(), QStringLiteral("--people-pill --type"));
+        configure(QStringLiteral("showPeoplePill"), false);
     }
 
     // A running launcher is known by its name on the bus, whoever started

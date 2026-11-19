@@ -20,6 +20,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_showNotesPillDefault
     property bool cfg_showHelpersPill
     property bool cfg_showHelpersPillDefault
+    property bool cfg_showPeoplePill
+    property bool cfg_showPeoplePillDefault
     property bool cfg_quickActions
     property bool cfg_quickActionsDefault
     property string cfg_quickActionsPlace
@@ -98,6 +100,13 @@ KCMUtils.SimpleKCM {
             text: i18n("Show the Helpers pill when Split Rock is installed")
             checked: cfg_showHelpersPill
             onToggled: cfg_showHelpersPill = checked
+        }
+
+        QQC2.CheckBox {
+            Kirigami.FormData.label: i18n("People:")
+            text: i18n("Show the People pill when a people provider is installed")
+            checked: cfg_showPeoplePill
+            onToggled: cfg_showPeoplePill = checked
         }
 
         // Quick actions: whether typed words such as "remind me to call the
