@@ -4692,8 +4692,9 @@ TestCase {
         compare(findChild(launcher, "helpers-more-rows").x, first.x)
         mouseClick(layouts, layouts.width / 2, layouts.height / 2)
         compare(results.helpersOpened[results.helpersOpened.length - 1], "layouts")
-        // Quick actions is the last tile, after Layouts, with its own glyph,
-        // and opens as the others do.
+        // Quick actions is the last tile, after Layouts, with its own glyph.
+        // It opens nothing: under the tiles it lists each action with what
+        // to type, those the settings leave out left out.
         controller.opened()
         launcher.showHelpers(true)
         mouseClick(more, more.width / 2, more.height / 2)
@@ -4702,8 +4703,45 @@ TestCase {
         compare(findChild(launcher, "helper-quickActions-glyph").glyph, "zap")
         verify(quick.mapToItem(row, 0, 0).y > layouts.mapToItem(row, 0, 0).y
                || quick.mapToItem(row, 0, 0).x > layouts.mapToItem(row, 0, 0).x)
+        const opened = results.helpersOpened.length
+        launcher.quickActionsLeftOut = ["bluetooth"]
         mouseClick(quick, quick.width / 2, quick.height / 2)
-        compare(results.helpersOpened[results.helpersOpened.length - 1], "quickActions")
+        compare(results.helpersOpened.length, opened)
+        verify(launcher.helpersShown)
+        verify(row.quickShown)
+        const list = findChild(launcher, "helpers-quick-actions")
+        tryCompare(list, "visible", true)
+        compare(list.x, first.x)
+        verify(list.mapToItem(row, 0, 0).y >= row.labelHeight + 2 * 88 + 12)
+        for (const kind of ["reminder", "note", "keepAwake", "doNotDisturb"])
+            tryVerify(() => findChild(launcher, "quick-example-" + kind) !== null)
+        verify(!findChild(launcher, "quick-example-bluetooth"))
+        compare(findChild(launcher, "quick-example-keepAwake-typed").text, "“keep awake 1h”")
+        tryCompare(sheet, "height", resting + 12 + 88 + row.quickHeight)
+        verify(row.quickHeight > 4 * 48)
+        // The tile again puts the list away; again, it is back.
+        mouseClick(quick, quick.width / 2, quick.height / 2)
+        verify(!row.quickShown)
+        tryCompare(sheet, "height", resting + 12 + 88)
+        mouseClick(quick, quick.width / 2, quick.height / 2)
+        // A tap on one puts its words in the field, out of the Helpers, where
+        // the action it names leads.
+        const awake = findChild(launcher, "quick-example-keepAwake")
+        mouseClick(awake, awake.width / 2, awake.height / 2)
+        verify(!launcher.helpersShown)
+        compare(launcher.query.text, "keep awake 1h")
+        verify(!row.quickShown)
+        // With quick actions off there is no such tile.
+        launcher.quickActionsLeftOut = []
+        launcher.query.text = ""
+        launcher.quickActionsOffered = false
+        launcher.showHelpers(true)
+        mouseClick(more, more.width / 2, more.height / 2)
+        tryCompare(findChild(launcher, "helpers-more-rows"), "visible", true)
+        tryVerify(() => !findChild(launcher, "helper-quickActions"))
+        verify(findChild(launcher, "helper-layouts").visible)
+        launcher.quickActionsOffered = true
+        tryVerify(() => findChild(launcher, "helper-quickActions") !== null)
         // Shown again, More starts closed.
         launcher.showHelpers(false)
         verify(!row.expanded)

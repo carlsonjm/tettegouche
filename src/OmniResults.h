@@ -641,8 +641,9 @@ public:
         Q_EMIT helpersChanged();
     }
     // The page where quick actions are set, where there is one to open:
-    // Quick actions is the last Helper, behind More, and is found by its
-    // words; either opens the page in a window of its own.
+    // Quick actions found by its words opens the page in a window of its
+    // own. The Quick actions Helper needs no page: Search itself lists what
+    // to type.
     void setQuickActionsPage(std::function<bool()> there, std::function<void()> open) {
         m_quickActionsPageThere = std::move(there);
         m_openQuickActionsPage = std::move(open);
@@ -658,8 +659,8 @@ public:
     }
     // Every upkeep card Core lists, in Core's own order: its id, title, the
     // line under it, its icon and whether Core shows it behind the row's
-    // More. Layouts follows them, behind More, where Core keeps layouts.
-    // None without Core.
+    // More. Layouts follows them, behind More, where Core keeps layouts, and
+    // Quick actions comes last. None without Core.
     QVariantList helpers() const {
         QVariantList listed;
         for (const auto &action : m_coreActions ? m_coreActions() : QList<QVariantMap>{}) {
@@ -677,7 +678,7 @@ public:
                                       {QStringLiteral("sub"), i18nc("@info under Layouts", "Save what's open, reopen it in one tap")},
                                       {QStringLiteral("icon"), QString()},
                                       {QStringLiteral("more"), true}});
-        if (!listed.isEmpty() && m_openQuickActionsPage && m_quickActionsPageThere && m_quickActionsPageThere())
+        if (!listed.isEmpty())
             listed.append(QVariantMap{{QStringLiteral("id"), QStringLiteral("quickActions")},
                                       {QStringLiteral("title"), i18nc("@title what Search does from typed words", "Quick actions")},
                                       {QStringLiteral("sub"), i18nc("@info under Quick actions", "What to type to get things done")},
@@ -694,11 +695,8 @@ public:
             m_openLayouts();
             return true;
         }
-        if (id == QLatin1String("quickActions")) {
-            if (!m_openQuickActionsPage || !m_quickActionsPageThere || !m_quickActionsPageThere()) return false;
-            m_openQuickActionsPage();
-            return true;
-        }
+        // Quick actions opens nothing: its tile lists what to type, in Search.
+        if (id == QLatin1String("quickActions")) return false;
         if (!m_openCoreAction || id.isEmpty()) return false;
         m_openCoreAction(id, query);
         return true;
