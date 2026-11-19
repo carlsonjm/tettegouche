@@ -33,6 +33,10 @@
       <label>Show the Helpers pill on Search's first screen and a Helpers door on the dot's slide, while Split Rock's Core is installed; Helpers still show among the results</label>
       <default>true</default>
     </entry>
+    <entry name="showPeoplePill" type="Bool">
+      <label>Show the People pill on Search's first screen, while a people provider is installed; off until it is turned on</label>
+      <default>false</default>
+    </entry>
     <entry name="quickActions" type="Bool">
       <label>Offer quick actions in Search: typed words such as "remind me to call the bank at 3" name something Search offers to do</label>
       <default>true</default>

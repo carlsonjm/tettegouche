@@ -171,7 +171,8 @@ Ask, the chip is Helpers, as above, and nothing is asked.
 
 ### People
 
-People is offered while a people provider is installed, looked for each time
+People is offered once the widget's "Show the People pill" setting is on, off
+by default, and while a people provider is installed, looked for each time
 Search opens. The provider keeps the people and decides who is who; Search
 keeps none, and Tettegouche works the same without it.
 

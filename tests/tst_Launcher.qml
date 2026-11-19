@@ -28,6 +28,7 @@ TestCase {
         launcher.askClient = null
         askStub.reset()
         launcher.peopleClient = null
+        launcher.peoplePillShown = true
         peopleStub.reset()
         notesStub.available = true
         notesStub.opened = 0
@@ -4994,7 +4995,12 @@ TestCase {
         waitForOpen()
         const pill = findChild(launcher, "people-pill")
         verify(!pill.visible)
+        // Off until it is turned on, even with a provider.
+        launcher.peoplePillShown = false
         launcher.peopleClient = peopleStub
+        wait(50)
+        verify(!pill.visible)
+        launcher.peoplePillShown = true
         tryCompare(pill, "visible", true)
         // The row places it once it shows, after Apps, and makes room for
         // it, or a tap on it lands outside the row.

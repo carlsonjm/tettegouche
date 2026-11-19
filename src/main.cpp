@@ -194,7 +194,7 @@ QStringList settingsIn(const QStringList &arguments)
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
                                QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
                                QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill"),
-                               QStringLiteral("--no-helpers-pill")};
+                               QStringLiteral("--no-helpers-pill"), QStringLiteral("--people-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
         if ((settings.contains(argument) || argument.startsWith(QLatin1String("--quick-actions=")))
@@ -514,6 +514,9 @@ int main(int argc, char **argv)
         // So can the Helpers pill.
         {QStringLiteral("helpersPillShown"),
          !application.arguments().contains(QStringLiteral("--no-helpers-pill"))},
+        // The People pill shows only once it is turned on.
+        {QStringLiteral("peoplePillShown"),
+         application.arguments().contains(QStringLiteral("--people-pill"))},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
         {QStringLiteral("quickSwitches"), QVariant::fromValue<QObject *>(&quickSwitches)},
         {QStringLiteral("quickActionsOffered"), !quickSettings.contains(QStringLiteral("off"))},
