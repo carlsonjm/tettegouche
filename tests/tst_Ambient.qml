@@ -1141,6 +1141,61 @@ TestCase {
         verify(shown(surface, "media").length > 1);
     }
 
+    // Layouts' island: a disc that opens Layouts in place, and the layout
+    // opened last beside it, which a tap opens. It stays, after the quick
+    // note's island, and narrow it keeps its disc and lets the name go.
+    function test_the_layouts_island() {
+        const door = {id: "layouts", generation: 1, kind: "layouts", state: "running", capabilities: {}};
+        const last = {id: "layouts", generation: 2, kind: "layouts", state: "running", capabilities: {},
+            layoutId: "3", title: "Coding"};
+        const surface = createSurface(460, [door]);
+        settle();
+        const shape = island(surface, "layouts");
+        verify(shape.visible);
+        compare(shown(surface, "layouts"), ["disc"]);
+        compare(shape.Accessible.name, "Layouts, open");
+        const disc = findChild(surface, "ambient-layouts-disc");
+        verify(disc.visible);
+        verify(shape.height >= 44 && carrier(surface, "layouts").width >= 44);
+        const opens = spyOn(surface, "openRequested");
+        const asked = spyOn(surface, "layoutRequested");
+        mouseClick(disc, disc.width / 2, disc.height / 2);
+        compare(opens.count, 1);
+        compare(opens.signalArguments[0][0], "layouts");
+        compare(asked.count, 0);
+
+        surface.activities = [last];
+        settle();
+        compare(shown(surface, "layouts"), ["disc", "last"]);
+        const name = findChild(surface, "ambient-layouts-last");
+        verify(name.visible);
+        verify(name.width >= 44 && name.height >= 44);
+        verify(leftOf(surface, name) >= rightOf(surface, disc));
+        compare(findChild(surface, "ambient-layouts-last-title").text, "Coding");
+        compare(name.Accessible.name, "Open the layout Coding");
+        mouseClick(name, name.width / 2, name.height / 2);
+        compare(asked.count, 1);
+        compare(asked.signalArguments[0][0], "3");
+        compare(opens.count, 1);
+
+        // It stays: a drag does not carry it, and nothing sets it aside.
+        const at = slowDrag(surface, "layouts", -120);
+        compare(carrier(surface, "layouts").peel, 0);
+        mouseRelease(surface, at.x - 120, at.y);
+        settle();
+        verify(island(surface, "layouts").visible);
+
+        // After the quick note's island, before what comes and goes.
+        const note = {id: "note", generation: 1, kind: "note", state: "running", capabilities: {}};
+        surface.activities = [media, last, note];
+        settle();
+        verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "layouts")));
+        verify(rightOf(surface, island(surface, "layouts")) <= leftOf(surface, island(surface, "media")));
+        surface.width = 300;
+        settle();
+        compare(shown(surface, "layouts"), ["disc"]);
+    }
+
     // The window in use's notes join the island as Gooseberry's dot, with
     // their count, after the pinned note; ringed while they are up, and a
     // tap asks for them either way. Narrow, the pinned note goes first.

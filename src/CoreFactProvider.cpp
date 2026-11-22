@@ -1,4 +1,6 @@
 #include "CoreFactProvider.h"
+
+#include <QDateTime>
 #include <QDBusArgument>
 #include <QDBusConnectionInterface>
 #include <QDBusError>
@@ -189,7 +191,8 @@ void CoreFactProvider::askLayouts() {
                 if (id.isEmpty() || name.isEmpty()) continue;
                 read.append({{QStringLiteral("id"), id}, {QStringLiteral("name"), name},
                              {QStringLiteral("groups"), groupsOf(layout.value(QStringLiteral("groups")))},
-                             {QStringLiteral("atSignIn"), layout.value(QStringLiteral("atSignIn")).toBool()}});
+                             {QStringLiteral("atSignIn"), layout.value(QStringLiteral("atSignIn")).toBool()},
+                             {QStringLiteral("opened"), layout.value(QStringLiteral("opened")).toString()}});
             }
         }
         const bool keeps = !reply.isError();
@@ -295,6 +298,29 @@ void CoreFactProvider::factChanged(const QVariantMap &arrived, const QDBusMessag
     }
     m_facts.append(fact);
     Q_EMIT changed();
+}
+
+QVariantMap CoreFactProvider::lastOpened() const {
+    QVariantMap last;
+    QDateTime latest;
+    for (const auto &layout : m_layouts) {
+        const auto when = QDateTime::fromString(layout.value(QStringLiteral("opened")).toString(), Qt::ISODate);
+        if (when.isValid() && (!latest.isValid() || when > latest)) { latest = when; last = layout; }
+    }
+    return last;
+}
+
+QVariantList CoreFactProvider::layoutsDoor() const {
+    if (!m_keepsLayouts) return {};
+    QVariantMap row{{QStringLiteral("id"), QString::fromLatin1(LayoutsDoor)}, {QStringLiteral("generation"), m_generation},
+                    {QStringLiteral("kind"), QStringLiteral("layouts")}, {QStringLiteral("state"), QStringLiteral("running")},
+                    {QStringLiteral("capabilities"), QVariantMap{}}};
+    const QVariantMap last = lastOpened();
+    if (!last.isEmpty()) {
+        row.insert(QStringLiteral("layoutId"), last.value(QStringLiteral("id")));
+        row.insert(QStringLiteral("title"), last.value(QStringLiteral("name")));
+    }
+    return {row};
 }
 
 QVariantList CoreFactProvider::activities() const {

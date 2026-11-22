@@ -68,6 +68,8 @@ Item {
     // The quick note's island asks Search's Notes for a page: "note", the
     // quick note's, or "note:" and a note's id, that note's.
     signal drawerRequested(string drawer)
+    // The Layouts island asks for a saved layout by its id.
+    signal layoutRequested(string layoutId)
 
     // A 44 px island in Shuffle's 64 px band; a shorter panel gets a shorter
     // one. Each control reaches the island's full height and, where the panel
@@ -152,7 +154,7 @@ Item {
     }
     readonly property bool peeling: mediaIsland.peeling || transferIsland.peeling || arrivedIsland.peeling
         || driveIsland.peeling || screenIsland.peeling || waitingIsland.peeling || coreIsland.peeling
-        || noteIsland.peeling
+        || noteIsland.peeling || layoutsIsland.peeling
     // Carried or flicked, an island leaves through the band's own edges and
     // never passes over what sits beside Ambient, the launcher's dot among them.
     clip: peeling
@@ -183,6 +185,11 @@ Item {
             // goes, and never takes the room as the newest.
             if (band === "note") {
                 bandNext[band] = 0;
+                continue;
+            }
+            // Layouts' island stands next, a door as the quick note's is.
+            if (band === "layouts") {
+                bandNext[band] = 0.5;
                 continue;
             }
             if (band in bandArrivals) {
@@ -219,7 +226,7 @@ Item {
         // An island set aside stays gone once its activity has left; one
         // whose activity is still here comes back.
         for (const island of [mediaIsland, transferIsland, arrivedIsland, driveIsland, screenIsland, waitingIsland, coreIsland,
-                noteIsland])
+                noteIsland, layoutsIsland])
             if (island.kind in bandNext) island.leaving = false;
         choose();
     }
@@ -428,6 +435,17 @@ Item {
         if (windowNotes > 0) invoke(noteShown, "windowNotes");
     }
 
+    // The Layouts island, there while Split Rock's Core keeps layouts: a disc
+    // with the layouts' mark that opens Layouts in place, and beside it the
+    // layout opened last, which a tap opens again.
+    readonly property var layoutsDoors: activities.filter(activity => activity.kind === "layouts")
+    readonly property var layoutsDoor: layoutsDoors.length > 0 ? layoutsDoors[0] : null
+    readonly property var lastLayout: layoutsDoor && layoutsDoor.layoutId ? layoutsDoor : null
+    readonly property string lastLayoutTitle: lastLayout ? lastLayout.title || "" : ""
+    function openLastLayout() {
+        if (lastLayout) layoutRequested(lastLayout.layoutId);
+    }
+
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
     FontMetrics { id: smallMetrics; font.pixelSize: 11 }
@@ -489,6 +507,10 @@ Item {
     function pinnedWidth() {
         return Math.max(reach, 6 + beadSize + 6 + Math.min(150, textWidth(plainMetrics, pinnedTitle)) + 6);
     }
+    // The layout opened last, its name on one line within a finger's reach.
+    function lastLayoutWidth() {
+        return Math.max(reach, 6 + Math.min(150, textWidth(plainMetrics, lastLayoutTitle)) + 10);
+    }
     // Who receives the screen, on one line.
     function screenWords(who) {
         return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
@@ -546,6 +568,8 @@ Item {
         if (kind === "note")
             return 2 * inset + (has("dot") ? reach : 0) + (has("window") ? reach : 0)
                 + (has("pinned") ? pinnedWidth() : 0);
+        if (kind === "layouts")
+            return 2 * inset + (has("disc") ? reach : 0) + (has("last") ? lastLayoutWidth() : 0);
         return 0;
     }
 
@@ -582,6 +606,8 @@ Item {
         case "note.dot": return noteShown !== null;
         case "note.pinned": return pinnedNote !== null;
         case "note.window": return windowNotes > 0;
+        case "layouts.disc": return layoutsDoor !== null;
+        case "layouts.last": return lastLayout !== null && lastLayoutTitle !== "";
         }
         return false;
     }
@@ -594,7 +620,8 @@ Item {
         return kind === "media" ? mediaIsland : kind === "transfer" ? transferIsland
             : kind === "arrived" ? arrivedIsland : kind === "drive" ? driveIsland
             : kind === "screen" ? screenIsland : kind === "waiting" ? waitingIsland
-            : kind === "core" ? coreIsland : kind === "note" ? noteIsland : null;
+            : kind === "core" ? coreIsland : kind === "note" ? noteIsland
+            : kind === "layouts" ? layoutsIsland : null;
     }
     // Islands sit in the order they arrived, the fold last; each takes its
     // share as it comes and goes, so its neighbours move over as it does.
@@ -633,9 +660,11 @@ Item {
     // dialog with it. Core's island opens the card that does what it suggests,
     // or, for a fact that asks, opens in place with its answers; what a saved
     // layout left out, told once, opens Layouts in place.
-    // The quick note's island opens Search's Notes on the quick note.
+    // The quick note's island opens Search's Notes on the quick note, and
+    // Layouts' island opens Layouts in place.
     function open(kind) {
         if (kind === "note") drawerRequested("note");
+        else if (kind === "layouts") openRequested("layouts");
         else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
         else if (kind === "core" && coreAsks) openRequested("core");
@@ -649,10 +678,12 @@ Item {
     }
     // Where the open island grows from.
     function islandFor(kind) {
-        // Layouts and Quick actions, asked for from Search, grow from the
+        // Layouts grows from its own island where the band shows it; it and
+        // Quick actions, asked for from Search, otherwise grow from the
         // band's end.
         const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
-            : kind === "layouts" || kind === "quickActions" ? [] : [transferIsland, arrivedIsland];
+            : kind === "layouts" ? [layoutsIsland] : kind === "quickActions" ? []
+            : [transferIsland, arrivedIsland];
         for (const island of candidates)
             if (island.present) return island.shape;
         return bubble;
@@ -666,6 +697,7 @@ Item {
             : words.i18n("%1 is waiting, show it", waitingName);
         if (kind === "drive") return words.i18n("%1, open in Files", driveName);
         if (kind === "note") return words.i18n("New quick note");
+        if (kind === "layouts") return words.i18n("Layouts, open");
         if (kind === "core") return coreShown && coreShown.actionText
             ? words.i18n("%1, %2", coreName, coreShown.actionText) : coreName;
         return words.i18n("%1, open", endingName);
@@ -1811,6 +1843,78 @@ Item {
         }
     }
 
+    // Layouts' island: the disc with the layouts' mark, and the layout opened
+    // last beside it. A tap on the disc, or anywhere off the layout's name,
+    // opens Layouts in place; a tap on the name opens that layout. It stays:
+    // a drag does not carry it away.
+    BandIsland {
+        id: layoutsIsland
+        kind: "layouts"
+        steady: true
+        Piece {
+            island: layoutsIsland
+            name: "disc"
+            size: surface.reach
+            Rectangle {
+                objectName: "ambient-layouts-disc"
+                anchors.centerIn: parent
+                width: Math.max(16, surface.artSize - 4)
+                height: width
+                radius: width / 2
+                color: tone.wash(0.16)
+                Behavior on color { ColorAnimation { duration: surface.ms(200) } }
+                SuiteIcon {
+                    anchors.centerIn: parent
+                    width: Math.round(parent.width * 0.6)
+                    height: width
+                    glyph: "panels-top-left"
+                }
+            }
+        }
+        Piece {
+            id: lastLayoutPiece
+            island: layoutsIsland
+            name: "last"
+            size: surface.lastLayoutWidth()
+            Item {
+                id: lastLayoutButton
+                objectName: "ambient-layouts-last"
+                anchors.fill: parent
+                activeFocusOnTab: lastLayoutPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Open the layout %1", surface.lastLayoutTitle)
+                Accessible.onPressAction: surface.openLastLayout()
+                Keys.onReturnPressed: surface.openLastLayout()
+                Keys.onEnterPressed: surface.openLastLayout()
+                Keys.onSpacePressed: surface.openLastLayout()
+                Label {
+                    objectName: "ambient-layouts-last-title"
+                    x: 6
+                    width: Math.max(0, parent.width - x - 10)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: surface.lastLayoutTitle
+                    opacity: lastLayoutArea.pressed ? 0.6 : 1
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: lastLayoutButton.activeFocus
+                }
+                MouseArea {
+                    id: lastLayoutArea
+                    anchors.fill: parent
+                    onClicked: surface.openLastLayout()
+                }
+            }
+        }
+    }
+
     // What has no room of its own folds in here, counted.
     Rectangle {
         id: bubble
@@ -1891,6 +1995,13 @@ Item {
             height: width
             visible: surface.bubbleKind === "note"
             glyph: "plus"
+        }
+        SuiteIcon {
+            anchors.centerIn: parent
+            width: surface.artSize > 26 ? 20 : 16
+            height: width
+            visible: surface.bubbleKind === "layouts"
+            glyph: "panels-top-left"
         }
         Rectangle {
             objectName: "ambient-bubble-count"
