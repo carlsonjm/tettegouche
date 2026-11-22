@@ -91,6 +91,12 @@ track where the player gives one, so a late request cannot move the next track,
 and stays inside the track's length. Bringing a player forward needs the
 player's own permission to be raised.
 
+One process can register two players for the same sound, as Spotify does: its
+own, which names its desktop entry, and the Chromium engine's inside it, which
+names none and calls itself Chromium. Where a process has a player that names
+its desktop entry, a player beside it that names none is left out. Players that
+all name nothing, as a browser's tabs, all stay.
+
 ### Plasma desktop jobs
 
 Tettegouche shares Plasma's jobs model in process. Where Plasma's Notifications
