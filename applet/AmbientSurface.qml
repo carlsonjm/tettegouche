@@ -681,7 +681,7 @@ Item {
     // or, for a fact that asks, opens in place with its answers; what a saved
     // layout left out, told once, opens Layouts in place.
     // The quick note's + grows the quick note's card, as every island grows
-    // its own (J, 22 November), or opens Search's Notes where the notes
+    // its own, or opens Search's Notes where the notes
     // application has no quick note to offer; Layouts' island opens Layouts
     // in place.
     function open(kind) {

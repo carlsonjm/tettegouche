@@ -283,7 +283,7 @@ Window {
     }
 
     // Every open island's first line: its picture, its name, and after a
-    // dot what it holds, as "Layouts · 5 saved" (J, 22 November).
+    // dot what it holds, as "Layouts · 5 saved".
     component CardTitle: Row {
         id: cardTitle
         property string name
@@ -1719,7 +1719,7 @@ Window {
                         }
                     }
 
-                    // Done, then the full note, as the mock-up J approved.
+                    // Done first and filled, then the full note.
                     Flow {
                         objectName: "ambient-island-note-actions"
                         width: parent.width

@@ -270,8 +270,7 @@ island and nothing else changes.
 A saved layout that places an app on a display not connected now is left out
 of the list, and comes back when the display does; one saved before layouts
 kept displays always shows. While none is left, Layouts' island goes from the
-band, and Layouts opened from Search says the layouts wait for a display
-(J, 22 November).
+band, and Layouts opened from Search says the layouts wait for a display.
 
 ### Quick note
 
@@ -462,7 +461,7 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 ### The open card
 
 Every island that opens grows into the same card from where it stands in the
-band, and every card is laid out the same way (J, 22 November): first a title
+band, and every card is laid out the same way: first a title
 line, the island's picture, its name in 15 px demibold and, after a dot in the
 quiet ink, what it holds ("Layouts · 5 saved", "Music · Spotify", "Quick note ·
 Inbox", "Transfers · 2 files", "Quick actions · what to type in Search"); then

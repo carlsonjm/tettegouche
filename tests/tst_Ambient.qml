@@ -1277,7 +1277,7 @@ TestCase {
         compare(drawers.signalArguments[0][0], "note");
         compare(opens.count, 0);
         // Where the notes application offers its quick note, the + grows
-        // the note's card from itself instead (J, 22 November).
+        // the note's card from itself instead.
         surface.noteCard = true;
         mouseClick(dot, dot.width / 2, dot.height / 2);
         compare(drawers.count, 1);

@@ -407,7 +407,7 @@ private Q_SLOTS:
     // setting it aside takes the row away, and Core hears nothing of it.
     // A layout placed on a display that isn't connected waits out of sight,
     // and the island goes when nothing is left; one saved before layouts kept
-    // displays always shows (J, 22 November).
+    // displays always shows.
     void aLayoutWaitsForItsDisplay() {
         FakeCore core;
         core.keepsLayouts = true;

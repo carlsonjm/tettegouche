@@ -364,7 +364,7 @@ QVariantMap CoreFactProvider::lastOpened() const {
 }
 
 // The island goes when no saved layout can be opened on the displays
-// connected now, and comes back with one (J, 22 November).
+// connected now, and comes back with one.
 QVariantList CoreFactProvider::layoutsDoor() const {
     if (!m_keepsLayouts || layouts().isEmpty()) return {};
     QVariantMap row{{QStringLiteral("id"), QString::fromLatin1(LayoutsDoor)}, {QStringLiteral("generation"), m_generation},

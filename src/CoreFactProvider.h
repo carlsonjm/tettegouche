@@ -68,7 +68,7 @@ public:
     // last took it (opened, ISO 8601, empty when never).
     // Only the layouts the displays connected now can hold: a layout that
     // places apps on a display that isn't connected is left out until it is
-    // (J, 22 November), and one saved before layouts kept displays always
+    //, and one saved before layouts kept displays always
     // shows.
     QList<QVariantMap> layouts() const;
     // How many saved layouts wait for a display that isn't connected.
