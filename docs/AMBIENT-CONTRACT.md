@@ -205,9 +205,8 @@ Core island and nothing else changes.
 ### Layouts
 
 Search's Layouts result opens the Layouts island in place, the way a Core
-question does, except that it stands above the band, its foot 8 px over the
-island it grew from, as the dock's sheets and folders do, so the band and the
-dock stay in sight beneath it: grown up from the band's end over the desk, on a surface of its
+question does: dropped out of the island it grew from, as every island's
+card is, or grown up from the band's end over the desk, on a surface of its
 own that is never a window Cards takes as a card, so it never becomes part of a
 layout. It opens once, on the first widget on Search's display to hear the
 ask, with its islands shown or not; where they are not, it grows from the dot.
@@ -217,8 +216,9 @@ change.
 
 The island's title reads "Layouts · 2 saved". Each saved layout is one line,
 56 tall: its picture, each display it stood on drawn small, left to right,
-with each window seen there where it sat (a layout kept without places is one
-display, a column for each group); its name; beneath the name each group's
+with each window seen there where it sat and its front app's icon in it, as
+Settings' map of a layout shows them (a layout kept without places is one
+display, a column for each group, each with its icon); its name; beneath the name each group's
 front app by its icon from the app menu, then its apps by the menu's names,
 group by group, "Zen Browser · Stack of Mail, Ghostty · Claude"; then an Open
 pill, 32 tall, the first row's filled. Past what fits, the island scrolls. A tap on a row off its pill shows its own Remove
@@ -244,7 +244,9 @@ and opens nothing. Core is told nothing of either.
 While Core keeps layouts, Layouts' own island stands in the band after the
 quick note's. A door island's button joins the quick note's as one row of
 actions: while the quick note's island is there, Layouts' disc is a button of
-that island, beside its +, each with its full 44 px, and Layouts' island holds
+that island, beside its +, and the window notes' dot after them, each with its
+full 44 px; an action's disc fills its reach but for 8 px, the dock's step
+between icons, and the pinned note's words follow the buttons. Layouts' island holds
 only the name of the layout opened last, one small step (Kirigami's small
 spacing) after the note's own words, where islands keep the band's full gap.
 While the quick note's island shows, the two buttons stay together; the

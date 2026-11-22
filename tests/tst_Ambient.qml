@@ -919,7 +919,8 @@ TestCase {
         compare(findChild(opened.contentItem, "ambient-island-layout-apps-1").text,
                 "Stack of Ghostty, Claude · Zen · Stack of Mail, Notes, Files");
         verify(findChild(opened.contentItem, "ambient-island-layout-1").height <= 64);
-        verify(opened.openY + opened.openHeight <= 540);
+        // It drops out of its island, as every island's card does.
+        verify(Math.abs(opened.openY + opened.openHeight - (540 + 44)) < 1);
         const first = findChild(opened.contentItem, "ambient-island-layout-open-1");
         const second = findChild(opened.contentItem, "ambient-island-layout-open-2");
         compare(first.label, "Open");
@@ -964,7 +965,7 @@ TestCase {
                 {apps: ["settings"], names: ["Settings"], stack: false, display: "eDP-1", shown: true,
                  displayX: 0, displayY: 0, displayWidth: 1280, displayHeight: 800,
                  pictureX: 0, pictureY: 0, pictureWidth: 1, pictureHeight: 1},
-                {apps: ["ferrite"], names: ["Ferrite"], stack: false, display: "DP-1", shown: true,
+                {apps: ["ferrite"], names: ["Ferrite"], icons: ["ferrite-icon"], stack: false, display: "DP-1", shown: true,
                  displayX: 1280, displayY: 0, displayWidth: 2194, displayHeight: 1463,
                  pictureX: 0.5, pictureY: 0, pictureWidth: 0.5, pictureHeight: 1}]}]});
         const opened = openLayouts(host);
@@ -972,6 +973,7 @@ TestCase {
         compare(picture.desk.length, 2);
         compare(picture.desk[0].name, "eDP-1");
         compare(picture.desk[1].windows.length, 1);
+        compare(picture.desk[1].windows[0].icon, "ferrite-icon");
         compare(findChild(opened.contentItem, "ambient-island-layout-apps-5").text, "Settings · Ferrite");
     }
 
@@ -1217,6 +1219,10 @@ TestCase {
         const beside = findChild(surface, "ambient-note-layouts");
         verify(beside.visible);
         verify(beside.width >= 44 && beside.height >= 44);
+        // The two discs a dock's step apart: each fills its reach but 8 px.
+        const plus = findChild(surface, "ambient-note-dot");
+        const panels = beside.children[0];
+        compare(Math.round(leftOf(surface, panels) - rightOf(surface, plus)), 8);
         verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "layouts")));
         verify(leftOf(surface, island(surface, "layouts")) - rightOf(surface, island(surface, "note")) < surface.gap);
         verify(rightOf(surface, island(surface, "layouts")) <= leftOf(surface, island(surface, "media")));
@@ -1231,7 +1237,7 @@ TestCase {
     }
 
     // The window in use's notes join the island as Gooseberry's dot, with
-    // their count, after the pinned note; ringed while they are up, and a
+    // their count, among its buttons before the pinned note; ringed while they are up, and a
     // tap asks for them either way. Narrow, the pinned note goes first.
     function test_the_window_notes_on_the_quick_note_island() {
         const pinned = {id: "note", generation: 2, kind: "note", state: "running", capabilities: {},
@@ -1250,7 +1256,8 @@ TestCase {
         const button = findChild(surface, "ambient-note-window");
         verify(button.visible);
         verify(button.width >= 44 && button.height >= 44);
-        verify(leftOf(surface, button) >= rightOf(surface, findChild(surface, "ambient-note-pinned")));
+        // A button, it stands with the + before the pinned note's words.
+        verify(rightOf(surface, button) <= leftOf(surface, findChild(surface, "ambient-note-pinned")));
         const dot = findChild(surface, "ambient-note-window-dot");
         compare(dot.width, 18);
         verify(Qt.colorEqual(dot.color, "#7FB8F0"));

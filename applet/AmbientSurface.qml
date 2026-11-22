@@ -87,6 +87,10 @@ Item {
     readonly property real inset: outlined ? 6 : 0
     // Between two door islands, the quick note's and Layouts': one small step.
     readonly property real doorGap: outlined ? 4 : Kirigami.Units.smallSpacing
+    // An action's disc: the + and Layouts' panels, each in its full reach,
+    // fill it but for the dock's own step between icons, 8 px, so buttons
+    // standing together read as one row of actions.
+    readonly property real actionDisc: Math.max(16, reach - 8)
     readonly property real margin: outlined || align === "center" ? 0 : gap
     // Art, a ring or a mark sits as far from the pill's edge as its top.
     readonly property real lead: pillHeight - 12
@@ -1709,7 +1713,7 @@ Item {
             Rectangle {
                 objectName: "ambient-note-dot"
                 anchors.centerIn: parent
-                width: Math.max(16, surface.artSize - 4)
+                width: surface.actionDisc
                 height: width
                 radius: width / 2
                 color: tone.wash(0.16)
@@ -1742,7 +1746,7 @@ Item {
                 Keys.onSpacePressed: surface.open("layouts")
                 Rectangle {
                     anchors.centerIn: parent
-                    width: Math.max(16, surface.artSize - 4)
+                    width: surface.actionDisc
                     height: width
                     radius: width / 2
                     color: tone.wash(layoutsDoorArea.pressed ? 0.24 : 0.16)
@@ -1768,58 +1772,6 @@ Item {
                     id: layoutsDoorArea
                     anchors.fill: parent
                     onClicked: surface.open("layouts")
-                }
-            }
-        }
-        Piece {
-            id: pinnedPiece
-            island: noteIsland
-            name: "pinned"
-            size: surface.pinnedWidth()
-            Item {
-                id: pinnedButton
-                objectName: "ambient-note-pinned"
-                anchors.fill: parent
-                activeFocusOnTab: pinnedPiece.showing
-                Accessible.role: Accessible.Button
-                Accessible.name: words.i18n("Pinned note: %1", surface.pinnedTitle)
-                Accessible.onPressAction: surface.openPinned()
-                Keys.onReturnPressed: surface.openPinned()
-                Keys.onEnterPressed: surface.openPinned()
-                Keys.onSpacePressed: surface.openPinned()
-                Rectangle {
-                    objectName: "ambient-note-bead"
-                    x: 6
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: surface.beadSize
-                    height: width
-                    radius: width / 2
-                    color: surface.pinnedColour
-                    scale: pinnedArea.pressed ? 1.2 : 1
-                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
-                }
-                Label {
-                    objectName: "ambient-note-title"
-                    x: 6 + surface.beadSize + 6
-                    width: Math.max(0, parent.width - x - 6)
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: surface.pinnedTitle
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.topMargin: 6
-                    anchors.bottomMargin: 6
-                    radius: height / 2
-                    color: "transparent"
-                    border.width: 1
-                    border.color: tone.text
-                    opacity: 0.6
-                    visible: pinnedButton.activeFocus
-                }
-                MouseArea {
-                    id: pinnedArea
-                    anchors.fill: parent
-                    onClicked: surface.openPinned()
                 }
             }
         }
@@ -1902,6 +1854,58 @@ Item {
                 }
             }
         }
+        Piece {
+            id: pinnedPiece
+            island: noteIsland
+            name: "pinned"
+            size: surface.pinnedWidth()
+            Item {
+                id: pinnedButton
+                objectName: "ambient-note-pinned"
+                anchors.fill: parent
+                activeFocusOnTab: pinnedPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Pinned note: %1", surface.pinnedTitle)
+                Accessible.onPressAction: surface.openPinned()
+                Keys.onReturnPressed: surface.openPinned()
+                Keys.onEnterPressed: surface.openPinned()
+                Keys.onSpacePressed: surface.openPinned()
+                Rectangle {
+                    objectName: "ambient-note-bead"
+                    x: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: surface.beadSize
+                    height: width
+                    radius: width / 2
+                    color: surface.pinnedColour
+                    scale: pinnedArea.pressed ? 1.2 : 1
+                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
+                }
+                Label {
+                    objectName: "ambient-note-title"
+                    x: 6 + surface.beadSize + 6
+                    width: Math.max(0, parent.width - x - 6)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: surface.pinnedTitle
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: pinnedButton.activeFocus
+                }
+                MouseArea {
+                    id: pinnedArea
+                    anchors.fill: parent
+                    onClicked: surface.openPinned()
+                }
+            }
+        }
     }
 
     // Layouts' island: the disc with the layouts' mark, and the layout opened
@@ -1919,7 +1923,7 @@ Item {
             Rectangle {
                 objectName: "ambient-layouts-disc"
                 anchors.centerIn: parent
-                width: Math.max(16, surface.artSize - 4)
+                width: surface.actionDisc
                 height: width
                 radius: width / 2
                 color: tone.wash(0.16)

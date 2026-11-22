@@ -6,11 +6,11 @@ history carries the implementation detail.
 ## Unreleased
 
 - Layouts' button stands beside the quick note's + as one row of actions,
-  with the name of the layout opened last after them, rather than spaced as
-  two islands.
-- Layouts opens above the band, and each saved layout is one line: a small
-  picture of where its windows sat, its name, its apps by their icons and
-  menu names ("Stack of Mail, Ghostty"), and Open.
+  a dock's step apart, with the window notes' dot after them and the pinned
+  note and the layout opened last following the buttons.
+- Each saved layout in Layouts is one line: a small picture of where its
+  windows sat with each app's icon in its place, its name, its apps by their
+  icons and menu names ("Stack of Mail, Ghostty"), and Open.
 - An island from Split Rock's Core tells Core which display it was tapped
   on, so the notifications it opens, opens there alone, not on every
   display.

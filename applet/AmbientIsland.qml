@@ -47,10 +47,8 @@ Window {
     // as a panel tucked away under another surface does, is taken as ending
     // at the display's edge, so the card's foot stays on it.
     readonly property real bandFoot: Math.min(start.y + start.height, height)
-    // Layouts, a list, opens above the band as the dock's sheets and folders
-    // do, so the band and the dock stay in sight beneath it.
-    readonly property bool aboveBand: kind === "layouts"
-    readonly property real cardFoot: aboveBand ? Math.max(128, Math.min(start.y, bandFoot) - 8) : bandFoot
+    // Every card, Layouts' too, drops out of the island it grew from.
+    readonly property real cardFoot: bandFoot
     readonly property real openRoom: Math.max(120, cardFoot - 8)
     readonly property real openHeight: Math.min(content.implicitHeight + 36, openRoom)
     readonly property real openX: Math.max(8, Math.min(width - 8 - openWidth,
@@ -283,7 +281,8 @@ Window {
                     displays.push(on);
                 }
                 if (g.shown && g.pictureWidth > 0 && g.pictureHeight > 0)
-                    on.windows.push({ x: g.pictureX, y: g.pictureY, w: g.pictureWidth, h: g.pictureHeight });
+                    on.windows.push({ x: g.pictureX, y: g.pictureY, w: g.pictureWidth, h: g.pictureHeight,
+                                      icon: g.icons && g.icons[0] ? g.icons[0] : "" });
             }
             return displays.sort((a, b) => a.x - b.x);
         }
@@ -316,6 +315,14 @@ Window {
                         height: Math.max(2, modelData.h * (shown.height - 2) - 1)
                         radius: 2
                         color: tone.wash(0.40)
+                        // The app in front there, by its icon, as Settings' map shows it.
+                        Kirigami.Icon {
+                            anchors.centerIn: parent
+                            width: Math.min(16, parent.width - 2, parent.height - 2)
+                            height: width
+                            visible: width >= 6 && parent.modelData.icon !== ""
+                            source: parent.modelData.icon
+                        }
                     }
                 }
             }
@@ -335,10 +342,19 @@ Window {
                 Repeater {
                     model: Math.max(1, Math.min(4, picture.groups.length))
                     delegate: Rectangle {
+                        required property int index
+                        readonly property var group: picture.groups[index] || ({})
                         width: (parent.width - 2 * (Math.max(1, Math.min(4, picture.groups.length)) - 1)) / Math.max(1, Math.min(4, picture.groups.length))
                         height: parent.height
                         radius: 2
                         color: tone.wash(0.40)
+                        Kirigami.Icon {
+                            anchors.centerIn: parent
+                            width: Math.min(16, parent.width - 2, parent.height - 2)
+                            height: width
+                            visible: width >= 6 && !!(parent.group.icons && parent.group.icons[0])
+                            source: parent.group.icons && parent.group.icons[0] ? parent.group.icons[0] : ""
+                        }
                     }
                 }
             }
