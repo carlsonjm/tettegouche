@@ -912,12 +912,14 @@ TestCase {
         compare(findChild(opened.contentItem, "ambient-island-layouts-count").text, " · 2 saved");
         verify(!findChild(opened.contentItem, "ambient-island-layouts-none").visible);
         verify(findChild(opened.contentItem, "ambient-island-layout-at-sign-in-1") === null);
-        // Each group a card in the miniature, three for Coding.
-        const miniature = findChild(opened.contentItem, "ambient-island-layout-miniature-1");
-        let cards = 0;
-        for (let i = 0; i < miniature.children.length; ++i)
-            if (miniature.children[i].names !== undefined) ++cards;
-        compare(cards, 3);
+        // One line each: its picture, its name, and its apps group by group,
+        // a Stack named as one; the card stands above the band.
+        verify(findChild(opened.contentItem, "ambient-island-layout-miniature-1").visible);
+        compare(findChild(opened.contentItem, "ambient-island-layout-name-1").text, "Coding");
+        compare(findChild(opened.contentItem, "ambient-island-layout-apps-1").text,
+                "Stack of Ghostty, Claude · Zen · Stack of Mail, Notes, Files");
+        verify(findChild(opened.contentItem, "ambient-island-layout-1").height <= 64);
+        verify(opened.openY + opened.openHeight <= 540);
         const first = findChild(opened.contentItem, "ambient-island-layout-open-1");
         const second = findChild(opened.contentItem, "ambient-island-layout-open-2");
         compare(first.label, "Open");
@@ -952,6 +954,25 @@ TestCase {
         opened.show();
         tryVerify(() => opened.expanded);
         verify(opened.openY + opened.openHeight <= opened.height);
+    }
+
+    // A layout kept with its place is drawn as its displays, each window
+    // where it sat as a share of its display.
+    function test_a_layout_picture_draws_its_desk() {
+        const host = createTemporaryObject(layoutsComponent, testCase, {layouts: [
+            {id: "5", name: "Dev", atSignIn: false, groups: [
+                {apps: ["settings"], names: ["Settings"], stack: false, display: "eDP-1", shown: true,
+                 displayX: 0, displayY: 0, displayWidth: 1280, displayHeight: 800,
+                 pictureX: 0, pictureY: 0, pictureWidth: 1, pictureHeight: 1},
+                {apps: ["ferrite"], names: ["Ferrite"], stack: false, display: "DP-1", shown: true,
+                 displayX: 1280, displayY: 0, displayWidth: 2194, displayHeight: 1463,
+                 pictureX: 0.5, pictureY: 0, pictureWidth: 0.5, pictureHeight: 1}]}]});
+        const opened = openLayouts(host);
+        const picture = findChild(opened.contentItem, "ambient-island-layout-miniature-5");
+        compare(picture.desk.length, 2);
+        compare(picture.desk[0].name, "eDP-1");
+        compare(picture.desk[1].windows.length, 1);
+        compare(findChild(opened.contentItem, "ambient-island-layout-apps-5").text, "Settings · Ferrite");
     }
 
     // With none saved, the island says how to make one.
@@ -1189,11 +1210,24 @@ TestCase {
         const note = {id: "note", generation: 1, kind: "note", state: "running", capabilities: {}};
         surface.activities = [media, last, note];
         settle();
+        // Beside the quick note's, its disc joins the note's button as one
+        // row of actions, and the layout's name follows a small step after.
+        compare(shown(surface, "note"), ["dot", "door"]);
+        compare(shown(surface, "layouts"), ["last"]);
+        const beside = findChild(surface, "ambient-note-layouts");
+        verify(beside.visible);
+        verify(beside.width >= 44 && beside.height >= 44);
         verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "layouts")));
+        verify(leftOf(surface, island(surface, "layouts")) - rightOf(surface, island(surface, "note")) < surface.gap);
         verify(rightOf(surface, island(surface, "layouts")) <= leftOf(surface, island(surface, "media")));
+        const fromNote = spyOn(surface, "openRequested");
+        mouseClick(beside, beside.width / 2, beside.height / 2);
+        compare(fromNote.count, 1);
+        compare(fromNote.signalArguments[0][0], "layouts");
+        // Short of room, the buttons stay together whatever goes.
         surface.width = 300;
         settle();
-        compare(shown(surface, "layouts"), ["disc"]);
+        compare(shown(surface, "note"), ["dot", "door"]);
     }
 
     // The window in use's notes join the island as Gooseberry's dot, with

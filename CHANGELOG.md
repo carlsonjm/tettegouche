@@ -5,6 +5,12 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Layouts' button stands beside the quick note's + as one row of actions,
+  with the name of the layout opened last after them, rather than spaced as
+  two islands.
+- Layouts opens above the band, and each saved layout is one line: a small
+  picture of where its windows sat, its name, its apps by their icons and
+  menu names ("Stack of Mail, Ghostty"), and Open.
 - Layouts has its own island in the band, after the quick note's, while
   Split Rock keeps saved layouts: its disc opens Layouts in place, and the
   name of the layout opened last, beside it, opens that layout in one tap.

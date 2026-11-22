@@ -205,7 +205,9 @@ Core island and nothing else changes.
 ### Layouts
 
 Search's Layouts result opens the Layouts island in place, the way a Core
-question does: grown up from the band's end over the desk, on a surface of its
+question does, except that it stands above the band, its foot 8 px over the
+island it grew from, as the dock's sheets and folders do, so the band and the
+dock stay in sight beneath it: grown up from the band's end over the desk, on a surface of its
 own that is never a window Cards takes as a card, so it never becomes part of a
 layout. It opens once, on the first widget on Search's display to hear the
 ask, with its islands shown or not; where they are not, it grows from the dot.
@@ -213,11 +215,13 @@ Its foot stays on the display even where the band reaches past it. Split Rock's 
 layouts; the island reads them from Core (`Layouts()`) and asks Core for every
 change.
 
-The island's title reads "Layouts · 2 saved". Each saved layout is a row: its
-name and its miniature, each
-group a small card, 6 px corners, naming its front app, a Stack's cards fanned
-5 px behind it, and the group's apps beneath; then an Open pill, 32 tall, the
-first row's filled. A tap on a row off its pill shows its own Remove
+The island's title reads "Layouts · 2 saved". Each saved layout is one line,
+56 tall: its picture, each display it stood on drawn small, left to right,
+with each window seen there where it sat (a layout kept without places is one
+display, a column for each group); its name; beneath the name each group's
+front app by its icon from the app menu, then its apps by the menu's names,
+group by group, "Zen Browser · Stack of Mail, Ghostty · Claude"; then an Open
+pill, 32 tall, the first row's filled. Past what fits, the island scrolls. A tap on a row off its pill shows its own Remove
 (`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
 brings apps back. With none saved,
 a line says how to make one. Below the rows are the pills Save what's open,
@@ -238,7 +242,14 @@ takes it away and opens Layouts; setting it aside, or a minute, takes it away
 and opens nothing. Core is told nothing of either.
 
 While Core keeps layouts, Layouts' own island stands in the band after the
-quick note's: a disc with the layouts' mark, Lucide's panels on a faint disc
+quick note's. A door island's button joins the quick note's as one row of
+actions: while the quick note's island is there, Layouts' disc is a button of
+that island, beside its +, each with its full 44 px, and Layouts' island holds
+only the name of the layout opened last, one small step (Kirigami's small
+spacing) after the note's own words, where islands keep the band's full gap.
+While the quick note's island shows, the two buttons stay together; the
+names go first.
+Without the quick note's island, Layouts' island is a disc with the layouts' mark, Lucide's panels on a faint disc
 of the style's ink, and beside it the name of the layout opened last, one
 line, elided where long. A tap on the disc, or on the island off the name,
 opens the Layouts island in place, grown from it; a tap on the name opens that
@@ -358,7 +369,7 @@ together and settle without overshoot.
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
 | Core | icon, what it is and how it stands, Don't tell me again (Windows programs only), detail and what can be done |
-| Quick note | dot with a plus, pinned note (its bead and first words) |
+| Quick note | dot with a plus, Layouts' disc while Layouts' island is there, pinned note (its bead and first words) |
 | Layouts | disc with the layouts' mark, the layout opened last |
 
 Beside a neighbour, an island reads what it is, then its words, then its

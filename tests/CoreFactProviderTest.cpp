@@ -4,6 +4,7 @@
 #include <QDBusMetaType>
 #include <QJsonDocument>
 #include <QSignalSpy>
+#include <QStandardPaths>
 #include <QTest>
 
 // A stand-in for Split Rock's Core on the test's own bus: its facts, and what
@@ -95,10 +96,22 @@ QVariantMap group(const QStringList &apps, const QStringList &names) {
 }
 
 // Coding: Ghostty stacked with Claude, then Zen on its own.
+// A group with the place Cards keeps for it: its display, and where it was
+// drawn there as shares of it.
+QVariantMap placed(QVariantMap group) {
+    group.insert(QStringLiteral("display"), QStringLiteral("DP-1"));
+    group.insert(QStringLiteral("shown"), true);
+    group.insert(QStringLiteral("pictureX"), 0.0);
+    group.insert(QStringLiteral("pictureY"), 0.0);
+    group.insert(QStringLiteral("pictureWidth"), 0.5);
+    group.insert(QStringLiteral("pictureHeight"), 1.0);
+    return group;
+}
+
 QVariantMap coding(bool atSignIn) {
     return {{QStringLiteral("id"), QStringLiteral("1")}, {QStringLiteral("name"), QStringLiteral("Coding")},
             {QStringLiteral("groups"), QVariant::fromValue(QList<QVariantMap>{
-                group({QStringLiteral("com.mitchellh.ghostty"), QStringLiteral("claude")}, {QStringLiteral("Ghostty"), QStringLiteral("Claude")}),
+                placed(group({QStringLiteral("com.mitchellh.ghostty"), QStringLiteral("claude")}, {QStringLiteral("Ghostty"), QStringLiteral("Claude")})),
                 group({QStringLiteral("app.zen_browser.zen")}, {QStringLiteral("Zen")})})},
             {QStringLiteral("atSignIn"), atSignIn}};
 }
@@ -113,7 +126,11 @@ QVariantMap rowOf(const CoreFactProvider &provider, const QString &id) {
 class CoreFactProviderTest : public QObject {
     Q_OBJECT
 private Q_SLOTS:
-    void initTestCase() { qDBusRegisterMetaType<QList<QVariantMap>>(); }
+    void initTestCase() {
+        qDBusRegisterMetaType<QList<QVariantMap>>();
+        // The menu this machine has names nothing here: Core's names stand.
+        QStandardPaths::setTestModeEnabled(true);
+    }
 
     // Without Core there are no rows and no facts, and nothing is asked.
     void noCoreNoRows() {
@@ -318,6 +335,10 @@ private Q_SLOTS:
         QVERIFY(groups.at(0).toMap().value(QStringLiteral("stack")).toBool());
         QCOMPARE(groups.at(1).toMap().value(QStringLiteral("apps")).toStringList(), QStringList{QStringLiteral("app.zen_browser.zen")});
         QVERIFY(!groups.at(1).toMap().value(QStringLiteral("stack")).toBool());
+        // Each app's icon where the menu has one, and the place Cards kept.
+        QCOMPARE(groups.at(0).toMap().value(QStringLiteral("icons")).toStringList().size(), 2);
+        QCOMPARE(groups.at(0).toMap().value(QStringLiteral("display")).toString(), QStringLiteral("DP-1"));
+        QCOMPARE(groups.at(0).toMap().value(QStringLiteral("pictureWidth")).toDouble(), 0.5);
 
         // What is open now, an app the menu doesn't name named by its id.
         QSignalSpy read(&provider, &CoreFactProvider::currentLayoutRead);

@@ -251,7 +251,8 @@ than repeat it.
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
 | Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Starts a quick note on Gooseberry's own card. |
 | Tap or click the pinned note on the quick note's island | Opens that note on Gooseberry's own card. |
-| Tap or click the disc on Layouts' island, or the island away from the layout's name | Opens the Layouts island in place, grown from it. |
+| Tap or click the disc on Layouts' island, or the island away from the layout's name | Opens the Layouts island in place, above the band. |
+| Tap or click Layouts' disc beside the quick note's + | Opens the Layouts island in place, above the band. |
 | Tap or click the layout's name on Layouts' island | Split Rock's Core opens the layout opened last again. |
 | Tap or click another island away from its controls | Opens it in place, larger. The quick note's island opens nothing in place. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |

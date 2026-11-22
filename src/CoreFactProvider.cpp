@@ -1,5 +1,6 @@
 #include "CoreFactProvider.h"
 
+#include <KService>
 #include <QDateTime>
 #include <QDBusArgument>
 #include <QDBusConnectionInterface>
@@ -83,8 +84,9 @@ QList<QVariantMap> mapsOf(const QVariant &value) {
     return maps;
 }
 
-// A layout's groups as they come from the bus, made plain. A group without
-// apps is left out; names stand in for apps the menu doesn't name.
+// A layout's groups as they come from the bus, made plain, each with its
+// place as Cards kept it. A group without apps is left out; the menu names
+// each app and gives its icon, and Core's names stand in where it can't.
 QVariantList groupsOf(const QVariant &value) {
     QVariantList groups;
     for (const auto &group : mapsOf(value)) {
@@ -96,8 +98,22 @@ QVariantList groupsOf(const QVariant &value) {
             else if (names.at(i).isEmpty()) names[i] = apps.at(i);
         }
         names = names.mid(0, apps.size());
-        groups.append(QVariantMap{{QStringLiteral("apps"), apps}, {QStringLiteral("names"), names},
-                                  {QStringLiteral("stack"), apps.size() > 1 && group.value(QStringLiteral("stack")).toBool()}});
+        // The menu's own name and icon for each app, where it knows the app.
+        QStringList icons;
+        for (qsizetype i = 0; i < apps.size(); ++i) {
+            QString id = apps.at(i);
+            if (id.endsWith(QStringLiteral(".desktop"))) id.chop(8);
+            KService::Ptr service = KService::serviceByDesktopName(id);
+            if (!service) service = KService::serviceByStorageId(id + QStringLiteral(".desktop"));
+            if (service && !service->name().isEmpty()) names[i] = service->name();
+            icons.append(service ? service->icon() : QString());
+        }
+        QVariantMap plain = group;
+        plain.insert(QStringLiteral("apps"), apps);
+        plain.insert(QStringLiteral("names"), names);
+        plain.insert(QStringLiteral("icons"), icons);
+        plain.insert(QStringLiteral("stack"), apps.size() > 1 && group.value(QStringLiteral("stack")).toBool());
+        groups.append(plain);
     }
     return groups;
 }

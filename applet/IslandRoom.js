@@ -46,8 +46,10 @@ var PIECES = {
     core: [
         { id: "icon" }, { id: "name" }, { id: "never" }, { id: "detail" },
     ],
+    // A door island's button joins the quick note's, as one row of actions:
+    // Layouts' disc stands beside the note's while both are here.
     note: [
-        { id: "dot" }, { id: "window" }, { id: "pinned" },
+        { id: "dot" }, { id: "door", withFirst: true }, { id: "window" }, { id: "pinned" },
     ],
     layouts: [
         { id: "disc" }, { id: "last" },
@@ -69,6 +71,14 @@ function own(kind, available) {
     });
 }
 
+// What an island keeps whatever the room: its first piece, and any piece
+// that stands with it, as a door's button stands with the note's.
+function firstOf(pieces) {
+    var ids = [pieces[0].id];
+    for (var i = 1; i < pieces.length; ++i) if (pieces[i].withFirst) ids.push(pieces[i].id);
+    return ids;
+}
+
 function withRiders(kind, items, available) {
     var all = items.slice();
     (PIECES[kind] || []).forEach(function (p) {
@@ -88,8 +98,9 @@ function layout(kinds, room, width, measure, available, gap, bubble) {
         var k = order[i];
         var pieces = own(k, available);
         if (!pieces.length) continue;
-        var cost = measure(k, [pieces[0].id]) + (shown.length ? gap : 0);
-        if (used + cost <= width) { shown.push({ kind: k, items: [pieces[0].id] }); used += cost; }
+        var first = firstOf(pieces);
+        var cost = measure(k, first) + (shown.length ? gap : 0);
+        if (used + cost <= width) { shown.push({ kind: k, items: first }); used += cost; }
         else folded.push(k);
     }
     if (folded.length) {
@@ -106,7 +117,7 @@ function layout(kinds, room, width, measure, available, gap, bubble) {
     function turns(names) {
         for (i = 0; i < shown.length; ++i) {
             s = shown[i];
-            s.queue = own(s.kind, available).slice(1).filter(function (p) { return !!p.name === names; });
+            s.queue = own(s.kind, available).slice(1).filter(function (p) { return !p.withFirst && !!p.name === names; });
         }
         for (;;) {
             var any = false;
@@ -155,7 +166,7 @@ function minimumWidth(kinds, measure, available, gap) {
     for (var i = 0; i < kinds.length; ++i) {
         var pieces = own(kinds[i], available);
         if (!pieces.length) continue;
-        total += measure(kinds[i], [pieces[0].id]) + (count ? gap : 0);
+        total += measure(kinds[i], firstOf(pieces)) + (count ? gap : 0);
         ++count;
     }
     return Math.ceil(total);

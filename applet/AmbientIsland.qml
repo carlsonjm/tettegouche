@@ -47,11 +47,15 @@ Window {
     // as a panel tucked away under another surface does, is taken as ending
     // at the display's edge, so the card's foot stays on it.
     readonly property real bandFoot: Math.min(start.y + start.height, height)
-    readonly property real openRoom: Math.max(120, bandFoot - 8)
+    // Layouts, a list, opens above the band as the dock's sheets and folders
+    // do, so the band and the dock stay in sight beneath it.
+    readonly property bool aboveBand: kind === "layouts"
+    readonly property real cardFoot: aboveBand ? Math.max(128, Math.min(start.y, bandFoot) - 8) : bandFoot
+    readonly property real openRoom: Math.max(120, cardFoot - 8)
     readonly property real openHeight: Math.min(content.implicitHeight + 36, openRoom)
     readonly property real openX: Math.max(8, Math.min(width - 8 - openWidth,
         Math.max(sideLeft, Math.min(sideRight - openWidth, start.x + start.width / 2 - openWidth / 2))))
-    readonly property real openY: Math.max(8, bandFoot - openHeight)
+    readonly property real openY: Math.max(8, cardFoot - openHeight)
     readonly property var activity: kind === "media" ? (surface ? surface.player : null) : null
     // The fact from Core the card answers, while Core still asks it.
     readonly property var question: kind === "core" && surface && surface.coreAsks ? surface.coreShown : null
@@ -124,6 +128,17 @@ Window {
         function onCurrentLayoutChanged() { overlay.takeCurrent(); }
     }
     // Open, Save and Not now close the island; Core and Cards do the rest.
+    // A layout's apps in one line, group by group: "Zen Browser · Stack of
+    // Mail, Ghostty · Claude".
+    function appsLine(groups) {
+        return groups.map(group => {
+            const names = group.names && group.names.length ? group.names : (group.apps || []);
+            return names.length > 1 && group.stack
+                ? words.i18nc("@info a Stack of apps in a saved layout", "Stack of %1", names.join(words.i18nc("@info between apps in a Stack", ", ")))
+                : names.join(words.i18nc("@info between apps in a Stack", ", "));
+        }).join(words.i18nc("@info between a saved layout's groups", " · "));
+    }
+
     function openLayout(id) {
         if (layouts) layouts.openLayout(id);
         dismiss();
@@ -251,59 +266,80 @@ Window {
 
     // A saved layout drawn small: each group a card, a Stack's cards fanned
     // 5 px behind its front one, and its apps' names beneath.
-    component Miniature: Flow {
-        id: miniature
+    // A saved layout's desk, drawn small: each display it stood on, left to
+    // right, with the windows that were seen there, as shares of it. A layout
+    // kept without places is one display, its groups side by side.
+    component LayoutPicture: Item {
+        id: picture
         property var groups: []
-        spacing: 8
+        readonly property var desk: {
+            const displays = [];
+            for (const g of groups) {
+                if (!g.display || !(g.displayWidth > 0) || !(g.displayHeight > 0)) return [];
+                let on = displays.find(d => d.name === g.display);
+                if (!on) {
+                    on = { name: g.display, x: Number(g.displayX) || 0, y: Number(g.displayY) || 0,
+                           w: g.displayWidth, h: g.displayHeight, windows: [] };
+                    displays.push(on);
+                }
+                if (g.shown && g.pictureWidth > 0 && g.pictureHeight > 0)
+                    on.windows.push({ x: g.pictureX, y: g.pictureY, w: g.pictureWidth, h: g.pictureHeight });
+            }
+            return displays.sort((a, b) => a.x - b.x);
+        }
+        readonly property real deskLeft: desk.length ? Math.min(...desk.map(d => d.x)) : 0
+        readonly property real deskTop: desk.length ? Math.min(...desk.map(d => d.y)) : 0
+        readonly property real across: desk.length ? Math.max(...desk.map(d => d.x + d.w)) - deskLeft : 1
+        readonly property real down: desk.length ? Math.max(...desk.map(d => d.y + d.h)) - deskTop : 1
+        readonly property real fit: Math.min(width / across, height / down)
         Repeater {
-            model: miniature.groups
-            delegate: Column {
-                id: drawn
+            model: picture.desk
+            delegate: Rectangle {
+                id: shown
                 required property var modelData
-                readonly property var names: modelData.names || modelData.apps || []
-                readonly property int fanned: Math.min(3, Math.max(1, names.length))
-                spacing: 4
-                Item {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: 64 + 5 * (drawn.fanned - 1)
-                    height: 44 + 5 * (drawn.fanned - 1)
-                    Repeater {
-                        model: drawn.fanned
-                        delegate: Rectangle {
-                            required property int index
-                            x: 5 * (drawn.fanned - 1 - index)
-                            y: 5 * (drawn.fanned - 1 - index)
-                            z: -index
-                            width: 64
-                            height: 44
-                            radius: 6
-                            color: tone.over(0.14)
-                            border.width: 1
-                            border.color: tone.wash(0.35)
-                            opacity: [1, 0.7, 0.45][index]
-                            Text {
-                                anchors.fill: parent
-                                anchors.margins: 4
-                                visible: parent.index === 0
-                                text: drawn.names[0] || ""
-                                color: overlay.ink
-                                font.pixelSize: 10
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
-                                elide: Text.ElideRight
-                            }
-                        }
+                x: (picture.width - picture.across * picture.fit) / 2 + (modelData.x - picture.deskLeft) * picture.fit
+                y: (picture.height - picture.down * picture.fit) / 2 + (modelData.y - picture.deskTop) * picture.fit
+                width: Math.max(4, modelData.w * picture.fit - 2)
+                height: Math.max(4, modelData.h * picture.fit - 2)
+                radius: 3
+                color: tone.over(0.10)
+                border.width: 1
+                border.color: tone.wash(0.30)
+                Repeater {
+                    model: shown.modelData.windows
+                    delegate: Rectangle {
+                        required property var modelData
+                        // Kept as shares of its display.
+                        x: 1 + modelData.x * (shown.width - 2)
+                        y: 1 + modelData.y * (shown.height - 2)
+                        width: Math.max(2, modelData.w * (shown.width - 2) - 1)
+                        height: Math.max(2, modelData.h * (shown.height - 2) - 1)
+                        radius: 2
+                        color: tone.wash(0.40)
                     }
                 }
-                Label {
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    width: Math.min(92, implicitWidth)
-                    text: drawn.names.join(words.i18nc("@info between apps in a Stack", ", "))
-                    font.pixelSize: 11
-                    opacity: 0.66
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.Wrap
-                    maximumLineCount: 2
+            }
+        }
+        // Kept without places: one display, a column for each group.
+        Rectangle {
+            visible: picture.desk.length === 0
+            anchors.fill: parent
+            radius: 3
+            color: tone.over(0.10)
+            border.width: 1
+            border.color: tone.wash(0.30)
+            Row {
+                anchors.fill: parent
+                anchors.margins: 3
+                spacing: 2
+                Repeater {
+                    model: Math.max(1, Math.min(4, picture.groups.length))
+                    delegate: Rectangle {
+                        width: (parent.width - 2 * (Math.max(1, Math.min(4, picture.groups.length)) - 1)) / Math.max(1, Math.min(4, picture.groups.length))
+                        height: parent.height
+                        radius: 2
+                        color: tone.wash(0.40)
+                    }
                 }
             }
         }
@@ -930,6 +966,8 @@ Window {
                         spacing: 8
                         Repeater {
                             model: overlay.savedLayouts
+                            // One line each: the layout's picture, its name
+                            // with its apps by icon and name, and Open.
                             delegate: Rectangle {
                                 id: saved
                                 required property var modelData
@@ -937,7 +975,7 @@ Window {
                                 readonly property bool chosen: overlay.chosenLayout === modelData.id
                                 objectName: "ambient-island-layout-" + modelData.id
                                 width: parent.width
-                                height: savedColumn.implicitHeight + 24
+                                height: Math.max(56, savedColumn.implicitHeight + 16)
                                 radius: 10
                                 color: tone.wash(savedArea.pressed ? 0.12 : 0.075)
                                 Accessible.role: Accessible.ListItem
@@ -949,38 +987,59 @@ Window {
                                     anchors.fill: parent
                                     onClicked: overlay.chosenLayout = saved.chosen ? "" : saved.modelData.id
                                 }
+                                LayoutPicture {
+                                    id: savedPicture
+                                    objectName: "ambient-island-layout-miniature-" + saved.modelData.id
+                                    x: 10
+                                    y: 8
+                                    width: 56
+                                    height: 40
+                                    groups: saved.modelData.groups || []
+                                }
                                 Column {
                                     id: savedColumn
-                                    x: 12
-                                    y: 12
-                                    width: parent.width - 24 - openSaved.width - 12
-                                    spacing: 10
-                                    Column {
+                                    x: savedPicture.x + savedPicture.width + 10
+                                    y: 8
+                                    width: parent.width - x - 12 - openSaved.width - 10
+                                    spacing: 4
+                                    Label {
+                                        objectName: "ambient-island-layout-name-" + saved.modelData.id
                                         width: parent.width
-                                        spacing: 2
+                                        text: saved.modelData.name
+                                        font.pixelSize: 15
+                                        elide: Text.ElideRight
+                                    }
+                                    Row {
+                                        width: parent.width
+                                        spacing: 4
+                                        Repeater {
+                                            model: (saved.modelData.groups || []).slice(0, 4)
+                                            delegate: Kirigami.Icon {
+                                                required property var modelData
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                width: 16
+                                                height: 16
+                                                source: modelData.icons && modelData.icons[0] ? modelData.icons[0] : "application-x-executable"
+                                            }
+                                        }
                                         Label {
-                                            width: parent.width
-                                            text: saved.modelData.name
-                                            font.pixelSize: 15
+                                            objectName: "ambient-island-layout-apps-" + saved.modelData.id
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            width: Math.max(0, parent.width - x)
+                                            text: overlay.appsLine(saved.modelData.groups || [])
+                                            font.pixelSize: 12
+                                            opacity: 0.66
+                                            elide: Text.ElideRight
                                         }
                                     }
-                                    Miniature {
-                                        objectName: "ambient-island-layout-miniature-" + saved.modelData.id
-                                        width: parent.width
-                                        groups: saved.modelData.groups || []
-                                    }
-                                    Column {
-                                        width: parent.width
+                                    PillButton {
+                                        objectName: "ambient-island-layout-remove-" + saved.modelData.id
                                         visible: saved.chosen
-                                        spacing: 8
-                                        PillButton {
-                                            objectName: "ambient-island-layout-remove-" + saved.modelData.id
-                                            height: 32
-                                            label: words.i18nc("@action:button forgets a saved layout", "Remove")
-                                            onActivated: {
-                                                overlay.chosenLayout = "";
-                                                if (overlay.layouts) overlay.layouts.removeLayout(saved.modelData.id);
-                                            }
+                                        height: 32
+                                        label: words.i18nc("@action:button forgets a saved layout", "Remove")
+                                        onActivated: {
+                                            overlay.chosenLayout = "";
+                                            if (overlay.layouts) overlay.layouts.removeLayout(saved.modelData.id);
                                         }
                                     }
                                 }
