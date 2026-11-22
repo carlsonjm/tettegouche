@@ -5,6 +5,9 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- An island from Split Rock's Core tells Core which display it was tapped
+  on, so the notifications it opens, opens there alone, not on every
+  display.
 - "dnd" or "keep awake" typed alone in Search offers to turn the switch
   off when it is already on, instead of saying it is already on.
 - Layouts has its own island in the band, after the quick note's, while
