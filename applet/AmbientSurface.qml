@@ -69,6 +69,9 @@ Item {
     // The quick note's island asks Search's Notes for a page: "note", the
     // quick note's, or "note:" and a note's id, that note's.
     signal drawerRequested(string drawer)
+    // The quick note opens as a card from the +, where the notes application
+    // offers its quick note; elsewhere the + opens Search's Notes.
+    property bool noteCard: false
     // The Layouts island asks for a saved layout by its id.
     signal layoutRequested(string layoutId)
 
@@ -677,10 +680,12 @@ Item {
     // dialog with it. Core's island opens the card that does what it suggests,
     // or, for a fact that asks, opens in place with its answers; what a saved
     // layout left out, told once, opens Layouts in place.
-    // The quick note's island opens Search's Notes on the quick note, and
-    // Layouts' island opens Layouts in place.
+    // The quick note's + grows the quick note's card, as every island grows
+    // its own, or opens Search's Notes where the notes
+    // application has no quick note to offer; Layouts' island opens Layouts
+    // in place.
     function open(kind) {
-        if (kind === "note") drawerRequested("note");
+        if (kind === "note") { if (noteCard) openRequested("note"); else drawerRequested("note"); }
         else if (kind === "layouts") openRequested("layouts");
         else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
@@ -698,6 +703,7 @@ Item {
         // Layouts grows from its own island where the band shows it; it and
         // Quick actions, asked for from Search, otherwise grow from the
         // band's end.
+        if (kind === "note" && noteIsland.present) return notePlus;
         const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
             : kind === "layouts" ? [layoutsIsland] : kind === "quickActions" ? []
             : [transferIsland, arrivedIsland];
@@ -1714,6 +1720,7 @@ Item {
             name: "dot"
             size: noteIsland.has("door") || noteIsland.has("window") ? surface.actionSlot : surface.reach
             Rectangle {
+                id: notePlus
                 objectName: "ambient-note-dot"
                 anchors.centerIn: parent
                 width: surface.actionDisc

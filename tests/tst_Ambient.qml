@@ -101,6 +101,7 @@ TestCase {
                 {id: "2", name: "Writing", atSignIn: false, groups: [
                     {apps: ["notes", "zen"], names: ["Notes", "Zen"], stack: true}]}]
             property var currentLayout: ({})
+            property int layoutsAway: 0
             property var calls: []
             function readCurrentLayout() { calls.push(["read"]); currentLayout = {}; }
             function saveLayout(name, groups, atSignIn) { calls.push(["save", name, groups, atSignIn]); }
@@ -110,6 +111,156 @@ TestCase {
             function typeInSearch(words) { calls.push(["type", words]); }
         }
     }
+    // The notes application's quick note, as the applet hands it over.
+    Component {
+        id: quickNoteComponent
+        QtObject {
+            signal cardAnswered(bool opened)
+            signal noteChanged()
+            property bool available: true
+            property bool open: false
+            property bool readOnly: false
+            property string text: ""
+            property string noteId: "n7"
+            property string colour: "yellow"
+            property string colourHex: "#F2D98A"
+            property var colours: ["yellow", "blue"]
+            property var colourHexes: ["#F2D98A", "#A9C8F0"]
+            property bool offersFolders: true
+            property string folderLabel: "Inbox"
+            property bool offersReminders: true
+            property string remindLabel: ""
+            property var remindChoices: [{kind: "later", label: "Later today", time: "2026-11-22T18:00:00"},
+                                         {kind: "pick", label: "Pick a time"}]
+            property bool checklist: false
+            property var lines: []
+            property var windows: [{window: "w1", app: "zen", label: "Zen Browser", chosen: false}]
+            property bool stuck: false
+            property string stuckWindow: ""
+            property var calls: []
+            function start() { calls.push(["start"]); open = true; text = "Milk"; noteChanged(); }
+            function setText(t) { calls.push(["text", t]); text = t; }
+            function flush() { calls.push(["flush"]); }
+            function done() { calls.push(["done"]); open = false; }
+            function setColour(c) { calls.push(["colour", c]); colour = c; colourHex = colourHexes[colours.indexOf(c)]; }
+            function setChecklist(on) { calls.push(["checklist", on]); checklist = on; }
+            function setReminder(when) { calls.push(["remind", when]); }
+            function setStuck(w, a) { calls.push(["stuck", w, a]); }
+            function setLineChecked(i, on) { calls.push(["line", i, on]); }
+            function openOnCard(id, back) { calls.push(["card", id, back]); }
+        }
+    }
+    Component {
+        id: drawerHostComponent
+        QtObject {
+            property var calls: []
+            function openDrawer(drawer) { calls.push(["drawer", drawer]); }
+        }
+    }
+    function openNote(note, host) {
+        const opened = createTemporaryObject(islandComponent, testCase,
+            {surface: createSurface(460, []), layouts: host || null, quickNote: note, kind: "note",
+             start: Qt.rect(300, 540, 40, 44), sideLeft: 0, sideRight: 460});
+        verify(opened !== null);
+        opened.show();
+        tryVerify(() => opened.expanded);
+        wait(360);
+        return opened;
+    }
+
+    // The + grows the quick note's card: its title with where it's kept,
+    // the paper in its colour holding the note Start resumed, its choices,
+    // and Done then Open in Notes. Typing goes to the notes application.
+    function test_the_quick_note_card() {
+        const note = createTemporaryObject(quickNoteComponent, testCase);
+        const opened = openNote(note);
+        compare(note.calls[0][0], "start");
+        compare(findChild(opened.contentItem, "ambient-island-note-title-name").text, "Quick note");
+        compare(findChild(opened.contentItem, "ambient-island-note-title-after").text, " · Inbox");
+        const pad = findChild(opened.contentItem, "ambient-island-note-pad");
+        tryCompare(pad, "text", "Milk");
+        compare(findChild(opened.contentItem, "ambient-island-note-paper").color, Qt.color("#F2D98A"));
+        opened.requestActivate();
+        tryVerify(() => opened.active);
+        pad.forceActiveFocus();
+        pad.cursorPosition = pad.length;
+        keyClick(Qt.Key_S);
+        compare(note.text, "Milks");
+        // A colour, from the row under the note.
+        tap(findChild(opened.contentItem, "ambient-island-note-colour"));
+        const blue = findChild(opened.contentItem, "ambient-island-note-swatch-blue");
+        tryVerify(() => blue.visible);
+        wait(360);
+        tap(blue);
+        compare(note.colour, "blue");
+        tryCompare(findChild(opened.contentItem, "ambient-island-note-paper"), "color", Qt.color("#A9C8F0"));
+        // A reminder: the choices the application offers, Pick a time left
+        // to the full note.
+        tap(findChild(opened.contentItem, "ambient-island-note-remind"));
+        verify(findChild(opened.contentItem, "ambient-island-note-remind-later").visible);
+        wait(360);
+        compare(findChild(opened.contentItem, "ambient-island-note-remind-pick"), null);
+        tap(findChild(opened.contentItem, "ambient-island-note-remind-later"));
+        compare(note.calls[note.calls.length - 1][0], "remind");
+        // The buttons: Done, then Open in Notes.
+        const done = findChild(opened.contentItem, "ambient-island-note-done");
+        const full = findChild(opened.contentItem, "ambient-island-note-in-notes");
+        wait(360);
+        verify(done.filled);
+        verify(done.mapToItem(null, 0, 0).x < full.mapToItem(null, 0, 0).x);
+        tap(done);
+        verify(note.calls.some(call => call[0] === "done"));
+        tryVerify(() => !opened.expanded);
+    }
+
+    // The full note goes to the notes application's own card; where it
+    // can't take it, to Search's Notes on that note.
+    function test_the_quick_note_opens_in_notes() {
+        const note = createTemporaryObject(quickNoteComponent, testCase);
+        const host = createTemporaryObject(drawerHostComponent, testCase);
+        const opened = openNote(note, host);
+        tap(findChild(opened.contentItem, "ambient-island-note-in-notes"));
+        const card = note.calls.filter(call => call[0] === "card");
+        compare(card.length, 1);
+        compare(card[0][1], "n7");
+        note.cardAnswered(false);
+        compare(host.calls.length, 1);
+        compare(host.calls[0][1], "note:n7");
+        tryVerify(() => !opened.expanded);
+        // Esc keeps the note as written, to carry on later.
+        const again = openNote(note, host);
+        const flushes = note.calls.filter(call => call[0] === "flush").length;
+        again.dismiss();
+        compare(note.calls.filter(call => call[0] === "flush").length, flushes + 1);
+        verify(note.calls[note.calls.length - 1][0] !== "done");
+    }
+
+    // Every card opens with the same line: its picture, its name and what it
+    // holds, and ends with its own way out.
+    function test_every_card_has_its_title_and_close() {
+        const surface = createSurface(405, [media]);
+        const music = openIsland(surface, "media");
+        compare(findChild(music.contentItem, "ambient-island-media-title-name").text, "Music");
+        verify(findChild(music.contentItem, "ambient-island-media-title-after").text.indexOf(media.source) > 0);
+        const close = findChild(music.contentItem, "ambient-island-media-close");
+        verify(close.visible);
+        const raise = findChild(music.contentItem, "ambient-island-raise");
+        verify(raise.filled);
+        verify(raise.mapToItem(null, 0, 0).x < close.mapToItem(null, 0, 0).x);
+        tap(close);
+        tryVerify(() => !music.expanded);
+    }
+
+    // Layouts waiting for a display that isn't connected say so.
+    function test_layouts_waiting_for_their_display() {
+        const host = createTemporaryObject(layoutsComponent, testCase, {layouts: []});
+        host.layoutsAway = 2;
+        const opened = openLayouts(host);
+        const none = findChild(opened.contentItem, "ambient-island-layouts-none");
+        verify(none.visible);
+        verify(none.text.indexOf("display") >= 0);
+    }
+
     function openLayouts(host) {
         const opened = createTemporaryObject(islandComponent, testCase,
             {surface: createSurface(460, []), layouts: host, kind: "layouts",
@@ -883,7 +1034,7 @@ TestCase {
         verify(findChild(opened.contentItem, "ambient-island-quick-actions").visible);
         verify(!findChild(opened.contentItem, "ambient-island-layouts").visible);
         verify(!findChild(opened.contentItem, "ambient-island-kinds").visible);
-        compare(findChild(opened.contentItem, "ambient-island-quick-actions-title").text, "Quick actions");
+        compare(findChild(opened.contentItem, "ambient-island-quick-actions-title-name").text, "Quick actions");
         for (const kind of ["reminder", "note", "keepAwake", "doNotDisturb"])
             verify(findChild(opened.contentItem, "ambient-island-quick-action-" + kind) !== null);
         verify(findChild(opened.contentItem, "ambient-island-quick-action-bluetooth") === null);
@@ -908,8 +1059,8 @@ TestCase {
         verify(list.visible);
         verify(!findChild(opened.contentItem, "ambient-island-layout-form").visible);
         verify(!findChild(opened.contentItem, "ambient-island-kinds").visible);
-        compare(findChild(opened.contentItem, "ambient-island-layouts-title").text, "Layouts");
-        compare(findChild(opened.contentItem, "ambient-island-layouts-count").text, " · 2 saved");
+        compare(findChild(opened.contentItem, "ambient-island-layouts-title-name").text, "Layouts");
+        compare(findChild(opened.contentItem, "ambient-island-layouts-title-after").text, " · 2 saved");
         verify(!findChild(opened.contentItem, "ambient-island-layouts-none").visible);
         verify(findChild(opened.contentItem, "ambient-island-layout-at-sign-in-1") === null);
         // One line each: its picture, its name, and its apps group by group,
@@ -982,7 +1133,7 @@ TestCase {
         const host = createTemporaryObject(layoutsComponent, testCase, {layouts: []});
         const opened = openLayouts(host);
         verify(findChild(opened.contentItem, "ambient-island-layouts-none").visible);
-        verify(!findChild(opened.contentItem, "ambient-island-layouts-count").visible);
+        verify(!findChild(opened.contentItem, "ambient-island-layouts-title-after").visible);
         verify(findChild(opened.contentItem, "ambient-island-layouts-save").visible);
     }
 
@@ -1125,6 +1276,15 @@ TestCase {
         compare(drawers.count, 1);
         compare(drawers.signalArguments[0][0], "note");
         compare(opens.count, 0);
+        // Where the notes application offers its quick note, the + grows
+        // the note's card from itself instead.
+        surface.noteCard = true;
+        mouseClick(dot, dot.width / 2, dot.height / 2);
+        compare(drawers.count, 1);
+        compare(opens.count, 1);
+        compare(opens.signalArguments[0][0], "note");
+        compare(surface.islandFor("note"), dot);
+        surface.noteCard = false;
 
         surface.activities = [pinned];
         settle();

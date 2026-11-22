@@ -2,6 +2,8 @@
 
 #include <KService>
 #include <QDateTime>
+#include <QGuiApplication>
+#include <QScreen>
 #include <QDBusArgument>
 #include <QDBusConnectionInterface>
 #include <QDBusError>
@@ -124,6 +126,18 @@ CoreFactProvider::CoreFactProvider(const QDBusConnection &bus, QObject *parent) 
     m_missedFor.setSingleShot(true);
     m_missedFor.setInterval(MissedMs);
     connect(&m_missedFor, &QTimer::timeout, this, &CoreFactProvider::forgetMissed);
+    // The displays as the application sees them, again whenever one comes
+    // or goes.
+    if (auto *gui = qobject_cast<QGuiApplication *>(QCoreApplication::instance())) {
+        const auto read = [this] {
+            QStringList names;
+            for (QScreen *screen : QGuiApplication::screens()) names.append(screen->name());
+            setDisplays(names);
+        };
+        connect(gui, &QGuiApplication::screenAdded, this, read);
+        connect(gui, &QGuiApplication::screenRemoved, this, read);
+        read();
+    }
     if (!m_bus.isConnected()) return;
     auto *watcher = new QDBusServiceWatcher(service(), m_bus, QDBusServiceWatcher::WatchForOwnerChange, this);
     connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this, &CoreFactProvider::ownerChanged);
@@ -316,18 +330,43 @@ void CoreFactProvider::factChanged(const QVariantMap &arrived, const QDBusMessag
     Q_EMIT changed();
 }
 
+void CoreFactProvider::setDisplays(const QStringList &names) {
+    if (names == m_displays) return;
+    const auto before = layouts();
+    m_displays = names;
+    if (m_keepsLayouts && layouts() != before) Q_EMIT layoutsChanged();
+}
+
+bool CoreFactProvider::usable(const QVariantMap &layout) const {
+    if (m_displays.isEmpty()) return true;
+    for (const auto &group : layout.value(QStringLiteral("groups")).toList()) {
+        const auto display = group.toMap().value(QStringLiteral("display")).toString();
+        if (!display.isEmpty() && !m_displays.contains(display)) return false;
+    }
+    return true;
+}
+
+QList<QVariantMap> CoreFactProvider::layouts() const {
+    QList<QVariantMap> shown;
+    for (const auto &layout : m_layouts)
+        if (usable(layout)) shown.append(layout);
+    return shown;
+}
+
 QVariantMap CoreFactProvider::lastOpened() const {
     QVariantMap last;
     QDateTime latest;
-    for (const auto &layout : m_layouts) {
+    for (const auto &layout : layouts()) {
         const auto when = QDateTime::fromString(layout.value(QStringLiteral("opened")).toString(), Qt::ISODate);
         if (when.isValid() && (!latest.isValid() || when > latest)) { latest = when; last = layout; }
     }
     return last;
 }
 
+// The island goes when no saved layout can be opened on the displays
+// connected now, and comes back with one.
 QVariantList CoreFactProvider::layoutsDoor() const {
-    if (!m_keepsLayouts) return {};
+    if (!m_keepsLayouts || layouts().isEmpty()) return {};
     QVariantMap row{{QStringLiteral("id"), QString::fromLatin1(LayoutsDoor)}, {QStringLiteral("generation"), m_generation},
                     {QStringLiteral("kind"), QStringLiteral("layouts")}, {QStringLiteral("state"), QStringLiteral("running")},
                     {QStringLiteral("capabilities"), QVariantMap{}}};

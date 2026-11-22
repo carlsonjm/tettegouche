@@ -405,6 +405,51 @@ private Q_SLOTS:
 
     // A run that leaves apps out names them on the island once: a tap or
     // setting it aside takes the row away, and Core hears nothing of it.
+    // A layout placed on a display that isn't connected waits out of sight,
+    // and the island goes when nothing is left; one saved before layouts kept
+    // displays always shows.
+    void aLayoutWaitsForItsDisplay() {
+        FakeCore core;
+        core.keepsLayouts = true;
+        QVariantMap everyDay{{QStringLiteral("id"), QStringLiteral("2")}, {QStringLiteral("name"), QStringLiteral("Every day")},
+                             {QStringLiteral("groups"), QVariant::fromValue(QList<QVariantMap>{
+                                 group({QStringLiteral("org.kde.dolphin")}, {QStringLiteral("Files")})})}};
+        core.layouts = {coding(false), everyDay};
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-core-away"));
+        QVERIFY(peer.registerObject(QStringLiteral("/Core"), &core, QDBusConnection::ExportAllSlots | QDBusConnection::ExportAllSignals));
+        QVERIFY(peer.registerService(QStringLiteral("io.github.carlsonjm.splitrock.Core")));
+
+        CoreFactProvider provider(QDBusConnection::sessionBus());
+        QTRY_VERIFY(provider.keepsLayouts());
+        QTRY_COMPARE(provider.layouts().size(), 2);
+        QSignalSpy moved(&provider, &CoreFactProvider::layoutsChanged);
+
+        // The BenQ unplugged: Coding needs DP-1 and waits; Every day stays.
+        provider.setDisplays({QStringLiteral("eDP-1")});
+        QCOMPARE(moved.size(), 1);
+        QCOMPARE(provider.layouts().size(), 1);
+        QCOMPARE(provider.layouts().first().value(QStringLiteral("name")).toString(), QStringLiteral("Every day"));
+        QCOMPARE(provider.layoutsAway(), 1);
+        QCOMPARE(provider.layoutsDoor().size(), 1);
+
+        // Plugged back in, it returns.
+        provider.setDisplays({QStringLiteral("eDP-1"), QStringLiteral("DP-1")});
+        QCOMPARE(moved.size(), 2);
+        QCOMPARE(provider.layouts().size(), 2);
+        QCOMPARE(provider.layoutsAway(), 0);
+
+        // With only layouts that need DP-1, the island goes while it is away.
+        core.layouts = {coding(false)};
+        Q_EMIT core.LayoutsChanged();
+        QTRY_COMPARE(provider.layouts().size(), 1);
+        provider.setDisplays({QStringLiteral("eDP-1")});
+        QVERIFY(provider.layouts().isEmpty());
+        QVERIFY(provider.layoutsDoor().isEmpty());
+        provider.setDisplays({QStringLiteral("eDP-1"), QStringLiteral("DP-1")});
+        QCOMPARE(provider.layoutsDoor().size(), 1);
+        peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
+    }
+
     void aLayoutThatMissesNamesWhatDidntOpen() {
         FakeCore core;
         core.keepsLayouts = true;
