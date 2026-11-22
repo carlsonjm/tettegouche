@@ -279,6 +279,7 @@ plasma_add_applet(co.goodinput.tettegouche
         assets/icons/lucide/sparkles.svg
         assets/icons/lucide/plus.svg
         assets/icons/lucide/bell-off.svg
+        assets/icons/lucide/panels-top-left.svg
         assets/icons/suite/notes.svg
 )
 target_link_libraries(co.goodinput.tettegouche PRIVATE
@@ -464,9 +465,11 @@ if(BUILD_TESTING)
         add_test(NAME ambient-surface-test
             COMMAND ${QMLTESTRUNNER_EXECUTABLE}
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Ambient.qml)
+        # Each island's case waits out its settling; the whole file runs
+        # about a minute on a shared runner.
         set_tests_properties(ambient-surface-test PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QUICK_BACKEND=software"
-            TIMEOUT 60)
+            TIMEOUT 120)
         add_test(NAME launcher-controls-test
             COMMAND ${QMLTESTRUNNER_EXECUTABLE}
                 -input ${CMAKE_CURRENT_SOURCE_DIR}/tests/tst_Launcher.qml)

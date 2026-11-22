@@ -348,6 +348,25 @@ private Q_SLOTS:
         QCOMPARE(core.acts.at(2), QStringLiteral("at-sign-in 1 off"));
         QCOMPARE(core.acts.at(3), QStringLiteral("remove-layout 1"));
 
+        // The Layouts island's door: there while Core keeps layouts, bare
+        // until one has been opened, then naming the one opened last.
+        QCOMPARE(provider.layoutsDoor().size(), 1);
+        QVariantMap door = provider.layoutsDoor().first().toMap();
+        QCOMPARE(door.value(QStringLiteral("kind")).toString(), QStringLiteral("layouts"));
+        QVERIFY(!door.contains(QStringLiteral("layoutId")));
+        QVariantMap writing = coding(false);
+        writing.insert(QStringLiteral("id"), QStringLiteral("2"));
+        writing.insert(QStringLiteral("name"), QStringLiteral("Writing"));
+        writing.insert(QStringLiteral("opened"), QStringLiteral("2026-11-20T09:00:00Z"));
+        QVariantMap opened = coding(true);
+        opened.insert(QStringLiteral("opened"), QStringLiteral("2026-11-21T09:00:00Z"));
+        core.layouts = {writing, opened};
+        Q_EMIT core.LayoutsChanged();
+        QTRY_COMPARE(provider.layouts().size(), 2);
+        door = provider.layoutsDoor().first().toMap();
+        QCOMPARE(door.value(QStringLiteral("layoutId")).toString(), QStringLiteral("1"));
+        QCOMPARE(door.value(QStringLiteral("title")).toString(), QStringLiteral("Coding"));
+
         QSignalSpy changed(&provider, &CoreFactProvider::layoutsChanged);
         core.layouts.clear();
         Q_EMIT core.LayoutsChanged();
@@ -358,6 +377,7 @@ private Q_SLOTS:
         // Core leaving takes its layouts with it.
         peer.unregisterService(QStringLiteral("io.github.carlsonjm.splitrock.Core"));
         QTRY_VERIFY(!provider.keepsLayouts());
+        QVERIFY(provider.layoutsDoor().isEmpty());
         peer.unregisterObject(QStringLiteral("/Core"));
         QDBusConnection::disconnectFromBus(QStringLiteral("fake-core-6"));
     }

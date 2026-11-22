@@ -2,8 +2,9 @@
 
 Ambient shows what is happening now, such as media and transfers, in the
 panel beside the launcher dot. Temperance handles notifications and passing
-events. Beside them stands one door that is always there, the quick note's
-island (§ Quick note). Its inputs are in [INPUT.md](INPUT.md).
+events. Beside them stand two doors that are always there, the quick note's
+island (§ Quick note) and Layouts' (§ Layouts). Its inputs are in
+[INPUT.md](INPUT.md).
 
 The widget's setting "Show islands beside the launcher", off, leaves the
 launcher's dot alone in the panel: Ambient shows nothing and takes no width.
@@ -31,12 +32,16 @@ Current sources are:
 - a fact Split Rock's Core asks attention for, such as the drive filling up,
   from Core's bus interface where Split Rock is installed (§ Core);
 - the quick note's island, while Gooseberry is installed, with the note pinned
-  in Gooseberry beside its door (§ Quick note).
+  in Gooseberry beside its door (§ Quick note);
+- Layouts' island, while Split Rock's Core keeps layouts, with the layout
+  opened last beside its door (§ Layouts).
 
-The quick note's island is the one island that stays without activity. It is a
-launcher, not an activity: a door to the quick note, and to the pinned note
-when there is one. Its source owner is Gooseberry, and it leaves when
-Gooseberry is removed or the widget's setting turns it off.
+The quick note's and Layouts' islands are the two that stay without activity.
+Each is a launcher, not an activity: a door to the quick note, and to the
+pinned note when there is one; a door to Layouts, and to the layout opened
+last when there is one. Their source owners are Gooseberry and Split Rock's
+Core, and each leaves when its owner is removed or the widget's setting turns
+it off.
 
 Plasma's jobs model and window list come from Plasma's own libraries, which
 change between releases, so a build reads them only on the Plasma it was built
@@ -66,7 +71,7 @@ and Ambient keeps no history of finished work.
 - A lost source, a quiet file, a cancellation or a disappearance is never shown
   as a success.
 - The person may set an item aside, which never stops or changes its source,
-  except the quick note's island, which stays:
+  except the quick note's and Layouts' islands, which stay:
   media stays away until it starts playing again, a transfer until its source
   ends, its end then filed without its minute, and an end is filed at once.
   While carried or flicked, the island stays within Ambient's own bounds.
@@ -232,6 +237,19 @@ once: "Mail didn't open", and beneath, "The rest of Coding is in place". A tap
 takes it away and opens Layouts; setting it aside, or a minute, takes it away
 and opens nothing. Core is told nothing of either.
 
+While Core keeps layouts, Layouts' own island stands in the band after the
+quick note's: a disc with the layouts' mark, Lucide's panels on a faint disc
+of the style's ink, and beside it the name of the layout opened last, one
+line, elided where long. A tap on the disc, or on the island off the name,
+opens the Layouts island in place, grown from it; a tap on the name opens that
+layout (`OpenLayout`). The layout opened last is the one with the latest
+`opened` in Core's `Layouts()`; with none opened, the disc stands alone.
+Core keeps when each layout opened; Ambient keeps nothing. The island is
+never set aside: a drag does not carry it and Delete leaves it. It takes its
+turn for room after the quick note's, so the name goes first and the disc
+last. The widget's setting "Show the Layouts island", on by default, shows it
+while "Show islands beside the launcher" is on.
+
 Without Split Rock, or with a Core that has no `Layouts()`, there is no Layouts
 island and nothing else changes.
 
@@ -305,8 +323,9 @@ just because the applet started.
 Each kind of activity is its own island: media, transfers under way, ends
 waiting out their minute (§ Ends), drives plugged in (§ Drives), a shared
 screen (§ Shared screen), applications waiting (§ Waiting applications),
-Core's facts (§ Core) and the quick note (§ Quick note). The islands sit side
-by side in the order they arrived, the quick note's first, an end in its transfer's place, the group against the
+Core's facts (§ Core), the quick note (§ Quick note) and Layouts (§ Layouts).
+The islands sit side by side in the order they arrived, the quick note's first
+and Layouts' next, an end in its transfer's place, the group against the
 launcher dot, or placed in the width the host hands Ambient as it asks
 (§ Host settings). They are clear, so the panel shows through them. While
 the panel prefers an opaque background, as Shuffle's band does while it is
@@ -323,7 +342,7 @@ order, and stops at the first that does not fit. The newest island takes its
 turn first for 2.4 s; after that the more urgent goes first: a waiting
 application, a shared screen, a drive, a transfer's end, a transfer, media,
 then a fact from Core, which never takes room from what is happening now,
-then the quick note's island. Names, such as a player or where
+then the quick note's island, then Layouts'. Names, such as a player or where
 a transfer comes from, wait until every island has had the rest, so they are
 the first to go; a song's title and artist are not names. What cannot keep even
 its first piece folds into a round bubble after the islands, which counts what
@@ -340,6 +359,7 @@ together and settle without overshoot.
 | Waiting application | icon, name, question |
 | Core | icon, what it is and how it stands, Don't tell me again (Windows programs only), detail and what can be done |
 | Quick note | dot with a plus, pinned note (its bead and first words) |
+| Layouts | disc with the layouts' mark, the layout opened last |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title
@@ -379,7 +399,7 @@ is on an ordinary panel.
 | Setting | Values | Default |
 | --- | --- | --- |
 | `launcherPlacement` | `start`, the dot before the islands; `end`, after them; `none`, no dot, for a widget that shows islands alone | `start` |
-| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media, the quick note's among them | `all` |
+| `ambientShows` | `all`; `media`, the media island alone; `others`, every island but media, the quick note's and Layouts' among them | `all` |
 | `ambientAlign` | `center`, `start` or `end` of the width the islands have | unset: against the dot, the widget as wide as its islands |
 | `islandOutline` | on, each island a faint pill; off, words and glyphs on the panel alone | on |
 | `islandSpacing` | the room between islands, 4 to 32 px, a value outside held to the nearer end; without an outline, also the room the group keeps from the end it is set against | unset: 8 px outlined, 24 px without |
@@ -394,7 +414,7 @@ an opaque background, an island takes the style's ground whatever
 the others, shows every island exactly once. Two widgets on one panel whose
 settings show the same island still show it once: the widget added to the
 panel first keeps it, and the other leaves it, for media, for the quick
-note's island and for the rest alike. Widgets on different panels share
+note's island, for Layouts' and for the rest alike. Widgets on different panels share
 nothing.
 
 Without an outline, only room parts one island from the next: they stand
@@ -418,8 +438,8 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 - An island's actions act only on its own source, and one the source does not
   support is not shown.
 - Closing the open island returns it to the band; it never opens search.
-- With nothing to show, Ambient leaves the panel clean; the quick note's island
-  is a door, not activity, and keeps only its own width.
+- With nothing to show, Ambient leaves the panel clean; the quick note's and
+  Layouts' islands are doors, not activity, and keep only their own width.
 - Do not add a daemon, polling loop, persistent history, replacement task
   manager, notification-derived progress, or an activity owner shared with
   other applications.
