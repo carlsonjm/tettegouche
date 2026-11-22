@@ -243,10 +243,11 @@ and opens nothing. Core is told nothing of either.
 
 While Core keeps layouts, Layouts' own island stands in the band after the
 quick note's. A door island's button joins the quick note's as one row of
-actions: while the quick note's island is there, Layouts' disc is a button of
-that island, beside its +, and the window notes' dot after them, each with its
-full 44 px; an action's disc fills its reach but for 8 px, the dock's step
-between icons, and the pinned note's words follow the buttons. Layouts' island holds
+actions: while the quick note's island is there, its + stands first, then its
+window notes' dot, then Layouts' disc, a button of that island. Each disc keeps
+an island's size, and buttons standing together take the disc and the dock's
+own step between icons, 8 px, each answering the band's full height; the
+pinned note's words follow the buttons. Layouts' island holds
 only the name of the layout opened last, one small step (Kirigami's small
 spacing) after the note's own words, where islands keep the band's full gap.
 While the quick note's island shows, the two buttons stay together; the

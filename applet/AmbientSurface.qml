@@ -87,10 +87,12 @@ Item {
     readonly property real inset: outlined ? 6 : 0
     // Between two door islands, the quick note's and Layouts': one small step.
     readonly property real doorGap: outlined ? 4 : Kirigami.Units.smallSpacing
-    // An action's disc: the + and Layouts' panels, each in its full reach,
-    // fill it but for the dock's own step between icons, 8 px, so buttons
-    // standing together read as one row of actions.
-    readonly property real actionDisc: Math.max(16, reach - 8)
+    // An action's disc keeps an island's size. Buttons standing together,
+    // the note's +, its window notes' dot and Layouts' panels, each take the
+    // disc and the dock's own step between icons, 8 px, so they read as one
+    // row of actions; each still answers the band's full height.
+    readonly property real actionDisc: Math.max(16, artSize - 4)
+    readonly property real actionSlot: Math.min(reach, actionDisc + 8)
     readonly property real margin: outlined || align === "center" ? 0 : gap
     // Art, a ring or a mark sits as far from the pill's edge as its top.
     readonly property real lead: pillHeight - 12
@@ -575,7 +577,8 @@ Item {
             return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"))
                 + (has("never") ? neverWidth() : 0);
         if (kind === "note")
-            return 2 * inset + (has("dot") ? reach : 0) + (has("door") ? reach : 0) + (has("window") ? reach : 0)
+            return 2 * inset + (has("dot") ? (has("door") || has("window") ? actionSlot : reach) : 0)
+                + (has("door") ? actionSlot : 0) + (has("window") ? actionSlot : 0)
                 + (has("pinned") ? pinnedWidth() : 0);
         if (kind === "layouts")
             return 2 * inset + (has("disc") ? reach : 0) + (has("last") ? lastLayoutWidth() : 0);
@@ -1709,7 +1712,7 @@ Item {
         Piece {
             island: noteIsland
             name: "dot"
-            size: surface.reach
+            size: noteIsland.has("door") || noteIsland.has("window") ? surface.actionSlot : surface.reach
             Rectangle {
                 objectName: "ambient-note-dot"
                 anchors.centerIn: parent
@@ -1726,60 +1729,11 @@ Item {
                 }
             }
         }
-        // Layouts' disc, beside the note's while both doors are here; the
-        // layout opened last follows after the note's own words.
-        Piece {
-            id: layoutsDoorPiece
-            island: noteIsland
-            name: "door"
-            size: surface.reach
-            Item {
-                id: layoutsDoorButton
-                objectName: "ambient-note-layouts"
-                anchors.fill: parent
-                activeFocusOnTab: layoutsDoorPiece.showing
-                Accessible.role: Accessible.Button
-                Accessible.name: words.i18n("Layouts")
-                Accessible.onPressAction: surface.open("layouts")
-                Keys.onReturnPressed: surface.open("layouts")
-                Keys.onEnterPressed: surface.open("layouts")
-                Keys.onSpacePressed: surface.open("layouts")
-                Rectangle {
-                    anchors.centerIn: parent
-                    width: surface.actionDisc
-                    height: width
-                    radius: width / 2
-                    color: tone.wash(layoutsDoorArea.pressed ? 0.24 : 0.16)
-                    Behavior on color { ColorAnimation { duration: surface.ms(200) } }
-                    SuiteIcon {
-                        anchors.centerIn: parent
-                        width: Math.round(parent.width * 0.6)
-                        height: width
-                        glyph: "panels-top-left"
-                    }
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: 6
-                    radius: height / 2
-                    color: "transparent"
-                    border.width: 1
-                    border.color: tone.text
-                    opacity: 0.6
-                    visible: layoutsDoorButton.activeFocus
-                }
-                MouseArea {
-                    id: layoutsDoorArea
-                    anchors.fill: parent
-                    onClicked: surface.open("layouts")
-                }
-            }
-        }
         Piece {
             id: windowPiece
             island: noteIsland
             name: "window"
-            size: surface.reach
+            size: surface.actionSlot
             Item {
                 id: windowButton
                 objectName: "ambient-note-window"
@@ -1851,6 +1805,55 @@ Item {
                     id: windowArea
                     anchors.fill: parent
                     onClicked: surface.toggleWindowNotes()
+                }
+            }
+        }
+        // Layouts' disc, beside the note's while both doors are here; the
+        // layout opened last follows after the note's own words.
+        Piece {
+            id: layoutsDoorPiece
+            island: noteIsland
+            name: "door"
+            size: surface.actionSlot
+            Item {
+                id: layoutsDoorButton
+                objectName: "ambient-note-layouts"
+                anchors.fill: parent
+                activeFocusOnTab: layoutsDoorPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Layouts")
+                Accessible.onPressAction: surface.open("layouts")
+                Keys.onReturnPressed: surface.open("layouts")
+                Keys.onEnterPressed: surface.open("layouts")
+                Keys.onSpacePressed: surface.open("layouts")
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: surface.actionDisc
+                    height: width
+                    radius: width / 2
+                    color: tone.wash(layoutsDoorArea.pressed ? 0.24 : 0.16)
+                    Behavior on color { ColorAnimation { duration: surface.ms(200) } }
+                    SuiteIcon {
+                        anchors.centerIn: parent
+                        width: Math.round(parent.width * 0.6)
+                        height: width
+                        glyph: "panels-top-left"
+                    }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: layoutsDoorButton.activeFocus
+                }
+                MouseArea {
+                    id: layoutsDoorArea
+                    anchors.fill: parent
+                    onClicked: surface.open("layouts")
                 }
             }
         }

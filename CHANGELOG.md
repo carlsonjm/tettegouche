@@ -6,8 +6,8 @@ history carries the implementation detail.
 ## Unreleased
 
 - Layouts' button stands beside the quick note's + as one row of actions,
-  a dock's step apart, with the window notes' dot after them and the pinned
-  note and the layout opened last following the buttons.
+  a dock's step apart: the +, the window notes' dot, then Layouts, with the
+  pinned note and the layout opened last following the buttons.
 - Each saved layout in Layouts is one line: a small picture of where its
   windows sat with each app's icon in its place, its name, its apps by their
   icons and menu names ("Stack of Mail, Ghostty"), and Open.

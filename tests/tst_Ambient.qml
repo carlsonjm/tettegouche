@@ -1218,11 +1218,22 @@ TestCase {
         compare(shown(surface, "layouts"), ["last"]);
         const beside = findChild(surface, "ambient-note-layouts");
         verify(beside.visible);
-        verify(beside.width >= 44 && beside.height >= 44);
-        // The two discs a dock's step apart: each fills its reach but 8 px.
+        verify(beside.height >= 44);
+        // The two discs island-sized, a dock's step apart.
         const plus = findChild(surface, "ambient-note-dot");
         const panels = beside.children[0];
+        compare(panels.width, plus.width);
         compare(Math.round(leftOf(surface, panels) - rightOf(surface, plus)), 8);
+        // The note's own window dot stands beside its +, then Layouts'.
+        surface.activities = [media, last, {id: "note", generation: 3, kind: "note", state: "running",
+            capabilities: {windowNotes: true}, windowCount: 1, windowColourHex: "#F2D98A", windowShown: false}];
+        settle();
+        const own = findChild(surface, "ambient-note-window");
+        verify(own.visible);
+        verify(leftOf(surface, own) >= rightOf(surface, plus.parent) - 0.5);
+        verify(rightOf(surface, own) <= leftOf(surface, beside) + 0.5);
+        surface.activities = [media, last, note];
+        settle();
         verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "layouts")));
         verify(leftOf(surface, island(surface, "layouts")) - rightOf(surface, island(surface, "note")) < surface.gap);
         verify(rightOf(surface, island(surface, "layouts")) <= leftOf(surface, island(surface, "media")));
@@ -1255,7 +1266,7 @@ TestCase {
         compare(shown(surface, "note"), ["dot", "window", "pinned"]);
         const button = findChild(surface, "ambient-note-window");
         verify(button.visible);
-        verify(button.width >= 44 && button.height >= 44);
+        verify(button.width >= 32 && button.height >= 44);
         // A button, it stands with the + before the pinned note's words.
         verify(rightOf(surface, button) <= leftOf(surface, findChild(surface, "ambient-note-pinned")));
         const dot = findChild(surface, "ambient-note-window-dot");
