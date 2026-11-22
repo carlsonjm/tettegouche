@@ -88,6 +88,20 @@ private Q_SLOTS:
         QCOMPARE(row.contains(QStringLiteral("until")), until.isValid());
     }
 
+    void namedAloneFlips()
+    {
+        // The name alone leaves the way to Search, which turns the switch
+        // the other way from where it stands; on, off or a time does not.
+        for (const char *typed : {"dnd", "do not disturb", "keep awake"}) {
+            QVERIFY(QuickActions::parse(QString::fromLatin1(typed), morning()).flips);
+            QVERIFY(QuickActions::describe(QString::fromLatin1(typed), morning(), QLocale::c()).value(QStringLiteral("flips")).toBool());
+        }
+        for (const char *typed : {"dnd on", "dnd off", "dnd until 3", "keep awake 1h", "bluetooth on"}) {
+            QVERIFY(!QuickActions::parse(QString::fromLatin1(typed), morning()).flips);
+            QVERIFY(!QuickActions::describe(QString::fromLatin1(typed), morning(), QLocale::c()).contains(QStringLiteral("flips")));
+        }
+    }
+
     void lateInTheDay()
     {
         const QDateTime late(QDate(2026, 11, 18), QTime(22, 40));

@@ -5,6 +5,8 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- "dnd" or "keep awake" typed alone in Search offers to turn the switch
+  off when it is already on, instead of saying it is already on.
 - Quick actions is the last Helper in Search, after Layouts: like Layouts it
   opens an island from the band, listing each action with what to type for
   it, and Try opens Search with those words in the field. Where Shuffle
