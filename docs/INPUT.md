@@ -249,11 +249,17 @@ than repeat it.
 | Tap or click the island that says an app didn't open, after a saved layout opened | Takes the line away and opens the Layouts island. Set aside, or after a minute, it goes and opens nothing. |
 | Tap or click Don't tell me again on a Windows program's island | Split Rock's Core stops telling about Windows programs for good and takes the fact off the island. Only that fact has the pill. |
 | Tap or click Stop on the shared screen's island | Ends the share. A tap elsewhere on that island does nothing. |
-| Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Starts a quick note on Gooseberry's own card. |
+| Tap or click the dot with a plus on the quick note's island, or the island away from its pinned note | Opens the quick note's card above the +, on the note left open or a new one, where Gooseberry offers its quick note; elsewhere starts a quick note on Gooseberry's own card. |
+| In the quick note's card, type | Writes the note, kept as it is typed. |
+| In the quick note's card, tap or click Colour, Checklist, Remind or the window button | Shows the note's colours, turns it into a checklist or back, shows the reminders Gooseberry offers, or the windows to stick it to; a choice applies and folds the row away. |
+| In the quick note's card, tap or click Done | Finishes the note and closes the card. |
+| In the quick note's card, tap or click Open in Notes | Hands the note to Gooseberry's own card, or Search's Notes on that note where the card can't take it, and closes the card. |
+| With the quick note's card open, Esc or a tap outside it | Closes the card and keeps the note as written, to carry on from the + or Search's Notes. |
 | Tap or click the pinned note on the quick note's island | Opens that note on Gooseberry's own card. |
 | Tap or click the disc on Layouts' island, or the island away from the layout's name | Opens the Layouts island in place, grown from it. |
+| Tap or click Layouts' disc beside the quick note's + | Opens the Layouts island in place, dropped out of that button. |
 | Tap or click the layout's name on Layouts' island | Split Rock's Core opens the layout opened last again. |
-| Tap or click another island away from its controls | Opens it in place, larger. The quick note's island opens nothing in place. |
+| Tap or click another island away from its controls | Opens it in place, larger, as the same card every island opens: its title line, what it holds, then its buttons ending in Close. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
 | Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |
 | With an island focused, Delete | Sets it aside. The quick note's and Layouts' islands stay, and a drag does not carry them. |

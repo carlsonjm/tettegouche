@@ -5,6 +5,22 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- Every island opens the same card, laid out the same way: a title line with
+  its picture, name and what it holds, then what it's about, then one row of
+  buttons ending in its way out. Music gains its title and Close; Transfers
+  gain a title and Close.
+- The quick note's + opens the note on a card right above it, instead of
+  leaving the band: write, pick a colour, make it a checklist, set a
+  reminder or stick it to a window, then Done, or Open in Notes for the
+  full note.
+- Layouts that need a display that isn't connected wait out of sight until
+  it is, and Layouts' island goes from the band while none is left.
+- Layouts' button stands beside the quick note's + as one row of actions,
+  a dock's step apart: the +, the window notes' dot, then Layouts, with the
+  pinned note and the layout opened last following the buttons.
+- Each saved layout in Layouts is one line: a small picture of where its
+  windows sat with each app's icon in its place, its name, its apps by their
+  icons and menu names ("Stack of Mail, Ghostty"), and Open.
 - An island from Split Rock's Core tells Core which display it was tapped
   on, so the notifications it opens, opens there alone, not on every
   display.

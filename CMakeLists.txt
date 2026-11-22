@@ -39,7 +39,7 @@ target_link_libraries(tettegouche-screenshare PUBLIC Qt6::DBus Qt6::Core)
 add_library(tettegouche-core STATIC src/CoreFactProvider.cpp src/CoreFactProvider.h)
 target_include_directories(tettegouche-core PUBLIC src)
 set_target_properties(tettegouche-core PROPERTIES POSITION_INDEPENDENT_CODE ON)
-target_link_libraries(tettegouche-core PUBLIC Qt6::DBus Qt6::Core)
+target_link_libraries(tettegouche-core PUBLIC Qt6::DBus Qt6::Core Qt6::Gui KF6::Service)
 
 # The quick note's island: a door to a quick note while Gooseberry is
 # installed, and the note pinned there.
@@ -251,6 +251,9 @@ plasma_add_applet(co.goodinput.tettegouche
         src/LauncherKeys.cpp
         src/LauncherKeys.h
         src/ProductName.h
+        src/QuickNote.cpp
+        src/QuickNote.h
+        src/BusValue.h
         src/shared/PanelRoom.h
         src/shared/SuitePresence.h
         src/shared/SuiteSettings.h

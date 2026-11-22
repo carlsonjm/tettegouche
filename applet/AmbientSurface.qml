@@ -69,6 +69,9 @@ Item {
     // The quick note's island asks Search's Notes for a page: "note", the
     // quick note's, or "note:" and a note's id, that note's.
     signal drawerRequested(string drawer)
+    // The quick note opens as a card from the +, where the notes application
+    // offers its quick note; elsewhere the + opens Search's Notes.
+    property bool noteCard: false
     // The Layouts island asks for a saved layout by its id.
     signal layoutRequested(string layoutId)
 
@@ -85,6 +88,14 @@ Item {
     readonly property real gap: spacing !== 0 ? Math.max(4, Math.min(32, spacing))
         : outlined ? 8 : 3 * Kirigami.Units.largeSpacing
     readonly property real inset: outlined ? 6 : 0
+    // Between two door islands, the quick note's and Layouts': one small step.
+    readonly property real doorGap: outlined ? 4 : Kirigami.Units.smallSpacing
+    // An action's disc keeps an island's size. Buttons standing together,
+    // the note's +, its window notes' dot and Layouts' panels, each take the
+    // disc and the dock's own step between icons, 8 px, so they read as one
+    // row of actions; each still answers the band's full height.
+    readonly property real actionDisc: Math.max(16, artSize - 4)
+    readonly property real actionSlot: Math.min(reach, actionDisc + 8)
     readonly property real margin: outlined || align === "center" ? 0 : gap
     // Art, a ring or a mark sits as far from the pill's edge as its top.
     readonly property real lead: pillHeight - 12
@@ -569,7 +580,8 @@ Item {
             return 2 * inset + (has("icon") ? lead : 0) + coreWords(has("name"), has("detail"))
                 + (has("never") ? neverWidth() : 0);
         if (kind === "note")
-            return 2 * inset + (has("dot") ? reach : 0) + (has("window") ? reach : 0)
+            return 2 * inset + (has("dot") ? (has("door") || has("window") ? actionSlot : reach) : 0)
+                + (has("door") ? actionSlot : 0) + (has("window") ? actionSlot : 0)
                 + (has("pinned") ? pinnedWidth() : 0);
         if (kind === "layouts")
             return 2 * inset + (has("disc") ? reach : 0) + (has("last") ? lastLayoutWidth() : 0);
@@ -607,9 +619,10 @@ Item {
         case "core.detail": return tall && coreDetail !== "";
         case "core.never": return capability(coreShown, "never");
         case "note.dot": return noteShown !== null;
+        case "note.door": return noteShown !== null && layoutsDoor !== null;
         case "note.pinned": return pinnedNote !== null;
         case "note.window": return windowNotes > 0;
-        case "layouts.disc": return layoutsDoor !== null;
+        case "layouts.disc": return layoutsDoor !== null && noteShown === null;
         case "layouts.last": return lastLayout !== null && lastLayoutTitle !== "";
         }
         return false;
@@ -632,13 +645,17 @@ Item {
     function lineUp(kind) {
         const order = Object.keys(places).sort((a, b) => places[a] - places[b])
             .map(islandOf).filter(island => island !== null);
-        let total = 0, at = 0, before = 0;
+        let total = 0, at = 0, before = 0, last = "";
         for (const island of order) {
             const share = Math.min(1, island.presence);
-            const space = gap * Math.min(before, share);
+            // Doors stand together, as one row of actions: the names after
+            // their buttons follow each other a small step apart.
+            const doors = (last === "note" || last === "layouts") && (island.kind === "note" || island.kind === "layouts");
+            const space = (doors ? doorGap : gap) * Math.min(before, share);
             if (island.kind === kind) at = total + space;
             total += space + island.width;
             before = Math.max(before, share);
+            if (share > 0) last = island.kind;
         }
         const space = gap * Math.min(before, bubble.presence);
         if (kind === "fold") at = total + space;
@@ -663,10 +680,12 @@ Item {
     // dialog with it. Core's island opens the card that does what it suggests,
     // or, for a fact that asks, opens in place with its answers; what a saved
     // layout left out, told once, opens Layouts in place.
-    // The quick note's island opens Search's Notes on the quick note, and
-    // Layouts' island opens Layouts in place.
+    // The quick note's + grows the quick note's card, as every island grows
+    // its own, or opens Search's Notes where the notes
+    // application has no quick note to offer; Layouts' island opens Layouts
+    // in place.
     function open(kind) {
-        if (kind === "note") drawerRequested("note");
+        if (kind === "note") { if (noteCard) openRequested("note"); else drawerRequested("note"); }
         else if (kind === "layouts") openRequested("layouts");
         else if (kind === "drive") invoke(driveShown, "open");
         else if (kind === "waiting") invoke(waitingShown, "raise");
@@ -684,9 +703,12 @@ Item {
         // Layouts grows from its own island where the band shows it; it and
         // Quick actions, asked for from Search, otherwise grow from the
         // band's end.
+        if (kind === "note" && noteIsland.present) return notePlus;
         const candidates = kind === "media" ? [mediaIsland] : kind === "core" ? [coreIsland]
             : kind === "layouts" ? [layoutsIsland] : kind === "quickActions" ? []
             : [transferIsland, arrivedIsland];
+        // Beside the quick note's, Layouts' disc is a button of that island.
+        if (kind === "layouts" && noteIsland.present && noteIsland.has("door")) return layoutsDoorButton;
         for (const island of candidates)
             if (island.present) return island.shape;
         return bubble;
@@ -1696,11 +1718,12 @@ Item {
         Piece {
             island: noteIsland
             name: "dot"
-            size: surface.reach
+            size: noteIsland.has("door") || noteIsland.has("window") ? surface.actionSlot : surface.reach
             Rectangle {
+                id: notePlus
                 objectName: "ambient-note-dot"
                 anchors.centerIn: parent
-                width: Math.max(16, surface.artSize - 4)
+                width: surface.actionDisc
                 height: width
                 radius: width / 2
                 color: tone.wash(0.16)
@@ -1714,62 +1737,10 @@ Item {
             }
         }
         Piece {
-            id: pinnedPiece
-            island: noteIsland
-            name: "pinned"
-            size: surface.pinnedWidth()
-            Item {
-                id: pinnedButton
-                objectName: "ambient-note-pinned"
-                anchors.fill: parent
-                activeFocusOnTab: pinnedPiece.showing
-                Accessible.role: Accessible.Button
-                Accessible.name: words.i18n("Pinned note: %1", surface.pinnedTitle)
-                Accessible.onPressAction: surface.openPinned()
-                Keys.onReturnPressed: surface.openPinned()
-                Keys.onEnterPressed: surface.openPinned()
-                Keys.onSpacePressed: surface.openPinned()
-                Rectangle {
-                    objectName: "ambient-note-bead"
-                    x: 6
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: surface.beadSize
-                    height: width
-                    radius: width / 2
-                    color: surface.pinnedColour
-                    scale: pinnedArea.pressed ? 1.2 : 1
-                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
-                }
-                Label {
-                    objectName: "ambient-note-title"
-                    x: 6 + surface.beadSize + 6
-                    width: Math.max(0, parent.width - x - 6)
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: surface.pinnedTitle
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.topMargin: 6
-                    anchors.bottomMargin: 6
-                    radius: height / 2
-                    color: "transparent"
-                    border.width: 1
-                    border.color: tone.text
-                    opacity: 0.6
-                    visible: pinnedButton.activeFocus
-                }
-                MouseArea {
-                    id: pinnedArea
-                    anchors.fill: parent
-                    onClicked: surface.openPinned()
-                }
-            }
-        }
-        Piece {
             id: windowPiece
             island: noteIsland
             name: "window"
-            size: surface.reach
+            size: surface.actionSlot
             Item {
                 id: windowButton
                 objectName: "ambient-note-window"
@@ -1844,6 +1815,107 @@ Item {
                 }
             }
         }
+        // Layouts' disc, beside the note's while both doors are here; the
+        // layout opened last follows after the note's own words.
+        Piece {
+            id: layoutsDoorPiece
+            island: noteIsland
+            name: "door"
+            size: surface.actionSlot
+            Item {
+                id: layoutsDoorButton
+                objectName: "ambient-note-layouts"
+                anchors.fill: parent
+                activeFocusOnTab: layoutsDoorPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Layouts")
+                Accessible.onPressAction: surface.open("layouts")
+                Keys.onReturnPressed: surface.open("layouts")
+                Keys.onEnterPressed: surface.open("layouts")
+                Keys.onSpacePressed: surface.open("layouts")
+                Rectangle {
+                    anchors.centerIn: parent
+                    width: surface.actionDisc
+                    height: width
+                    radius: width / 2
+                    color: tone.wash(layoutsDoorArea.pressed ? 0.24 : 0.16)
+                    Behavior on color { ColorAnimation { duration: surface.ms(200) } }
+                    SuiteIcon {
+                        anchors.centerIn: parent
+                        width: Math.round(parent.width * 0.6)
+                        height: width
+                        glyph: "panels-top-left"
+                    }
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: layoutsDoorButton.activeFocus
+                }
+                MouseArea {
+                    id: layoutsDoorArea
+                    anchors.fill: parent
+                    onClicked: surface.open("layouts")
+                }
+            }
+        }
+        Piece {
+            id: pinnedPiece
+            island: noteIsland
+            name: "pinned"
+            size: surface.pinnedWidth()
+            Item {
+                id: pinnedButton
+                objectName: "ambient-note-pinned"
+                anchors.fill: parent
+                activeFocusOnTab: pinnedPiece.showing
+                Accessible.role: Accessible.Button
+                Accessible.name: words.i18n("Pinned note: %1", surface.pinnedTitle)
+                Accessible.onPressAction: surface.openPinned()
+                Keys.onReturnPressed: surface.openPinned()
+                Keys.onEnterPressed: surface.openPinned()
+                Keys.onSpacePressed: surface.openPinned()
+                Rectangle {
+                    objectName: "ambient-note-bead"
+                    x: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: surface.beadSize
+                    height: width
+                    radius: width / 2
+                    color: surface.pinnedColour
+                    scale: pinnedArea.pressed ? 1.2 : 1
+                    Behavior on scale { NumberAnimation { duration: surface.ms(90) } }
+                }
+                Label {
+                    objectName: "ambient-note-title"
+                    x: 6 + surface.beadSize + 6
+                    width: Math.max(0, parent.width - x - 6)
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: surface.pinnedTitle
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.topMargin: 6
+                    anchors.bottomMargin: 6
+                    radius: height / 2
+                    color: "transparent"
+                    border.width: 1
+                    border.color: tone.text
+                    opacity: 0.6
+                    visible: pinnedButton.activeFocus
+                }
+                MouseArea {
+                    id: pinnedArea
+                    anchors.fill: parent
+                    onClicked: surface.openPinned()
+                }
+            }
+        }
     }
 
     // Layouts' island: the disc with the layouts' mark, and the layout opened
@@ -1861,7 +1933,7 @@ Item {
             Rectangle {
                 objectName: "ambient-layouts-disc"
                 anchors.centerIn: parent
-                width: Math.max(16, surface.artSize - 4)
+                width: surface.actionDisc
                 height: width
                 radius: width / 2
                 color: tone.wash(0.16)

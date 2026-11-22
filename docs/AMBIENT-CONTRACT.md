@@ -205,7 +205,8 @@ Core island and nothing else changes.
 ### Layouts
 
 Search's Layouts result opens the Layouts island in place, the way a Core
-question does: grown up from the band's end over the desk, on a surface of its
+question does: dropped out of the island it grew from, as every island's
+card is, or grown up from the band's end over the desk, on a surface of its
 own that is never a window Cards takes as a card, so it never becomes part of a
 layout. It opens once, on the first widget on Search's display to hear the
 ask, with its islands shown or not; where they are not, it grows from the dot.
@@ -213,11 +214,14 @@ Its foot stays on the display even where the band reaches past it. Split Rock's 
 layouts; the island reads them from Core (`Layouts()`) and asks Core for every
 change.
 
-The island's title reads "Layouts · 2 saved". Each saved layout is a row: its
-name and its miniature, each
-group a small card, 6 px corners, naming its front app, a Stack's cards fanned
-5 px behind it, and the group's apps beneath; then an Open pill, 32 tall, the
-first row's filled. A tap on a row off its pill shows its own Remove
+The island's title reads "Layouts · 2 saved". Each saved layout is one line,
+56 tall: its picture, each display it stood on drawn small, left to right,
+with each window seen there where it sat and its front app's icon in it, as
+Settings' map of a layout shows them (a layout kept without places is one
+display, a column for each group, each with its icon); its name; beneath the name each group's
+front app by its icon from the app menu, then its apps by the menu's names,
+group by group, "Zen Browser · Stack of Mail, Ghostty · Claude"; then an Open
+pill, 32 tall, the first row's filled. Past what fits, the island scrolls. A tap on a row off its pill shows its own Remove
 (`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
 brings apps back. With none saved,
 a line says how to make one. Below the rows are the pills Save what's open,
@@ -238,7 +242,17 @@ takes it away and opens Layouts; setting it aside, or a minute, takes it away
 and opens nothing. Core is told nothing of either.
 
 While Core keeps layouts, Layouts' own island stands in the band after the
-quick note's: a disc with the layouts' mark, Lucide's panels on a faint disc
+quick note's. A door island's button joins the quick note's as one row of
+actions: while the quick note's island is there, its + stands first, then its
+window notes' dot, then Layouts' disc, a button of that island. Each disc keeps
+an island's size, and buttons standing together take the disc and the dock's
+own step between icons, 8 px, each answering the band's full height; the
+pinned note's words follow the buttons. Layouts' island holds
+only the name of the layout opened last, one small step (Kirigami's small
+spacing) after the note's own words, where islands keep the band's full gap.
+While the quick note's island shows, the two buttons stay together; the
+names go first.
+Without the quick note's island, Layouts' island is a disc with the layouts' mark, Lucide's panels on a faint disc
 of the style's ink, and beside it the name of the layout opened last, one
 line, elided where long. A tap on the disc, or on the island off the name,
 opens the Layouts island in place, grown from it; a tap on the name opens that
@@ -253,18 +267,31 @@ while "Show islands beside the launcher" is on.
 Without Split Rock, or with a Core that has no `Layouts()`, there is no Layouts
 island and nothing else changes.
 
+A saved layout that places an app on a display not connected now is left out
+of the list, and comes back when the display does; one saved before layouts
+kept displays always shows. While none is left, Layouts' island goes from the
+band, and Layouts opened from Search says the layouts wait for a display.
+
 ### Quick note
 
 While Gooseberry is installed with its Capture action, the test Search's Notes
 door uses, the quick note's island stands in the band: a dot with a plus,
 Lucide's plus on a faint disc of the style's ink. A tap on the dot, or on the
-island off the pinned note, starts a quick note on Gooseberry's own card,
-through its Capture action. Where Gooseberry has a note pinned, the note sits
+island off the pinned note, grows the quick note's card from the + (§ The open
+card), where Gooseberry offers its quick-note interface, version 1: the note
+`Start` resumes or begins, on paper of its colour, written through that
+interface as Search's Notes writes it, so either carries on the same note.
+Under it stand Colour, Checklist and Remind where Gooseberry offers reminders,
+and the window it is stuck to; Pick a time, folders and More stay on the full
+note. Done finishes the note (`Done`); Open in Notes hands it to Gooseberry's
+own card (`OpenOnCard`), or to Search's Notes on that note where the card
+can't take it; Esc or a tap outside keeps it as written. Without that
+interface the tap starts a quick note on Gooseberry's own card, through its
+Capture action. Where Gooseberry has a note pinned, the note sits
 beside the dot in the same island: a bead of the note's colour and its first
 words, one line, elided where long. A tap there opens that note on Gooseberry's
-card (`OpenNote`), or starts a new one where the note has gone. The island
-opens no card of its own; Search's Notes takes the tap only where Gooseberry
-cannot.
+card (`OpenNote`), or starts a new one where the note has gone. Search's Notes
+takes the tap only where Gooseberry cannot.
 
 Ambient reads the pinned note from Gooseberry's quick-note interface on the
 session bus, version 1, only while Gooseberry runs: it asks `Pinned` when
@@ -358,7 +385,7 @@ together and settle without overshoot.
 | Shared screen | Stop, red dot, who receives it |
 | Waiting application | icon, name, question |
 | Core | icon, what it is and how it stands, Don't tell me again (Windows programs only), detail and what can be done |
-| Quick note | dot with a plus, pinned note (its bead and first words) |
+| Quick note | dot with a plus, Layouts' disc while Layouts' island is there, pinned note (its bead and first words) |
 | Layouts | disc with the layouts' mark, the layout opened last |
 
 Beside a neighbour, an island reads what it is, then its words, then its
@@ -431,6 +458,17 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 8 px away. Outlined, art keeps to its pill, 68% of the island's height with
 10 px corners, and the icons are 24 px, each a little less on a short panel.
 
+### The open card
+
+Every island that opens grows into the same card from where it stands in the
+band, and every card is laid out the same way: first a title
+line, the island's picture, its name in 15 px demibold and, after a dot in the
+quiet ink, what it holds ("Layouts · 5 saved", "Music · Spotify", "Quick note ·
+Inbox", "Transfers · 2 files", "Quick actions · what to type in Search"); then
+what the island is about; then one row of buttons, the main one filled and
+first, and the card's own way out in it: Close, Not now for Core, Done for the
+quick note. Esc and a tap outside close every card as well.
+
 ## Interaction and safety
 
 - Touch, mouse and keyboard reach the same actions, as far as the source
@@ -438,6 +476,7 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 - An island's actions act only on its own source, and one the source does not
   support is not shown.
 - Closing the open island returns it to the band; it never opens search.
+- Every open island is the same card (§ The open card).
 - With nothing to show, Ambient leaves the panel clean; the quick note's and
   Layouts' islands are doors, not activity, and keep only their own width.
 - Do not add a daemon, polling loop, persistent history, replacement task

@@ -198,8 +198,10 @@ PlasmoidItem {
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
         onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
+        noteCard: !!Plasmoid.quickNote && Plasmoid.quickNote.available
         onLayoutRequested: layoutId => Plasmoid.openLayout(layoutId)
         onKindsChanged: if (root.island && root.island.kind !== "layouts" && root.island.kind !== "quickActions"
+                            && root.island.kind !== "note"
                             && kinds.length === 0) root.island.dismiss()
     }
 
@@ -348,6 +350,7 @@ PlasmoidItem {
         const opened = islandComponent.createObject(null, {
             surface: ambient,
             layouts: Plasmoid,
+            quickNote: Plasmoid.quickNote || null,
             quickLeftOut: root.quickLeftOut,
             kind: kind,
             start: Plasmoid.screenRect(from),
