@@ -64,6 +64,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
     connect(&m_screen, &ScreenShareProvider::changed, this, update);
     connect(&m_waiting, &WaitingAppProvider::changed, this, update);
     connect(&m_core, &CoreFactProvider::changed, this, update);
+    connect(&m_core, &CoreFactProvider::layoutsChanged, this, update);
     connect(&m_noteIsland, &NotesIslandProvider::changed, this, update);
     if (windows) {
         // The window in use, for its notes on the quick note's island. While
@@ -110,7 +111,7 @@ ActivityModel::ActivityModel(const QDBusConnection &bus, const QString &download
 }
 void ActivityModel::refresh() {
     reconcile(m_tette.activities() + m_jobs.activities() + m_notices.activities(), m_media.activities(), m_files.activities(),
-              m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_noteIsland.activities());
+              m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_core.layoutsDoor() + m_noteIsland.activities());
 }
 void ActivityModel::reconcile(const QVariantList &transfers, const QVariantList &media, const QVariantList &files,
                               const QVariantList &drives) {
@@ -224,7 +225,7 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     else if (sourceId.startsWith(QLatin1String("drive:")) && action == QLatin1String("open")) m_drives.open(sourceId);
     else if (sourceId.startsWith(QLatin1String("screen:"))) m_screen.invoke(sourceId, sourceGeneration, action);
     else if (sourceId.startsWith(QLatin1String("waiting:"))) m_waiting.invoke(sourceId, sourceGeneration, action);
-    else if (sourceId.startsWith(QLatin1String("core:"))) m_core.invoke(sourceId, sourceGeneration, action);
+    else if (sourceId.startsWith(QLatin1String("core:"))) m_core.invoke(sourceId, sourceGeneration, action, value.toString());
     else if (sourceId == QLatin1String(NotesIslandProvider::Id) && action == QLatin1String("windowNotes"))
         m_noteIsland.toggleWindowNotes();
 }
@@ -234,13 +235,13 @@ void ActivityModel::setAside(const QString &id, int generation) {
     const auto source = route.value(QStringLiteral("id")).toString();
     const auto state = route.value(QStringLiteral("state")).toString();
     const auto kind = route.value(QStringLiteral("kind")).toString();
-    // The quick note's island is a door, not activity: it stays.
-    if (kind == QLatin1String("note")) return;
+    // The quick note's and Layouts' islands are doors, not activity: they stay.
+    if (kind == QLatin1String("note") || kind == QLatin1String("layouts")) return;
     if (kind == QLatin1String("media")) m_asideMedia.insert(source, state);
     else if (kind == QLatin1String("drive")) {
         m_drives.setAside(source);
         reconcile(m_lastTransfers, m_lastMedia, m_lastFiles,
-                  m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_noteIsland.activities());
+                  m_drives.activities() + m_screen.activities() + m_waiting.activities() + m_core.activities() + m_core.layoutsDoor() + m_noteIsland.activities());
         return;
     }
     // Core hears it was dismissed, and stays quiet until the fact gets worse.

@@ -8,8 +8,8 @@
 // Which islands each Search on one panel leaves to another, so no island
 // shows twice there whatever the widgets' settings say.
 //
-// Islands are of three sorts: "media", "note" for the quick note's, and
-// "others" for the rest. Each widget names the sorts its settings show; given
+// Islands are of four sorts: "media", "note" for the quick note's, "layouts"
+// for Layouts', and "others" for the rest. Each widget names the sorts its settings show; given
 // every widget on a panel in its order there, a widget leaves a sort to the
 // first widget before it that shows the same.
 inline QList<QStringList> islandsLeftToOthers(const QList<QStringList> &shownInOrder)

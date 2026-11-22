@@ -40,15 +40,21 @@ PlasmoidItem {
     // still show each island once.
     readonly property var islandsShown: {
         if (!showAmbient || vertical) return [];
-        const rest = Plasmoid.configuration.showQuickNote !== false ? ["others", "note"] : ["others"];
+        const rest = ["others"];
+        if (Plasmoid.configuration.showQuickNote !== false) rest.push("note");
+        if (Plasmoid.configuration.showLayoutsIsland !== false) rest.push("layouts");
         return ambientShows === "media" ? ["media"] : ambientShows === "others" ? rest : ["media"].concat(rest);
     }
     onIslandsShownChanged: Plasmoid.islandsShown = islandsShown
     function leftToAnother(sort) { return Plasmoid.islandsLeft.indexOf(sort) >= 0; }
     function shows(activity) {
-        if (leftToAnother(activity.kind === "media" ? "media" : activity.kind === "note" ? "note" : "others")) return false;
-        // The quick note's island, unless the widget's setting turns it off.
+        const sort = activity.kind === "media" || activity.kind === "note" || activity.kind === "layouts"
+            ? activity.kind : "others";
+        if (leftToAnother(sort)) return false;
+        // The quick note's and Layouts' islands, unless the widget's settings
+        // turn them off.
         if (activity.kind === "note" && Plasmoid.configuration.showQuickNote === false) return false;
+        if (activity.kind === "layouts" && Plasmoid.configuration.showLayoutsIsland === false) return false;
         if (ambientShows === "media") return activity.kind === "media";
         if (ambientShows === "others") return activity.kind !== "media";
         return true;
@@ -192,6 +198,7 @@ PlasmoidItem {
             Plasmoid.invokeActivity(activityId, generation, action, value)
         onOpenRequested: kind => root.openIsland(kind)
         onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
+        onLayoutRequested: layoutId => Plasmoid.openLayout(layoutId)
         onKindsChanged: if (root.island && root.island.kind !== "layouts" && root.island.kind !== "quickActions"
                             && kinds.length === 0) root.island.dismiss()
     }

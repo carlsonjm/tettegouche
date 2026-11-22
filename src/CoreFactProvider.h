@@ -53,7 +53,8 @@ public:
     QVariantList activities() const;
     // Passes Open, Not now on a fact that asks, "never" for Windows programs
     // and any action that fact lists among its choices to Core.
-    void invoke(const QString &id, int generation, const QString &action);
+    // `screen` is the name of the display the island was answered on.
+    void invoke(const QString &id, int generation, const QString &action, const QString &screen = QString());
     // The person set the row aside.
     void dismiss(const QString &id);
     // Asks Core to open a fact's card, as from Search.
@@ -63,8 +64,16 @@ public:
     bool keepsLayouts() const { return m_keepsLayouts; }
     // Each saved layout, in Core's order: its id, name, groups ({apps, names,
     // stack} each, apps by desktop id and names as the app menu gives them,
-    // front first) and whether it opens at sign-in (atSignIn).
+    // front first), whether it opens at sign-in (atSignIn) and when Cards
+    // last took it (opened, ISO 8601, empty when never).
     QList<QVariantMap> layouts() const { return m_layouts; }
+    // The layout opened last, empty when none has been opened.
+    QVariantMap lastOpened() const;
+    static constexpr char LayoutsDoor[] = "layouts";
+    // The Layouts island's one row while Core keeps layouts, a door that
+    // stays without activity: the layout opened last rides on it (layoutId
+    // and title) where there is one.
+    QVariantList layoutsDoor() const;
     // Asks Core what is open on the workspace in use, in the same groups;
     // currentLayoutRead answers, with `available` false where Cards is not
     // running or Core does not answer.
@@ -97,7 +106,7 @@ private:
     // Asks Core for its upkeep cards.
     void askActions();
     void askLayouts();
-    void act(const QString &topic, const QString &action);
+    void act(const QString &topic, const QString &action, const QString &screen = QString());
     // Asks Core about layouts, where it keeps them.
     void call(const QString &method, const QVariantList &arguments);
     // The apps a run left out, on the island until it is tapped, set aside or

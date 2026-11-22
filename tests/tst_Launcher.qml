@@ -143,9 +143,9 @@ TestCase {
             if (typed === "do not disturb until 3")
                 return { kind: "doNotDisturb", on: true,
                          until: { when: "2026-11-18T15:00:00-06:00", day: "today", time: "3:00 PM", date: "Wed 18 Nov" } }
-            if (typed === "dnd") return { kind: "doNotDisturb", on: true }
+            if (typed === "dnd") return { kind: "doNotDisturb", on: true, flips: true }
             if (typed === "bluetooth off") return { kind: "bluetooth", on: false }
-            if (typed === "keep awake") return { kind: "keepAwake", on: true }
+            if (typed === "keep awake") return { kind: "keepAwake", on: true, flips: true }
             if (typed === "keep awake 1h")
                 return { kind: "keepAwake", on: true,
                          until: { when: "2026-11-18T11:00:00-06:00", day: "today", time: "11:00 AM", date: "Wed 18 Nov" } }
@@ -5160,6 +5160,25 @@ TestCase {
         compare(switchStub.forgets, 1)
         compare(switchStub.undos, 0)
         compare(switchStub.doNotDisturbOn, true)
+        endQuickAction()
+    }
+    function test_quickSwitchNamedAloneTurnsItBack() {
+        // With Do not disturb on, its name alone offers to turn it off.
+        switchStub.reset()
+        switchStub.doNotDisturbOn = true
+        launcher.quickSwitches = switchStub
+        typeQuickAction("dnd")
+        compare(findChild(launcher, "quick-action-title").text, "Turn off Do not disturb")
+        keyClick(Qt.Key_Return)
+        compare(switchStub.sets.length, 1)
+        compare(switchStub.sets[0][0], "doNotDisturb")
+        compare(switchStub.sets[0][1], false)
+        endQuickAction()
+        // Off, the same word turns it on.
+        switchStub.reset()
+        launcher.quickSwitches = switchStub
+        typeQuickAction("dnd")
+        compare(findChild(launcher, "quick-action-title").text, "Turn on Do not disturb")
         endQuickAction()
     }
     function test_quickSwitchNothingToChange() {

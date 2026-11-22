@@ -241,6 +241,12 @@ Item {
         if (!action || !action.kind || root.quickActionsLeftOut.indexOf(action.kind) >= 0) return null
         if (action.kind === "note" || action.kind === "reminder")
             return root.quickNote && root.quickNote.available ? action : null
+        // The name alone turns the switch the other way from where it stands:
+        // "dnd" with Do not disturb on offers to turn it off.
+        if (action.flips && root.quickSwitches
+                && (action.kind === "keepAwake" ? root.quickSwitches.keepAwakeOn
+                    : action.kind === "doNotDisturb" && root.quickSwitches.doNotDisturbOn))
+            action.on = false
         if (action.kind === "doNotDisturb") return root.quickSwitches ? action : null
         if (action.kind === "bluetooth")
             return root.quickSwitches && root.quickSwitches.bluetoothThere ? action : null

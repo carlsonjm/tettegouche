@@ -44,6 +44,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_showAmbientDefault
     property bool cfg_showQuickNote
     property bool cfg_showQuickNoteDefault
+    property bool cfg_showLayoutsIsland
+    property bool cfg_showLayoutsIslandDefault
     property bool cfg_animateIndicator
     property bool cfg_animateIndicatorDefault
 
@@ -194,6 +196,13 @@ KCMUtils.SimpleKCM {
             enabled: cfg_showAmbient
             checked: cfg_showQuickNote
             onToggled: cfg_showQuickNote = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show the Layouts island")
+            enabled: cfg_showAmbient
+            checked: cfg_showLayoutsIsland
+            onToggled: cfg_showLayoutsIsland = checked
         }
 
         QQC2.CheckBox {
