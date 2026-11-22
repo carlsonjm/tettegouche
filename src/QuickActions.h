@@ -25,6 +25,9 @@ struct Action {
     // A switch only: the way it is to be set. `when` is then the time it
     // goes back by itself, and `timed` whether the phrase named one.
     bool on = true;
+    // A switch named alone, with no on, off or time: Search turns it the
+    // other way from where it stands.
+    bool flips = false;
     explicit operator bool() const { return kind != None; }
 };
 
@@ -289,6 +292,7 @@ inline Action parseSwitch(const QString &phrase, const QDateTime &now)
         } else if (rest != QLatin1String("on")) {
             if (!readEnd(rest, now, action.when)) return {};
             action.timed = !rest.isEmpty();
+            action.flips = rest.isEmpty();
         }
         return action;
     }
@@ -353,7 +357,8 @@ inline QVariantMap describeWhen(const QDateTime &when, const QDateTime &now, con
 // the day among them) and, for a reminder, `choices`: the time the phrase
 // named first, then this evening while it is ahead and tomorrow at `usual`.
 // A switch is `kind` ("keepAwake", "doNotDisturb" or "bluetooth"), `on`,
-// and `until`, worded as a choice is, when the phrase named an end.
+// `flips` when the name came alone, and `until`, worded as a choice is, when
+// the phrase named an end.
 inline QVariantMap describe(const QString &typed, const QDateTime &now, const QLocale &locale = QLocale(),
                             const QTime &usual = QTime(Detail::Morning, 0))
 {
@@ -364,6 +369,7 @@ inline QVariantMap describe(const QString &typed, const QDateTime &now, const QL
             {QStringLiteral("kind"), action.kind == Action::KeepAwake ? QStringLiteral("keepAwake")
                 : action.kind == Action::DoNotDisturb ? QStringLiteral("doNotDisturb") : QStringLiteral("bluetooth")},
             {QStringLiteral("on"), action.on}};
+        if (action.flips) row.insert(QStringLiteral("flips"), true);
         if (action.timed) row.insert(QStringLiteral("until"), describeWhen(action.when, now, locale));
         return row;
     }

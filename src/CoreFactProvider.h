@@ -53,7 +53,8 @@ public:
     QVariantList activities() const;
     // Passes Open, Not now on a fact that asks, "never" for Windows programs
     // and any action that fact lists among its choices to Core.
-    void invoke(const QString &id, int generation, const QString &action);
+    // `screen` is the name of the display the island was answered on.
+    void invoke(const QString &id, int generation, const QString &action, const QString &screen = QString());
     // The person set the row aside.
     void dismiss(const QString &id);
     // Asks Core to open a fact's card, as from Search.
@@ -105,7 +106,7 @@ private:
     // Asks Core for its upkeep cards.
     void askActions();
     void askLayouts();
-    void act(const QString &topic, const QString &action);
+    void act(const QString &topic, const QString &action, const QString &screen = QString());
     // Asks Core about layouts, where it keeps them.
     void call(const QString &method, const QVariantList &arguments);
     // The apps a run left out, on the island until it is tapped, set aside or

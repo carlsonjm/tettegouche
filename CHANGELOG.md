@@ -11,6 +11,11 @@ history carries the implementation detail.
 - Layouts opens above the band, and each saved layout is one line: a small
   picture of where its windows sat, its name, its apps by their icons and
   menu names ("Stack of Mail, Ghostty"), and Open.
+- An island from Split Rock's Core tells Core which display it was tapped
+  on, so the notifications it opens, opens there alone, not on every
+  display.
+- "dnd" or "keep awake" typed alone in Search offers to turn the switch
+  off when it is already on, instead of saying it is already on.
 - Layouts has its own island in the band, after the quick note's, while
   Split Rock keeps saved layouts: its disc opens Layouts in place, and the
   name of the layout opened last, beside it, opens that layout in one tap.

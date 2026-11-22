@@ -375,12 +375,12 @@ QVariantList CoreFactProvider::activities() const {
     return rows;
 }
 
-void CoreFactProvider::invoke(const QString &id, int generation, const QString &action) {
+void CoreFactProvider::invoke(const QString &id, int generation, const QString &action, const QString &screen) {
     if (!id.startsWith(Prefix) || generation != m_generation) return;
     const auto topic = id.mid(Prefix.size());
     // Told once: a tap takes it away.
     if (topic == Missed) { if (action == QLatin1String("open")) forgetMissed(); return; }
-    if (action == QLatin1String("open")) { act(topic, action); return; }
+    if (action == QLatin1String("open")) { act(topic, action, screen); return; }
     if (action == QLatin1String("never") && topic == QLatin1String("windows")) { act(topic, action); return; }
     const auto found = std::find_if(m_facts.cbegin(), m_facts.cend(), [&topic](const QVariantMap &fact) {
         return fact.value(QStringLiteral("topic")).toString() == topic;
@@ -423,10 +423,22 @@ void CoreFactProvider::removeApp(const QString &applicationId, const QString &na
     });
 }
 
-// Core answers with FactChanged, which takes the row away.
-void CoreFactProvider::act(const QString &topic, const QString &action) {
+// Core answers with FactChanged, which takes the row away. With the display
+// named, ActOn, so what Core opens opens there; a Core without ActOn says
+// so, and hears Act instead.
+void CoreFactProvider::act(const QString &topic, const QString &action, const QString &screen) {
     if (m_owner.isEmpty() && m_facts.isEmpty()) return;
-    auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Act"));
-    call.setArguments({topic, action});
-    m_bus.asyncCall(call, 5000);
+    if (screen.isEmpty()) {
+        auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("Act"));
+        call.setArguments({topic, action});
+        m_bus.asyncCall(call, 5000);
+        return;
+    }
+    auto call = QDBusMessage::createMethodCall(service(), path(), iface(), QStringLiteral("ActOn"));
+    call.setArguments({topic, action, screen});
+    auto *watcher = new QDBusPendingCallWatcher(m_bus.asyncCall(call, 5000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, topic, action] {
+        const QDBusPendingReply<bool> reply = *watcher; watcher->deleteLater();
+        if (reply.isError() && reply.error().type() == QDBusError::UnknownMethod) act(topic, action);
+    });
 }

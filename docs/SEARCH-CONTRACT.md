@@ -361,6 +361,11 @@ nothing:
   closed. With no end named it lasts until sign-out. It is offered only
   while that door is there.
 
+Do not disturb and Keep awake named alone, with no "on", "off" or end, turn
+the switch the other way from where it stands: "dnd" with Do not disturb on
+offers "Turn off Do not disturb". Named with "on" or "off", a switch already
+that way says so and sets nothing.
+
 A switch's row carries a symbol of the switch, what Enter does ("Turn on Do
 not disturb until 3:00 PM"), "Happens right here, nothing opens" beneath, and
 Turn on or Turn off as its light pill. Enter, a tap on the row or the pill

@@ -225,7 +225,7 @@ void ActivityModel::invoke(const QString &id, int generation, const QString &act
     else if (sourceId.startsWith(QLatin1String("drive:")) && action == QLatin1String("open")) m_drives.open(sourceId);
     else if (sourceId.startsWith(QLatin1String("screen:"))) m_screen.invoke(sourceId, sourceGeneration, action);
     else if (sourceId.startsWith(QLatin1String("waiting:"))) m_waiting.invoke(sourceId, sourceGeneration, action);
-    else if (sourceId.startsWith(QLatin1String("core:"))) m_core.invoke(sourceId, sourceGeneration, action);
+    else if (sourceId.startsWith(QLatin1String("core:"))) m_core.invoke(sourceId, sourceGeneration, action, value.toString());
     else if (sourceId == QLatin1String(NotesIslandProvider::Id) && action == QLatin1String("windowNotes"))
         m_noteIsland.toggleWindowNotes();
 }

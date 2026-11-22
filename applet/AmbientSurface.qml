@@ -2,6 +2,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
 import org.kde.ki18n
 import org.kde.kirigami as Kirigami
 import "IslandRoom.js" as IslandRoom
@@ -261,10 +262,12 @@ Item {
     function capability(activity, name) {
         return Boolean(activity && activity.capabilities && activity.capabilities[name]);
     }
+    // Core's facts carry the display they were answered on, so what they
+    // open, such as the notifications, opens on this display alone.
     function invoke(activity, action, value) {
         if (activity)
             invokeRequested(String(activity.id), Number(activity.generation), action,
-                value === undefined ? null : value);
+                value !== undefined ? value : activity.kind === "core" ? Screen.name : null);
     }
     function known(value) {
         return value !== undefined && value !== null;
