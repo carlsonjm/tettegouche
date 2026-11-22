@@ -7,6 +7,7 @@
 #include "NotesDoor.h"
 #include "NotesIslandProvider.h"
 #include "ProductName.h"
+#include "QuickNote.h"
 #include "shared/SuiteSettings.h"
 
 #include <KConfigGroup>
@@ -161,6 +162,7 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
         m_ambientActivities = {transfer, media};
     } else {
         m_activities = ActivityModel::acquire();
+        m_quickNote = new QuickNote(this);
         connect(m_activities.get(), &ActivityModel::changed, this, [this] {
             setAmbientActivities(m_activities->activities());
         });
@@ -381,6 +383,16 @@ QVariantList TettegoucheApplet::layouts() const
     if (!m_activities) return listed;
     for (const auto &layout : m_activities->core()->layouts()) listed.append(layout);
     return listed;
+}
+
+QObject *TettegoucheApplet::quickNote() const
+{
+    return m_quickNote;
+}
+
+int TettegoucheApplet::layoutsAway() const
+{
+    return m_activities ? m_activities->core()->layoutsAway() : 0;
 }
 
 void TettegoucheApplet::readCurrentLayout()

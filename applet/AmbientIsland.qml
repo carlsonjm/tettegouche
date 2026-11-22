@@ -69,6 +69,8 @@ Window {
     // readCurrentLayout(), and saves, opens, and removes them.
     property var layouts: null
     readonly property var savedLayouts: kind === "layouts" && layouts && layouts.layouts ? layouts.layouts : []
+    // Saved layouts waiting for a display that isn't connected, out of the list.
+    readonly property int layoutsAway: layouts && layouts.layoutsAway ? layouts.layoutsAway : 0
     // Quick actions, asked for from Search's Helpers: each action Search
     // offers by its name, with what to type for it; the kinds the settings
     // leave out are left out here. Try asks the keeper to open Search with
@@ -90,6 +92,95 @@ Window {
         if (layouts) layouts.typeInSearch(typed);
         dismiss();
     }
+    // The quick note the notes application keeps, for the + island's card:
+    // the same note Search's Notes writes. Null where there is none, when
+    // the + opens Search instead.
+    property var quickNote: null
+    readonly property bool noteWritable: quickNote !== null && quickNote.open && !quickNote.readOnly
+    readonly property color noteHex: quickNote && quickNote.colourHex !== "" ? quickNote.colourHex : "#F2D98A"
+    // Which of the note's choices shows under it: "", "colour", "remind" or "window".
+    property string noteChoosing: ""
+    // The note opened on the + resumes the one left open, or starts one.
+    // Whether anything has been typed since the card opened: until then the
+    // note Start resumes or begins is drawn as it arrives.
+    property bool noteTyped: false
+    function startNote() {
+        noteChoosing = "";
+        noteTyped = false;
+        if (!quickNote) return;
+        quickNote.start();
+        notePad.text = quickNote.text;
+        overlay.syncNoteLines();
+        notePadFocus.restart();
+    }
+    // Done finishes the note, kept as it was written.
+    function finishNote() {
+        if (quickNote) {
+            quickNote.flush();
+            quickNote.done();
+        }
+        dismiss();
+    }
+    // The full note, on the notes application's own card; where it can't
+    // take it, on Search's Notes page.
+    function noteInNotes() {
+        if (!quickNote) return;
+        quickNote.flush();
+        const id = quickNote.noteId;
+        handingNote = id;
+        quickNote.openOnCard(id, "");
+    }
+    property string handingNote: ""
+    Connections {
+        target: overlay.quickNote
+        ignoreUnknownSignals: true
+        function onCardAnswered(opened) {
+            if (overlay.handingNote === "") return;
+            const id = overlay.handingNote;
+            overlay.handingNote = "";
+            if (!opened && overlay.layouts) overlay.layouts.openDrawer("note:" + id);
+            overlay.dismiss();
+        }
+        // A change kept elsewhere shows while the pad isn't typed into.
+        function onNoteChanged() {
+            if (overlay.kind !== "note") return;
+            if ((!notePad.activeFocus || !overlay.noteTyped) && notePad.text !== overlay.quickNote.text)
+                notePad.text = overlay.quickNote.text;
+            if (!noteLines.typing) overlay.syncNoteLines();
+        }
+    }
+    Timer {
+        id: notePadFocus
+        interval: 1
+        onTriggered: {
+            if (overlay.quickNote && overlay.quickNote.checklist && noteLineModel.count > 0) noteLines.focusRow(noteLineModel.count - 1);
+            else notePad.forceActiveFocus();
+        }
+    }
+    // The checklist, one row per line, kept here while it is typed into, as
+    // Search's Notes keeps it: "- [ ] " and "- [x] " lines.
+    ListModel { id: noteLineModel }
+    function syncNoteLines() {
+        const lines = quickNote && quickNote.checklist ? quickNote.lines || [] : [];
+        let same = lines.length === noteLineModel.count;
+        for (let i = 0; same && i < lines.length; ++i) {
+            const row = noteLineModel.get(i);
+            same = row.text === (lines[i].text || "") && row.item === !!lines[i].item && row.checked === !!lines[i].checked;
+        }
+        if (same) return;
+        noteLineModel.clear();
+        for (const line of lines)
+            noteLineModel.append({ text: line.text || "", item: !!line.item, checked: !!line.checked });
+    }
+    function sendNoteLines() {
+        const out = [];
+        for (let i = 0; i < noteLineModel.count; ++i) {
+            const row = noteLineModel.get(i);
+            out.push(row.item ? (row.checked ? "- [x] " : "- [ ] ") + row.text : row.text);
+        }
+        quickNote.setText(out.join("\n"));
+    }
+
     // Layouts shows the saved layouts, or the form that saves what's open.
     property bool savingLayout: false
     // The saved layout whose Remove shows, by its id.
@@ -103,7 +194,9 @@ Window {
     onKindChanged: {
         savingLayout = false;
         chosenLayout = "";
+        if (kind === "note") startNote();
     }
+    Component.onCompleted: if (kind === "note") startNote()
     function saveWhatsOpen() {
         keptGroups = [];
         currentRead = false;
@@ -150,6 +243,9 @@ Window {
     // Not close(): that is the window's own, and would drop it at once.
     function dismiss() {
         if (!expanded) return;
+        // A note left open is kept as written, to carry on from the + or
+        // Search's Notes.
+        if (kind === "note" && quickNote) quickNote.flush();
         expanded = false;
         closing.restart();
     }
@@ -184,6 +280,58 @@ Window {
         font.pixelSize: 13
         elide: Text.ElideRight
         maximumLineCount: 1
+    }
+
+    // Every open island's first line: its picture, its name, and after a
+    // dot what it holds, as "Layouts · 5 saved" (J, 22 November).
+    component CardTitle: Row {
+        id: cardTitle
+        property string name
+        property string after
+        // A theme icon, a suite glyph, or a colour, in that order.
+        property string icon
+        property string glyph
+        property color swatch: "transparent"
+        spacing: 8
+        Kirigami.Icon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: cardTitle.icon !== ""
+            width: 20
+            height: 20
+            source: cardTitle.icon
+        }
+        SuiteIcon {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: cardTitle.icon === "" && cardTitle.glyph !== ""
+            width: 18
+            height: 18
+            glyph: cardTitle.glyph !== "" ? cardTitle.glyph : "plus"
+        }
+        Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            visible: cardTitle.icon === "" && cardTitle.glyph === "" && cardTitle.swatch.a > 0
+            width: 18
+            height: 18
+            radius: 5
+            color: cardTitle.swatch
+        }
+        Row {
+            anchors.verticalCenter: parent.verticalCenter
+            Label {
+                id: cardName
+                objectName: cardTitle.objectName + "-name"
+                text: cardTitle.name
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+            }
+            Label {
+                objectName: cardTitle.objectName + "-after"
+                anchors.baseline: cardName.baseline
+                visible: text !== ""
+                text: cardTitle.after
+                opacity: 0.66
+            }
+        }
     }
 
     component GlyphButton: Item {
@@ -492,7 +640,7 @@ Window {
                 // With more than one kind going on, a row to move between them.
                 Row {
                     objectName: "ambient-island-kinds"
-                    visible: overlay.kind !== "core" && overlay.kind !== "layouts" && overlay.kind !== "quickActions"
+                    visible: overlay.kind !== "core" && overlay.kind !== "layouts" && overlay.kind !== "quickActions" && overlay.kind !== "note"
                         && overlay.surface !== null
                         && overlay.surface.kinds.length > 1
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -540,6 +688,15 @@ Window {
                     width: parent.width
                     spacing: 10
 
+                    CardTitle {
+                        objectName: "ambient-island-media-title"
+                        name: words.i18nc("@title the open music island", "Music")
+                        after: overlay.activity && overlay.activity.source
+                            ? words.i18nc("@title after Music: the player", " · %1", overlay.activity.source) : ""
+                        icon: overlay.activity && overlay.activity.icon ? overlay.activity.icon : ""
+                        glyph: "play"
+                    }
+
                     Row {
                         spacing: 14
                         Art {
@@ -564,19 +721,6 @@ Window {
                                     .filter(Boolean).join(" · ") : ""
                                 font.pixelSize: 14
                                 opacity: 0.66
-                            }
-                            Row {
-                                spacing: 6
-                                Kirigami.Icon {
-                                    width: 14
-                                    height: 14
-                                    source: overlay.activity && overlay.activity.icon ? overlay.activity.icon : ""
-                                }
-                                Label {
-                                    text: overlay.activity ? overlay.activity.source || "" : ""
-                                    font.pixelSize: 12
-                                    opacity: 0.66
-                                }
                             }
                         }
                     }
@@ -759,14 +903,26 @@ Window {
                         }
                     }
 
-                    PillButton {
-                        objectName: "ambient-island-raise"
-                        anchors.right: parent.right
-                        visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "raise")
-                        label: words.i18n("Show %1", overlay.activity ? overlay.activity.source || words.i18n("player") : "")
-                        onActivated: {
-                            overlay.surface.invoke(overlay.activity, "raise");
-                            overlay.dismiss();
+                    // The card's buttons: the player, then Close, last as on
+                    // every card.
+                    Flow {
+                        objectName: "ambient-island-media-actions"
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-raise"
+                            filled: true
+                            visible: overlay.surface !== null && overlay.surface.capability(overlay.activity, "raise")
+                            label: words.i18n("Show %1", overlay.activity ? overlay.activity.source || words.i18n("player") : "")
+                            onActivated: {
+                                overlay.surface.invoke(overlay.activity, "raise");
+                                overlay.dismiss();
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-media-close"
+                            label: words.i18n("Close")
+                            onActivated: overlay.dismiss()
                         }
                     }
                 }
@@ -853,20 +1009,11 @@ Window {
                     visible: overlay.kind === "quickActions"
                     width: parent.width
                     spacing: 12
-                    Row {
-                        spacing: 0
-                        Label {
-                            id: quickTitle
-                            objectName: "ambient-island-quick-actions-title"
-                            text: words.i18nc("@title what Search does from typed words", "Quick actions")
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
-                        }
-                        Label {
-                            anchors.baseline: quickTitle.baseline
-                            text: words.i18nc("@title after Quick actions", " · what to type in Search")
-                            opacity: 0.66
-                        }
+                    CardTitle {
+                        objectName: "ambient-island-quick-actions-title"
+                        name: words.i18nc("@title what Search does from typed words", "Quick actions")
+                        after: words.i18nc("@title after Quick actions", " · what to type in Search")
+                        glyph: "sparkles"
                     }
                     Label {
                         objectName: "ambient-island-quick-actions-none"
@@ -951,28 +1098,22 @@ Window {
                     visible: overlay.kind === "layouts" && !overlay.savingLayout
                     width: parent.width
                     spacing: 12
-                    Row {
-                        spacing: 0
-                        Label {
-                            id: layoutsTitle
-                            objectName: "ambient-island-layouts-title"
-                            text: words.i18nc("@title the saved layouts", "Layouts")
-                            font.pixelSize: 15
-                            font.weight: Font.DemiBold
-                        }
-                        Label {
-                            objectName: "ambient-island-layouts-count"
-                            anchors.baseline: layoutsTitle.baseline
-                            visible: overlay.savedLayouts.length > 0
-                            text: words.i18ncp("@title after Layouts", " · %1 saved", " · %1 saved", overlay.savedLayouts.length)
-                            opacity: 0.66
-                        }
+                    CardTitle {
+                        objectName: "ambient-island-layouts-title"
+                        name: words.i18nc("@title the saved layouts", "Layouts")
+                        after: overlay.savedLayouts.length > 0
+                            ? words.i18ncp("@title after Layouts", " · %1 saved", " · %1 saved", overlay.savedLayouts.length) : ""
+                        glyph: "panels-top-left"
                     }
                     Label {
                         objectName: "ambient-island-layouts-none"
                         width: parent.width
                         visible: overlay.savedLayouts.length === 0
-                        text: words.i18n("Nothing saved yet. Arrange your apps, then save what's open.")
+                        text: overlay.layoutsAway > 0
+                            ? words.i18np("Your layout needs a display that isn't connected. It comes back when the display does.",
+                                          "Your %1 layouts need a display that isn't connected. They come back when the display does.",
+                                          overlay.layoutsAway)
+                            : words.i18n("Nothing saved yet. Arrange your apps, then save what's open.")
                         opacity: 0.66
                         wrapMode: Text.Wrap
                         maximumLineCount: 3
@@ -1223,17 +1364,392 @@ Window {
                     }
                 }
 
+                // The quick note, grown from the + where Search's Notes used
+                // to take the screen: the paper in the note's colour, its
+                // choices under it, then Done and Open in Notes. It writes
+                // through the notes application as Search does, so either
+                // carries on the same note.
+                Column {
+                    objectName: "ambient-island-note"
+                    visible: overlay.kind === "note"
+                    width: parent.width
+                    spacing: 12
+
+                    CardTitle {
+                        objectName: "ambient-island-note-title"
+                        name: words.i18nc("@title the open quick note island", "Quick note")
+                        after: overlay.quickNote && overlay.quickNote.offersFolders && overlay.quickNote.folderLabel
+                            ? words.i18nc("@title after Quick note: where it is kept", " · %1", overlay.quickNote.folderLabel) : ""
+                        swatch: overlay.noteHex
+                    }
+
+                    Rectangle {
+                        id: paper
+                        objectName: "ambient-island-note-paper"
+                        width: parent.width
+                        height: Math.min(220, Math.max(120, (overlay.quickNote && overlay.quickNote.checklist
+                            ? noteLineColumn.height : notePad.contentHeight) + 28))
+                        radius: 10
+                        color: overlay.noteHex
+                        clip: true
+                        Behavior on color { ColorAnimation { duration: overlay.ms(160) } }
+                        readonly property color ink: "#1A1A1A"
+
+                        Flickable {
+                            anchors.fill: parent
+                            anchors.margins: 14
+                            visible: !overlay.quickNote || !overlay.quickNote.checklist
+                            contentHeight: notePad.contentHeight
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            TextEdit {
+                                id: notePad
+                                objectName: "ambient-island-note-pad"
+                                width: parent.width
+                                color: paper.ink
+                                font.pixelSize: 16
+                                font.weight: Font.DemiBold
+                                wrapMode: TextEdit.Wrap
+                                textFormat: TextEdit.PlainText
+                                selectByMouse: true
+                                selectionColor: "#40000000"
+                                selectedTextColor: paper.ink
+                                readOnly: !overlay.noteWritable
+                                Accessible.role: Accessible.EditableText
+                                Accessible.name: words.i18n("Note")
+                                // Typing is the person's; a change kept
+                                // elsewhere arrives only while it isn't typed.
+                                onTextChanged: {
+                                    if (!activeFocus || !overlay.noteWritable || text === overlay.quickNote.text) return;
+                                    overlay.noteTyped = true;
+                                    overlay.quickNote.setText(text);
+                                }
+                                Text {
+                                    visible: notePad.text.length === 0
+                                    text: words.i18n("Write it down…")
+                                    color: "#73000000"
+                                    font: notePad.font
+                                }
+                            }
+                        }
+
+                        Flickable {
+                            id: noteLines
+                            objectName: "ambient-island-note-checklist"
+                            anchors.fill: parent
+                            anchors.topMargin: 6
+                            anchors.bottomMargin: 6
+                            visible: !!overlay.quickNote && overlay.quickNote.checklist
+                            contentHeight: noteLineColumn.height
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            readonly property bool typing: {
+                                for (let i = 0; i < noteLineRepeater.count; ++i) {
+                                    const item = noteLineRepeater.itemAt(i);
+                                    if (item && item.typing) return true;
+                                }
+                                return false;
+                            }
+                            function focusRow(index, at) {
+                                Qt.callLater(() => {
+                                    const item = noteLineRepeater.itemAt(index);
+                                    if (item) item.focusAt(at === undefined ? -1 : at);
+                                });
+                            }
+                            Column {
+                                id: noteLineColumn
+                                width: parent.width
+                                Repeater {
+                                    id: noteLineRepeater
+                                    model: noteLineModel
+                                    delegate: Item {
+                                        id: line
+                                        required property int index
+                                        required property string text
+                                        required property bool item
+                                        required property bool checked
+                                        readonly property bool typing: lineInput.activeFocus
+                                        function focusAt(position) {
+                                            lineInput.forceActiveFocus();
+                                            lineInput.cursorPosition = position < 0 ? lineInput.length : position;
+                                        }
+                                        objectName: "ambient-island-note-line-" + index
+                                        width: noteLineColumn.width
+                                        height: Math.max(40, lineInput.contentHeight + 12)
+                                        Item {
+                                            objectName: "ambient-island-note-box-" + line.index
+                                            visible: line.item
+                                            x: 4
+                                            width: 40
+                                            height: 40
+                                            Accessible.role: Accessible.CheckBox
+                                            Accessible.name: line.text
+                                            Accessible.checked: line.checked
+                                            Rectangle {
+                                                anchors.centerIn: parent
+                                                width: 20
+                                                height: 20
+                                                radius: 6
+                                                color: line.checked ? paper.ink : "transparent"
+                                                border.width: 2
+                                                border.color: paper.ink
+                                                SuiteIcon {
+                                                    anchors.centerIn: parent
+                                                    visible: line.checked
+                                                    width: 14
+                                                    height: 14
+                                                    glyph: "check"
+                                                }
+                                            }
+                                            TapHandler {
+                                                enabled: overlay.noteWritable
+                                                gesturePolicy: TapHandler.ReleaseWithinBounds
+                                                onTapped: {
+                                                    noteLineModel.setProperty(line.index, "checked", !line.checked);
+                                                    overlay.quickNote.setLineChecked(line.index, line.checked);
+                                                }
+                                            }
+                                        }
+                                        TextEdit {
+                                            id: lineInput
+                                            x: line.item ? 48 : 14
+                                            width: parent.width - x - 12
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            text: line.text
+                                            color: paper.ink
+                                            opacity: line.checked ? 0.5 : 1
+                                            font.pixelSize: 16
+                                            font.weight: Font.DemiBold
+                                            font.strikeout: line.checked
+                                            wrapMode: TextEdit.Wrap
+                                            textFormat: TextEdit.PlainText
+                                            selectByMouse: true
+                                            readOnly: !overlay.noteWritable
+                                            Accessible.role: Accessible.EditableText
+                                            Accessible.name: words.i18n("Line")
+                                            onTextChanged: {
+                                                if (!activeFocus || text === line.text) return;
+                                                noteLineModel.setProperty(line.index, "text", text);
+                                                overlay.sendNoteLines();
+                                            }
+                                            // Enter makes a new item of what follows the cursor.
+                                            Keys.onReturnPressed: event => line.split(event)
+                                            Keys.onEnterPressed: event => line.split(event)
+                                            Keys.onPressed: event => {
+                                                if (event.key !== Qt.Key_Backspace || lineInput.cursorPosition > 0
+                                                    || lineInput.selectedText !== "" || line.index === 0) return;
+                                                event.accepted = true;
+                                                const before = noteLineModel.get(line.index - 1).text;
+                                                const at = line.index - 1;
+                                                noteLineModel.setProperty(at, "text", before + lineInput.text);
+                                                noteLineModel.remove(line.index);
+                                                overlay.sendNoteLines();
+                                                noteLines.focusRow(at, before.length);
+                                            }
+                                        }
+                                        function split(event) {
+                                            event.accepted = true;
+                                            const head = lineInput.text.slice(0, lineInput.cursorPosition);
+                                            const tail = lineInput.text.slice(lineInput.cursorPosition);
+                                            noteLineModel.setProperty(line.index, "text", head);
+                                            noteLineModel.insert(line.index + 1, { text: tail, item: true, checked: false });
+                                            overlay.sendNoteLines();
+                                            noteLines.focusRow(line.index + 1, 0);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // The note's choices, as on Search's note page: its
+                    // colour, the checklist, a reminder and the window it is
+                    // stuck to. Picking a time, folders and More stay on the
+                    // full note.
+                    Flow {
+                        objectName: "ambient-island-note-choices"
+                        width: parent.width
+                        spacing: 8
+                        enabled: overlay.noteWritable
+                        PillButton {
+                            objectName: "ambient-island-note-colour"
+                            height: 32
+                            label: words.i18n("Colour")
+                            onActivated: overlay.noteChoosing = overlay.noteChoosing === "colour" ? "" : "colour"
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-checklist-toggle"
+                            height: 32
+                            visible: !!overlay.quickNote && overlay.quickNote.offersReminders
+                            label: words.i18n("Checklist")
+                            filled: !!overlay.quickNote && overlay.quickNote.checklist
+                            onActivated: {
+                                overlay.noteChoosing = "";
+                                overlay.quickNote.flush();
+                                overlay.quickNote.setChecklist(!overlay.quickNote.checklist);
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-remind"
+                            height: 32
+                            visible: !!overlay.quickNote && overlay.quickNote.offersReminders
+                            label: overlay.quickNote && overlay.quickNote.remindLabel !== ""
+                                ? overlay.quickNote.remindLabel : words.i18n("Remind")
+                            onActivated: overlay.noteChoosing = overlay.noteChoosing === "remind" ? "" : "remind"
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-window"
+                            height: 32
+                            visible: !!overlay.quickNote && (overlay.quickNote.windows || []).length > 0
+                            label: {
+                                if (!overlay.quickNote || !overlay.quickNote.stuck) return words.i18n("Stick to a window");
+                                const windows = overlay.quickNote.windows || [];
+                                for (const window of windows)
+                                    if (window.chosen) return words.i18n("Stuck to %1", window.label || window.window || "");
+                                return words.i18n("Stuck to %1", overlay.quickNote.stuckWindow);
+                            }
+                            onActivated: overlay.noteChoosing = overlay.noteChoosing === "window" ? "" : "window"
+                        }
+                    }
+
+                    // The choices of the one asked for.
+                    Flow {
+                        objectName: "ambient-island-note-colours"
+                        visible: overlay.noteChoosing === "colour"
+                        width: parent.width
+                        spacing: 4
+                        Repeater {
+                            model: overlay.quickNote ? overlay.quickNote.colours : []
+                            delegate: Item {
+                                id: swatch
+                                required property string modelData
+                                required property int index
+                                readonly property bool chosen: overlay.quickNote !== null && overlay.quickNote.colour === modelData
+                                objectName: "ambient-island-note-swatch-" + modelData
+                                width: 40
+                                height: 40
+                                Accessible.role: Accessible.RadioButton
+                                Accessible.name: modelData
+                                Accessible.checked: chosen
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 28
+                                    height: 28
+                                    radius: 14
+                                    color: "transparent"
+                                    border.width: 2
+                                    border.color: overlay.ink
+                                    visible: swatch.chosen
+                                }
+                                Rectangle {
+                                    anchors.centerIn: parent
+                                    width: 20
+                                    height: 20
+                                    radius: 10
+                                    color: overlay.quickNote ? (overlay.quickNote.colourHexes[swatch.index] || "#888888") : "#888888"
+                                }
+                                TapHandler {
+                                    gesturePolicy: TapHandler.ReleaseWithinBounds
+                                    onTapped: {
+                                        overlay.quickNote.setColour(swatch.modelData);
+                                        overlay.noteChoosing = "";
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Flow {
+                        objectName: "ambient-island-note-remind-choices"
+                        visible: overlay.noteChoosing === "remind"
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: overlay.quickNote ? (overlay.quickNote.remindChoices || []).filter(choice => choice.kind !== "pick") : []
+                            delegate: PillButton {
+                                required property var modelData
+                                objectName: "ambient-island-note-remind-" + (modelData.kind || "")
+                                height: 32
+                                label: modelData.label || ""
+                                onActivated: {
+                                    overlay.quickNote.setReminder(modelData.kind === "opens" ? "opens" : (modelData.time || ""));
+                                    overlay.noteChoosing = "";
+                                }
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-no-reminder"
+                            height: 32
+                            visible: !!overlay.quickNote && overlay.quickNote.remindLabel !== ""
+                            label: words.i18n("No reminder")
+                            onActivated: {
+                                overlay.quickNote.setReminder("");
+                                overlay.noteChoosing = "";
+                            }
+                        }
+                    }
+                    Flow {
+                        objectName: "ambient-island-note-window-choices"
+                        visible: overlay.noteChoosing === "window"
+                        width: parent.width
+                        spacing: 8
+                        Repeater {
+                            model: overlay.quickNote ? overlay.quickNote.windows || [] : []
+                            delegate: PillButton {
+                                required property var modelData
+                                required property int index
+                                objectName: "ambient-island-note-window-" + index
+                                height: 32
+                                filled: !!modelData.chosen
+                                label: modelData.label || modelData.window || ""
+                                onActivated: {
+                                    overlay.quickNote.setStuck(modelData.window || "", modelData.app || "");
+                                    overlay.noteChoosing = "";
+                                }
+                            }
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-dont-stick"
+                            height: 32
+                            visible: !!overlay.quickNote && overlay.quickNote.stuck
+                            label: words.i18n("Don't stick to a window")
+                            onActivated: {
+                                overlay.quickNote.setStuck("", "");
+                                overlay.noteChoosing = "";
+                            }
+                        }
+                    }
+
+                    // Done, then the full note, as the mock-up J approved.
+                    Flow {
+                        objectName: "ambient-island-note-actions"
+                        width: parent.width
+                        spacing: 8
+                        PillButton {
+                            objectName: "ambient-island-note-done"
+                            filled: true
+                            label: words.i18n("Done")
+                            onActivated: overlay.finishNote()
+                        }
+                        PillButton {
+                            objectName: "ambient-island-note-in-notes"
+                            label: words.i18n("Open in Notes")
+                            onActivated: overlay.noteInNotes()
+                        }
+                    }
+                }
+
                 // Transfers, each with its own progress and actions.
                 Column {
                     objectName: "ambient-island-transfers"
                     visible: overlay.kind === "transfer"
                     width: parent.width
                     spacing: 6
-                    Label {
-                        text: overlay.surface && overlay.surface.transfers.length > 1
-                            ? words.i18np("1 transfer", "%1 transfers", overlay.surface.transfers.length) : words.i18n("Transfer")
-                        font.pixelSize: 12
-                        opacity: 0.66
+                    CardTitle {
+                        objectName: "ambient-island-transfers-title"
+                        name: words.i18nc("@title the open transfers island", "Transfers")
+                        after: overlay.surface && overlay.surface.transfers.length > 0
+                            ? words.i18ncp("@title after Transfers", " · %1 file", " · %1 files", overlay.surface.transfers.length) : ""
+                        glyph: "download"
                     }
                     // Counted rather than listed: each update is a new list, and a
                     // Repeater given a new list makes every row again, whose ring
@@ -1309,6 +1825,11 @@ Window {
                                 }
                             }
                         }
+                    }
+                    PillButton {
+                        objectName: "ambient-island-transfers-close"
+                        label: words.i18n("Close")
+                        onActivated: overlay.dismiss()
                     }
                 }
             }

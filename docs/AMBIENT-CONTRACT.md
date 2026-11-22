@@ -267,18 +267,32 @@ while "Show islands beside the launcher" is on.
 Without Split Rock, or with a Core that has no `Layouts()`, there is no Layouts
 island and nothing else changes.
 
+A saved layout that places an app on a display not connected now is left out
+of the list, and comes back when the display does; one saved before layouts
+kept displays always shows. While none is left, Layouts' island goes from the
+band, and Layouts opened from Search says the layouts wait for a display
+(J, 22 November).
+
 ### Quick note
 
 While Gooseberry is installed with its Capture action, the test Search's Notes
 door uses, the quick note's island stands in the band: a dot with a plus,
 Lucide's plus on a faint disc of the style's ink. A tap on the dot, or on the
-island off the pinned note, starts a quick note on Gooseberry's own card,
-through its Capture action. Where Gooseberry has a note pinned, the note sits
+island off the pinned note, grows the quick note's card from the + (§ The open
+card), where Gooseberry offers its quick-note interface, version 1: the note
+`Start` resumes or begins, on paper of its colour, written through that
+interface as Search's Notes writes it, so either carries on the same note.
+Under it stand Colour, Checklist and Remind where Gooseberry offers reminders,
+and the window it is stuck to; Pick a time, folders and More stay on the full
+note. Done finishes the note (`Done`); Open in Notes hands it to Gooseberry's
+own card (`OpenOnCard`), or to Search's Notes on that note where the card
+can't take it; Esc or a tap outside keeps it as written. Without that
+interface the tap starts a quick note on Gooseberry's own card, through its
+Capture action. Where Gooseberry has a note pinned, the note sits
 beside the dot in the same island: a bead of the note's colour and its first
 words, one line, elided where long. A tap there opens that note on Gooseberry's
-card (`OpenNote`), or starts a new one where the note has gone. The island
-opens no card of its own; Search's Notes takes the tap only where Gooseberry
-cannot.
+card (`OpenNote`), or starts a new one where the note has gone. Search's Notes
+takes the tap only where Gooseberry cannot.
 
 Ambient reads the pinned note from Gooseberry's quick-note interface on the
 session bus, version 1, only while Gooseberry runs: it asks `Pinned` when
@@ -445,6 +459,17 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 8 px away. Outlined, art keeps to its pill, 68% of the island's height with
 10 px corners, and the icons are 24 px, each a little less on a short panel.
 
+### The open card
+
+Every island that opens grows into the same card from where it stands in the
+band, and every card is laid out the same way (J, 22 November): first a title
+line, the island's picture, its name in 15 px demibold and, after a dot in the
+quiet ink, what it holds ("Layouts · 5 saved", "Music · Spotify", "Quick note ·
+Inbox", "Transfers · 2 files", "Quick actions · what to type in Search"); then
+what the island is about; then one row of buttons, the main one filled and
+first, and the card's own way out in it: Close, Not now for Core, Done for the
+quick note. Esc and a tap outside close every card as well.
+
 ## Interaction and safety
 
 - Touch, mouse and keyboard reach the same actions, as far as the source
@@ -452,6 +477,7 @@ drawn at the whole square, as the dock draws one. The words beside them begin
 - An island's actions act only on its own source, and one the source does not
   support is not shown.
 - Closing the open island returns it to the band; it never opens search.
+- Every open island is the same card (§ The open card).
 - With nothing to show, Ambient leaves the panel clean; the quick note's and
   Layouts' islands are doors, not activity, and keep only their own width.
 - Do not add a daemon, polling loop, persistent history, replacement task

@@ -14,6 +14,7 @@
 #include <memory>
 class ActivityModel;
 class LauncherKeys;
+class QuickNote;
 
 class QQuickItem;
 class QWindow;
@@ -40,6 +41,12 @@ class TettegoucheApplet final : public Plasma::Applet
     // layout as Core lists it, and what is open now once asked for.
     Q_PROPERTY(bool keepsLayouts READ keepsLayouts NOTIFY layoutsChanged)
     Q_PROPERTY(QVariantList layouts READ layouts NOTIFY layoutsChanged)
+    // Saved layouts left out of `layouts` until their display is connected.
+    Q_PROPERTY(int layoutsAway READ layoutsAway NOTIFY layoutsChanged)
+    // The quick note the notes application keeps, for the + island's card:
+    // the same note Search's Notes writes, so either can carry it on. Null
+    // in the fixture.
+    Q_PROPERTY(QObject *quickNote READ quickNote CONSTANT)
     // What is open on the workspace in use, as Core reads it from Cards
     // (`available`, `groups`), with the workspace's name (`workspaceName`)
     // where KWin gives it; empty until readCurrentLayout() is answered.
@@ -91,6 +98,8 @@ public:
     Q_INVOKABLE void typeInSearch(const QString &words);
     bool keepsLayouts() const;
     QVariantList layouts() const;
+    int layoutsAway() const;
+    QObject *quickNote() const;
     QVariantMap currentLayout() const { return m_currentLayout; }
     QStringList islandsShown() const { return m_islandsShown; }
     void setIslandsShown(const QStringList &sorts);
@@ -176,4 +185,5 @@ private:
     QVariantMap m_currentLayout;
     std::shared_ptr<ActivityModel> m_activities;
     std::shared_ptr<LauncherKeys> m_keys;
+    QuickNote *m_quickNote = nullptr;
 };

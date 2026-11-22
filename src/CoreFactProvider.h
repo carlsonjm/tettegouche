@@ -66,7 +66,18 @@ public:
     // stack} each, apps by desktop id and names as the app menu gives them,
     // front first), whether it opens at sign-in (atSignIn) and when Cards
     // last took it (opened, ISO 8601, empty when never).
-    QList<QVariantMap> layouts() const { return m_layouts; }
+    // Only the layouts the displays connected now can hold: a layout that
+    // places apps on a display that isn't connected is left out until it is
+    // (J, 22 November), and one saved before layouts kept displays always
+    // shows.
+    QList<QVariantMap> layouts() const;
+    // How many saved layouts wait for a display that isn't connected.
+    int layoutsAway() const { return int(m_layouts.size() - layouts().size()); }
+    // The displays connected now, by their names. Read from the application's
+    // screens where it has any; empty means not known, when every layout shows.
+    void setDisplays(const QStringList &names);
+    QStringList displays() const { return m_displays; }
+    bool usable(const QVariantMap &layout) const;
     // The layout opened last, empty when none has been opened.
     QVariantMap lastOpened() const;
     static constexpr char LayoutsDoor[] = "layouts";
@@ -117,6 +128,7 @@ private:
     QList<QVariantMap> m_facts;
     QList<QVariantMap> m_actions;
     QList<QVariantMap> m_layouts;
+    QStringList m_displays;
     bool m_keepsLayouts = false;
     QStringList m_missed;
     QString m_missedLayout;
