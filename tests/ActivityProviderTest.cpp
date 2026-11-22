@@ -342,6 +342,46 @@ private Q_SLOTS:
     // names, by an application ID ending in that name, by the window class
     // the application declares, or by the player's own name. A player nothing
     // installed names shows the generic player icon, never a missing one.
+    // One process, two players for one sound: the app's own, which names its
+    // desktop entry, and an engine's inside it, which names none. Only the
+    // app's shows; nameless players with no named one beside them all stay.
+    void mprisSameProcessEcho() {
+        const auto bus = QDBusConnection::sessionBus();
+        auto echoBus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-echo-media"));
+        auto appBus = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-app-media"));
+        const QString path = QStringLiteral("/org/mpris/MediaPlayer2");
+        const QString echoName = QStringLiteral("org.mpris.MediaPlayer2.chromium.instance4242");
+        const QString appName = QStringLiteral("org.mpris.MediaPlayer2.AmbientEchoApp");
+        FakePlayer echo, app;
+        auto *echoRoot = new FakePlayerRoot(&echo);
+        echoRoot->identity = QStringLiteral("Chromium");
+        auto *appRoot = new FakePlayerRoot(&app);
+        appRoot->identity = QStringLiteral("Tune");
+        appRoot->desktopEntry = QStringLiteral("tune");
+        const auto exports = QDBusConnection::ExportAllProperties | QDBusConnection::ExportAllSlots | QDBusConnection::ExportAdaptors;
+        QVERIFY(echoBus.registerObject(path, &echo, exports));
+        QVERIFY(echoBus.registerService(echoName));
+        MprisActivityProvider provider(bus);
+        const auto ids = [&] {
+            QStringList out;
+            for (const auto &row : provider.activities()) out << row.toMap().value(QStringLiteral("id")).toString();
+            out.sort();
+            return out;
+        };
+        // Alone, the nameless player shows.
+        QTRY_COMPARE(ids(), QStringList{echoName});
+        QVERIFY(appBus.registerObject(path, &app, exports));
+        QVERIFY(appBus.registerService(appName));
+        QTRY_COMPARE(ids(), QStringList{appName});
+        // The app's player stopped: the other shows again.
+        appBus.unregisterService(appName);
+        QTRY_COMPARE(ids(), QStringList{echoName});
+
+        echoBus.unregisterService(echoName); echoBus.unregisterObject(path); appBus.unregisterObject(path);
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-echo-media"));
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-app-media"));
+    }
+
     void mprisPlayerIcon() {
         const QString applications = qEnvironmentVariable("XDG_DATA_HOME") + QStringLiteral("/applications/");
         const auto install = [&](const QString &file, const QByteArray &extra) {

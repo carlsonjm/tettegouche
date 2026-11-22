@@ -13,6 +13,7 @@
 #include <QDBusMessage>
 #include <QDBusObjectPath>
 #include <QIcon>
+#include <QSet>
 #include <QUrl>
 
 namespace {
@@ -82,7 +83,19 @@ public:
                     SLOT(propertiesChanged(QString,QVariantMap,QStringList)));
         bus.connect(owner, path, playerInterface, QStringLiteral("Seeked"), this, SLOT(seeked(qlonglong)));
         fetch(rootInterface); fetch(playerInterface);
+        // The process behind the player, so a second player the same app
+        // registers can be told from it (MprisActivityProvider::activities).
+        auto *lookup = new QDBusPendingCallWatcher(bus.interface()->asyncCall(
+            QStringLiteral("GetConnectionUnixProcessID"), owner), this);
+        connect(lookup, &QDBusPendingCallWatcher::finished, this, [this, lookup] {
+            const QDBusPendingReply<uint> reply = *lookup; lookup->deleteLater();
+            if (reply.isError()) return;
+            pid = reply.value(); Q_EMIT changed();
+        });
     }
+    // Which process speaks for the player, 0 until the bus has said.
+    uint pid = 0;
+    bool namesItsApp() const { return !root.value(QStringLiteral("DesktopEntry")).toString().trimmed().isEmpty(); }
     QVariantMap activity() const {
         const QString status = player.value(QStringLiteral("PlaybackStatus")).toString();
         const bool control = player.value(QStringLiteral("CanControl")).toBool();
@@ -272,8 +285,19 @@ void MprisActivityProvider::ownerChanged(const QString &name, const QString &, c
     Q_EMIT changed();
 }
 QVariantList MprisActivityProvider::activities() const {
+    // An app can register two players for the same sound: Spotify's own,
+    // which names its desktop entry, and the Chromium engine's inside it,
+    // which names none and calls itself Chromium. Where a process has a
+    // player that names its app, a nameless one beside it is that echo and
+    // is left out. Players that all name nothing, as a browser's tabs, stay.
+    QSet<uint> named;
+    for (auto *session : m_sessions)
+        if (session->pid != 0 && session->namesItsApp() && !session->activity().isEmpty()) named.insert(session->pid);
     QVariantList rows;
-    for (auto *session : m_sessions) { const auto row = session->activity(); if (!row.isEmpty()) rows.append(row); }
+    for (auto *session : m_sessions) {
+        if (session->pid != 0 && !session->namesItsApp() && named.contains(session->pid)) continue;
+        const auto row = session->activity(); if (!row.isEmpty()) rows.append(row);
+    }
     return rows;
 }
 void MprisActivityProvider::invoke(const QString &id, int generation, const QString &action, const QVariant &value) {
