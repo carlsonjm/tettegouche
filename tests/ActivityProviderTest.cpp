@@ -432,6 +432,42 @@ private Q_SLOTS:
             QFile::remove(applications + QString::fromLatin1(file));
     }
 
+    // Spotify says each new track with every field blank, and never says it
+    // again once it knows the name and cover: asked again shortly after, the
+    // player has them, and the island shows them.
+    void blankTrackIsAskedAgain() {
+        const auto bus = QDBusConnection::sessionBus();
+        auto peer = QDBusConnection::connectToBus(QDBusConnection::SessionBus, QStringLiteral("fake-blank-media"));
+        const QString name = QStringLiteral("org.mpris.MediaPlayer2.AmbientBlankTest");
+        const QString path = QStringLiteral("/org/mpris/MediaPlayer2");
+        FakePlayer player;
+        player.metadata = {{QStringLiteral("xesam:title"), QStringLiteral("First")}};
+        QVERIFY(peer.registerObject(path, &player, QDBusConnection::ExportAllProperties | QDBusConnection::ExportAllSlots));
+        QVERIFY(peer.registerService(name));
+        MprisActivityProvider provider(bus);
+        const auto title = [&] {
+            const auto rows = provider.activities();
+            return rows.isEmpty() ? QString() : rows.first().toMap().value(QStringLiteral("title")).toString();
+        };
+        QTRY_COMPARE(title(), QStringLiteral("First"));
+        // The next track, said blank; the player knows it a moment later and
+        // says nothing more.
+        const QVariantMap blank{{QStringLiteral("xesam:title"), QString()}, {QStringLiteral("mpris:artUrl"), QString()}};
+        player.metadata = blank;
+        auto signal = QDBusMessage::createSignal(path, QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("PropertiesChanged"));
+        signal.setArguments({QStringLiteral("org.mpris.MediaPlayer2.Player"),
+            QVariantMap{{QStringLiteral("Metadata"), blank}}, QStringList{}});
+        QVERIFY(peer.send(signal));
+        QTRY_COMPARE(title(), QString());
+        player.metadata = {{QStringLiteral("xesam:title"), QStringLiteral("Second")},
+            {QStringLiteral("mpris:artUrl"), QStringLiteral("https://example.org/cover.jpg")}};
+        QTRY_COMPARE_WITH_TIMEOUT(title(), QStringLiteral("Second"), 6000);
+        QCOMPARE(provider.activities().first().toMap().value(QStringLiteral("artUrl")).toString(),
+            QStringLiteral("https://example.org/cover.jpg"));
+        peer.unregisterService(name); peer.unregisterObject(path);
+        QDBusConnection::disconnectFromBus(QStringLiteral("fake-blank-media"));
+    }
+
     void filesystemEvents() {
         QTemporaryDir dir; QVERIFY(dir.isValid());
         QFile baseline(dir.filePath(QStringLiteral("existing"))); QVERIFY(baseline.open(QIODevice::WriteOnly)); baseline.close();
