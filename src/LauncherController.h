@@ -293,6 +293,8 @@ Q_SIGNALS:
     void contextChanged();
     void guestChanged();
     void guestLaunchReady();
+    // What Search started came forward as a window already open.
+    void guestLaunchElsewhere();
     void guestNavigationReady(int slot);
     void guestBridgeLost();
     void filesWindowChanged();

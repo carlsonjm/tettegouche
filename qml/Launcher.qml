@@ -1359,6 +1359,13 @@ Item {
             root.guestExiting = true
             launchReadyExit.restart()
         }
+        function onGuestLaunchElsewhere() {
+            if (!root.applicationLaunchPending) return
+            launchTimeout.stop()
+            root.applicationLaunchPending = false
+            root.launchingApplication = ""
+            root.launcherController.close()
+        }
         function onGuestNavigationReady(slot) {
             if (root.guestExiting) {
                 return

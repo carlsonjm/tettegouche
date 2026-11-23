@@ -90,6 +90,18 @@ LauncherController::LauncherController(QQuickView *view,
     , m_guestAllowed(guestAllowed)
 {
     setProgram(QCoreApplication::applicationFilePath());
+    // In Spread, what Search starts may come forward as a window already open,
+    // on this display or another, and no new window ever arrives for Kadunce
+    // to hand Search's card to. Another window taking the keys while that
+    // start waits is the start done: Search goes, as it does once it lands.
+    connect(m_view, &QWindow::activeChanged, this, [this] {
+        if (m_view->isActive() || !m_guestMode || m_launchToken.isEmpty()) return;
+        QTimer::singleShot(700, this, [this, token = m_launchToken] {
+            if (!m_guestMode || m_view->isActive() || m_launchToken != token) return;
+            cancelGuestApplicationLaunch();
+            Q_EMIT guestLaunchElsewhere();
+        });
+    });
     connect(&m_related, &RelatedInfo::changed, this, [this]() { ++m_relatedRevision; Q_EMIT relatedChanged(); });
     m_lateQuit.setSingleShot(true);
     m_lateQuit.setInterval(1000);
