@@ -33,11 +33,24 @@ Item {
     readonly property real tileWidth: 96
     // Whole tiles a row holds at this width.
     readonly property int perRow: Math.max(2, Math.floor((width + tileGap) / (tileWidth + tileGap)))
+    // The height the sheet gives the tiles, under the label; unbounded where
+    // the sheet grows to what it holds.
+    property real roomHeight: Infinity
+    // Every Helper at once, when the sheet has room for all their rows: no
+    // More, nothing waiting behind it.
+    readonly property int allRows: Math.ceil(helpers.length / perRow)
+    readonly property bool allShown: isFinite(roomHeight) && helpers.length > perRow
+        && labelHeight + allRows * tileHeight + (allRows - 1) * tileGap <= roomHeight
     // The first row, and what waits behind More: those Core marks for it,
     // and any the first row has no room for, More taking the last place.
+    // With room for all, the first row is full and the rest follow it.
     readonly property var split: {
         const first = helpers.filter(h => !h.more)
         const rest = helpers.filter(h => !!h.more)
+        if (allShown) {
+            const all = first.concat(rest)
+            return {first: all.slice(0, perRow), rest: all.slice(perRow)}
+        }
         if (rest.length === 0 && first.length <= perRow) return {first: first, rest: []}
         const room = perRow - 1
         return {first: first.slice(0, room), rest: first.slice(room).concat(rest)}
@@ -45,11 +58,13 @@ Item {
     readonly property var firstRow: split.first
     readonly property var behindMore: split.rest
     property bool expanded: false
-    readonly property int moreRows: expanded ? Math.ceil(behindMore.length / perRow) : 0
+    readonly property bool open: expanded || allShown
+    readonly property bool moreOffered: behindMore.length > 0 && !allShown
+    readonly property int moreRows: open ? Math.ceil(behindMore.length / perRow) : 0
     // The tiles stand as one block centred under the field: as wide as its
     // widest row, rows under the first starting at the same left edge.
-    readonly property int firstCount: firstRow.length + (behindMore.length > 0 ? 1 : 0)
-    readonly property int columns: Math.max(firstCount, expanded ? Math.min(perRow, behindMore.length) : 0)
+    readonly property int firstCount: firstRow.length + (moreOffered ? 1 : 0)
+    readonly property int columns: Math.max(firstCount, open ? Math.min(perRow, behindMore.length) : 0)
     readonly property real blockWidth: Math.max(0, columns * (tileWidth + tileGap) - tileGap)
     readonly property real blockX: Math.max(0, Math.round((width - blockWidth) / 2))
     // How tall it is, which sizes the sheet at rest.
@@ -205,7 +220,7 @@ Item {
         }
         Tile {
             host: helpersRow
-            visible: helpersRow.behindMore.length > 0
+            visible: helpersRow.moreOffered
             tileId: "more"
             title: helpersRow.expanded ? helpersRow.words.i18nc("@action:button shows fewer Helpers", "Less")
                 : helpersRow.words.i18nc("@action:button shows the other Helpers", "More")
@@ -226,9 +241,9 @@ Item {
         y: helpersRow.labelHeight + helpersRow.tileHeight + helpersRow.tileGap
         width: Math.max(helpersRow.blockWidth, helpersRow.tileWidth)
         spacing: helpersRow.tileGap
-        visible: helpersRow.expanded
+        visible: helpersRow.open
         Repeater {
-            model: helpersRow.expanded ? helpersRow.behindMore : []
+            model: helpersRow.open ? helpersRow.behindMore : []
             Tile {
                 required property var modelData
                 host: helpersRow

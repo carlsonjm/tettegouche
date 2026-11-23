@@ -100,11 +100,15 @@ public Q_SLOTS:
         const QJsonObject card{{QStringLiteral("x"), 100}, {QStringLiteral("y"), 50},
                                {QStringLiteral("width"), 600}, {QStringLiteral("height"), 400}};
         return QString::fromUtf8(QJsonDocument(QJsonObject{
-            {QStringLiteral("protocol"), 3}, {QStringLiteral("accepted"), accepts},
+            {QStringLiteral("protocol"), protocol}, {QStringLiteral("accepted"), accepts},
             {QStringLiteral("output"), output}, {QStringLiteral("card"), accepts ? card : QJsonObject()},
             {QStringLiteral("active"), card}}).toJson(QJsonDocument::Compact));
     }
     Q_SCRIPTABLE void endLauncherGuest() { note(QStringLiteral("endLauncherGuest"), 0); }
+    Q_SCRIPTABLE void resizeLauncherGuest(double width, double height)
+    {
+        note(QStringLiteral("resizeLauncherGuest ") + QString::number(width) + QLatin1Char(' ') + QString::number(height), 0);
+    }
     Q_SCRIPTABLE void updateLauncherGuest(double delta) { note(QStringLiteral("updateLauncherGuest ") + QString::number(delta), 0); }
     Q_SCRIPTABLE bool finishLauncherGuest(double delta) { return note(QStringLiteral("finishLauncherGuest ") + QString::number(delta), true); }
     Q_SCRIPTABLE bool prepareLauncherGuestLaunch(const QStringList &identities, const QString &token)
@@ -239,6 +243,46 @@ private Q_SLOTS:
         QVERIFY(!m_view->isVisible());
         QVERIFY(!m_controller->guestMode());
         QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("endLauncherGuest")));
+    }
+
+    // Kadunce speaking protocol 4 lets Search size itself: it stands centred
+    // on the middle card's centre at its own size and says that size once.
+    void sizesItselfUnderProtocolFour()
+    {
+        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.protocol = 4; });
+        QVERIFY(QMetaObject::invokeMethod(m_controller.get(), "bridgeLost"));
+        m_kadunce.forget();
+        m_controller->open();
+        QTRY_VERIFY(m_view->isVisible());
+        QVERIFY(m_controller->guestMode());
+        QVERIFY(m_controller->guestSizesItself());
+        QCOMPARE(m_controller->guestCardHeight(), 400);
+        m_controller->sizeGuest(840, 300);
+        QCOMPARE(m_controller->guestWidth(), 840);
+        QCOMPARE(m_controller->guestHeight(), 300);
+        // Centred on the card exactly: the card's place, less half the difference.
+        QCOMPARE(m_controller->guestX(), 100 + (600 - 840) / 2);
+        QCOMPARE(m_controller->guestY(), 50 + (400 - 300) / 2);
+        QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("resizeLauncherGuest 840 300")));
+        // A new height is said too: Kadunce takes a tap inside it as Search's.
+        m_kadunce.forget();
+        m_controller->sizeGuest(840, 380);
+        QCOMPARE(m_controller->guestHeight(), 380);
+        QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("resizeLauncherGuest 840 380")));
+        // The same size again says nothing.
+        m_kadunce.forget();
+        m_controller->sizeGuest(840, 380);
+        QTest::qWait(50);
+        QVERIFY(!m_kadunce.calls().join(QLatin1Char('\n')).contains(QStringLiteral("resizeLauncherGuest")));
+        m_controller->close();
+        QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("endLauncherGuest")));
+        m_kadunce.set([](StandInKadunce &kadunce) { kadunce.protocol = 3; });
+        QVERIFY(QMetaObject::invokeMethod(m_controller.get(), "bridgeLost"));
+        // Protocol 3 is asked again and kept for the tests that follow.
+        m_controller->open();
+        QTRY_VERIFY(m_controller->guestMode());
+        QVERIFY(!m_controller->guestSizesItself());
+        m_controller->close();
     }
 
     // The protocol is asked once for each Kadunce. Any other protocol, from
