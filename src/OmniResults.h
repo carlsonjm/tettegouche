@@ -640,14 +640,6 @@ public:
         m_openLayout = std::move(open);
         Q_EMIT helpersChanged();
     }
-    // The page where quick actions are set, where there is one to open:
-    // Quick actions found by its words opens the page in a window of its
-    // own.
-    void setQuickActionsPage(std::function<bool()> there, std::function<void()> open) {
-        m_quickActionsPageThere = std::move(there);
-        m_openQuickActionsPage = std::move(open);
-        Q_EMIT helpersChanged();
-    }
     // Quick actions' island in the band, which lists what to type: Quick
     // actions is the last Helper, behind More, and its tile opens the
     // island as Layouts' opens its own.
@@ -784,7 +776,8 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
-        if (m_openQuickActionsPage && m_quickActionsPageThere && m_quickActionsPageThere() && quickActionsFit(query)) {
+        // Quick actions found by its words opens its island, as its tile does.
+        if (m_openQuickActionsIsland && quickActionsFit(query)) {
             const auto title = i18nc("@title what Search does from typed words", "Quick actions");
             const auto sub = i18nc("@info under Quick actions", "What to type to get things done");
             KRunner::QueryMatch match(&m_coreRunner);
@@ -925,8 +918,8 @@ public:
                 return true;
             }
             if (target == QLatin1String("quickActions")) {
-                if (!m_openQuickActionsPage) return false;
-                m_openQuickActionsPage();
+                if (!m_openQuickActionsIsland) return false;
+                m_openQuickActionsIsland();
                 return true;
             }
             if (target.startsWith(QLatin1String("layout:"))) {
@@ -1190,9 +1183,7 @@ private:
     std::function<bool()> m_keepsLayouts;
     std::function<QList<QVariantMap>()> m_coreLayouts;
     std::function<void()> m_openLayouts;
-    std::function<bool()> m_quickActionsPageThere;
     std::function<void()> m_openQuickActionsIsland;
-    std::function<void()> m_openQuickActionsPage;
     std::function<void(const QString &)> m_openLayout;
     SearchSource m_results;
     QStandardItemModel m_aliases;

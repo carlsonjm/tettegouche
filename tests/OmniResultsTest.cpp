@@ -360,6 +360,13 @@ int main(int argc, char **argv)
         if (helpers.last().toMap().value(QStringLiteral("id")).toString() != QStringLiteral("quickActions")
             || !helpers.last().toMap().value(QStringLiteral("more")).toBool()
             || !core.openHelper(QStringLiteral("quickActions")) || quickIslands != 1) return 408;
+        // Found by its words, Quick actions opens the same island, never a
+        // settings window.
+        core.testQuery = QStringLiteral("quick act");
+        core.showCore(core.testQuery);
+        if (core.rowCount() != 1 || core.getQueryMatch(core.index(0, 0)).text() != QStringLiteral("Quick actions")) return 409;
+        if (!core.run(core.index(0, 0)) || quickIslands != 2) return 410;
+        core.clear();
         const auto tile = helpers.first().toMap();
         if (tile.value(QStringLiteral("id")).toString() != QStringLiteral("install")
             || tile.value(QStringLiteral("title")).toString() != QStringLiteral("Install an app")

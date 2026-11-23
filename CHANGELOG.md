@@ -14,6 +14,8 @@ history carries the implementation detail.
 - With every layout removed, Layouts still opens from Search and its
   Helper, with Save what's open, so a new one can be made. Only the band's
   island goes while nothing can be opened.
+- "quick actions" typed in Search opens the Quick actions island in the
+  band, as its Helper does, instead of a settings window.
 - Every island opens the same card, laid out the same way: a title line with
   its picture, name and what it holds, then what it's about, then one row of
   buttons ending in its way out. Music gains its title and Close; Transfers
