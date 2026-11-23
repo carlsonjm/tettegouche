@@ -1413,8 +1413,8 @@ Item {
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
             && !root.peopleShown
         // Medium: resting with a section of what was used lately under the
-        // field, Search is one height on every display, 416, a Spread card's
-        // (in Spread, the middle card's own, which it meets top and bottom),
+        // field, Search is 416 floating, and in Spread the middle card's own
+        // height, which it meets top and bottom,
         // and the sections scroll inside. Only a screen too small for it trims
         // it. The field alone, or the Helpers, keep the height of what they hold.
         readonly property bool medium: resting && !small && !root.helpersShown
@@ -1422,7 +1422,10 @@ Item {
             && root.launcherController.guestCardHeight > 0
             ? root.launcherController.guestCardHeight
             : Math.min(416, root.launcherController.availableArea.height - 40)
-        readonly property real ownHeight: medium ? mediumHeight : resting ? restingHeight : fullHeight
+        // Working, it is its full height, and in Spread never shorter than the
+        // card it meets at Medium: on a large display that card is taller.
+        readonly property real ownHeight: medium ? mediumHeight : resting ? restingHeight
+            : root.launcherController.guestSizesItself ? Math.max(fullHeight, mediumHeight) : fullHeight
         readonly property real restHeight: root.launcherController.guestSizesItself
             ? ownHeight
             : root.launcherController.guestMode
