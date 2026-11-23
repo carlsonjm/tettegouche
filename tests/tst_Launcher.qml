@@ -3413,7 +3413,11 @@ TestCase {
         compare(controller.drawerExpanded, true)
         launcher.setDrawerOpen(true, data.mode)
         compare(launcher.filesMode, data.mode === "files")
-        wait(50)
+        // Make smaller is pressed once the sheet has grown over it: until
+        // then the button is still under the sheet's moving edge, and a
+        // press there lands beside Search.
+        const sheet = findChild(launcher, "launcher-sheet")
+        tryCompare(sheet, "width", sheet.targetWidth)
         mouseClick(expand, expand.width / 2, expand.height / 2)
         compare(controller.drawerExpanded, false)
         compare(expand.Accessible.name, "Expand")
