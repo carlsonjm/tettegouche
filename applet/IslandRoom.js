@@ -52,7 +52,7 @@ var PIECES = {
         { id: "dot" }, { id: "door", withFirst: true }, { id: "window" }, { id: "pinned" },
     ],
     layouts: [
-        { id: "disc" }, { id: "last" },
+        { id: "disc" },
     ],
 };
 

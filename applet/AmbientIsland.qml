@@ -244,13 +244,25 @@ Window {
     }
 
     // Not close(): that is the window's own, and would drop it at once.
+    // One that never grew open closes as well, so none is left holding the
+    // widget's place.
     function dismiss() {
-        if (!expanded) return;
+        if (closing.running || (!expanded && !visible)) return;
+        opening.stop();
         // A note left open is kept as written, to carry on from the + or
         // Search's Notes.
         if (kind === "note" && quickNote) quickNote.flush();
         expanded = false;
         closing.restart();
+    }
+    // Gone at once, for a new card in its place.
+    function letGo() {
+        opening.stop();
+        closing.stop();
+        if (kind === "note" && quickNote) quickNote.flush();
+        expanded = false;
+        hide();
+        closed();
     }
     Timer {
         id: opening

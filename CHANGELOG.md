@@ -8,6 +8,12 @@ history carries the implementation detail.
 - A saved layout can be pinned to Shuffle's dock: tap its row in the
   Layouts island and choose Pin to dock, beside Remove. Once pinned it reads
   Unpin from dock. The dock's All Layouts opens this island.
+- Layouts' island in the band is its disc alone: the name of the layout
+  opened last no longer stands beside it, since every saved layout is one
+  tap in Layouts.
+- With every layout removed, Layouts still opens from Search and its
+  Helper, with Save what's open, so a new one can be made. Only the band's
+  island goes while nothing can be opened.
 - Every island opens the same card, laid out the same way: a title line with
   its picture, name and what it holds, then what it's about, then one row of
   buttons ending in its way out. Music gains its title and Close; Transfers
