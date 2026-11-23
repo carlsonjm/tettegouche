@@ -5,6 +5,9 @@ history carries the implementation detail.
 
 ## Unreleased
 
+- In Spread, Search is its own size, centred where the middle card stands, and
+  the cards beside it stand one gap beyond it. Resting with anything under the
+  field it is a Spread card's height there, and what it holds scrolls inside.
 - Every island opens the same card, laid out the same way: a title line with
   its picture, name and what it holds, then what it's about, then one row of
   buttons ending in its way out. Music gains its title and Close; Transfers

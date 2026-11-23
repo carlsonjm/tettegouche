@@ -119,8 +119,9 @@ its panel. It changes here. Temperance builds from a byte-for-byte copy that its
 
 ## Kadunce integration
 
-At open time the launcher negotiates Kadunce launcher-guest protocol 3 and reads
-workspace-context schema version 1; no other versions are accepted. The protocol
+At open time the launcher negotiates Kadunce launcher-guest protocol 3 or 4 and
+reads workspace-context schema version 1; no other versions are accepted. Under 4
+Search sizes itself in Spread and says its size. The protocol
 is asked once for each Kadunce on the bus. Neither question waits: the launcher
 shows when Kadunce answers its guest, or on its own after half a second, so a
 busy KWin never holds it still, and a place Kadunce makes after that is given

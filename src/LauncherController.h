@@ -64,6 +64,11 @@ class LauncherController final : public QObject
     Q_PROPERTY(int guestY READ guestY NOTIFY guestChanged)
     Q_PROPERTY(int guestWidth READ guestWidth NOTIFY guestChanged)
     Q_PROPERTY(int guestHeight READ guestHeight NOTIFY guestChanged)
+    // Protocol 4: in Spread, Search is its own size, centred where the card in
+    // the middle stands, and says its size to Kadunce (sizeGuest).
+    Q_PROPERTY(bool guestSizesItself READ guestSizesItself NOTIFY guestChanged)
+    // The middle card's height, which Medium matches in Spread.
+    Q_PROPERTY(int guestCardHeight READ guestCardHeight NOTIFY guestChanged)
     Q_PROPERTY(QRect availableArea READ availableArea NOTIFY guestChanged)
     Q_PROPERTY(int relatedRevision READ relatedRevision NOTIFY relatedChanged)
     // Whether Shuffle's dock answered when Search last asked what it pins.
@@ -109,6 +114,11 @@ public:
     int guestY() const { return m_guestRect.y(); }
     int guestWidth() const { return m_guestRect.width(); }
     int guestHeight() const { return m_guestRect.height(); }
+    bool guestSizesItself() const { return m_guestMode && m_guestProtocol >= 4 && !m_drawerExpanded; }
+    int guestCardHeight() const { return m_guestCardRect.height(); }
+    // Search's size in Spread: it stands centred on the middle card's centre,
+    // takes input there, and Kadunce stands the cards beside it at its width.
+    Q_INVOKABLE void sizeGuest(int width, int height);
     // Floating, Search keeps to the room above Shuffle's dock, as cards do.
     QRect availableArea() const;
 
@@ -382,6 +392,10 @@ private:
     bool m_contextPending = false;
     QRect m_guestRect;
     QRect m_compactGuestRect, m_activeGuestRect;
+    // The middle card's place as Kadunce gave it, in the guest screen.
+    QRect m_guestCardRect;
+    // Whether this guest has said its size to Kadunce yet.
+    bool m_guestSized = false;
     int m_dockBand = 0;
     // The Context Bar's height along the top of Search's display.
     int m_contextBar = 0;

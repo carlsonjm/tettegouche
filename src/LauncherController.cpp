@@ -313,6 +313,23 @@ void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
     });
 }
 
+void LauncherController::sizeGuest(int width, int height)
+{
+    if (!guestSizesItself() || !m_guestCardRect.isValid() || width <= 0 || height <= 0) return;
+    const QPoint centre = m_guestCardRect.center();
+    const QRect place(centre.x() - width / 2, centre.y() - height / 2, width, height);
+    if (place == m_compactGuestRect && m_guestRect == place) return;
+    const bool widthChanged = place.width() != m_compactGuestRect.width();
+    m_compactGuestRect = place;
+    m_guestRect = place;
+    m_view->setMask(QRegion(m_guestRect.adjusted(-16, -16, 16, 16)));
+    Q_EMIT guestChanged();
+    if (widthChanged || !m_guestSized) {
+        m_guestSized = true;
+        Kadunce::tell(QStringLiteral("resizeLauncherGuest"), {double(width), double(height)});
+    }
+}
+
 QRect LauncherController::availableArea() const
 {
     const auto *screen = placedScreen();
@@ -924,8 +941,8 @@ bool LauncherController::popOutFilesWindow()
     }
     QQuickView *view = window->view.get();
     const QRect area = availableArea();
-    const QSize size = m_guestMode && m_compactGuestRect.isValid()
-        ? m_compactGuestRect.size()
+    const QSize size = m_guestMode && m_guestCardRect.isValid()
+        ? m_guestCardRect.size()
         : QSize(qRound(area.width() * 0.64), qRound(area.height() * 0.64));
     view->resize(size.expandedTo(view->minimumSize()));
     view->setScreen(placedScreen());
@@ -1412,8 +1429,8 @@ void LauncherController::askGuest()
             takeGuest(reply.isError() ? QByteArray() : reply.value().toUtf8());
         });
     };
-    // Only launcher-guest protocol 3 is spoken.
-    if (m_guestProtocol == 3) {
+    // Launcher-guest protocols 3 and 4 are spoken; 4 adds sizeGuest.
+    if (m_guestProtocol == 3 || m_guestProtocol == 4) {
         begin();
         return;
     }
@@ -1423,7 +1440,7 @@ void LauncherController::askGuest()
         if (!answered(watcher)) return;
         const QDBusPendingReply<int> reply = *watcher;
         if (!reply.isError()) m_guestProtocol = reply.value();
-        if (m_guestProtocol == 3 && m_opening) {
+        if ((m_guestProtocol == 3 || m_guestProtocol == 4) && m_opening) {
             begin();
             return;
         }
@@ -1439,7 +1456,7 @@ void LauncherController::takeGuest(const QByteArray &answer)
     const QJsonObject root = document.object();
     const QJsonObject card = root.value(QStringLiteral("card")).toObject();
     const bool accepted = error.error == QJsonParseError::NoError
-        && root.value(QStringLiteral("protocol")).toInt() == 3
+        && root.value(QStringLiteral("protocol")).toInt() == m_guestProtocol
         && root.value(QStringLiteral("accepted")).toBool();
     if (!m_opening) {
         // Closed, or shown on its own, before Kadunce answered: the place it
@@ -1482,6 +1499,8 @@ void LauncherController::takeGuest(const QByteArray &answer)
     m_guestRect = globalCard.translated(
         -guestScreen->geometry().topLeft());
     m_compactGuestRect = m_guestRect;
+    m_guestCardRect = m_guestRect;
+    m_guestSized = false;
     const auto active = root.value(QStringLiteral("active")).toObject();
     m_activeGuestRect = QRect(active.value(QStringLiteral("x")).toInt(),
         active.value(QStringLiteral("y")).toInt(),

@@ -1412,7 +1412,14 @@ Item {
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
             && !root.peopleShown
-        readonly property real restHeight: root.launcherController.guestMode
+        // Medium, in Spread: resting with anything under the field, Search is
+        // the middle card's height, never above its full height, and what it
+        // holds scrolls inside. Floating, it rests as tall as what it holds.
+        readonly property real mediumHeight: Math.min(fullHeight, root.launcherController.guestCardHeight > 0
+            ? root.launcherController.guestCardHeight : restingHeight)
+        readonly property real restHeight: root.launcherController.guestSizesItself
+            ? (resting ? (small ? restingHeight : mediumHeight) : fullHeight)
+            : root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.height - 20)
@@ -1457,21 +1464,41 @@ Item {
             ? root.launcherController.guestX
             : root.launcherController.availableArea.x
                 + (root.launcherController.availableArea.width - width) / 2
-        // A guest stays in the room Kadunce gave it and shortens to fit.
-        y: root.launcherController.guestMode
+        // A guest stays in the room Kadunce gave it and shortens to fit. Sizing
+        // itself, it is centred where it stands and never lifts for the keys.
+        y: root.launcherController.guestSizesItself
+            ? root.launcherController.guestY
+            : root.launcherController.guestMode
             ? Math.max(highest, Math.min(keysLine - height, root.launcherController.guestY))
             : Math.max(highest, Math.min(home, keysLine - holdHeight))
         // The size it is going to, which what it holds is laid out at.
-        readonly property real targetWidth: root.launcherController.guestMode
+        readonly property real ownWidth: Math.min(small ? smallWidth : universalWidth,
+            root.launcherController.availableArea.width - 40)
+        readonly property real targetWidth: root.launcherController.guestSizesItself
+            ? ownWidth
+            : root.launcherController.guestMode
             ? root.launcherController.guestWidth
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.width - 20)
                 : Math.min(small ? smallWidth : universalWidth, root.launcherController.availableArea.width - 40)
-        readonly property real targetHeight: root.launcherController.guestMode
+        readonly property real targetHeight: root.launcherController.guestSizesItself
+            ? Math.max(Math.min(restHeight, 120), Math.min(restHeight, keysLine - y))
+            : root.launcherController.guestMode
             ? Math.max(Math.min(restHeight, 160), Math.min(restHeight, keysLine - highest))
             : Math.min(freeHeight, Math.max(holdHeight, keysLine - y))
         width: targetWidth
         height: targetHeight
+        // Sizing itself in Spread, Search says its size: Kadunce stands the
+        // cards beside it one gutter beyond its edges.
+        readonly property size ownSize: Qt.size(Math.round(ownWidth), Math.round(restHeight))
+        onOwnSizeChanged: if (root.launcherController.guestSizesItself) root.launcherController.sizeGuest(ownSize.width, ownSize.height)
+        Connections {
+            target: root.launcherController
+            function onGuestChanged() {
+                if (root.launcherController.guestSizesItself)
+                    root.launcherController.sizeGuest(sheet.ownSize.width, sheet.ownSize.height)
+            }
+        }
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Placed by its working height, so it grows downward with no motion
         // of its own; the keys never move it.

@@ -14,8 +14,9 @@ pragma ComponentBehavior: Bound
 // the files used lately, each in a labelled section of its own,
 // eight of each, and none pinned, open or hidden. Each section has
 // its setting, and what is on sets how tall Search rests: the
-// field alone, one section, or both filling the sheet.
-Item {
+// field alone, one section, or both filling the sheet. In Spread, taller
+// than Search's Medium size, they scroll inside it, fading at its foot.
+Flickable {
     id: firstRow
     objectName: "first-row"
     // The launcher whose state this draws, and the parts of its sheet it
@@ -311,7 +312,17 @@ Item {
         + (sections === 2 ? gap : 0)
         + (filesShown ? headHeight + 2 * cardHeight + cardGap : 0)
     readonly property real filesY: appsShown ? appsReach + gap : 0
-    readonly property real filesRoom: Math.max(0, height - filesY - headHeight)
+    // In Spread, more than Search's Medium holds scrolls, the files keeping
+    // their two full rows; floating, the sheet is as tall as they are.
+    readonly property bool scrolls: !!launcher.launcherController && launcher.launcherController.guestSizesItself
+        && naturalHeight > height + 0.5
+    contentWidth: width
+    contentHeight: scrolls ? naturalHeight : height
+    flickableDirection: Flickable.VerticalFlick
+    boundsBehavior: Flickable.StopAtBounds
+    interactive: scrolls
+    clip: scrolls
+    readonly property real filesRoom: Math.max(0, contentHeight - filesY - headHeight)
     readonly property int fileRows: filesRoom >= 2 * 96 + cardGap ? 2 : filesRoom >= 96 ? 1 : 0
     readonly property real fileHeight: fileRows > 0
         ? Math.min(176, (filesRoom - cardGap * (fileRows - 1)) / fileRows) : 0
@@ -334,6 +345,7 @@ Item {
         return 1 - Math.pow(1 - t, 3)
     }
     function arrive(delay, again) {
+        contentY = 0
         leaving.stop()
         // Caught on its way out, it comes straight back.
         if (!again && rest > 0 && arrival >= 1) {
@@ -349,6 +361,7 @@ Item {
     }
     // Where Search opens, the row is there from the first frame.
     function settle() {
+        contentY = 0
         leaving.stop()
         arriving.stop()
         returning.stop()
@@ -468,6 +481,20 @@ Item {
             visible: mine && place >= 0 && place < firstRow.fileColumns * firstRow.fileRows
             opacity: reveal
             transform: Translate { y: launcher.reducedMotion ? 0 : (1 - recentFile.reveal) * 10 }
+        }
+    }
+    // What goes on below fades at the sheet's foot.
+    Rectangle {
+        objectName: "first-row-fade"
+        parent: firstRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 32
+        visible: firstRow.scrolls && firstRow.contentY < firstRow.contentHeight - firstRow.height - 1
+        gradient: Gradient {
+            GradientStop { position: 0; color: Qt.rgba(launcher.surfaceColor.r, launcher.surfaceColor.g, launcher.surfaceColor.b, 0) }
+            GradientStop { position: 1; color: launcher.surfaceColor }
         }
     }
 }
