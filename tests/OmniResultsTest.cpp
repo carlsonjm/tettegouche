@@ -469,6 +469,15 @@ int main(int argc, char **argv)
         core.showCore(core.testQuery);
         if (core.rowCount() != 1
             || core.index(0, 0).data(KRunner::ResultsModel::SubtextRole).toString() != QStringLiteral("Save what's open as a layout")) return 145;
+        // And both ways in open the island, never a settings window: the
+        // result, and the Layouts Helper, with nothing saved.
+        if (!core.run(core.index(0, 0)) || islands != 3) return 411;
+        core.setCoreActions([&health] { return QList<QVariantMap>{health}; },
+                            [&helpersOpened](const QString &id, const QString &) { helpersOpened.append(id); });
+        if (core.helpers().size() != 2 || core.helpers().last().toMap().value(QStringLiteral("id")).toString() != QStringLiteral("layouts"))
+            return 412;
+        if (!core.openHelper(QStringLiteral("layouts")) || islands != 4 || !helpersOpened.isEmpty()) return 413;
+        core.setCoreActions({}, {});
         // A Core that keeps no layouts, or none at all: no Layouts.
         keeps = false;
         layouts = {coding};
