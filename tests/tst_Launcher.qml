@@ -1222,7 +1222,7 @@ TestCase {
         controller.guestMode = false
         // One size on every display: 840 wide, centred.
         tryCompare(sheet, "width", 840)
-        compare(sheet.height, sheet.restingHeight)
+        compare(sheet.height, sheet.ownHeight)
         compare(sheet.x, 80)
         controller.guestMode = true
         tryCompare(sheet, "width", controller.guestWidth)
@@ -1626,7 +1626,7 @@ TestCase {
         tryCompare(launcher, "drawerOpen", false)
         compare(controller.closes, closesBefore)
         tryCompare(sheet, "width", 840)
-        tryCompare(sheet, "height", sheet.restingHeight)
+        tryCompare(sheet, "height", sheet.ownHeight)
         compare(controller.drawerExpanded, false)
     }
     function test_expandedDrawerWithoutLocalDock() {
@@ -1721,8 +1721,11 @@ TestCase {
         compare(field.width, field.parent.width)
         compare(Math.round(left(dot) + (dot.width - 40) / 2), Math.round(left(field)))
         verify(right(close) <= right(field) + 1)
-        // Both on, the sheet has its full height.
-        compare(sheet.height, sheet.fullHeight)
+        // Both on, it rests at Medium: a Spread card's height, never above
+        // its full height, and the sections scroll inside.
+        verify(sheet.medium)
+        compare(sheet.height, sheet.mediumHeight)
+        verify(sheet.mediumHeight <= sheet.fullHeight)
         verify(row.visible)
         compare(row.sections, 2)
         compare(row.y - field.y - field.height, 24)
@@ -1749,7 +1752,7 @@ TestCase {
         compare(below.x, card.x)
         compare(below.y - card.y - card.height, 12)
         verify(card.y > first.y + first.height)
-        verify(below.y + below.height <= row.height + 0.5)
+        verify(below.y + below.height <= row.contentHeight + 0.5)
         // Typing hands the room to the results, and clearing brings it back;
         // the modes and search stay.
         const query = findChild(launcher, "search-query")
@@ -1774,7 +1777,7 @@ TestCase {
         const area = controller.availableArea
         const small = 2 * 24 + 56 + 44
         launcher.recentFiles = false
-        tryCompare(sheet, "height", small + 24 + 40 + 116)
+        tryCompare(sheet, "height", sheet.mediumHeight)
         verify(findChild(launcher, "recent-0").visible)
         verify(!findChild(launcher, "recent-files").visible)
         // With something under the field, it rests where its full height is
@@ -1788,11 +1791,11 @@ TestCase {
         compare(sheet.y, restingY)
         compare(field.mapToItem(null, 0, 0).y, fieldY)
         query.text = ""
-        tryCompare(sheet, "height", small + 24 + 40 + 116)
+        tryCompare(sheet, "height", sheet.mediumHeight)
         compare(sheet.y, restingY)
         launcher.recentFiles = true
         launcher.recentApps = false
-        tryCompare(sheet, "height", Math.min(area.height - 40, small + 24 + 40 + 2 * 150 + 12))
+        tryCompare(sheet, "height", sheet.mediumHeight)
         verify(!findChild(launcher, "recent-apps").visible)
         verify(findChild(launcher, "recent-10").visible)
         compare(findChild(launcher, "recent-10").y, 40)
@@ -1872,14 +1875,14 @@ TestCase {
         const field = findChild(launcher, "search-field")
         const sheet = findChild(launcher, "launcher-sheet")
         compare(row.offered, 0)
-        compare(sheet.height, sheet.fullHeight)
+        compare(sheet.height, sheet.mediumHeight)
         compare(field.y, 0)
         verify(findChild(launcher, "recent-apps-empty").visible)
         verify(findChild(launcher, "recent-files-empty").visible)
         fillRecent(4)
         verify(!findChild(launcher, "recent-apps-empty").visible)
         verify(!findChild(launcher, "recent-files-empty").visible)
-        compare(sheet.height, sheet.fullHeight)
+        compare(sheet.height, sheet.mediumHeight)
     }
     // With the setting off the launcher has no record at all: the modes
     // alone, and Tab goes from one to the next.
@@ -2005,7 +2008,11 @@ TestCase {
         mouseClick(second, second.width / 2, second.height / 2)
         compare(recentStub.opened, [1])
         compare(controller.closes, 1)
+        // Below Medium's foot, the file is scrolled to.
+        const row = findChild(launcher, "first-row")
         const third = findChild(launcher, "recent-2")
+        if (row.scrolls)
+            row.contentY = Math.min(row.contentHeight - row.height, third.y + third.height / 2 - row.height / 2)
         const touch = touchEvent(launcher)
         touch.press(0, third, third.width / 2, third.height / 2).commit()
         wait(40)
@@ -4092,7 +4099,7 @@ TestCase {
     }
     // Notes opens in Search's own window with the drawer's motion, on the
     // board: the field becomes Find a note, with every note under
-    // it, and the window keeps its size. Nothing is handed to Gooseberry's
+    // it, and the window keeps its width. Nothing is handed to Gooseberry's
     // own card, no note is started, and Search stays open.
     function test_notesModeOpensInSearch() {
         const sheet = findChild(launcher, "launcher-sheet")
@@ -4119,8 +4126,9 @@ TestCase {
         compare(controller.closes, 0)
         compare(controller.drawerExpanded, false)
         tryCompare(launcher, "notesProgress", 1)
+        // It keeps its width and opens to its working height.
         compare(sheet.width, rest.width)
-        compare(sheet.height, rest.height)
+        compare(sheet.height, sheet.fullHeight)
         verify(field.opacity < 0.01)
         compare(frame.y, 0)
         compare(frame.height, 44)
@@ -4255,7 +4263,7 @@ TestCase {
         keyClick(Qt.Key_R)
         keyClick(Qt.Key_N)
         const newNote = findChild(launcher, "notes-new")
-        verify(newNote.visible)
+        tryCompare(newNote, "visible", true)
         verify(newNote.height >= 44)
         // Under the pointer it lights, with a ring round it.
         const ring = findChild(newNote, "notes-new-ring")

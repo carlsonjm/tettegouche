@@ -1412,18 +1412,24 @@ Item {
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
             && !root.peopleShown
-        // Medium, in Spread: resting with anything under the field, Search is
-        // the middle card's height, never above its full height, and what it
-        // holds scrolls inside. Floating, it rests as tall as what it holds.
-        readonly property real mediumHeight: Math.min(fullHeight, root.launcherController.guestCardHeight > 0
-            ? root.launcherController.guestCardHeight : restingHeight)
+        // Medium: resting with a section of what was used lately under the
+        // field, Search is a Spread card's height, 54% of the work area (in
+        // Spread, the middle card's own), never above its full height, and the
+        // sections scroll inside. The field alone, or the Helpers, keep the
+        // height of what they hold.
+        readonly property bool medium: resting && !small && !root.helpersShown
+        readonly property real mediumHeight: Math.min(fullHeight,
+            root.launcherController.guestSizesItself && root.launcherController.guestCardHeight > 0
+                ? root.launcherController.guestCardHeight
+                : Math.round(root.launcherController.availableArea.height * 0.54))
+        readonly property real ownHeight: medium ? mediumHeight : resting ? restingHeight : fullHeight
         readonly property real restHeight: root.launcherController.guestSizesItself
-            ? (resting ? (small ? restingHeight : mediumHeight) : fullHeight)
+            ? ownHeight
             : root.launcherController.guestMode
             ? root.launcherController.guestHeight
             : root.launcherController.drawerExpanded
                 ? Math.max(1, root.launcherController.availableArea.height - 20)
-                : resting ? restingHeight : fullHeight
+                : ownHeight
         // Floating, Search is one size on every display, as tall as both
         // sections and as wide as eight applications want, never scaled up
         // with a large display; only a smaller screen trims it.

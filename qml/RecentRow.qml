@@ -14,8 +14,8 @@ pragma ComponentBehavior: Bound
 // the files used lately, each in a labelled section of its own,
 // eight of each, and none pinned, open or hidden. Each section has
 // its setting, and what is on sets how tall Search rests: the
-// field alone, one section, or both filling the sheet. In Spread, taller
-// than Search's Medium size, they scroll inside it, fading at its foot.
+// field alone, or Medium with either section on. Taller than Medium, they
+// scroll inside it, fading at its foot.
 Flickable {
     id: firstRow
     objectName: "first-row"
@@ -312,9 +312,10 @@ Flickable {
         + (sections === 2 ? gap : 0)
         + (filesShown ? headHeight + 2 * cardHeight + cardGap : 0)
     readonly property real filesY: appsShown ? appsReach + gap : 0
-    // In Spread, more than Search's Medium holds scrolls, the files keeping
-    // their two full rows; floating, the sheet is as tall as they are.
-    readonly property bool scrolls: !!launcher.launcherController && launcher.launcherController.guestSizesItself
+    // More than Search's Medium holds scrolls, the files keeping their two
+    // full rows; only an older Kadunce's fixed guest place still fits them in.
+    readonly property bool scrolls: !!launcher.launcherController
+        && (launcher.launcherController.guestSizesItself || !launcher.launcherController.guestMode)
         && naturalHeight > height + 0.5
     contentWidth: width
     contentHeight: scrolls ? naturalHeight : height
