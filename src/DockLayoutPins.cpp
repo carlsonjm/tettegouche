@@ -6,6 +6,7 @@
 #include <QDBusPendingCallWatcher>
 #include <QDBusPendingReply>
 #include <QDBusServiceWatcher>
+#include <QDebug>
 
 namespace {
 QString service() { return QString::fromLatin1(DockLayoutPins::Service); }
@@ -72,7 +73,15 @@ void DockLayoutPins::pin(const QString &id, bool pin) {
     auto request = QDBusMessage::createMethodCall(service(), path(), iface(),
                                                   pin ? QStringLiteral("pinLayout") : QStringLiteral("unpinLayout"));
     request << id;
-    m_bus.asyncCall(request, 2000);
+    // Said in the journal, so a pin that does not reach the dock is found; a
+    // dock that refuses is asked again what it holds.
+    auto *watcher = new QDBusPendingCallWatcher(m_bus.asyncCall(request, 2000), this);
+    connect(watcher, &QDBusPendingCallWatcher::finished, this, [this, watcher, id, pin] {
+        const QDBusPendingReply<bool> reply = *watcher; watcher->deleteLater();
+        if (reply.isError()) qInfo() << "Tettegouche: the dock did not take" << (pin ? "pin" : "unpin") << "of layout" << id << reply.error().message();
+        else qInfo() << "Tettegouche: the dock" << (reply.value() ? "took" : "refused") << (pin ? "pin" : "unpin") << "of layout" << id;
+        if (reply.isError() || !reply.value()) ask();
+    });
     if (pin) m_pinned.append(id);
     else m_pinned.removeAll(id);
     Q_EMIT changed();
