@@ -271,7 +271,7 @@ than repeat it.
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island on a Core question, tap or click an answer | Passes that answer to Split Rock's Core, such as Bring back, Always or Not now, and closes the island. The words are Core's. |
 | In the Layouts island, tap or click Open on a saved layout | Split Rock's Core opens that layout and the island closes. |
-| In the Layouts island, tap or click a saved layout off its pill | Shows its switch "Open when I sign in" and Remove; again, hides them. The switch flips whether Core opens it at sign-in; Remove forgets it. |
+| In the Layouts island, tap or click a saved layout off its pill | Shows Pin to dock, where Shuffle's dock is there, and Remove; again, hides them. Pin to dock puts the layout on the dock as a place of its own, and reads Unpin from dock once it is there; Remove forgets it. |
 | In the Layouts island, tap or click Save what's open | Turns the island into the form, with what is open on this workspace, group by group. |
 | In the Layouts form, type in the name field | Names the layout. `Enter` saves, as Save does. |
 | In the Layouts form, tap or click Remove on a group | Takes that group out of the layout being saved. |

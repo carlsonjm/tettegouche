@@ -216,6 +216,10 @@ whether the screen is shared from the portal's status item; each is optional,
 and with none of them nothing is left out on its account.
 The same answer tells an application's sheet in Apps whether to offer Pin to
 dock; it asks the Bottom Surface's `pinApplication` or `unpinApplication`.
+The widget's `DockLayoutPins` does the same for the Layouts island's saved
+layouts: `pinnedLayouts`, `pinLayout` and `unpinLayout`, and it hears
+`layoutsRequested` from the dock to open the Layouts island. Without the dock
+the island offers no pin.
 
 ## Files
 

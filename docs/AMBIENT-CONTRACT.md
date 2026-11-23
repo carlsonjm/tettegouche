@@ -222,7 +222,12 @@ display, a column for each group, each with its icon); its name; beneath the nam
 front app by its icon from the app menu, then its apps by the menu's names,
 group by group, "Zen Browser · Stack of Mail, Ghostty · Claude"; then an Open
 pill, 32 tall, the first row's filled. Past what fits, the island scrolls. A tap on a row off its pill shows its own Remove
-(`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
+(`RemoveLayout`), and before it, where Shuffle's dock is there, Pin to dock,
+or Unpin from dock once the dock holds it, both under Open on one line. The
+dock pins it as a place of its own (the Bottom Surface's `pinLayout` and
+`unpinLayout`, and `pinnedLayouts` for which it holds). A pinned layout's sheet
+in the dock asks for every layout (`layoutsRequested`, with its display), and
+the widget on that display opens this island, as when Search asks. No layout opens at sign-in: the desktop's own restore
 brings apps back. With none saved,
 a line says how to make one. Below the rows are the pills Save what's open,
 filled, and Close.

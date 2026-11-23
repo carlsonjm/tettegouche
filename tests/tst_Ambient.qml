@@ -109,6 +109,12 @@ TestCase {
             function removeLayout(id) { calls.push(["remove", id]); }
             function setLayoutAtSignIn(id, on) { calls.push(["atSignIn", id, on]); }
             function typeInSearch(words) { calls.push(["type", words]); }
+            property bool dockPinsLayouts: false
+            property var dockLayouts: []
+            function pinLayoutToDock(id, pin) {
+                calls.push(["pin", id, pin]);
+                dockLayouts = pin ? dockLayouts.concat([id]) : dockLayouts.filter(kept => kept !== id);
+            }
         }
     }
     // The notes application's quick note, as the applet hands it over.
@@ -1153,6 +1159,32 @@ TestCase {
         tap(remove);
         compare(host.calls[0], ["remove", "1"]);
         verify(opened.expanded);
+    }
+
+    // With Shuffle's dock there, the chosen row offers Pin to dock before
+    // Remove, then Unpin from dock once pinned; without it, no pin.
+    function test_a_saved_layout_pins_to_the_dock() {
+        const host = createTemporaryObject(layoutsComponent, testCase);
+        let opened = openLayouts(host);
+        mouseClick(findChild(opened.contentItem, "ambient-island-layout-1"), 20, 20);
+        settle();
+        verify(!findChild(opened.contentItem, "ambient-island-layout-pin-1").visible);
+        verify(findChild(opened.contentItem, "ambient-island-layout-remove-1").visible);
+
+        host.dockPinsLayouts = true;
+        settle();
+        const pin = findChild(opened.contentItem, "ambient-island-layout-pin-1");
+        verify(pin.visible);
+        compare(pin.label, "Pin to dock");
+        const remove = findChild(opened.contentItem, "ambient-island-layout-remove-1");
+        verify(pin.x < remove.x || pin.y < remove.y);
+        tap(pin);
+        compare(host.calls[host.calls.length - 1], ["pin", "1", true]);
+        compare(pin.label, "Unpin from dock");
+        verify(opened.expanded);
+        tap(pin);
+        compare(host.calls[host.calls.length - 1], ["pin", "1", false]);
+        compare(pin.label, "Pin to dock");
     }
 
     // Save what's open turns the island into the form: a name, what Core

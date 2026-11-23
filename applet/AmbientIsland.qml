@@ -68,6 +68,9 @@ Window {
     // Rock's Core. It lists `layouts`, reads `currentLayout` on
     // readCurrentLayout(), and saves, opens, and removes them.
     property var layouts: null
+    // Shuffle's dock is there to pin a layout to, and what it pins.
+    readonly property bool dockPinsLayouts: !!layouts && layouts.dockPinsLayouts === true
+    readonly property var dockLayouts: layouts && layouts.dockLayouts ? layouts.dockLayouts : []
     readonly property var savedLayouts: kind === "layouts" && layouts && layouts.layouts ? layouts.layouts : []
     // Saved layouts waiting for a display that isn't connected, out of the list.
     readonly property int layoutsAway: layouts && layouts.layoutsAway ? layouts.layoutsAway : 0
@@ -1189,14 +1192,30 @@ Window {
                                             elide: Text.ElideRight
                                         }
                                     }
-                                    PillButton {
-                                        objectName: "ambient-island-layout-remove-" + saved.modelData.id
+                                    // Chosen: Pin to dock, where Shuffle's
+                                    // dock is there, then Remove.
+                                    // Under Open too, so both fit on one line.
+                                    Flow {
+                                        width: saved.width - savedColumn.x - 12
+                                        spacing: 8
                                         visible: saved.chosen
-                                        height: 32
-                                        label: words.i18nc("@action:button forgets a saved layout", "Remove")
-                                        onActivated: {
-                                            overlay.chosenLayout = "";
-                                            if (overlay.layouts) overlay.layouts.removeLayout(saved.modelData.id);
+                                        PillButton {
+                                            readonly property bool pinned: overlay.dockLayouts.indexOf(saved.modelData.id) >= 0
+                                            objectName: "ambient-island-layout-pin-" + saved.modelData.id
+                                            visible: overlay.dockPinsLayouts
+                                            height: 32
+                                            label: pinned ? words.i18nc("@action:button takes a saved layout off the dock", "Unpin from dock")
+                                                          : words.i18nc("@action:button puts a saved layout on the dock", "Pin to dock")
+                                            onActivated: overlay.layouts.pinLayoutToDock(saved.modelData.id, !pinned)
+                                        }
+                                        PillButton {
+                                            objectName: "ambient-island-layout-remove-" + saved.modelData.id
+                                            height: 32
+                                            label: words.i18nc("@action:button forgets a saved layout", "Remove")
+                                            onActivated: {
+                                                overlay.chosenLayout = "";
+                                                if (overlay.layouts) overlay.layouts.removeLayout(saved.modelData.id);
+                                            }
                                         }
                                     }
                                 }
