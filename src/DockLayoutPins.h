@@ -6,7 +6,7 @@
 #include <QObject>
 #include <QStringList>
 
-class QDBusMessage;
+#include <QDBusMessage>
 
 // The saved layouts pinned to Shuffle's dock, for the Layouts card's "Pin to
 // dock" and "Unpin from dock". The dock publishes them on its bus name,
