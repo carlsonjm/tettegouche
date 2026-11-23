@@ -264,10 +264,14 @@ private Q_SLOTS:
         QCOMPARE(m_controller->guestX(), 100 + (600 - 840) / 2);
         QCOMPARE(m_controller->guestY(), 50 + (400 - 300) / 2);
         QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("resizeLauncherGuest 840 300")));
-        // Only a new width is said again; the height is Search's own.
+        // A new height is said too: Kadunce takes a tap inside it as Search's.
         m_kadunce.forget();
         m_controller->sizeGuest(840, 380);
         QCOMPARE(m_controller->guestHeight(), 380);
+        QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("resizeLauncherGuest 840 380")));
+        // The same size again says nothing.
+        m_kadunce.forget();
+        m_controller->sizeGuest(840, 380);
         QTest::qWait(50);
         QVERIFY(!m_kadunce.calls().join(QLatin1Char('\n')).contains(QStringLiteral("resizeLauncherGuest")));
         m_controller->close();

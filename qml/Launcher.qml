@@ -1500,13 +1500,16 @@ Item {
         // Sizing itself in Spread, Search says its size: Kadunce stands the
         // cards beside it one gutter beyond its edges.
         readonly property size ownSize: Qt.size(Math.round(ownWidth), Math.round(restHeight))
-        onOwnSizeChanged: if (root.launcherController.guestSizesItself) root.launcherController.sizeGuest(ownSize.width, ownSize.height)
+        // Said once the size has settled, never inside working it out, so
+        // what Search is told back cannot loop into the size it is working out.
+        function sayOwnSize() {
+            if (root.launcherController.guestSizesItself)
+                root.launcherController.sizeGuest(sheet.ownSize.width, sheet.ownSize.height)
+        }
+        onOwnSizeChanged: Qt.callLater(sheet.sayOwnSize)
         Connections {
             target: root.launcherController
-            function onGuestChanged() {
-                if (root.launcherController.guestSizesItself)
-                    root.launcherController.sizeGuest(sheet.ownSize.width, sheet.ownSize.height)
-            }
+            function onGuestChanged() { Qt.callLater(sheet.sayOwnSize) }
         }
         Behavior on x { enabled: root.launcherController.guestMode; NumberAnimation { duration: root.ms(220); easing.type: Easing.OutCubic } }
         // Placed by its working height, so it grows downward with no motion

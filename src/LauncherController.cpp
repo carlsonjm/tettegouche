@@ -320,12 +320,14 @@ void LauncherController::sizeGuest(int width, int height)
     const QRect place(m_guestCardRect.x() + (m_guestCardRect.width() - width) / 2,
                       m_guestCardRect.y() + (m_guestCardRect.height() - height) / 2, width, height);
     if (place == m_compactGuestRect && m_guestRect == place) return;
-    const bool widthChanged = place.width() != m_compactGuestRect.width();
+    // Kadunce stands the cards by its width and takes a tap inside its size
+    // as Search's, so a change of either is said.
+    const bool sizeChanged = place.size() != m_compactGuestRect.size();
     m_compactGuestRect = place;
     m_guestRect = place;
     m_view->setMask(QRegion(m_guestRect.adjusted(-16, -16, 16, 16)));
     Q_EMIT guestChanged();
-    if (widthChanged || !m_guestSized) {
+    if (sizeChanged || !m_guestSized) {
         m_guestSized = true;
         Kadunce::tell(QStringLiteral("resizeLauncherGuest"), {double(width), double(height)});
     }
