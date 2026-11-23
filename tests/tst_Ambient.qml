@@ -109,6 +109,12 @@ TestCase {
             function removeLayout(id) { calls.push(["remove", id]); }
             function setLayoutAtSignIn(id, on) { calls.push(["atSignIn", id, on]); }
             function typeInSearch(words) { calls.push(["type", words]); }
+            property bool dockPinsLayouts: false
+            property var dockLayouts: []
+            function pinLayoutToDock(id, pin) {
+                calls.push(["pin", id, pin]);
+                dockLayouts = pin ? dockLayouts.concat([id]) : dockLayouts.filter(kept => kept !== id);
+            }
         }
     }
     // The notes application's quick note, as the applet hands it over.
@@ -1137,6 +1143,34 @@ TestCase {
         verify(findChild(opened.contentItem, "ambient-island-layouts-save").visible);
     }
 
+    // An island shown but not yet grown open still closes when sent away,
+    // so none is left holding the widget's place and a card asked for next
+    // can open; one never shown is left alone.
+    function test_an_island_closes_before_it_grows() {
+        const surface = createSurface(460, [media]);
+        const unseen = createTemporaryObject(islandComponent, testCase,
+            {surface: surface, kind: "layouts", start: Qt.rect(40, 540, 44, 44), sideLeft: 0, sideRight: 460});
+        const quiet = spyOn(unseen, "closed");
+        unseen.dismiss();
+        wait(400);
+        compare(quiet.count, 0);
+        const shown = createTemporaryObject(islandComponent, testCase,
+            {surface: surface, kind: "layouts", start: Qt.rect(40, 540, 44, 44), sideLeft: 0, sideRight: 460});
+        const closed = spyOn(shown, "closed");
+        shown.show();
+        shown.dismiss();
+        tryCompare(closed, "count", 1);
+        verify(!shown.expanded);
+        const gone = createTemporaryObject(islandComponent, testCase,
+            {surface: surface, kind: "layouts", start: Qt.rect(40, 540, 44, 44), sideLeft: 0, sideRight: 460});
+        const letGo = spyOn(gone, "closed");
+        gone.show();
+        tryVerify(() => gone.expanded);
+        gone.letGo();
+        compare(letGo.count, 1);
+        verify(!gone.visible);
+    }
+
     // A tap on a saved layout's row shows its own Remove, which goes to
     // Core; no layout has a sign-in switch.
     function test_a_saved_layouts_remove() {
@@ -1153,6 +1187,32 @@ TestCase {
         tap(remove);
         compare(host.calls[0], ["remove", "1"]);
         verify(opened.expanded);
+    }
+
+    // With Shuffle's dock there, the chosen row offers Pin to dock before
+    // Remove, then Unpin from dock once pinned; without it, no pin.
+    function test_a_saved_layout_pins_to_the_dock() {
+        const host = createTemporaryObject(layoutsComponent, testCase);
+        let opened = openLayouts(host);
+        mouseClick(findChild(opened.contentItem, "ambient-island-layout-1"), 20, 20);
+        settle();
+        verify(!findChild(opened.contentItem, "ambient-island-layout-pin-1").visible);
+        verify(findChild(opened.contentItem, "ambient-island-layout-remove-1").visible);
+
+        host.dockPinsLayouts = true;
+        settle();
+        const pin = findChild(opened.contentItem, "ambient-island-layout-pin-1");
+        verify(pin.visible);
+        compare(pin.label, "Pin to dock");
+        const remove = findChild(opened.contentItem, "ambient-island-layout-remove-1");
+        verify(pin.x < remove.x || pin.y < remove.y);
+        tap(pin);
+        compare(host.calls[host.calls.length - 1], ["pin", "1", true]);
+        compare(pin.label, "Unpin from dock");
+        verify(opened.expanded);
+        tap(pin);
+        compare(host.calls[host.calls.length - 1], ["pin", "1", false]);
+        compare(pin.label, "Pin to dock");
     }
 
     // Save what's open turns the island into the form: a name, what Core
@@ -1324,42 +1384,32 @@ TestCase {
         verify(shown(surface, "media").length > 1);
     }
 
-    // Layouts' island: a disc that opens Layouts in place, and the layout
-    // opened last beside it, which a tap opens. It stays, after the quick
-    // note's island, and narrow it keeps its disc and lets the name go.
+    // Layouts' island: a disc that opens Layouts in place, where each saved
+    // layout is one tap; no layout's name stands beside it. It stays, after
+    // the quick note's island, where its disc joins the note's buttons.
     function test_the_layouts_island() {
         const door = {id: "layouts", generation: 1, kind: "layouts", state: "running", capabilities: {}};
-        const last = {id: "layouts", generation: 2, kind: "layouts", state: "running", capabilities: {},
-            layoutId: "3", title: "Coding"};
         const surface = createSurface(460, [door]);
         settle();
         const shape = island(surface, "layouts");
         verify(shape.visible);
         compare(shown(surface, "layouts"), ["disc"]);
         compare(shape.Accessible.name, "Layouts, open");
+        compare(findChild(surface, "ambient-layouts-last"), null);
         const disc = findChild(surface, "ambient-layouts-disc");
         verify(disc.visible);
         verify(shape.height >= 44 && carrier(surface, "layouts").width >= 44);
         const opens = spyOn(surface, "openRequested");
-        const asked = spyOn(surface, "layoutRequested");
         mouseClick(disc, disc.width / 2, disc.height / 2);
         compare(opens.count, 1);
         compare(opens.signalArguments[0][0], "layouts");
-        compare(asked.count, 0);
 
-        surface.activities = [last];
+        // A door still carrying a layout's name, as an older Search sends,
+        // shows the disc alone.
+        surface.activities = [{id: "layouts", generation: 2, kind: "layouts", state: "running", capabilities: {},
+            layoutId: "3", title: "Coding"}];
         settle();
-        compare(shown(surface, "layouts"), ["disc", "last"]);
-        const name = findChild(surface, "ambient-layouts-last");
-        verify(name.visible);
-        verify(name.width >= 44 && name.height >= 44);
-        verify(leftOf(surface, name) >= rightOf(surface, disc));
-        compare(findChild(surface, "ambient-layouts-last-title").text, "Coding");
-        compare(name.Accessible.name, "Open the layout Coding");
-        mouseClick(name, name.width / 2, name.height / 2);
-        compare(asked.count, 1);
-        compare(asked.signalArguments[0][0], "3");
-        compare(opens.count, 1);
+        compare(shown(surface, "layouts"), ["disc"]);
 
         // It stays: a drag does not carry it, and nothing sets it aside.
         const at = slowDrag(surface, "layouts", -120);
@@ -1368,14 +1418,13 @@ TestCase {
         settle();
         verify(island(surface, "layouts").visible);
 
-        // After the quick note's island, before what comes and goes.
+        // Beside the quick note's island, its disc joins the note's button as
+        // one row of actions, and has no island of its own.
         const note = {id: "note", generation: 1, kind: "note", state: "running", capabilities: {}};
-        surface.activities = [media, last, note];
+        surface.activities = [media, door, note];
         settle();
-        // Beside the quick note's, its disc joins the note's button as one
-        // row of actions, and the layout's name follows a small step after.
         compare(shown(surface, "note"), ["dot", "door"]);
-        compare(shown(surface, "layouts"), ["last"]);
+        compare(shown(surface, "layouts") || [], []);
         const beside = findChild(surface, "ambient-note-layouts");
         verify(beside.visible);
         verify(beside.height >= 44);
@@ -1385,18 +1434,16 @@ TestCase {
         compare(panels.width, plus.width);
         compare(Math.round(leftOf(surface, panels) - rightOf(surface, plus)), 8);
         // The note's own window dot stands beside its +, then Layouts'.
-        surface.activities = [media, last, {id: "note", generation: 3, kind: "note", state: "running",
+        surface.activities = [media, door, {id: "note", generation: 3, kind: "note", state: "running",
             capabilities: {windowNotes: true}, windowCount: 1, windowColourHex: "#F2D98A", windowShown: false}];
         settle();
         const own = findChild(surface, "ambient-note-window");
         verify(own.visible);
         verify(leftOf(surface, own) >= rightOf(surface, plus.parent) - 0.5);
         verify(rightOf(surface, own) <= leftOf(surface, beside) + 0.5);
-        surface.activities = [media, last, note];
+        surface.activities = [media, door, note];
         settle();
-        verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "layouts")));
-        verify(leftOf(surface, island(surface, "layouts")) - rightOf(surface, island(surface, "note")) < surface.gap);
-        verify(rightOf(surface, island(surface, "layouts")) <= leftOf(surface, island(surface, "media")));
+        verify(rightOf(surface, island(surface, "note")) <= leftOf(surface, island(surface, "media")));
         const fromNote = spyOn(surface, "openRequested");
         mouseClick(beside, beside.width / 2, beside.height / 2);
         compare(fromNote.count, 1);

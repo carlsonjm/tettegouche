@@ -22,12 +22,10 @@
 #include "TransferActivityBridge.h"
 
 #include <KIO/ApplicationLauncherJob>
-#include <KIO/CommandLauncherJob>
 #include <KIO/OpenUrlJob>
 #include <KLocalizedString>
 #include <KRunner/RunnerManager>
 #include <KService/KService>
-#include <KShell>
 #include <LayerShellQt/Window>
 #include <Plasma/Theme>
 
@@ -405,23 +403,9 @@ int main(int argc, char **argv)
                            [&controller] { controller.requestIsland(QStringLiteral("layouts")); },
                            [&core](const QString &id) { core.openLayout(id); });
     // Quick actions, the last Helper, opens its island in the band through
-    // the widget there, as Layouts does, and Search closes.
+    // the widget there, as Layouts does, and Search closes; found by its
+    // words it does the same, never a settings window.
     results.setQuickActionsIsland([&controller] { controller.requestIsland(QStringLiteral("quickActions")); });
-    // Quick actions' settings page, where Shuffle Settings is installed to
-    // show it, looked for at each asking: Quick actions found by its words
-    // opens it in its own window. Elsewhere the widget's own settings page
-    // has them.
-    const auto suiteSettings = [] {
-        const KService::Ptr settings = KService::serviceByDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
-        return settings ? KShell::splitArgs(settings->exec()).value(0) : QString();
-    };
-    results.setQuickActionsPage([suiteSettings] { return !suiteSettings().isEmpty(); }, [suiteSettings] {
-        const QString program = suiteSettings();
-        if (program.isEmpty()) return;
-        auto *job = new KIO::CommandLauncherJob(program, {QStringLiteral("search/quick")});
-        job->setDesktopName(QStringLiteral("co.goodinput.Shuffle.Settings"));
-        job->start();
-    });
     // Apps found by the names Windows gives its own tools, such as Task
     // Manager, where they are installed.
     results.setApplications([](const QString &name) {

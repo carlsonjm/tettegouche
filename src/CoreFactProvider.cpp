@@ -353,16 +353,6 @@ QList<QVariantMap> CoreFactProvider::layouts() const {
     return shown;
 }
 
-QVariantMap CoreFactProvider::lastOpened() const {
-    QVariantMap last;
-    QDateTime latest;
-    for (const auto &layout : layouts()) {
-        const auto when = QDateTime::fromString(layout.value(QStringLiteral("opened")).toString(), Qt::ISODate);
-        if (when.isValid() && (!latest.isValid() || when > latest)) { latest = when; last = layout; }
-    }
-    return last;
-}
-
 // The island goes when no saved layout can be opened on the displays
 // connected now, and comes back with one.
 QVariantList CoreFactProvider::layoutsDoor() const {
@@ -370,11 +360,6 @@ QVariantList CoreFactProvider::layoutsDoor() const {
     QVariantMap row{{QStringLiteral("id"), QString::fromLatin1(LayoutsDoor)}, {QStringLiteral("generation"), m_generation},
                     {QStringLiteral("kind"), QStringLiteral("layouts")}, {QStringLiteral("state"), QStringLiteral("running")},
                     {QStringLiteral("capabilities"), QVariantMap{}}};
-    const QVariantMap last = lastOpened();
-    if (!last.isEmpty()) {
-        row.insert(QStringLiteral("layoutId"), last.value(QStringLiteral("id")));
-        row.insert(QStringLiteral("title"), last.value(QStringLiteral("name")));
-    }
     return {row};
 }
 

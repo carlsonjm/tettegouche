@@ -33,8 +33,8 @@ Current sources are:
   from Core's bus interface where Split Rock is installed (§ Core);
 - the quick note's island, while Gooseberry is installed, with the note pinned
   in Gooseberry beside its door (§ Quick note);
-- Layouts' island, while Split Rock's Core keeps layouts, with the layout
-  opened last beside its door (§ Layouts).
+- Layouts' island, while Split Rock's Core keeps a layout that can open on
+  the displays connected now (§ Layouts).
 
 The quick note's and Layouts' islands are the two that stay without activity.
 Each is a launcher, not an activity: a door to the quick note, and to the
@@ -222,7 +222,12 @@ display, a column for each group, each with its icon); its name; beneath the nam
 front app by its icon from the app menu, then its apps by the menu's names,
 group by group, "Zen Browser · Stack of Mail, Ghostty · Claude"; then an Open
 pill, 32 tall, the first row's filled. Past what fits, the island scrolls. A tap on a row off its pill shows its own Remove
-(`RemoveLayout`). No layout opens at sign-in: the desktop's own restore
+(`RemoveLayout`), and before it, where Shuffle's dock is there, Pin to dock,
+or Unpin from dock once the dock holds it, both under Open on one line. The
+dock pins it as a place of its own (the Bottom Surface's `pinLayout` and
+`unpinLayout`, and `pinnedLayouts` for which it holds). A pinned layout's sheet
+in the dock asks for every layout (`layoutsRequested`, with its display), and
+the widget on that display opens this island, as when Search asks. No layout opens at sign-in: the desktop's own restore
 brings apps back. With none saved,
 a line says how to make one. Below the rows are the pills Save what's open,
 filled, and Close.
@@ -241,27 +246,21 @@ once: "Mail didn't open", and beneath, "The rest of Coding is in place". A tap
 takes it away and opens Layouts; setting it aside, or a minute, takes it away
 and opens nothing. Core is told nothing of either.
 
-While Core keeps layouts, Layouts' own island stands in the band after the
-quick note's. A door island's button joins the quick note's as one row of
+While Core keeps a layout that can open on the displays connected now,
+Layouts' own island stands in the band after the quick note's. A door island's button joins the quick note's as one row of
 actions: while the quick note's island is there, its + stands first, then its
 window notes' dot, then Layouts' disc, a button of that island. Each disc keeps
 an island's size, and buttons standing together take the disc and the dock's
 own step between icons, 8 px, each answering the band's full height; the
-pinned note's words follow the buttons. Layouts' island holds
-only the name of the layout opened last, one small step (Kirigami's small
-spacing) after the note's own words, where islands keep the band's full gap.
-While the quick note's island shows, the two buttons stay together; the
+pinned note's words follow the buttons, and Layouts has no island of its
+own. While the quick note's island shows, the two buttons stay together; the
 names go first.
-Without the quick note's island, Layouts' island is a disc with the layouts' mark, Lucide's panels on a faint disc
-of the style's ink, and beside it the name of the layout opened last, one
-line, elided where long. A tap on the disc, or on the island off the name,
-opens the Layouts island in place, grown from it; a tap on the name opens that
-layout (`OpenLayout`). The layout opened last is the one with the latest
-`opened` in Core's `Layouts()`; with none opened, the disc stands alone.
-Core keeps when each layout opened; Ambient keeps nothing. The island is
-never set aside: a drag does not carry it and Delete leaves it. It takes its
-turn for room after the quick note's, so the name goes first and the disc
-last. The widget's setting "Show the Layouts island", on by default, shows it
+Without the quick note's island, Layouts' island is a disc with the layouts'
+mark, Lucide's panels on a faint disc of the style's ink, and nothing beside
+it: no layout's name, since each saved layout is already one tap in the
+Layouts island. A tap on the disc opens the Layouts island in place, grown
+from it. The island is never set aside: a drag does not carry it and Delete
+leaves it. It takes its turn for room after the quick note's. The widget's setting "Show the Layouts island", on by default, shows it
 while "Show islands beside the launcher" is on.
 
 Without Split Rock, or with a Core that has no `Layouts()`, there is no Layouts
@@ -271,6 +270,12 @@ A saved layout that places an app on a display not connected now is left out
 of the list, and comes back when the display does; one saved before layouts
 kept displays always shows. While none is left, Layouts' island goes from the
 band, and Layouts opened from Search says the layouts wait for a display.
+
+Only the band's island goes. With nothing saved, or none that can open now,
+Search's Layouts result, its Layouts Helper and the dock's All Layouts still
+open the Layouts island, with Save what's open, so a first layout can always
+be made. A card asked for while an earlier one never grew open, or is on its
+way out, takes that one's place rather than waiting on it.
 
 ### Quick note
 
@@ -386,7 +391,7 @@ together and settle without overshoot.
 | Waiting application | icon, name, question |
 | Core | icon, what it is and how it stands, Don't tell me again (Windows programs only), detail and what can be done |
 | Quick note | dot with a plus, Layouts' disc while Layouts' island is there, pinned note (its bead and first words) |
-| Layouts | disc with the layouts' mark, the layout opened last |
+| Layouts | disc with the layouts' mark |
 
 Beside a neighbour, an island reads what it is, then its words, then its
 buttons last. Media alone keeps its controls at its centre, with art and title

@@ -67,7 +67,8 @@ than repeat it.
 | Tap Do it on Ask's answer, where it offers one | Split Rock's broker makes the write the card names, such as keeping the answer in Notes, once, and the card says Done, or that it didn't work and why. Nothing is written before the tap. |
 | Tap Ask Codex after an answer, where Codex is signed in, or under Codex only; or press Enter under Codex only | The question goes on to Codex's own window and Search closes. Codex runs only from this tap or Enter, or from the person's own Settings switch. |
 | Tap or click a result | Opens it. An application marked OPEN comes forward instead of opening again. A fact from Split Rock's Core, such as "Storage · 91% full", opens the card that acts on it; one of its Helpers, such as Check for updates, opens on its own, and Install an app opens searching for what was typed. |
-| Tap or click Layouts among the results, where Split Rock's Core keeps saved layouts | Search closes and the Layouts island opens in place in the band, above the panel. |
+| Tap or click Layouts among the results, or the Layouts Helper, where Split Rock is installed | Search closes and the Layouts island opens in place in the band, above the panel, with nothing saved too: it then offers Save what's open. |
+| Tap or click Quick actions among the results, or its Helper | Search closes and the Quick actions island opens in place in the band, listing what to type for each action. It never opens a settings window. |
 | Tap or click a saved layout among the results, such as Open your Coding layout, or its Open pill | Split Rock's Core opens it: what isn't running starts, the rest moves to its place, and Search closes. Nothing is closed. |
 | Touch and hold an application among the results, or right-click it | Opens its sheet with Uninstall…, where it can be uninstalled: Split Rock's Core, where it is installed, opens Remove an app straight to the yes for the package that owns it, and nothing is removed until that yes; without Core, the software centre opens on it where it lists it. Other results have no sheet. |
 | Highlight an application or a file among the results | Its actions show under it while it is highlighted, and move with the highlight: an application's own, such as New Window or New Private Window, at most four; a file's Open With…, Show in Folder, Copy Path and Move to Trash, a folder's without Open With…. Touch and hold a file to highlight it without opening it; held, an application also opens its sheet. |
@@ -107,7 +108,7 @@ than repeat it.
 | Setting "Show the Helpers pill when Split Rock is installed", off | The row of modes leaves out the Helpers pill, and a slide from the dot its Helpers door; Helpers still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
-| Setting "Show the Layouts island", off | Layouts' island leaves the panel; the other islands are unchanged. On, its default, it shows while Split Rock's Core keeps layouts. |
+| Setting "Show the Layouts island", off | Layouts' island leaves the panel; the other islands are unchanged. On, its default, it shows while Split Rock's Core keeps a layout that can open on the displays connected now. |
 | Setting "Animate the launcher indicator", off | The dot turns into its ring at once, and its hover change is instant. |
 
 ### Related settings
@@ -256,9 +257,8 @@ than repeat it.
 | In the quick note's card, tap or click Open in Notes | Hands the note to Gooseberry's own card, or Search's Notes on that note where the card can't take it, and closes the card. |
 | With the quick note's card open, Esc or a tap outside it | Closes the card and keeps the note as written, to carry on from the + or Search's Notes. |
 | Tap or click the pinned note on the quick note's island | Opens that note on Gooseberry's own card. |
-| Tap or click the disc on Layouts' island, or the island away from the layout's name | Opens the Layouts island in place, grown from it. |
+| Tap or click the disc on Layouts' island | Opens the Layouts island in place, grown from it. |
 | Tap or click Layouts' disc beside the quick note's + | Opens the Layouts island in place, dropped out of that button. |
-| Tap or click the layout's name on Layouts' island | Split Rock's Core opens the layout opened last again. |
 | Tap or click another island away from its controls | Opens it in place, larger, as the same card every island opens: its title line, what it holds, then its buttons ending in Close. |
 | Drag an island sideways, by finger or mouse, from anywhere on it | It follows and sheds its details in its own order, down to its first piece; its neighbours hold their places. Let go early and it springs back whole. |
 | Flick an island sideways, or drag it past its first piece | Sets aside what it shows: it fades where it is let go, and its neighbours take the room: media until it plays again; transfers until they end, each then filed in the notification history; an ended transfer or a drive, filed now; a Core fact, dismissed, so Core stays quiet about it until it gets worse. |
@@ -271,7 +271,7 @@ than repeat it.
 | In the open island, tap or click another player | Shows that player in the island. |
 | In the open island on a Core question, tap or click an answer | Passes that answer to Split Rock's Core, such as Bring back, Always or Not now, and closes the island. The words are Core's. |
 | In the Layouts island, tap or click Open on a saved layout | Split Rock's Core opens that layout and the island closes. |
-| In the Layouts island, tap or click a saved layout off its pill | Shows its switch "Open when I sign in" and Remove; again, hides them. The switch flips whether Core opens it at sign-in; Remove forgets it. |
+| In the Layouts island, tap or click a saved layout off its pill | Shows Pin to dock, where Shuffle's dock is there, and Remove; again, hides them. Pin to dock puts the layout on the dock as a place of its own, and reads Unpin from dock once it is there; Remove forgets it. |
 | In the Layouts island, tap or click Save what's open | Turns the island into the form, with what is open on this workspace, group by group. |
 | In the Layouts form, type in the name field | Names the layout. `Enter` saves, as Save does. |
 | In the Layouts form, tap or click Remove on a group | Takes that group out of the layout being saved. |

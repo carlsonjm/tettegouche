@@ -248,6 +248,8 @@ plasma_add_applet(co.goodinput.tettegouche
     CPP_SOURCES
         src/TettegoucheApplet.cpp
         src/TettegoucheApplet.h
+        src/DockLayoutPins.cpp
+        src/DockLayoutPins.h
         src/LauncherKeys.cpp
         src/LauncherKeys.h
         src/ProductName.h

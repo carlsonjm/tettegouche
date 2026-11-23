@@ -78,12 +78,9 @@ public:
     void setDisplays(const QStringList &names);
     QStringList displays() const { return m_displays; }
     bool usable(const QVariantMap &layout) const;
-    // The layout opened last, empty when none has been opened.
-    QVariantMap lastOpened() const;
     static constexpr char LayoutsDoor[] = "layouts";
-    // The Layouts island's one row while Core keeps layouts, a door that
-    // stays without activity: the layout opened last rides on it (layoutId
-    // and title) where there is one.
+    // The Layouts island's one row while a saved layout can be opened on the
+    // displays connected now, a door that stays without activity.
     QVariantList layoutsDoor() const;
     // Asks Core what is open on the workspace in use, in the same groups;
     // currentLayoutRead answers, with `available` false where Cards is not
