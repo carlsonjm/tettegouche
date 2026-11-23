@@ -14,6 +14,7 @@
 #include <QDBusObjectPath>
 #include <QIcon>
 #include <QSet>
+#include <QTimer>
 #include <QUrl>
 
 namespace {
@@ -187,6 +188,12 @@ private Q_SLOTS:
             positionKnown = false;
             revisions[playerInterface + QStringLiteral("Position")] = ++revision;
             fetch(playerInterface);
+            // Spotify says a new track with every field blank and never says
+            // it again once it has its name and cover; asking for it shortly
+            // after finds them.
+            if (Ambient::map(values.value(QStringLiteral("Metadata"))).value(QStringLiteral("xesam:title")).toString().isEmpty())
+                for (const int after : {500, 1500, 4000})
+                    QTimer::singleShot(after, this, [this] { fetch(playerInterface); });
         }
         if (values.contains(QStringLiteral("Position"))) setPosition(values.value(QStringLiteral("Position")).toLongLong());
         if (invalid.contains(QStringLiteral("Position"))) positionKnown = false;
