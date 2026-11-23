@@ -91,9 +91,10 @@ leave out; the island is no taller than the room above the band, and what
 does not fit scrolls. Try, or a tap on the row, opens Search with those
 words in the field, where the action they name leads as if typed: Enter
 does it, and the words can be changed first. Close, or a tap off the island,
-puts it away. Where Shuffle Settings is installed, Quick actions found by
-its words opens Shuffle Settings' Quick actions page in its own window, and
-Search closes; the widget's own settings page has the same settings. Core says when its Helpers change, as
+puts it away. Quick actions found by its words opens the same island, and
+Search closes: never a settings window. Its settings are on the widget's own
+settings page, and on Shuffle Settings' Quick actions page where that is
+installed. Core says when its Helpers change, as
 when the app store comes or goes, and the row follows. The field reads "Look over the computer, free up
 space…"; what is typed lists only Helpers, by the same words that find them
 on the first screen, best first, and never searches the web. A tap or Enter

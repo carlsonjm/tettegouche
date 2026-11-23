@@ -13,6 +13,7 @@
 #include <QVariantList>
 #include <memory>
 class ActivityModel;
+class DockLayoutPins;
 class LauncherKeys;
 class QuickNote;
 
@@ -43,6 +44,10 @@ class TettegoucheApplet final : public Plasma::Applet
     Q_PROPERTY(QVariantList layouts READ layouts NOTIFY layoutsChanged)
     // Saved layouts left out of `layouts` until their display is connected.
     Q_PROPERTY(int layoutsAway READ layoutsAway NOTIFY layoutsChanged)
+    // Shuffle's dock is there to pin a layout to, and the layouts it pins,
+    // by id, for the Layouts card's "Pin to dock" and "Unpin from dock".
+    Q_PROPERTY(bool dockPinsLayouts READ dockPinsLayouts NOTIFY dockLayoutsChanged)
+    Q_PROPERTY(QStringList dockLayouts READ dockLayouts NOTIFY dockLayoutsChanged)
     // The quick note the notes application keeps, for the + island's card:
     // the same note Search's Notes writes, so either can carry it on. Null
     // in the fixture.
@@ -109,6 +114,10 @@ public:
     Q_INVOKABLE void openLayout(const QString &id);
     Q_INVOKABLE void removeLayout(const QString &id);
     Q_INVOKABLE void setLayoutAtSignIn(const QString &id, bool on);
+    bool dockPinsLayouts() const;
+    QStringList dockLayouts() const;
+    // Pins the layout to Shuffle's dock, or unpins it.
+    Q_INVOKABLE void pinLayoutToDock(const QString &id, bool pin);
 
 private Q_SLOTS:
     void launcherShown(bool visible);
@@ -124,11 +133,13 @@ Q_SIGNALS:
     void activityActionInvoked(const QString &id, int generation, const QString &action);
     void pearlDoorsChanged();
     void layoutsChanged();
+    void dockLayoutsChanged();
     void currentLayoutChanged();
     void islandsShownChanged();
     void islandsLeftChanged();
     // Search asked for an island in the band, such as Layouts, on the
-    // display named (empty where Search could not say).
+    // display named (empty where Search could not say). A pinned layout's
+    // sheet in Shuffle's dock asks for Layouts the same way.
     void islandRequested(const QString &kind, const QString &output);
 
 private:
@@ -186,4 +197,5 @@ private:
     std::shared_ptr<ActivityModel> m_activities;
     std::shared_ptr<LauncherKeys> m_keys;
     QuickNote *m_quickNote = nullptr;
+    DockLayoutPins *m_dockLayouts = nullptr;
 };

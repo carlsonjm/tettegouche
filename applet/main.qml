@@ -160,8 +160,13 @@ PlasmoidItem {
         // actions: one widget on Search's display opens it, islands shown
         // or not.
         function onIslandRequested(kind, output) {
+            if (kind === "layouts" && !Plasmoid.keepsLayouts) {
+                // Said in the journal, so a card that does not open is found.
+                console.info("Tettegouche: Layouts asked for, but Core keeps no layouts here");
+                return;
+            }
             if (kind === "quickActions" ? Plasmoid.configuration.quickActions === false
-                    : kind !== "layouts" || !Plasmoid.keepsLayouts) return;
+                    : kind !== "layouts") return;
             if (output.length > 0 && Plasmoid.screenName(root) !== output) return;
             // One widget opens it, however many hear the request.
             if (!Plasmoid.claimIsland(kind)) return;
@@ -199,7 +204,6 @@ PlasmoidItem {
         onOpenRequested: kind => root.openIsland(kind)
         onDrawerRequested: drawer => Plasmoid.openDrawer(drawer)
         noteCard: !!Plasmoid.quickNote && Plasmoid.quickNote.available
-        onLayoutRequested: layoutId => Plasmoid.openLayout(layoutId)
         onKindsChanged: if (root.island && root.island.kind !== "layouts" && root.island.kind !== "quickActions"
                             && root.island.kind !== "note"
                             && kinds.length === 0) root.island.dismiss()
@@ -338,9 +342,18 @@ PlasmoidItem {
         .map(kind => kind.charAt(0).toLowerCase() + kind.slice(1))
 
     function openIsland(kind) {
-        if (island) {
+        // One open: asked again, it turns to what is asked for. One that
+        // never opened, or is on its way out, is let go, and a new one opens:
+        // a card asked for always shows.
+        if (island && island.expanded && island.visible) {
             island.kind = kind;
+            island.requestActivate();
             return;
+        }
+        if (island) {
+            const stale = island;
+            island = null;
+            stale.letGo();
         }
         // Layouts grows from the band whether or not its islands show: from
         // the dot where they don't.
@@ -362,8 +375,11 @@ PlasmoidItem {
         // rather than left for the collector.
         island = opened;
         opened.closed.connect(() => {
-            ambient.opened = false;
-            ambient.chosenPlayer = "";
+            // One let go while a new one opened leaves the band to the new one.
+            if (root.island === opened || root.island === null) {
+                ambient.opened = false;
+                ambient.chosenPlayer = "";
+            }
             if (root.island === opened) root.island = null;
             opened.destroy();
         });

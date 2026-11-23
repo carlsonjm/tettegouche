@@ -2,6 +2,7 @@
 
 #include "TettegoucheApplet.h"
 #include "ActivityModel.h"
+#include "DockLayoutPins.h"
 #include "IslandShare.h"
 #include "LauncherKeys.h"
 #include "NotesDoor.h"
@@ -163,6 +164,10 @@ TettegoucheApplet::TettegoucheApplet(QObject *parent,
     } else {
         m_activities = ActivityModel::acquire();
         m_quickNote = new QuickNote(this);
+        m_dockLayouts = new DockLayoutPins(QDBusConnection::sessionBus(), this);
+        connect(m_dockLayouts, &DockLayoutPins::changed, this, &TettegoucheApplet::dockLayoutsChanged);
+        connect(m_dockLayouts, &DockLayoutPins::layoutsRequested, this,
+                [this](const QString &output) { Q_EMIT islandRequested(QStringLiteral("layouts"), output); });
         connect(m_activities.get(), &ActivityModel::changed, this, [this] {
             setAmbientActivities(m_activities->activities());
         });
@@ -388,6 +393,21 @@ QVariantList TettegoucheApplet::layouts() const
 QObject *TettegoucheApplet::quickNote() const
 {
     return m_quickNote;
+}
+
+bool TettegoucheApplet::dockPinsLayouts() const
+{
+    return m_dockLayouts && m_dockLayouts->present();
+}
+
+QStringList TettegoucheApplet::dockLayouts() const
+{
+    return m_dockLayouts ? m_dockLayouts->pinned() : QStringList();
+}
+
+void TettegoucheApplet::pinLayoutToDock(const QString &id, bool pin)
+{
+    if (m_dockLayouts) m_dockLayouts->pin(id, pin);
 }
 
 int TettegoucheApplet::layoutsAway() const

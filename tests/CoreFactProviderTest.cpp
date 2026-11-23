@@ -369,8 +369,8 @@ private Q_SLOTS:
         QCOMPARE(core.acts.at(2), QStringLiteral("at-sign-in 1 off"));
         QCOMPARE(core.acts.at(3), QStringLiteral("remove-layout 1"));
 
-        // The Layouts island's door: there while Core keeps layouts, bare
-        // until one has been opened, then naming the one opened last.
+        // The Layouts island's door: there while Core keeps a layout, and
+        // bare: no layout's name rides on it, the one opened last included.
         QCOMPARE(provider.layoutsDoor().size(), 1);
         QVariantMap door = provider.layoutsDoor().first().toMap();
         QCOMPARE(door.value(QStringLiteral("kind")).toString(), QStringLiteral("layouts"));
@@ -385,8 +385,8 @@ private Q_SLOTS:
         Q_EMIT core.LayoutsChanged();
         QTRY_COMPARE(provider.layouts().size(), 2);
         door = provider.layoutsDoor().first().toMap();
-        QCOMPARE(door.value(QStringLiteral("layoutId")).toString(), QStringLiteral("1"));
-        QCOMPARE(door.value(QStringLiteral("title")).toString(), QStringLiteral("Coding"));
+        QVERIFY(!door.contains(QStringLiteral("layoutId")));
+        QVERIFY(!door.contains(QStringLiteral("title")));
 
         QSignalSpy changed(&provider, &CoreFactProvider::layoutsChanged);
         core.layouts.clear();

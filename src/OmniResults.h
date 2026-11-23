@@ -5,6 +5,7 @@
 
 #include <KRunner/AbstractRunner>
 #include <KRunner/ResultsModel>
+#include <QDebug>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QSet>
@@ -640,14 +641,6 @@ public:
         m_openLayout = std::move(open);
         Q_EMIT helpersChanged();
     }
-    // The page where quick actions are set, where there is one to open:
-    // Quick actions found by its words opens the page in a window of its
-    // own.
-    void setQuickActionsPage(std::function<bool()> there, std::function<void()> open) {
-        m_quickActionsPageThere = std::move(there);
-        m_openQuickActionsPage = std::move(open);
-        Q_EMIT helpersChanged();
-    }
     // Quick actions' island in the band, which lists what to type: Quick
     // actions is the last Helper, behind More, and its tile opens the
     // island as Layouts' opens its own.
@@ -698,7 +691,9 @@ public:
     // own.
     Q_INVOKABLE bool openHelper(const QString &id, const QString &query = QString()) {
         if (id == QLatin1String("layouts")) {
-            if (!m_openLayouts || !m_keepsLayouts || !m_keepsLayouts()) return false;
+            const bool keeps = m_keepsLayouts && m_keepsLayouts();
+            qInfo() << "Tettegouche Search: the Layouts Helper asks the band for Layouts, Core keeps layouts:" << keeps;
+            if (!m_openLayouts || !keeps) return false;
             m_openLayouts();
             return true;
         }
@@ -784,7 +779,8 @@ public:
             item->setData(true, KRunner::ResultsModel::EnabledRole);
             m_core.appendRow(item);
         }
-        if (m_openQuickActionsPage && m_quickActionsPageThere && m_quickActionsPageThere() && quickActionsFit(query)) {
+        // Quick actions found by its words opens its island, as its tile does.
+        if (m_openQuickActionsIsland && quickActionsFit(query)) {
             const auto title = i18nc("@title what Search does from typed words", "Quick actions");
             const auto sub = i18nc("@info under Quick actions", "What to type to get things done");
             KRunner::QueryMatch match(&m_coreRunner);
@@ -920,13 +916,14 @@ public:
             // Layouts opens in place in the band, never as a window; a saved
             // layout opens at once.
             if (target == QLatin1String("layouts")) {
+                qInfo() << "Tettegouche Search: the Layouts result asks the band for Layouts";
                 if (!m_openLayouts) return false;
                 m_openLayouts();
                 return true;
             }
             if (target == QLatin1String("quickActions")) {
-                if (!m_openQuickActionsPage) return false;
-                m_openQuickActionsPage();
+                if (!m_openQuickActionsIsland) return false;
+                m_openQuickActionsIsland();
                 return true;
             }
             if (target.startsWith(QLatin1String("layout:"))) {
@@ -942,6 +939,7 @@ public:
             return m_openApplication && m_openApplication(runnerApplicationId(getQueryMatch(index)));
         if (source.model() == &m_aliases) {
             const auto module = getQueryMatch(index).data().toString();
+            qInfo() << "Tettegouche Search: opens the settings page" << module;
             auto bus = QDBusConnection::sessionBus();
             if (bus.interface() && bus.interface()->isServiceRegistered(QStringLiteral("org.kde.systemsettings")).value()) {
                 auto request = QDBusMessage::createMethodCall(QStringLiteral("org.kde.systemsettings"),
@@ -954,6 +952,7 @@ public:
             return !executable.isEmpty() && QProcess::startDetached(executable,
                 {module});
         }
+        qInfo() << "Tettegouche Search: runs" << getQueryMatch(index).id() << getQueryMatch(index).text();
         return m_results.run(source);
     }
     KRunner::QueryMatch getQueryMatch(const QModelIndex &index) const {
@@ -1190,9 +1189,7 @@ private:
     std::function<bool()> m_keepsLayouts;
     std::function<QList<QVariantMap>()> m_coreLayouts;
     std::function<void()> m_openLayouts;
-    std::function<bool()> m_quickActionsPageThere;
     std::function<void()> m_openQuickActionsIsland;
-    std::function<void()> m_openQuickActionsPage;
     std::function<void(const QString &)> m_openLayout;
     SearchSource m_results;
     QStandardItemModel m_aliases;

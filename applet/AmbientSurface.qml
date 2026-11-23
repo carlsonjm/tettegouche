@@ -72,8 +72,6 @@ Item {
     // The quick note opens as a card from the +, where the notes application
     // offers its quick note; elsewhere the + opens Search's Notes.
     property bool noteCard: false
-    // The Layouts island asks for a saved layout by its id.
-    signal layoutRequested(string layoutId)
 
     // A 44 px island in Shuffle's 64 px band; a shorter panel gets a shorter
     // one. Each control reaches the island's full height and, where the panel
@@ -449,16 +447,11 @@ Item {
         if (windowNotes > 0) invoke(noteShown, "windowNotes");
     }
 
-    // The Layouts island, there while Split Rock's Core keeps layouts: a disc
-    // with the layouts' mark that opens Layouts in place, and beside it the
-    // layout opened last, which a tap opens again.
+    // The Layouts island, there while a saved layout can be opened on the
+    // displays connected now: a disc with the layouts' mark that opens
+    // Layouts in place, where each saved layout is one tap.
     readonly property var layoutsDoors: activities.filter(activity => activity.kind === "layouts")
     readonly property var layoutsDoor: layoutsDoors.length > 0 ? layoutsDoors[0] : null
-    readonly property var lastLayout: layoutsDoor && layoutsDoor.layoutId ? layoutsDoor : null
-    readonly property string lastLayoutTitle: lastLayout ? lastLayout.title || "" : ""
-    function openLastLayout() {
-        if (lastLayout) layoutRequested(lastLayout.layoutId);
-    }
 
     FontMetrics { id: strongMetrics; font.pixelSize: surface.labelSize; font.weight: Font.DemiBold }
     FontMetrics { id: plainMetrics; font.pixelSize: surface.labelSize }
@@ -521,10 +514,6 @@ Item {
     function pinnedWidth() {
         return Math.max(reach, 6 + beadSize + 6 + Math.min(150, textWidth(plainMetrics, pinnedTitle)) + 6);
     }
-    // The layout opened last, its name on one line within a finger's reach.
-    function lastLayoutWidth() {
-        return Math.max(reach, 6 + Math.min(150, textWidth(plainMetrics, lastLayoutTitle)) + 10);
-    }
     // Who receives the screen, on one line.
     function screenWords(who) {
         return who ? 12 + Math.min(240, textWidth(plainMetrics, screenWho)) : 0;
@@ -584,7 +573,7 @@ Item {
                 + (has("door") ? actionSlot : 0) + (has("window") ? actionSlot : 0)
                 + (has("pinned") ? pinnedWidth() : 0);
         if (kind === "layouts")
-            return 2 * inset + (has("disc") ? reach : 0) + (has("last") ? lastLayoutWidth() : 0);
+            return 2 * inset + (has("disc") ? reach : 0);
         return 0;
     }
 
@@ -623,7 +612,6 @@ Item {
         case "note.pinned": return pinnedNote !== null;
         case "note.window": return windowNotes > 0;
         case "layouts.disc": return layoutsDoor !== null && noteShown === null;
-        case "layouts.last": return lastLayout !== null && lastLayoutTitle !== "";
         }
         return false;
     }
@@ -1815,8 +1803,7 @@ Item {
                 }
             }
         }
-        // Layouts' disc, beside the note's while both doors are here; the
-        // layout opened last follows after the note's own words.
+        // Layouts' disc, beside the note's while both doors are here.
         Piece {
             id: layoutsDoorPiece
             island: noteIsland
@@ -1918,10 +1905,8 @@ Item {
         }
     }
 
-    // Layouts' island: the disc with the layouts' mark, and the layout opened
-    // last beside it. A tap on the disc, or anywhere off the layout's name,
-    // opens Layouts in place; a tap on the name opens that layout. It stays:
-    // a drag does not carry it away.
+    // Layouts' island: the disc with the layouts' mark. A tap opens Layouts
+    // in place. It stays: a drag does not carry it away.
     BandIsland {
         id: layoutsIsland
         kind: "layouts"
@@ -1943,48 +1928,6 @@ Item {
                     width: Math.round(parent.width * 0.6)
                     height: width
                     glyph: "panels-top-left"
-                }
-            }
-        }
-        Piece {
-            id: lastLayoutPiece
-            island: layoutsIsland
-            name: "last"
-            size: surface.lastLayoutWidth()
-            Item {
-                id: lastLayoutButton
-                objectName: "ambient-layouts-last"
-                anchors.fill: parent
-                activeFocusOnTab: lastLayoutPiece.showing
-                Accessible.role: Accessible.Button
-                Accessible.name: words.i18n("Open the layout %1", surface.lastLayoutTitle)
-                Accessible.onPressAction: surface.openLastLayout()
-                Keys.onReturnPressed: surface.openLastLayout()
-                Keys.onEnterPressed: surface.openLastLayout()
-                Keys.onSpacePressed: surface.openLastLayout()
-                Label {
-                    objectName: "ambient-layouts-last-title"
-                    x: 6
-                    width: Math.max(0, parent.width - x - 10)
-                    anchors.verticalCenter: parent.verticalCenter
-                    text: surface.lastLayoutTitle
-                    opacity: lastLayoutArea.pressed ? 0.6 : 1
-                }
-                Rectangle {
-                    anchors.fill: parent
-                    anchors.topMargin: 6
-                    anchors.bottomMargin: 6
-                    radius: height / 2
-                    color: "transparent"
-                    border.width: 1
-                    border.color: tone.text
-                    opacity: 0.6
-                    visible: lastLayoutButton.activeFocus
-                }
-                MouseArea {
-                    id: lastLayoutArea
-                    anchors.fill: parent
-                    onClicked: surface.openLastLayout()
                 }
             }
         }
