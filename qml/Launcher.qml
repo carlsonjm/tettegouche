@@ -1416,8 +1416,10 @@ Item {
         // field, Search is 416 floating, and in Spread the middle card's own
         // height, which it meets top and bottom,
         // and the sections scroll inside. Only a screen too small for it trims
-        // it. The field alone, or the Helpers, keep the height of what they hold.
-        readonly property bool medium: resting && !small && !root.helpersShown
+        // it. The Helpers rest at Medium too, all of them shown where it has
+        // room; the field alone keeps the height of what it holds.
+        readonly property bool medium: resting && !small
+            && !(root.helpersShown && helpersRow.expanded && !helpersRow.allShown)
         readonly property real mediumHeight: root.launcherController.guestSizesItself
             && root.launcherController.guestCardHeight > 0
             ? root.launcherController.guestCardHeight
@@ -1612,6 +1614,8 @@ Item {
             HelpersRow {
                 id: helpersRow
                 launcher: root
+                // Under the field at Medium: what is left of its height.
+                roomHeight: sheet.mediumHeight - 2 * root.contentInset - root.modeRowReach - root.fieldHeight - gap
                 tone: tone
                 words: words
                 searchField: searchField

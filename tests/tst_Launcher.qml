@@ -4598,9 +4598,10 @@ TestCase {
         compare(update.width, 96)
         compare(update.height, 88)
         compare(left(space) - left(update), 96 + 12)
-        // At rest the sheet is as tall as the row of Helpers, at its full width.
+        // At rest the sheet is Search's Medium, as the other first screens
+        // are, at its full width.
         const sheet = findChild(launcher, "launcher-sheet")
-        tryCompare(sheet, "height", 2 * launcher.contentInset + launcher.modeRowReach + launcher.fieldHeight + row.gap + row.naturalHeight)
+        tryCompare(sheet, "height", sheet.mediumHeight)
         compare(sheet.width, sheet.universalWidth)
         // The field stays under the modes, so every tile and its name show
         // whole inside the sheet, however tall the room is.
@@ -4663,12 +4664,23 @@ TestCase {
         verify(launcher.helpersShown)
         const row = findChild(launcher, "helpers-row")
         tryCompare(row, "opacity", 1)
+        const sheet = findChild(launcher, "launcher-sheet")
+        // Search's Medium has room for every Helper: they rest at its height,
+        // all shown in full rows, with no More.
+        tryCompare(sheet, "height", sheet.mediumHeight)
+        verify(row.allShown)
+        verify(!findChild(launcher, "helper-more").visible)
+        tryCompare(findChild(launcher, "helpers-more-rows"), "visible", true)
+        verify(findChild(launcher, "helper-layouts").visible)
+        // Where it has no room for them, the first row and More.
+        row.roomHeight = 0
+        tryVerify(() => !row.allShown)
         const install = findChild(launcher, "helper-install")
         const changes = findChild(launcher, "helper-changes")
         const more = findChild(launcher, "helper-more")
         verify(install.visible && changes.visible && more.visible)
         compare(install.width, 96)
-        compare(left(more) - left(changes), 96 + 12)
+        tryVerify(() => left(more) - left(changes) === 96 + 12)
         // The block of tiles stands centred under the field, and each glyph
         // and its name centred in their tile.
         const first = findChild(launcher, "helpers-first-row")
@@ -4685,9 +4697,8 @@ TestCase {
         compare(findChild(launcher, "helper-install-glyph").glyph, "download")
         compare(findChild(launcher, "helper-more-glyph").glyph, "chevron-down")
         verify(!findChild(launcher, "helpers-more-rows").visible)
-        const sheet = findChild(launcher, "launcher-sheet")
         const resting = 2 * launcher.contentInset + launcher.modeRowReach + launcher.fieldHeight + row.gap + row.labelHeight + 88
-        tryCompare(sheet, "height", resting)
+        tryCompare(sheet, "height", sheet.mediumHeight)
         mouseClick(more, more.width / 2, more.height / 2)
         verify(row.expanded)
         tryCompare(findChild(launcher, "helpers-more-rows"), "visible", true)
@@ -4731,6 +4742,8 @@ TestCase {
         // Nothing behind More, no More.
         results.helpers = [tile("install", "Install an app", false), tile("health", "Health check", false)]
         tryCompare(findChild(launcher, "helper-more"), "visible", false)
+        row.roomHeight = Qt.binding(() => sheet.mediumHeight - 2 * launcher.contentInset
+            - launcher.modeRowReach - launcher.fieldHeight - row.gap)
     }
     // With Split Rock's Ask installed the chip is named Ask: a question typed
     // there is handed to Ask, its answer shows above the Helpers it names,
