@@ -7,8 +7,9 @@ history carries the implementation detail.
 
 - In Spread, Search is its own size, centred where the middle card stands, and
   the cards beside it stand one gap beyond it.
-- Resting with Recent apps or Recent files on, Search is Medium everywhere: a
-  Spread card's height, and what it holds scrolls inside, fading at its foot.
+- Resting with Recent apps or Recent files on, Search is Medium everywhere: 415
+  tall, a Spread card's height, and what it holds scrolls inside, fading at its
+  foot. In Spread it meets the cards beside it top and bottom.
 - A saved layout can be pinned to Shuffle's dock: tap its row in the
   Layouts island and choose Pin to dock, beside Remove. Once pinned it reads
   Unpin from dock. The dock's All Layouts opens this island.

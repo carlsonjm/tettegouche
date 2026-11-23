@@ -316,8 +316,9 @@ void LauncherController::setDrawerExpanded(bool expanded, bool chosen)
 void LauncherController::sizeGuest(int width, int height)
 {
     if (!guestSizesItself() || !m_guestCardRect.isValid() || width <= 0 || height <= 0) return;
-    const QPoint centre = m_guestCardRect.center();
-    const QRect place(centre.x() - width / 2, centre.y() - height / 2, width, height);
+    // Centred on the card exactly: at the card's height it meets its edges.
+    const QRect place(m_guestCardRect.x() + (m_guestCardRect.width() - width) / 2,
+                      m_guestCardRect.y() + (m_guestCardRect.height() - height) / 2, width, height);
     if (place == m_compactGuestRect && m_guestRect == place) return;
     const bool widthChanged = place.width() != m_compactGuestRect.width();
     m_compactGuestRect = place;
@@ -1499,7 +1500,13 @@ void LauncherController::takeGuest(const QByteArray &answer)
     m_guestRect = globalCard.translated(
         -guestScreen->geometry().topLeft());
     m_compactGuestRect = m_guestRect;
-    m_guestCardRect = m_guestRect;
+    // Protocol 4 names the row's middle card, which Search centres on and
+    // meets top and bottom at Medium; the guest's own place may be larger.
+    const auto row = root.value(QStringLiteral("row")).toObject();
+    m_guestCardRect = row.isEmpty() ? m_guestRect
+        : QRect(row.value(QStringLiteral("x")).toInt(), row.value(QStringLiteral("y")).toInt(),
+                row.value(QStringLiteral("width")).toInt(), row.value(QStringLiteral("height")).toInt())
+              .translated(-guestScreen->geometry().topLeft());
     m_guestSized = false;
     const auto active = root.value(QStringLiteral("active")).toObject();
     m_activeGuestRect = QRect(active.value(QStringLiteral("x")).toInt(),

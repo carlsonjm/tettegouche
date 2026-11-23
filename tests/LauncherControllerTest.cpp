@@ -260,8 +260,9 @@ private Q_SLOTS:
         m_controller->sizeGuest(840, 300);
         QCOMPARE(m_controller->guestWidth(), 840);
         QCOMPARE(m_controller->guestHeight(), 300);
-        QCOMPARE(m_controller->guestX() + 420, QRect(100, 50, 600, 400).center().x());
-        QCOMPARE(m_controller->guestY() + 150, QRect(100, 50, 600, 400).center().y());
+        // Centred on the card exactly: the card's place, less half the difference.
+        QCOMPARE(m_controller->guestX(), 100 + (600 - 840) / 2);
+        QCOMPARE(m_controller->guestY(), 50 + (400 - 300) / 2);
         QTRY_VERIFY(m_kadunce.calls().contains(QStringLiteral("resizeLauncherGuest 840 300")));
         // Only a new width is said again; the height is Search's own.
         m_kadunce.forget();
