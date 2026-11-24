@@ -1,0 +1,3 @@
+#!/bin/sh
+# Search's people provider; see people/good_input_people/provider.py.
+exec env PYTHONPATH="@PEOPLE_DIR@${PYTHONPATH:+:$PYTHONPATH}" python3 -m good_input_people.provider "$@"

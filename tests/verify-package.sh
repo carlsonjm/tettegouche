@@ -23,6 +23,8 @@ required=(
     src/TettegoucheApplet.h
     src/metadata.json
     src/main.cpp
+    people/good-input-people.in
+    people/good_input_people/provider.py
     src/ApplicationCatalog.cpp
     src/ApplicationCatalog.h
     src/WorkspaceContext.cpp
