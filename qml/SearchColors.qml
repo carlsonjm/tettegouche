@@ -74,6 +74,19 @@ QtObject {
     // A resting card laid in the sheet, as a recent file is: a step above it.
     readonly property color subtle: dark ? "#13ffffff" : wash(0.05)
     readonly property color current: dark ? "#3dffffff" : wash(0.16)
+    // The modes along Search's top: the one highlight that glides under
+    // the mode shown, a raised key, lighter at its top edge, with a hairline
+    // and a soft shadow; the words beside it, quieter until the pointer
+    // comes; and the faint wash under a mode as it is pressed.
+    // Solid, so its shadow stays under it and never shows through.
+    readonly property color modeKeyTop: dark ? suite("#3E3E3E") : "#ffffff"
+    readonly property color modeKeyBottom: dark ? suite("#313131") : "#ffffff"
+    readonly property color modeKeyEdge: dark ? "#16ffffff" : Qt.rgba(0, 0, 0, 0.07)
+    readonly property color modeKeyShadow: dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(0, 0, 0, 0.16)
+    readonly property color modeText: dark ? "#94ffffff" : wash(0.58)
+    readonly property color modeTextHover: dark ? "#dbffffff" : wash(0.85)
+    readonly property color modeHover: dark ? "#0dffffff" : wash(0.04)
+    readonly property color modePressed: dark ? "#17ffffff" : wash(0.07)
     readonly property color focusRing: dark ? "#b0ffffff" : wash(0.69)
     readonly property color track: dark ? "#24ffffff" : wash(0.14)
     readonly property color progress: dark ? "#d9ffffff" : wash(0.85)

@@ -27,8 +27,10 @@ Item {
     required property KI18nContext words
     required property NumberAnimation drawerSettle
 
-    // One of Search's modes along its top, Apps, Files or Notes: its glyph
-    // and its word on a pill, filled behind the one shown.
+    // One of Search's modes along its top, Apps, Files or Notes: its word,
+    // quiet until the pointer comes and bright once its mode is shown. The
+    // highlight under the one shown is the row's own, and glides between
+    // them; a mode only washes faintly as it is pressed.
     component FirstPill: Item {
         id: pill
         property string label
@@ -36,8 +38,11 @@ Item {
         property bool selected: false
         // How far it has arrived, 0 to 1.
         property real reveal: 1
+        readonly property bool pressed: pillTap.pressed
         signal activated()
-        width: pillLabel.implicitWidth + 28
+        // Held at the bolder weight, so a mode's width never changes as it
+        // is chosen and the highlight lands where the word is.
+        width: boldWidth.advanceWidth + 32
         height: 44
         opacity: reveal
         activeFocusOnTab: true
@@ -48,27 +53,31 @@ Item {
         Keys.onReturnPressed: pill.activated()
         Keys.onEnterPressed: pill.activated()
         Keys.onSpacePressed: pill.activated()
+        TextMetrics {
+            id: boldWidth
+            text: pill.label
+            font.pixelSize: 14
+            font.weight: Font.DemiBold
+        }
         Rectangle {
             id: pillFace
             anchors.verticalCenter: parent.verticalCenter
             width: parent.width
-            height: 40
+            height: modeRow.keyHeight
             radius: height / 2
-            color: pillTap.pressed ? tone.doorPressed
-                : pill.selected ? tone.current
-                : pillHover.hovered ? tone.doorHover : "transparent"
-            scale: pillTap.pressed ? 1.04 : 1
-            Behavior on scale { NumberAnimation { duration: launcher.ms(120); easing.type: Easing.OutCubic } }
-            Behavior on color { ColorAnimation { duration: launcher.ms(90) } }
+            color: pill.selected ? "transparent"
+                : pillTap.pressed ? tone.modePressed
+                : pillHover.hovered ? tone.modeHover : "transparent"
+            Behavior on color { ColorAnimation { duration: launcher.ms(120) } }
             Text {
                 id: pillLabel
-                x: 14
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.centerIn: parent
                 text: pill.label
-                color: pill.selected ? launcher.primaryText : launcher.secondaryText
+                color: pill.selected ? launcher.primaryText
+                    : pillHover.hovered || pill.activeFocus ? tone.modeTextHover : tone.modeText
                 font.pixelSize: 14
-                font.weight: Font.DemiBold
-                Behavior on color { ColorAnimation { duration: launcher.ms(90) } }
+                font.weight: pill.selected ? Font.DemiBold : Font.Medium
+                Behavior on color { ColorAnimation { duration: launcher.ms(180) } }
             }
         }
         // Keyboard focus alone gets an outline.
@@ -103,6 +112,15 @@ Item {
         : launcher.helpersShown ? "helpers"
         : launcher.peopleShown ? "people" : ""
     readonly property real pillGap: 4
+    // The height of the highlight and of a mode's wash, inside the row's 44.
+    readonly property real keyHeight: 34
+    // The mode whose word the highlight sits under, or null on the first
+    // screen, where the dot is the one shown.
+    readonly property Item selectedPill: current === "apps" ? appsPill
+        : current === "files" ? filesPill
+        : current === "notes" ? notesPill
+        : current === "people" ? peoplePill
+        : current === "helpers" ? helpersPill : null
     function show(mode) {
         if (mode === current) return
         if (mode === "") {
@@ -151,7 +169,81 @@ Item {
     transform: Translate { y: (1 - launcher.openingControls) * 6 }
     z: 6
 
+    // The highlight under the mode shown: one raised key that glides and
+    // stretches from the mode left to the mode chosen, and settles without
+    // a bounce. From the first screen it fades in where it lands, and it
+    // fades out there as the dot is chosen. A press on the mode shown
+    // squeezes it a little.
+    Item {
+        id: modeKey
+        objectName: "mode-highlight"
+        property Item target: modeRow.selectedPill
+        // The mode it last sat under, which it stays over as it fades.
+        property Item resting: null
+        // Whether it moves to the next mode or appears there.
+        property bool glides: false
+        readonly property var settle: [0.32, 0.72, 0, 1, 1, 1]
+        z: 0
+        y: (modeRow.height - height) / 2
+        height: modeRow.keyHeight
+        x: resting ? resting.x : 0
+        width: resting ? resting.width : 0
+        opacity: target && target.visible ? 1 : 0
+        visible: opacity > 0
+        scale: target && target.pressed ? 0.96 : 1
+        onTargetChanged: {
+            glides = opacity > 0 && !!target && !!resting
+            if (target) resting = target
+        }
+        Behavior on x {
+            enabled: modeKey.glides
+            NumberAnimation { duration: launcher.ms(320); easing.type: Easing.BezierSpline; easing.bezierCurve: modeKey.settle }
+        }
+        Behavior on width {
+            enabled: modeKey.glides
+            NumberAnimation { duration: launcher.ms(320); easing.type: Easing.BezierSpline; easing.bezierCurve: modeKey.settle }
+        }
+        Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
+
+        // The soft shadow under the key: two faint layers, one tight and
+        // one wide, as the key lifts off the bar.
+        Rectangle {
+            x: 0
+            y: 2
+            width: parent.width
+            height: parent.height
+            radius: height / 2
+            color: "transparent"
+            border.width: 0
+            Rectangle {
+                anchors.fill: parent
+                anchors.margins: -1
+                radius: height / 2
+                color: Qt.rgba(tone.modeKeyShadow.r, tone.modeKeyShadow.g, tone.modeKeyShadow.b, tone.modeKeyShadow.a * 0.35)
+            }
+            Rectangle {
+                anchors.fill: parent
+                anchors.topMargin: -1
+                radius: height / 2
+                color: Qt.rgba(tone.modeKeyShadow.r, tone.modeKeyShadow.g, tone.modeKeyShadow.b, tone.modeKeyShadow.a * 0.5)
+            }
+        }
+        Rectangle {
+            objectName: "mode-highlight-face"
+            anchors.fill: parent
+            radius: height / 2
+            border.width: 1
+            border.color: tone.modeKeyEdge
+            gradient: Gradient {
+                GradientStop { position: 0; color: tone.modeKeyTop }
+                GradientStop { position: 1; color: tone.modeKeyBottom }
+            }
+        }
+    }
+
     Row {
+        z: 1
         spacing: modeRow.pillGap
         // The dot: Search's first screen, from any mode.
         Item {

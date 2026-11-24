@@ -1912,8 +1912,9 @@ TestCase {
         verify(files.activeFocus)
         launcher.recentUse = recentStub
     }
-    // A tap on another mode moves straight there, the grey pill with it, and
-    // the dot comes back to the first screen with what was typed.
+    // A tap on another mode moves straight there, the highlight gliding
+    // under it, and the dot comes back to the first screen with what was
+    // typed, the highlight fading where it was.
     function test_modesSwitch() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
@@ -1942,6 +1943,13 @@ TestCase {
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
         verify(files.selected && !apps.selected)
         compare(controller.showing[0], "files")
+        // One highlight, under the mode shown, as wide as it; it glides
+        // there rather than jumping.
+        const key = findChild(launcher, "mode-highlight")
+        verify(key.glides)
+        tryCompare(key, "x", files.x)
+        compare(key.width, files.width)
+        compare(key.opacity, 1)
         verify(findChild(launcher, "home-dot-glyph").visible)
         verify(!findChild(launcher, "home-dot-apps").visible)
         mouseClick(notes, notes.width / 2, notes.height / 2)
@@ -1964,6 +1972,8 @@ TestCase {
         tryCompare(launcher, "drawerOpen", false)
         tryCompare(launcher, "drawerProgress", 0)
         verify(dot.selected)
+        tryCompare(key, "opacity", 0)
+        compare(key.x, apps.x)
         tryCompare(mark, "openness", 1)
         verify(!findChild(launcher, "home-dot-apps").visible && !findChild(launcher, "home-dot-glyph").visible)
         verify(mark.seed)
