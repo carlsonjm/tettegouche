@@ -41,6 +41,22 @@
       <label>Show the People pill on Search's first screen, while a people provider is installed; off until it is turned on</label>
       <default>false</default>
     </entry>
+    <entry name="showFilesPill" type="Bool">
+      <label>Show the Files mode on Search's first screen, while a file browser is installed; files still show among the results</label>
+      <default>true</default>
+    </entry>
+    <entry name="modeOrder" type="String">
+      <label>The order of the modes along Search's top, as names joined by commas: apps, files, notes, people, helpers</label>
+      <default>apps,files,notes,people,helpers</default>
+    </entry>
+    <entry name="sectionOrder" type="String">
+      <label>The order of the sections under Search's field, as names joined by commas: apps, files</label>
+      <default>apps,files</default>
+    </entry>
+    <entry name="compactWhenFull" type="Bool">
+      <label>When the sections on need more than Search's largest size, rest at Medium rather than at the largest size</label>
+      <default>false</default>
+    </entry>
     <entry name="quickActions" type="Bool">
       <label>Offer quick actions in Search: typed words such as "remind me to call the bank at 3" name something Search offers to do</label>
       <default>true</default>

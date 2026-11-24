@@ -113,6 +113,10 @@ Item {
     // Its pill can be left off the first screen; Helpers still answer what
     // is typed.
     property bool helpersPillShown: true
+    property bool filesPillShown: true
+    // The order of the modes along Search's top, as Settings gives it:
+    // "apps", "files", "notes", "people" and "helpers".
+    property var modeOrder: []
     // Asked for by the dot's slide before Core has listed its Helpers: they
     // show once it does, or Search stays on its first screen.
     property bool helpersAwaited: false
@@ -192,6 +196,12 @@ Item {
     // its setting: the applications, the files, or both.
     property bool recentApps: true
     property bool recentFiles: true
+    // The order of the sections under the field, as Settings gives it:
+    // "apps" and "files".
+    property var sectionOrder: []
+    // How tall Search rests when its sections need more than its largest
+    // size: "compact", Medium, or "tall", its largest.
+    property string whenFull: "tall"
     // When something was used, as a recent file says it: minutes or hours
     // ago, yesterday, a day this week, or its date.
     function usedWhen(when) {
@@ -1419,21 +1429,32 @@ Item {
             Math.min(root.launcherController.availableArea.height - 40, universalHeight))
         readonly property bool resting: query.text.length === 0 && !root.drawerOpen && root.modeShown === ""
             && !root.peopleShown
-        // Medium: resting with a section of what was used lately under the
-        // field, Search is 416 floating, and in Spread the middle card's own
-        // height, which it meets top and bottom,
-        // and the sections scroll inside. Only a screen too small for it trims
-        // it. The Helpers rest at Medium too, all of them shown where it has
-        // room; the field alone keeps the height of what it holds.
+        // Floating, Search rests as tall as the sections under the field
+        // need, up to its largest size: the field alone 148, Recent apps 328,
+        // Recent files 524, both 704, its largest. Sections that need more
+        // than that rest at Medium or at the largest size, as Settings says,
+        // and scroll inside.
+        readonly property real sectionsHeight: 2 * root.contentInset + root.modeRowReach + root.fieldHeight
+            + (firstRow.sections > 0 ? firstRow.gap + firstRow.naturalHeight : 0)
+        readonly property bool sectionsOver: sectionsHeight > universalHeight + 0.5
+        // Medium: in Spread the middle card's own height, which Search meets
+        // top and bottom, with the sections scrolling inside; floating, 416,
+        // where the sections need more than the largest size and Settings
+        // keeps Search compact. The Helpers rest at Medium too, all of them
+        // shown where it has room; the field alone keeps the height of what
+        // it holds. Only a screen too small for it trims it.
         readonly property bool medium: resting && !small
             && !(root.helpersShown && helpersRow.expanded && !helpersRow.allShown)
+            && (root.helpersShown || root.launcherController.guestSizesItself
+                || (sectionsOver && root.whenFull !== "tall"))
         readonly property real mediumHeight: root.launcherController.guestSizesItself
             && root.launcherController.guestCardHeight > 0
             ? root.launcherController.guestCardHeight
             : Math.min(416, root.launcherController.availableArea.height - 40)
         // Working, it is its full height, and in Spread never shorter than the
         // card it meets at Medium: on a large display that card is taller.
-        readonly property real ownHeight: medium ? mediumHeight : resting ? restingHeight
+        readonly property real ownHeight: medium ? mediumHeight
+            : resting ? (sectionsOver ? Math.min(restingHeight, universalHeight) : restingHeight)
             : root.launcherController.guestSizesItself ? Math.max(fullHeight, mediumHeight) : fullHeight
         readonly property real restHeight: root.launcherController.guestSizesItself
             ? ownHeight

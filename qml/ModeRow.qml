@@ -116,11 +116,28 @@ Item {
     readonly property real keyHeight: 34
     // The mode whose word the highlight sits under, or null on the first
     // screen, where the dot is the one shown.
-    readonly property Item selectedPill: current === "apps" ? appsPill
-        : current === "files" ? filesPill
-        : current === "notes" ? notesPill
-        : current === "people" ? peoplePill
-        : current === "helpers" ? helpersPill : null
+    readonly property Item selectedPill: {
+        const at = order.indexOf(current)
+        return at >= 0 && pills.count === order.length ? pills.itemAt(at) : null
+    }
+    // The modes in the order Settings gives them: each known mode once,
+    // any it leaves out after the rest in their first order.
+    readonly property var order: {
+        const first = ["apps", "files", "notes", "people", "helpers"]
+        const given = (launcher.modeOrder || []).filter((mode, i, all) =>
+            first.indexOf(mode) >= 0 && all.indexOf(mode) === i)
+        return given.concat(first.filter(mode => given.indexOf(mode) < 0))
+    }
+    // Whether a mode shows: Apps always; Files where there is a file
+    // browser; Notes, People and the Helpers or Ask by their settings and
+    // what is installed.
+    function offered(mode) {
+        if (mode === "files") return launcher.fileBrowser !== null && launcher.filesPillShown
+        if (mode === "notes") return launcher.notesPillShown && !!launcher.notesDoor && launcher.notesDoor.available
+        if (mode === "people") return launcher.peopleOffered
+        if (mode === "helpers") return launcher.helpersPillShown && launcher.helpers.length > 0
+        return true
+    }
     function show(mode) {
         if (mode === current) return
         if (mode === "") {
@@ -333,44 +350,22 @@ Item {
                 onTapped: modeRow.show("")
             }
         }
-        FirstPill {
-            id: appsPill
-            objectName: "apps-pill"
-            label: words.i18n("Apps")
-            selected: modeRow.current === "apps"
-            onActivated: modeRow.show("apps")
-        }
-        FirstPill {
-            id: filesPill
-            objectName: "files-pill"
-            label: words.i18n("Files")
-            selected: modeRow.current === "files"
-            visible: launcher.fileBrowser !== null
-            onActivated: modeRow.show("files")
-        }
-        FirstPill {
-            id: notesPill
-            objectName: "notes-pill"
-            label: words.i18n("Notes")
-            selected: modeRow.current === "notes"
-            visible: launcher.notesPillShown && !!launcher.notesDoor && launcher.notesDoor.available
-            onActivated: modeRow.show("notes")
-        }
-        FirstPill {
-            id: peoplePill
-            objectName: "people-pill"
-            label: words.i18n("People")
-            selected: modeRow.current === "people"
-            visible: launcher.peopleOffered
-            onActivated: modeRow.show("people")
-        }
-        FirstPill {
-            id: helpersPill
-            objectName: "helpers-pill"
-            label: launcher.askOffered ? words.i18n("Ask") : words.i18n("Helpers")
-            selected: modeRow.current === "helpers"
-            visible: launcher.helpersPillShown && launcher.helpers.length > 0
-            onActivated: modeRow.show("helpers")
+        // The modes, in the order Settings gives them.
+        Repeater {
+            id: pills
+            model: modeRow.order
+            delegate: FirstPill {
+                required property string modelData
+                objectName: modelData + "-pill"
+                label: modelData === "apps" ? words.i18n("Apps")
+                    : modelData === "files" ? words.i18n("Files")
+                    : modelData === "notes" ? words.i18n("Notes")
+                    : modelData === "people" ? words.i18n("People")
+                    : launcher.askOffered ? words.i18n("Ask") : words.i18n("Helpers")
+                selected: modeRow.current === modelData
+                visible: modeRow.offered(modelData)
+                onActivated: modeRow.show(modelData)
+            }
         }
     }
 

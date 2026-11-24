@@ -36,7 +36,7 @@ than repeat it.
 | Tap or click Pop out, beside Expand, in Notes | Search grows and Gooseberry's board takes its place, open on the note. |
 | Tap ‹ Notes on top of Gooseberry's card, or press `Esc` there, on a note opened from Notes | The card goes, the note kept, and Search opens on Notes again. |
 | Tap or click something used lately, below the search field | Opens it, an application or a file in its usual application, and Search closes. |
-| Tap or click Apps, Files, Notes, People or Helpers in the row along Search's top, from any screen | Moves straight to that mode, the grey pill with it; the field keeps what was typed. |
+| Tap or click Apps, Files, Notes, People or Helpers in the row along Search's top, from any screen | Moves straight to that mode, the highlight gliding under it; the field keeps what was typed. |
 | Tap or click the dot at the start of that row | Returns to Search's first screen, with what is typed. The dot is a ring, as the panel's dot is while Search is up: with a small dot in the middle on the first screen, and holding the mark of Apps, Files, Notes or the Helpers while that mode shows. |
 | Tap or click People, after Notes, where a people provider is installed | Lists the people the provider knows, by name, each person once. The field reads Find a person, and the sheet takes its working height. |
 | Type, under People | Finds people by the start of a name, by a number or by an address. Nothing else is searched, and nothing is sent online. |
