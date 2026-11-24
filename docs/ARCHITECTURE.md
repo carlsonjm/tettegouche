@@ -194,7 +194,14 @@ KDE's menu editor, which keeps the person's copy of the entry; Apps reads it
 from KDE's application list like any other. Existing-window matching runs before launch.
 
 `PeopleClient` speaks to a people provider: a command named
-`good-input-people`, on the path or in `~/.local/bin`. It runs the command
+`good-input-people`, on the path or in `~/.local/bin`. Tettegouche installs
+one, `people/`: plain Python with no dependency beyond Python itself. It reads
+the contact cards KDE Connect keeps in `~/.local/share/kpeoplevcard`, or the
+folder `GOOD_INPUT_PEOPLE_CARDS` names, joins cards into one person only when
+they share a number or an address, offers a shared name as a suggestion, and
+keeps what the person decides in
+`~/.local/share/good-input-people/decisions.json`, by handle, so the people can
+always be rebuilt from the cards. It runs the command
 once for each question and reads one JSON object back: `people` with the
 words typed, `person` with an id, and `join`, `not-same` and `separate` for
 what is decided on a person's page. The newest question wins, and an answer

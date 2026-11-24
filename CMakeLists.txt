@@ -244,6 +244,14 @@ install(FILES assets/co.goodinput.tettegouche-logo.png
 # plugin ID so the widget picker keeps the photo above.
 install(FILES assets/co.goodinput.tettegouche-apps.svg assets/co.goodinput.tettegouche-files.svg
         DESTINATION ${KDE_INSTALL_ICONDIR}/hicolor/scalable/apps)
+# The people provider PeopleClient asks: plain Python, read from the
+# installed folder through the command on the path.
+set(PEOPLE_DIR ${CMAKE_INSTALL_PREFIX}/${KDE_INSTALL_DATADIR}/tettegouche/people)
+configure_file(people/good-input-people.in good-input-people @ONLY)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/good-input-people DESTINATION ${KDE_INSTALL_BINDIR})
+install(FILES people/good_input_people/__init__.py people/good_input_people/model.py
+              people/good_input_people/provider.py people/good_input_people/vcard.py
+        DESTINATION ${KDE_INSTALL_DATADIR}/tettegouche/people/good_input_people)
 plasma_add_applet(co.goodinput.tettegouche
     CPP_SOURCES
         src/TettegoucheApplet.cpp
@@ -304,6 +312,9 @@ target_link_libraries(co.goodinput.tettegouche PRIVATE
 target_compile_definitions(co.goodinput.tettegouche PRIVATE TRANSLATION_DOMAIN="plasma_applet_co.goodinput.tettegouche")
 
 if(BUILD_TESTING)
+    add_test(NAME people-provider-test COMMAND python3 -m unittest discover -s tests
+             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/people)
+    set_tests_properties(people-provider-test PROPERTIES ENVIRONMENT PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/people)
     qt_add_executable(activity-provider-test tests/ActivityProviderTest.cpp
         src/TransferActivityBridge.cpp src/TransferActivityBridge.h src/FileBrowser.h src/FileDevices.h src/FileQuestions.h src/PlaceBook.h)
     target_link_libraries(activity-provider-test PRIVATE tettegouche-activities KF6::Bookmarks KF6::KIOCore KF6::Service KF6::Solid Qt6::Test Qt6::Quick)
