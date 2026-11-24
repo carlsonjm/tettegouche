@@ -57,6 +57,7 @@ else
     # own package from installing over it.
     installed=(
         /usr/bin/tettegouche
+        /usr/bin/good-input-people
         /usr/share/applications/io.github.carlsonjm.Tettegouche.desktop
         /usr/share/applications/io.github.carlsonjm.Tettegouche.Files.desktop
         /usr/share/applications/io.github.carlsonjm.Tettegouche.Apps.desktop
@@ -67,6 +68,10 @@ else
         /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche-files.svg
         /usr/share/icons/hicolor/scalable/apps/co.goodinput.tettegouche.svg
         /usr/lib/qt6/plugins/plasma/applets/co.goodinput.tettegouche.so
+        /usr/share/tettegouche/people/good_input_people/__init__.py
+        /usr/share/tettegouche/people/good_input_people/model.py
+        /usr/share/tettegouche/people/good_input_people/provider.py
+        /usr/share/tettegouche/people/good_input_people/vcard.py
     )
     shopt -s nullglob
     installed+=(/usr/share/locale/*/LC_MESSAGES/tettegouche.mo
@@ -89,7 +94,9 @@ else
     if ((${#present[@]} > 0)); then
         sudo rm -f -- "${present[@]}"
     fi
-    sudo rmdir --ignore-fail-on-non-empty /usr/share/tettegouche 2>/dev/null || true
+    sudo rm -rf -- /usr/share/tettegouche/people/good_input_people/__pycache__
+    sudo rmdir --ignore-fail-on-non-empty /usr/share/tettegouche/people/good_input_people \
+        /usr/share/tettegouche/people /usr/share/tettegouche 2>/dev/null || true
 fi
 kbuildsycoca6
 
