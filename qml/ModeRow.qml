@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -223,29 +224,6 @@ Item {
         Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
 
-        // The soft shadow under the key: two faint layers, one tight and
-        // one wide, as the key lifts off the bar.
-        Rectangle {
-            x: 0
-            y: 2
-            width: parent.width
-            height: parent.height
-            radius: height / 2
-            color: "transparent"
-            border.width: 0
-            Rectangle {
-                anchors.fill: parent
-                anchors.margins: -1
-                radius: height / 2
-                color: Qt.rgba(tone.modeKeyShadow.r, tone.modeKeyShadow.g, tone.modeKeyShadow.b, tone.modeKeyShadow.a * 0.35)
-            }
-            Rectangle {
-                anchors.fill: parent
-                anchors.topMargin: -1
-                radius: height / 2
-                color: Qt.rgba(tone.modeKeyShadow.r, tone.modeKeyShadow.g, tone.modeKeyShadow.b, tone.modeKeyShadow.a * 0.5)
-            }
-        }
         Rectangle {
             objectName: "mode-highlight-face"
             anchors.fill: parent
@@ -255,6 +233,17 @@ Item {
             gradient: Gradient {
                 GradientStop { position: 0; color: tone.modeKeyTop }
                 GradientStop { position: 1; color: tone.modeKeyBottom }
+            }
+            // The key lifts off the bar on a soft, blurred shadow that
+            // fades out all round, with no hard line beneath it.
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                autoPaddingEnabled: true
+                shadowEnabled: true
+                shadowColor: tone.modeKeyShadow
+                shadowBlur: 0.45
+                shadowOpacity: 0.6
+                shadowVerticalOffset: 1
             }
         }
     }
