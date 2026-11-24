@@ -18,6 +18,8 @@ KCMUtils.SimpleKCM {
     property bool cfg_offerNotesDefault
     property bool cfg_showNotesPill
     property bool cfg_showNotesPillDefault
+    property bool cfg_notesInResults
+    property bool cfg_notesInResultsDefault
     property bool cfg_showHelpersPill
     property bool cfg_showHelpersPillDefault
     property bool cfg_showPeoplePill
@@ -95,6 +97,13 @@ KCMUtils.SimpleKCM {
             enabled: cfg_offerNotes
             checked: cfg_showNotesPill
             onToggled: cfg_showNotesPill = checked
+        }
+
+        QQC2.CheckBox {
+            text: i18n("Show notes among the results")
+            enabled: cfg_offerNotes
+            checked: cfg_notesInResults
+            onToggled: cfg_notesInResults = checked
         }
 
         QQC2.CheckBox {

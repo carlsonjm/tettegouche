@@ -291,6 +291,9 @@ Notes had when the note left. A
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
   pill, and the dot's Notes door with it; notes still answer a search.
+- "Show notes among the results", on by default, leaves notes out of what a
+  search finds; the Notes pill, the dot's Notes door and the quick note stay.
+  The two are independent of each other.
 - "Show the Helpers pill when Split Rock is installed", on by default, hides
   the first screen's Helpers
   pill and the dot's Helpers door; Helpers still answer a search. The door is

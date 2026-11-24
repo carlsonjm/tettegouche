@@ -391,26 +391,32 @@ private Q_SLOTS:
         QTRY_COMPARE(launches().size(), before + 4);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-pill --type"));
         configure(QStringLiteral("showNotesPill"), true);
+        // With only notes among the results off, the Notes pill stays.
+        configure(QStringLiteral("notesInResults"), false);
+        m_applet->activated();
+        QTRY_COMPARE(launches().size(), before + 5);
+        QCOMPARE(launches().constLast(), QStringLiteral("--no-notes-results --type"));
+        configure(QStringLiteral("notesInResults"), true);
         // So with only the Helpers pill off.
         configure(QStringLiteral("showHelpersPill"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 5);
+        QTRY_COMPARE(launches().size(), before + 6);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-helpers-pill --type"));
         configure(QStringLiteral("showHelpersPill"), true);
         // Recent apps off alone, then recent files off alone.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 6);
+        QTRY_COMPARE(launches().size(), before + 7);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-apps --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 7);
+        QTRY_COMPARE(launches().size(), before + 8);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent-files --type"));
         // Both off is recent use off.
         configure(QStringLiteral("recentApps"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 8);
+        QTRY_COMPARE(launches().size(), before + 9);
         QCOMPARE(launches().constLast(), QStringLiteral("--no-recent --type"));
         configure(QStringLiteral("recentApps"), true);
         configure(QStringLiteral("recentFiles"), true);
@@ -422,7 +428,7 @@ private Q_SLOTS:
         configure(QStringLiteral("quickReminderTime"), QStringLiteral("14:30"));
         configure(QStringLiteral("quickActionKeepAwake"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 9);
+        QTRY_COMPARE(launches().size(), before + 10);
         QCOMPARE(launches().constLast(), QStringLiteral("--quick-actions=among,open,at14:30,noKeepAwake --type"));
         // A time no clock shows is left as the usual one, and off is off
         // whatever else is set.
@@ -431,18 +437,18 @@ private Q_SLOTS:
         configure(QStringLiteral("quickActionKeepAwake"), true);
         configure(QStringLiteral("quickReminderTime"), QStringLiteral("25:00"));
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 10);
+        QTRY_COMPARE(launches().size(), before + 11);
         QCOMPARE(launches().constLast(), QStringLiteral("--type"));
         configure(QStringLiteral("quickActions"), false);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 11);
+        QTRY_COMPARE(launches().size(), before + 12);
         QCOMPARE(launches().constLast(), QStringLiteral("--quick-actions=off --type"));
         configure(QStringLiteral("quickActions"), true);
         configure(QStringLiteral("quickReminderTime"), QStringLiteral("09:00"));
         // The People pill is off until it is turned on; on, Search is told.
         configure(QStringLiteral("showPeoplePill"), true);
         m_applet->activated();
-        QTRY_COMPARE(launches().size(), before + 12);
+        QTRY_COMPARE(launches().size(), before + 13);
         QCOMPARE(launches().constLast(), QStringLiteral("--people-pill --type"));
         configure(QStringLiteral("showPeoplePill"), false);
     }
