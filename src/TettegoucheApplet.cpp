@@ -601,9 +601,15 @@ QStringList TettegoucheApplet::launchFlags()
     else if (!apps) flags << QStringLiteral("--no-recent-apps");
     else if (!files) flags << QStringLiteral("--no-recent-files");
     // It offers Notes, where the notes application is installed, unless that is off.
-    if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
-    // Its pill alone can be left out; notes still answer a search.
-    else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+    if (!setting(QStringLiteral("offerNotes"), true)) {
+        flags << QStringLiteral("--no-notes");
+    } else {
+        // The Notes mode and notes among the results are each left out on
+        // their own: without the pill notes still answer a search, and
+        // without the results the mode still opens.
+        if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+        if (!setting(QStringLiteral("notesInResults"), true)) flags << QStringLiteral("--no-notes-results");
+    }
     // The Helpers pill can be left out; Helpers still answer a search.
     if (!setting(QStringLiteral("showHelpersPill"), true)) flags << QStringLiteral("--no-helpers-pill");
     // The People pill is off until it is turned on.

@@ -29,6 +29,10 @@
       <label>Show the Notes pill on Search's first screen, while Notes is offered; notes still show among the results</label>
       <default>true</default>
     </entry>
+    <entry name="notesInResults" type="Bool">
+      <label>List notes among what a search finds, while Notes is offered; the Notes pill still opens Notes</label>
+      <default>true</default>
+    </entry>
     <entry name="showHelpersPill" type="Bool">
       <label>Show the Helpers pill on Search's first screen and a Helpers door on the dot's slide, while Split Rock's Core is installed; Helpers still show among the results</label>
       <default>true</default>

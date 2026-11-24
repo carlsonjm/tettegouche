@@ -192,6 +192,7 @@ QStringList settingsIn(const QStringList &arguments)
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
                                QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
                                QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill"),
+                               QStringLiteral("--no-notes-results"),
                                QStringLiteral("--no-helpers-pill"), QStringLiteral("--people-pill")};
     QStringList given;
     for (const QString &argument : arguments) {
@@ -381,8 +382,9 @@ int main(int argc, char **argv)
     NotesDoor notes;
     if (offerNotes) controller.setNotesDoor(&notes);
     // Notes found by their words are listed among the results, as Gooseberry
-    // answers, only while Notes is offered.
-    results.setNotesOffered(offerNotes);
+    // answers, while Notes is offered and that is not left out on its own.
+    // The Notes mode and the quick note stay either way.
+    results.setNotesOffered(offerNotes && !application.arguments().contains(QStringLiteral("--no-notes-results")));
     // Split Rock's Core, where it is installed: its facts and its upkeep
     // cards are found by their words, and Core opens the card.
     CoreFactProvider core(QDBusConnection::sessionBus());

@@ -105,6 +105,7 @@ than repeat it.
 | Tap or click See all beside a section | Opens Apps or Files. |
 | Setting "Show Notes when Gooseberry is installed", off | Search never offers Notes. On, its default, Notes appears whenever Gooseberry is installed. |
 | Setting "Show the Notes pill", off | The row of modes leaves out the Notes pill, and a slide from the dot its Notes door; notes still answer a search. |
+| Setting "Show notes among the results", off | A search lists no notes; the Notes pill and the dot's Notes door still open Notes. |
 | Setting "Show the Helpers pill when Split Rock is installed", off | The row of modes leaves out the Helpers pill, and a slide from the dot its Helpers door; Helpers still answer a search. |
 | Setting "Show islands beside the launcher", off | The widget is the launcher's dot alone: no islands in the panel, and an open island closes. Search is unchanged. |
 | Setting "Show the quick note island", off | The quick note's island leaves the panel; the other islands are unchanged. On, its default, it shows while Gooseberry is installed. |
