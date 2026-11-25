@@ -1711,7 +1711,10 @@ Item {
                         }
                     }
                     x: searchField.x + searchField.width - 12 - (searchField.trailingAction.visible ? 36 : 0) - width
-                    anchors.verticalCenter: parent.verticalCenter
+                    // Held on the field itself, not on the header, which
+                    // rises from the foot of Search as Apps opens: the eye
+                    // fades in and out where it sits, never riding up.
+                    y: searchField.y - drawerHandle.y + (searchField.height - height) / 2
                     width: 42
                     height: 42
                     opacity: drawerHandle.controlsOpacity
