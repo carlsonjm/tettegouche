@@ -112,6 +112,27 @@ Item {
         : launcher.drawerOpen ? (launcher.filesMode ? "files" : "apps")
         : launcher.helpersShown ? "helpers"
         : launcher.peopleShown ? "people" : ""
+    // The mode whose mark the dot's ring holds, behind current by a beat:
+    // the old mark shrinks away, the same 140 ms as the first screen's new
+    // dot takes to go, then the next grows in over 240 ms, as that dot does.
+    // While Search is still opening or closing it simply follows.
+    property string mark: current
+    property real markGrowth: 1
+    onCurrentChanged: {
+        if (launcher.openingControls < 0.5) {
+            markSwap.stop()
+            mark = current
+            markGrowth = 1
+        } else {
+            markSwap.restart()
+        }
+    }
+    SequentialAnimation {
+        id: markSwap
+        NumberAnimation { target: modeRow; property: "markGrowth"; to: 0; duration: launcher.ms(140); easing.type: Easing.InCubic }
+        ScriptAction { script: modeRow.mark = modeRow.current }
+        NumberAnimation { target: modeRow; property: "markGrowth"; to: 1; duration: launcher.ms(240); easing.type: Easing.OutCubic }
+    }
     readonly property real pillGap: 4
     // The height of the highlight and of a mode's wash, inside the row's 44.
     readonly property real keyHeight: 34
@@ -275,7 +296,9 @@ Item {
                 objectName: "home-dot-mark"
                 anchors.centerIn: parent
                 openness: launcher.openingControls > 0.5 ? 1 : 0
-                seed: modeRow.current === ""
+                // The mark changes in two beats, the same both ways: the
+                // one shown shrinks away, then the next grows in.
+                seed: modeRow.current === "" && modeRow.mark === ""
                 speed: launcher.ms(1000) / 1000
                 pearl: tone.dark
                 ink: launcher.primaryText
@@ -289,7 +312,8 @@ Item {
                 Grid {
                     objectName: "home-dot-apps"
                     anchors.centerIn: parent
-                    visible: modeRow.current === "apps"
+                    visible: modeRow.mark === "apps" && modeRow.markGrowth > 0
+                    scale: modeRow.markGrowth
                     columns: 2
                     spacing: 2
                     Repeater {
@@ -307,12 +331,13 @@ Item {
                     anchors.centerIn: parent
                     // An open folder carries its weight on the left; half a pixel
                     // right sets it in the middle of the ring to the eye.
-                    anchors.horizontalCenterOffset: modeRow.current === "files" ? 0.5 : 0
-                    visible: modeRow.current === "files" || modeRow.current === "notes"
-                        || modeRow.current === "helpers" || modeRow.current === "people"
-                    glyph: modeRow.current === "notes" ? "notes"
-                        : modeRow.current === "helpers" ? "sparkles"
-                        : modeRow.current === "people" ? "users" : "folder-open"
+                    anchors.horizontalCenterOffset: modeRow.mark === "files" ? 0.5 : 0
+                    visible: (modeRow.mark === "files" || modeRow.mark === "notes"
+                        || modeRow.mark === "helpers" || modeRow.mark === "people") && modeRow.markGrowth > 0
+                    scale: modeRow.markGrowth
+                    glyph: modeRow.mark === "notes" ? "notes"
+                        : modeRow.mark === "helpers" ? "sparkles"
+                        : modeRow.mark === "people" ? "users" : "folder-open"
                     width: 12
                     height: 12
                 }
