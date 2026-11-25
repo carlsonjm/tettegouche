@@ -185,6 +185,16 @@ bool forwardOrTakeOver(QLockFile &lock, const QString &method, const QVariantLis
     return false;
 }
 
+// The words after a flag such as --modes=apps,files, in order.
+QStringList listAfter(const QStringList &arguments, const QString &flag)
+{
+    for (const QString &argument : arguments) {
+        if (argument.startsWith(flag))
+            return argument.mid(flag.size()).split(QLatin1Char(','), Qt::SkipEmptyParts);
+    }
+    return {};
+}
+
 // The widget's settings among a launcher's arguments, which it compares with
 // the widget's own when it is asked to leave for them.
 QStringList settingsIn(const QStringList &arguments)
@@ -192,10 +202,13 @@ QStringList settingsIn(const QStringList &arguments)
     const QStringList settings{QStringLiteral("--standalone"), QStringLiteral("--no-recent"),
                                QStringLiteral("--no-recent-apps"), QStringLiteral("--no-recent-files"),
                                QStringLiteral("--no-notes"), QStringLiteral("--no-notes-pill"),
-                               QStringLiteral("--no-helpers-pill"), QStringLiteral("--people-pill")};
+                               QStringLiteral("--no-notes-results"),
+                               QStringLiteral("--no-helpers-pill"), QStringLiteral("--people-pill"),
+                               QStringLiteral("--no-files-pill"), QStringLiteral("--compact")};
     QStringList given;
     for (const QString &argument : arguments) {
-        if ((settings.contains(argument) || argument.startsWith(QLatin1String("--quick-actions=")))
+        if ((settings.contains(argument) || argument.startsWith(QLatin1String("--quick-actions="))
+                || argument.startsWith(QLatin1String("--modes=")) || argument.startsWith(QLatin1String("--sections=")))
                 && !given.contains(argument))
             given.append(argument);
     }
@@ -381,8 +394,9 @@ int main(int argc, char **argv)
     NotesDoor notes;
     if (offerNotes) controller.setNotesDoor(&notes);
     // Notes found by their words are listed among the results, as Gooseberry
-    // answers, only while Notes is offered.
-    results.setNotesOffered(offerNotes);
+    // answers, while Notes is offered and that is not left out on its own.
+    // The Notes mode and the quick note stay either way.
+    results.setNotesOffered(offerNotes && !application.arguments().contains(QStringLiteral("--no-notes-results")));
     // Split Rock's Core, where it is installed: its facts and its upkeep
     // cards are found by their words, and Core opens the card.
     CoreFactProvider core(QDBusConnection::sessionBus());
@@ -501,6 +515,15 @@ int main(int argc, char **argv)
         // The People pill shows only once it is turned on.
         {QStringLiteral("peoplePillShown"),
          application.arguments().contains(QStringLiteral("--people-pill"))},
+        // The Files mode can be left off the row too, where a file browser is.
+        {QStringLiteral("filesPillShown"),
+         !application.arguments().contains(QStringLiteral("--no-files-pill"))},
+        // The order of the modes and of the sections, as Settings gives them.
+        {QStringLiteral("modeOrder"), listAfter(application.arguments(), QStringLiteral("--modes="))},
+        {QStringLiteral("sectionOrder"), listAfter(application.arguments(), QStringLiteral("--sections="))},
+        // Past its largest size, Search rests compact rather than tall.
+        {QStringLiteral("whenFull"),
+         application.arguments().contains(QStringLiteral("--compact")) ? QStringLiteral("compact") : QStringLiteral("tall")},
         {QStringLiteral("quickNote"), QVariant::fromValue<QObject *>(quickNote.get())},
         {QStringLiteral("quickSwitches"), QVariant::fromValue<QObject *>(&quickSwitches)},
         {QStringLiteral("quickActionsOffered"), !quickSettings.contains(QStringLiteral("off"))},

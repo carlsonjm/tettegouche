@@ -311,7 +311,16 @@ Flickable {
     readonly property real naturalHeight: (appsShown ? appsReach : 0)
         + (sections === 2 ? gap : 0)
         + (filesShown ? headHeight + 2 * cardHeight + cardGap : 0)
-    readonly property real filesY: appsShown ? appsReach + gap : 0
+    // Recent files above Recent apps where Settings puts them first.
+    readonly property bool filesFirst: {
+        const order = launcher.sectionOrder || []
+        return order.indexOf("files") >= 0 && (order.indexOf("apps") < 0 || order.indexOf("files") < order.indexOf("apps"))
+    }
+    readonly property real filesY: filesFirst ? 0 : appsShown ? appsReach + gap : 0
+    // Where the applications start: at the top, or under the files' rows
+    // as they are laid out.
+    readonly property real appsY: filesFirst && filesShown
+        ? headHeight + fileRows * fileHeight + Math.max(0, fileRows - 1) * cardGap + gap : 0
     // More than Search's Medium holds scrolls, the files keeping their two
     // full rows; only an older Kadunce's fixed guest place still fits them in.
     readonly property bool scrolls: !!launcher.launcherController
@@ -323,7 +332,7 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     interactive: scrolls
     clip: scrolls
-    readonly property real filesRoom: Math.max(0, contentHeight - filesY - headHeight)
+    readonly property real filesRoom: Math.max(0, contentHeight - (appsShown ? appsReach + gap : 0) - headHeight)
     readonly property int fileRows: filesRoom >= 2 * 96 + cardGap ? 2 : filesRoom >= 96 ? 1 : 0
     readonly property real fileHeight: fileRows > 0
         ? Math.min(176, (filesRoom - cardGap * (fileRows - 1)) / fileRows) : 0
@@ -418,6 +427,7 @@ Flickable {
         id: appsHead
         objectName: "recent-apps"
         visible: firstRow.appsShown
+        y: firstRow.appsY
         width: parent.width
         title: words.i18n("Recent apps")
         prefix: "recent-apps"
@@ -427,7 +437,7 @@ Flickable {
     Text {
         objectName: "recent-apps-empty"
         x: 12
-        y: firstRow.headHeight + (firstRow.appHeight - height) / 2
+        y: firstRow.appsY + firstRow.headHeight + (firstRow.appHeight - height) / 2
         visible: firstRow.appsShown && firstRow.appsOffered === 0
         text: words.i18n("Apps you used lately show up here when they aren't open or in the dock.")
         color: launcher.secondaryText
@@ -439,7 +449,7 @@ Flickable {
             id: recentApp
             readonly property real reveal: firstRow.reveal(firstRow.doors)
             x: index * firstRow.appWidth
-            y: firstRow.headHeight
+            y: firstRow.appsY + firstRow.headHeight
             width: firstRow.appWidth
             height: firstRow.appHeight
             visible: mine && index < Math.min(firstRow.appColumns, firstRow.appsOffered)

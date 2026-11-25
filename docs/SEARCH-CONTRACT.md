@@ -8,9 +8,11 @@ examples rather than tuned to one query. Its inputs are in [INPUT.md](INPUT.md).
 
 Search's modes run along its top on every screen, one row above the field: the
 dot for this first screen, then Apps and Files, then Notes where Gooseberry is
-installed, and Helpers where Split Rock's Core lists them. The grey pill marks
-the mode shown, and a tap moves straight to another; the dot comes back here
-with what was typed. The window's own buttons end that row: Expand while Apps,
+installed, and Helpers where Split Rock's Core lists them, in the order the
+widget's setting "modeOrder" gives; the dot always leads. One raised highlight
+sits under the mode shown and glides to the next as a tap moves straight to
+it; the dot comes back here with what was typed, the highlight fading where it
+was. The setting "showFilesPill" off leaves Files off the row. The window's own buttons end that row: Expand while Apps,
 Files or Notes is open, Pop out in Files and Notes, and Close, last; at rest,
 Close alone. The field is the same on every screen: a pill
 44 tall on the row's own edges, the dot's pill starting where it starts and
@@ -31,7 +33,7 @@ How tall Search rests depends on which sections are on: with neither, the
 sheet holds the modes and the field alone, and is only as wide as the field
 needs; with one, it is as tall as that
 section; with both, it is its full height. Floating, Search is one size
-on every display, 840 wide and at most as tall as both sections, so a large
+on every display, 840 wide and at most as tall as both sections, 704, so a large
 desktop screen shows it no bigger than a tablet does; only a smaller screen
 trims it. It stands where its full height is centred on the screen, so
 typing, a drawer or a mode grows it to that height downward and the field
@@ -62,7 +64,9 @@ each file it opens, and Plasma's privacy setting decides what is kept.
   is on show; the modes stay.
 - Typing hands the room to the results.
 - The widget's settings "Recent apps" and "Recent files" each turn their
-  section on, both by default. With both off nothing is read; an older
+  section on, both by default, and "sectionOrder" sets which comes first.
+  Sections that need more than the largest size keep it and scroll; the
+  setting "compactWhenFull" rests them at 416 instead. With both off nothing is read; an older
   setting "offerRecent" off counts as both off.
 - A section that is on with nothing to show says so in a line, and keeps its
   room, so Search's size does not depend on what the record holds.
@@ -291,6 +295,9 @@ Notes had when the note left. A
   default; off, Notes is never offered and no note is asked for.
 - "Show the Notes pill", on by default, hides only the first screen's Notes
   pill, and the dot's Notes door with it; notes still answer a search.
+- "Show notes among the results", on by default, leaves notes out of what a
+  search finds; the Notes pill, the dot's Notes door and the quick note stay.
+  The two are independent of each other.
 - "Show the Helpers pill when Split Rock is installed", on by default, hides
   the first screen's Helpers
   pill and the dot's Helpers door; Helpers still answer a search. The door is

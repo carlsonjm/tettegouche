@@ -601,9 +601,27 @@ QStringList TettegoucheApplet::launchFlags()
     else if (!apps) flags << QStringLiteral("--no-recent-apps");
     else if (!files) flags << QStringLiteral("--no-recent-files");
     // It offers Notes, where the notes application is installed, unless that is off.
-    if (!setting(QStringLiteral("offerNotes"), true)) flags << QStringLiteral("--no-notes");
-    // Its pill alone can be left out; notes still answer a search.
-    else if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+    if (!setting(QStringLiteral("offerNotes"), true)) {
+        flags << QStringLiteral("--no-notes");
+    } else {
+        // The Notes mode and notes among the results are each left out on
+        // their own: without the pill notes still answer a search, and
+        // without the results the mode still opens.
+        if (!setting(QStringLiteral("showNotesPill"), true)) flags << QStringLiteral("--no-notes-pill");
+        if (!setting(QStringLiteral("notesInResults"), true)) flags << QStringLiteral("--no-notes-results");
+    }
+    // The Files mode can be left out too; files still answer a search.
+    if (!setting(QStringLiteral("showFilesPill"), true)) flags << QStringLiteral("--no-files-pill");
+    // The modes and the sections, in the order Settings gives them, where
+    // it is not their first order.
+    const QString modes = setting(QStringLiteral("modeOrder"), QString()).remove(QLatin1Char(' '));
+    if (!modes.isEmpty() && modes != QLatin1String("apps,files,notes,people,helpers"))
+        flags << QStringLiteral("--modes=") + modes;
+    const QString sections = setting(QStringLiteral("sectionOrder"), QString()).remove(QLatin1Char(' '));
+    if (!sections.isEmpty() && sections != QLatin1String("apps,files"))
+        flags << QStringLiteral("--sections=") + sections;
+    // Past its largest size Search rests tall, unless Compact is on.
+    if (setting(QStringLiteral("compactWhenFull"), false)) flags << QStringLiteral("--compact");
     // The Helpers pill can be left out; Helpers still answer a search.
     if (!setting(QStringLiteral("showHelpersPill"), true)) flags << QStringLiteral("--no-helpers-pill");
     // The People pill is off until it is turned on.

@@ -1721,11 +1721,12 @@ TestCase {
         compare(field.width, field.parent.width)
         compare(Math.round(left(dot) + (dot.width - 40) / 2), Math.round(left(field)))
         verify(right(close) <= right(field) + 1)
-        // Both on, it rests at Medium: a Spread card's height, never above
-        // its full height, and the sections scroll inside.
-        verify(sheet.medium)
-        compare(sheet.height, sheet.mediumHeight)
-        verify(sheet.mediumHeight <= sheet.fullHeight)
+        // Both on, it rests at its largest size, 704, which a short screen
+        // trims; Recent files scroll inside what is left.
+        verify(!sheet.medium)
+        compare(sheet.universalHeight, 704)
+        compare(sheet.height, Math.min(704, controller.availableArea.height - 40))
+        compare(sheet.height, sheet.fullHeight)
         verify(row.visible)
         compare(row.sections, 2)
         compare(row.y - field.y - field.height, 24)
@@ -1763,8 +1764,9 @@ TestCase {
         query.text = ""
         tryCompare(row, "opacity", 1)
     }
-    // What is on sets how tall Search rests: the field alone, one section,
-    // or both. Typing gives the sheet its full height, still centred.
+    // What is on sets how tall Search rests, as Settings' map shows it: the
+    // field alone 148, Recent apps 328, Recent files 524, both its largest.
+    // Typing gives the sheet its full height, still centred.
     function test_firstRowSections() {
         launcher.fileBrowser = filesMock
         fillRecent(20)
@@ -1777,7 +1779,7 @@ TestCase {
         const area = controller.availableArea
         const small = 2 * 24 + 56 + 44
         launcher.recentFiles = false
-        tryCompare(sheet, "height", sheet.mediumHeight)
+        tryCompare(sheet, "height", 328)
         verify(findChild(launcher, "recent-0").visible)
         verify(!findChild(launcher, "recent-files").visible)
         // With something under the field, it rests where its full height is
@@ -1791,11 +1793,11 @@ TestCase {
         compare(sheet.y, restingY)
         compare(field.mapToItem(null, 0, 0).y, fieldY)
         query.text = ""
-        tryCompare(sheet, "height", sheet.mediumHeight)
+        tryCompare(sheet, "height", 328)
         compare(sheet.y, restingY)
         launcher.recentFiles = true
         launcher.recentApps = false
-        tryCompare(sheet, "height", sheet.mediumHeight)
+        tryCompare(sheet, "height", 524)
         verify(!findChild(launcher, "recent-apps").visible)
         verify(findChild(launcher, "recent-10").visible)
         compare(findChild(launcher, "recent-10").y, 40)
@@ -1875,14 +1877,55 @@ TestCase {
         const field = findChild(launcher, "search-field")
         const sheet = findChild(launcher, "launcher-sheet")
         compare(row.offered, 0)
-        compare(sheet.height, sheet.mediumHeight)
+        const rests = sheet.height
+        compare(rests, Math.min(704, controller.availableArea.height - 40))
         compare(field.y, 0)
         verify(findChild(launcher, "recent-apps-empty").visible)
         verify(findChild(launcher, "recent-files-empty").visible)
         fillRecent(4)
         verify(!findChild(launcher, "recent-apps-empty").visible)
         verify(!findChild(launcher, "recent-files-empty").visible)
-        compare(sheet.height, sheet.mediumHeight)
+        compare(sheet.height, rests)
+    }
+    // Settings orders the modes along the top and the sections under the
+    // field, and can leave the Files mode off.
+    function test_modeAndSectionOrder() {
+        launcher.fileBrowser = filesMock
+        launcher.notesDoor = notesStub
+        fillRecent(20)
+        launcher.modeOrder = ["notes", "apps", "bogus", "notes"]
+        launcher.sectionOrder = ["files", "apps"]
+        controller.opened()
+        waitForOpen()
+        const left = item => item.mapToItem(launcher, 0, 0).x
+        const notes = findChild(launcher, "notes-pill")
+        const apps = findChild(launcher, "apps-pill")
+        const files = findChild(launcher, "files-pill")
+        tryVerify(() => notes.visible && left(notes) < left(apps) && left(apps) < left(files))
+        // A chosen mode puts the highlight under it, wherever it stands.
+        mouseClick(files, files.width / 2, files.height / 2)
+        tryVerify(() => launcher.drawerOpen && launcher.filesMode)
+        tryCompare(findChild(launcher, "mode-highlight"), "x", files.x)
+        launcher.setDrawerOpen(false)
+        tryCompare(launcher, "drawerProgress", 0)
+        // Recent files first, Recent apps under their two rows.
+        const row = findChild(launcher, "first-row")
+        compare(row.filesY, 0)
+        compare(findChild(launcher, "recent-apps").y, 40 + 2 * 150 + 12 + 24)
+        // The Files mode can be left off the row.
+        launcher.filesPillShown = false
+        verify(!files.visible)
+        launcher.filesPillShown = true
+        // Two sections reach the largest size and no further, so Compact
+        // has nothing to do yet.
+        const sheet = findChild(launcher, "launcher-sheet")
+        verify(!sheet.sectionsOver)
+        launcher.whenFull = "compact"
+        tryCompare(sheet, "height", Math.min(704, controller.availableArea.height - 40))
+        launcher.whenFull = "tall"
+        launcher.modeOrder = []
+        launcher.sectionOrder = []
+        launcher.notesDoor = null
     }
     // With the setting off the launcher has no record at all: the modes
     // alone, and Tab goes from one to the next.
@@ -1912,8 +1955,9 @@ TestCase {
         verify(files.activeFocus)
         launcher.recentUse = recentStub
     }
-    // A tap on another mode moves straight there, the grey pill with it, and
-    // the dot comes back to the first screen with what was typed.
+    // A tap on another mode moves straight there, the highlight gliding
+    // under it, and the dot comes back to the first screen with what was
+    // typed, the highlight fading where it was.
     function test_modesSwitch() {
         launcher.fileBrowser = filesMock
         launcher.notesDoor = notesStub
@@ -1942,6 +1986,13 @@ TestCase {
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
         verify(files.selected && !apps.selected)
         compare(controller.showing[0], "files")
+        // One highlight, under the mode shown, as wide as it; it glides
+        // there rather than jumping.
+        const key = findChild(launcher, "mode-highlight")
+        verify(key.glides)
+        tryCompare(key, "x", files.x)
+        compare(key.width, files.width)
+        compare(key.opacity, 1)
         verify(findChild(launcher, "home-dot-glyph").visible)
         verify(!findChild(launcher, "home-dot-apps").visible)
         mouseClick(notes, notes.width / 2, notes.height / 2)
@@ -1964,6 +2015,8 @@ TestCase {
         tryCompare(launcher, "drawerOpen", false)
         tryCompare(launcher, "drawerProgress", 0)
         verify(dot.selected)
+        tryCompare(key, "opacity", 0)
+        compare(key.x, apps.x)
         tryCompare(mark, "openness", 1)
         verify(!findChild(launcher, "home-dot-apps").visible && !findChild(launcher, "home-dot-glyph").visible)
         verify(mark.seed)

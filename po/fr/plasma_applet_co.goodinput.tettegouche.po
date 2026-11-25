@@ -337,6 +337,10 @@ msgstr "Afficher Notes quand Gooseberry est installé"
 msgid "Show the Notes pill"
 msgstr "Afficher le bouton Notes"
 
+#: applet/ConfigGeneral.qml
+msgid "Show notes among the results"
+msgstr "Afficher les notes parmi les résultats"
+
 #: applet/ConfigGeneral.qml:79
 msgid "Helpers:"
 msgstr "Assistants :"
