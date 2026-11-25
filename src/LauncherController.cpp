@@ -358,8 +358,7 @@ bool LauncherController::resultIsOpen(int row) const
     const QModelIndex index = m_results->index(row, 0);
     if (searchTier(m_results->getQueryMatch(index)) != 0) return false;
     return index.isValid() && m_context.applicationIsOpen(
-        runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
-        m_results->data(index, Qt::DisplayRole).toString());
+        runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()));
 }
 
 QString LauncherController::resultApplicationId(int row) const
@@ -376,22 +375,21 @@ int LauncherController::activateIfOpen(int row)
     if (!index.isValid()) return 0;
     if (searchTier(m_results->getQueryMatch(index)) != 0) return 0;
     return bringForward(
-        runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()),
-        m_results->data(index, Qt::DisplayRole).toString());
+        runnerApplicationId(m_results->data(index, KRunner::ResultsModel::QueryMatchRole).value<KRunner::QueryMatch>()));
 }
 
 int LauncherController::activateCatalogIfOpen(int row)
 {
     if (!m_catalog) return 0;
-    return bringForward(m_catalog->applicationId(row), m_catalog->applicationName(row));
+    return bringForward(m_catalog->applicationId(row));
 }
 
-int LauncherController::bringForward(const QString &applicationId, const QString &name)
+int LauncherController::bringForward(const QString &applicationId)
 {
     // What is open is read as Search opens and again at each change, so a
     // tap reads it afresh only while that reading has not answered.
     if (m_contextPending) refreshContextBlocking();
-    const QString windowId = m_context.windowIdForApplication(applicationId, name);
+    const QString windowId = m_context.windowIdForApplication(applicationId);
     if (windowId.isEmpty()) return 0;
     bool brought = false;
     if (m_contextFromKadunce) {
@@ -402,7 +400,7 @@ int LauncherController::bringForward(const QString &applicationId, const QString
     }
     if (brought) return 1;
     refreshContextBlocking();
-    return m_context.applicationIsOpen(applicationId, name) ? -1 : 0;
+    return m_context.applicationIsOpen(applicationId) ? -1 : 0;
 }
 
 void LauncherController::workspaceUpdated()
@@ -1052,8 +1050,8 @@ void LauncherController::raiseBrowser(const QStringList &identities)
     // a new card and comes forward with it.
     if (m_contextPending) refreshContextBlocking();
     for (const auto &identity : identities) {
-        if (m_context.windowIdForApplication(identity, QString()).isEmpty()) continue;
-        bringForward(identity, QString());
+        if (m_context.windowIdForApplication(identity).isEmpty()) continue;
+        bringForward(identity);
         return;
     }
 }
@@ -1154,8 +1152,8 @@ bool LauncherController::filesWorking() const
 void LauncherController::setRecentUse(RecentUse *recent)
 {
     m_recent = recent;
-    recent->setExcluded([this](const QString &applicationId, const QString &name) {
-        return m_pinned.contains(applicationId) || m_context.applicationIsOpen(applicationId, name)
+    recent->setExcluded([this](const QString &applicationId, const QString &) {
+        return m_pinned.contains(applicationId) || m_context.applicationIsOpen(applicationId)
             || (m_catalog && m_catalog->isHiddenApplication(applicationId));
     });
     connect(this, &LauncherController::contextChanged, recent, &RecentUse::refilter);
@@ -1200,7 +1198,7 @@ void LauncherController::raiseFilesWindow()
     if (!window) return;
     // Through the window list, which also brings a minimized window back;
     // the window itself, where that list cannot.
-    if (bringForward(QString::fromLatin1(FilesApplicationId), QString()) == 1) return;
+    if (bringForward(QString::fromLatin1(FilesApplicationId)) == 1) return;
     window->view->showNormal();
     window->view->raise();
     window->view->requestActivate();

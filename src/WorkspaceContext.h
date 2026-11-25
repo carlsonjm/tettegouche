@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include <QSet>
 #include <QString>
 #include <QVector>
 
@@ -16,20 +15,19 @@ public:
     void clear();
 
     bool available() const;
-    bool applicationIsOpen(const QString &resultId,
-                           const QString &displayName) const;
-    QString windowIdForApplication(const QString &resultId,
-                                   const QString &displayName) const;
+    // A launcher is matched to open windows by its desktop entry only.
+    bool applicationIsOpen(const QString &resultId) const;
+    QString windowIdForApplication(const QString &resultId) const;
     QString focusedApplicationId() const;
 
 private:
     static QString normalized(const QString &value);
-    static bool identitiesMatch(const QString &left, const QString &right);
+    static QString launcherIdentity(const QString &resultId);
+    static bool identitiesMatch(const QString &launcher, const QString &window);
 
     struct Application {
         QString windowId;
         QString appId;
-        QString title;
         bool focused = false;
         bool selected = false;
         qint64 lastActivated = 0;
@@ -37,7 +35,5 @@ private:
 
     bool m_available = false;
     QVector<Application> m_applications;
-    QSet<QString> m_openApplicationIds;
-    QSet<QString> m_openTitles;
     QString m_focusedApplicationId;
 };
