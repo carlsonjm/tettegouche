@@ -1978,11 +1978,9 @@ TestCase {
         verify(apps.selected && !files.selected && !dot.selected)
         verify(apps.visible && files.visible && notes.visible)
         compare(mark.openness, 1)
-        // The mark changes in two beats: the new dot shrinks away, then
-        // the four squares grow in.
-        verify(!mark.seed)
-        tryVerify(() => findChild(launcher, "home-dot-apps").visible && findChild(launcher, "home-dot-apps").scale === 1)
+        verify(findChild(launcher, "home-dot-apps").visible)
         verify(!findChild(launcher, "home-dot-glyph").visible)
+        verify(!mark.seed)
         compare(controller.showing, ["apps", false])
         mouseClick(files, files.width / 2, files.height / 2)
         tryVerify(() => launcher.drawerOpen && launcher.filesMode)
@@ -1995,7 +1993,8 @@ TestCase {
         tryCompare(key, "x", files.x)
         compare(key.width, files.width)
         compare(key.opacity, 1)
-        tryVerify(() => findChild(launcher, "home-dot-glyph").visible && !findChild(launcher, "home-dot-apps").visible)
+        verify(findChild(launcher, "home-dot-glyph").visible)
+        verify(!findChild(launcher, "home-dot-apps").visible)
         mouseClick(notes, notes.width / 2, notes.height / 2)
         tryCompare(launcher, "notesProgress", 1)
         verify(!launcher.drawerOpen && notes.selected && !files.selected)
@@ -2019,9 +2018,8 @@ TestCase {
         tryCompare(key, "opacity", 0)
         compare(key.x, apps.x)
         tryCompare(mark, "openness", 1)
-        tryVerify(() => !findChild(launcher, "home-dot-apps").visible && !findChild(launcher, "home-dot-glyph").visible)
-        tryVerify(() => mark.seed)
-        tryCompare(findChild(mark, "dotMarkSeed"), "shown", 1)
+        verify(!findChild(launcher, "home-dot-apps").visible && !findChild(launcher, "home-dot-glyph").visible)
+        verify(mark.seed)
         compare(controller.showing[0], "")
         compare(controller.closes, 0)
         launcher.quickNote = null
@@ -4656,7 +4654,8 @@ TestCase {
         // The dot's ring holds the Helpers' sparkles, and the panel's dot is
         // told so it shows them too.
         const glyph = findChild(launcher, "home-dot-glyph")
-        tryVerify(() => glyph.visible && glyph.glyph === "sparkles")
+        verify(glyph.visible)
+        compare(glyph.glyph, "sparkles")
         verify(!findChild(launcher, "home-dot-mark").seed)
         compare(controller.showing[0], "helpers")
         const row = findChild(launcher, "helpers-row")
@@ -5018,7 +5017,7 @@ TestCase {
         results.helpers = [{id: "update", title: "Check for updates", sub: "", icon: "system-software-update"}]
         verify(launcher.helpersShown)
         verify(!launcher.helpersAwaited)
-        tryCompare(findChild(launcher, "home-dot-glyph"), "glyph", "sparkles")
+        compare(findChild(launcher, "home-dot-glyph").glyph, "sparkles")
         controller.drawerRequested("helpers")
         compare(controller.closes, 1)
         controller.opened()

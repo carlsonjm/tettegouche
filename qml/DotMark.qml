@@ -111,8 +111,7 @@ Item {
     }
 
     // The new dot: it grows from nothing once the ring has formed, and goes
-    // at once as the ring starts to fill back. Taken away while the ring
-    // stays open, as a mode is chosen, it shrinks away as it grew.
+    // at once as the ring starts to fill back.
     Rectangle {
         id: seedDot
         objectName: "dotMarkSeed"
@@ -120,9 +119,7 @@ Item {
         property real shown: 0
         onGrownChanged: {
             seedGrowth.stop()
-            seedShrink.stop()
             if (grown) seedGrowth.start()
-            else if (dot.seed === false && !dot.loading && dot.openness > 0.98) seedShrink.start()
             else shown = 0
         }
         Component.onCompleted: shown = grown ? 1 : 0
@@ -130,17 +127,10 @@ Item {
             id: seedGrowth
             target: seedDot
             property: "shown"
+            from: 0
             to: 1
             duration: Math.max(1, Math.round(240 * dot.speed))
             easing.type: Easing.OutCubic
-        }
-        NumberAnimation {
-            id: seedShrink
-            target: seedDot
-            property: "shown"
-            to: 0
-            duration: Math.max(1, Math.round(140 * dot.speed))
-            easing.type: Easing.InCubic
         }
         antialiasing: true
         anchors.centerIn: parent
