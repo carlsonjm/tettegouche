@@ -3415,8 +3415,21 @@ TestCase {
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
 
+        // In Apps it stays on the field all the way in and out, never
+        // riding up with the header from Search's foot.
+        const fieldMiddle = () => field.mapToItem(null, 0, field.height / 2).y
+        const eyeMiddle = () => eye.mapToItem(null, 0, eye.height / 2).y
         launcher.setDrawerOpen(true)
-        tryCompare(launcher, "drawerProgress", 1)
+        let checked = 0
+        tryVerify(() => {
+            if (eye.opacity > 0) {
+                checked++
+                if (Math.abs(eyeMiddle() - fieldMiddle()) > 0.5) return true
+            }
+            return launcher.drawerProgress === 1
+        })
+        compare(eyeMiddle(), fieldMiddle())
+        verify(checked > 0)
         wait(250)
         verify(!catalog.showHidden)
         mouseClick(eye, eye.width / 2, eye.height / 2)
