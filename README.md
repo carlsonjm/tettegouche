@@ -73,8 +73,8 @@ Kickoff is.
 ## Search
 
 Tap the dot in the panel, or press `Meta`. Before you type, Search offers Apps
-and Files, Notes where Gooseberry is installed, People where a people
-provider is installed, Helpers where Split Rock is installed, and below them what you used lately: files, and applications that
+and Files, Notes where Gooseberry is installed, People once it is turned on
+(it is off by default) and a people provider is installed, Helpers where Split Rock is installed, and below them what you used lately: files, and applications that
 are not already open or pinned in the dock. To go straight to one of them,
 press the dot and slide toward the islands. Search stays ready after you close
 it, so it opens at once next time, and Tettegouche adds no background service
@@ -97,6 +97,12 @@ index that Dolphin also uses, so Tettegouche keeps no index of its own. Only
 - The time in another zone, such as "time in London"
 - Split Rock's upkeep cards and facts, such as "update" or "storage", where
   Split Rock is installed
+- Quick actions, tasks Search carries out from a sentence: "remind me to…" or
+  "note: …" with Gooseberry, and "do not disturb until 3", "bluetooth off" or
+  "keep awake 1h" as switches set right there. Typing "quick actions" opens
+  the Quick actions island, which lists what to type for each.
+- Saved layouts, found by name, which open the Layouts island where Split
+  Rock keeps them
 
 Local results come first. If nothing local matches, submitting the search can
 open it in your web browser. Results are not ranked by what you used before.
