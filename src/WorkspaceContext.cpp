@@ -25,15 +25,40 @@ QString WorkspaceContext::normalized(const QString &value)
     return identity;
 }
 
-bool WorkspaceContext::identitiesMatch(const QString &left,
-                                       const QString &right)
+// What a launcher names is its desktop entry: a storage ID, a file path or an
+// older runner key. Only the entry's own name is compared with a window.
+QString WorkspaceContext::launcherIdentity(const QString &resultId)
 {
-    if (left.isEmpty() || right.isEmpty()) {
+    QString identity = normalized(QFileInfo(resultId.trimmed()).fileName());
+    if (identity.startsWith(QLatin1String("services_"))) {
+        identity.remove(0, 9);
+    }
+    return identity;
+}
+
+// A window is paired with a launcher only by the application it says it
+// belongs to, never by its caption, and never when it names none: a window
+// with no application ID belongs to no launcher. The two match when they are
+// the same, or when the shorter is one whole dot-separated part of the
+// longer, as "konsole" is of "org.kde.konsole" and "spotify" of
+// "com.spotify.client".
+bool WorkspaceContext::identitiesMatch(const QString &launcher,
+                                       const QString &window)
+{
+    if (launcher.isEmpty() || window.isEmpty()) {
         return false;
     }
-    return left == right
-        || (left.size() > 3 && right.contains(left))
-        || (right.size() > 3 && left.contains(right));
+    if (launcher == window) {
+        return true;
+    }
+    const bool launcherShorter = launcher.size() < window.size();
+    const QString &shorter = launcherShorter ? launcher : window;
+    const QString &longer = launcherShorter ? window : launcher;
+    if (shorter.size() <= 3 || shorter.contains(QLatin1Char('.'))) {
+        return false;
+    }
+    const QStringList parts = longer.split(QLatin1Char('.'), Qt::SkipEmptyParts);
+    return parts.contains(shorter);
 }
 
 bool WorkspaceContext::update(const QString &payload)
@@ -56,8 +81,6 @@ bool WorkspaceContext::update(const QString &payload)
         return false;
     }
 
-    QSet<QString> applicationIds;
-    QSet<QString> titles;
     QVector<Application> parsedApplications;
     const QJsonArray applications =
         root.value(QStringLiteral("applications")).toArray();
@@ -65,21 +88,14 @@ bool WorkspaceContext::update(const QString &payload)
         const QJsonObject application = value.toObject();
         const QString appId = normalized(
             application.value(QStringLiteral("appId")).toString());
-        const QString title = normalized(
-            application.value(QStringLiteral("title")).toString());
         const QString windowId = application
             .value(QStringLiteral("windowId")).toString().trimmed();
-        if (!appId.isEmpty()) {
-            applicationIds.insert(appId);
-        }
-        if (!title.isEmpty()) {
-            titles.insert(title);
-        }
-        if (!windowId.isEmpty()) {
+        // A window that names no application can never be reached from a
+        // launcher, so it is not kept.
+        if (!windowId.isEmpty() && !appId.isEmpty()) {
             parsedApplications.append({
                 .windowId = windowId,
                 .appId = appId,
-                .title = title,
                 .focused = application
                     .value(QStringLiteral("focused")).toBool(),
                 .selected = application
@@ -96,8 +112,6 @@ bool WorkspaceContext::update(const QString &payload)
             .value(QStringLiteral("appId")).toString());
     }
 
-    m_openApplicationIds = std::move(applicationIds);
-    m_openTitles = std::move(titles);
     m_applications = std::move(parsedApplications);
     m_focusedApplicationId = focusedId;
     m_available = true;
@@ -108,8 +122,6 @@ void WorkspaceContext::clear()
 {
     m_available = false;
     m_applications.clear();
-    m_openApplicationIds.clear();
-    m_openTitles.clear();
     m_focusedApplicationId.clear();
 }
 
@@ -118,25 +130,18 @@ bool WorkspaceContext::available() const
     return m_available;
 }
 
-bool WorkspaceContext::applicationIsOpen(const QString &resultId,
-                                         const QString &displayName) const
+bool WorkspaceContext::applicationIsOpen(const QString &resultId) const
 {
-    return !windowIdForApplication(resultId, displayName).isEmpty();
+    return !windowIdForApplication(resultId).isEmpty();
 }
 
-QString WorkspaceContext::windowIdForApplication(
-    const QString &resultId, const QString &displayName) const
+QString WorkspaceContext::windowIdForApplication(const QString &resultId) const
 {
-    const QString id = normalized(resultId);
-    const QString executable = normalized(QFileInfo(id).baseName());
-    const QString title = normalized(displayName);
+    const QString launcher = launcherIdentity(resultId);
     const Application *best = nullptr;
     int bestPriority = -1;
     for (const Application &application : m_applications) {
-        const bool matches = identitiesMatch(id, application.appId)
-            || identitiesMatch(executable, application.appId)
-            || identitiesMatch(title, application.title);
-        if (!matches) {
+        if (!identitiesMatch(launcher, application.appId)) {
             continue;
         }
         const int priority = application.focused ? 2
