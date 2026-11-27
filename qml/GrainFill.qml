@@ -32,8 +32,12 @@ Item {
     // so the grain never holds Search back from opening: painting it takes
     // tens of milliseconds in a fresh process.
     property bool armed: false
-    opacity: armed ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    // Whether it shows now. One hidden this way keeps its grain, drawn, for
+    // when it shows again.
+    property bool shown: true
+    property real arrival: armed ? 1 : 0
+    Behavior on arrival { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    opacity: shown ? arrival : 0
     Connections {
         target: grain.Window.window
         enabled: !grain.armed

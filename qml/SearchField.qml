@@ -80,17 +80,31 @@ Rectangle {
             GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
         }
         // Its shade drawn again with a fine grain, so no lines show
-        // between its greys.
+        // between its greys. Each state has its grain drawn once and kept:
+        // the lit one shows over the other, so lighting the field as Search
+        // opens never draws the grain again before the first frame.
         GrainFill {
             objectName: "search-field-grain"
             anchors.fill: parent
             anchors.margins: 1
-            upper: searchField.lit ? tone.fieldLitTop : tone.fieldTop
-            lower: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom
+            upper: tone.fieldTop
+            lower: tone.fieldBottom
             keyHeight: fieldFace.height
             topInset: 1
             widest: searchField.parent ? searchField.parent.width - 2 : width
             round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
+        }
+        GrainFill {
+            objectName: "search-field-grain-lit"
+            anchors.fill: parent
+            anchors.margins: 1
+            upper: tone.fieldLitTop
+            lower: tone.fieldLitBottom
+            keyHeight: fieldFace.height
+            topInset: 1
+            widest: searchField.parent ? searchField.parent.width - 2 : width
+            round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
+            shown: searchField.lit
         }
         // No shadow: the fade and the fine rim raise it, and nothing is
         // laid over it to draw as Search opens.
