@@ -22,6 +22,7 @@ Item {
     Behavior on opacity { NumberAnimation { duration: key.fadeDuration; easing.type: Easing.OutCubic } }
 
     Rectangle {
+        id: face
         anchors.fill: parent
         radius: key.radius
         border.width: 1
@@ -29,6 +30,27 @@ Item {
         gradient: Gradient {
             GradientStop { position: 0; color: key.tone.modeKeyTop }
             GradientStop { position: 1; color: key.tone.modeKeyBottom }
+        }
+        // Its shade drawn again with a fine grain, so no lines show between
+        // its greys. Drawn once the key has come to rest under a row, so
+        // moving through rows stays quick; the grain is too fine to be seen
+        // arriving.
+        Timer {
+            id: settle
+            interval: 160
+            running: key.shown
+        }
+        Loader {
+            anchors.fill: parent
+            anchors.margins: 1
+            active: key.shown && key.visible && !settle.running
+            sourceComponent: GrainFill {
+                upper: key.tone.modeKeyTop
+                lower: key.tone.modeKeyBottom
+                keyHeight: face.height
+                topInset: 1
+                round: Math.max(0, Math.min(key.radius, face.height / 2) - 1)
+            }
         }
         // As the mode highlight's: a soft, blurred shadow that fades out
         // all round, with no hard line beneath it.

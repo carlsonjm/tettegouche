@@ -225,6 +225,7 @@ Item {
         Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
 
         Rectangle {
+            id: modeFace
             objectName: "mode-highlight-face"
             anchors.fill: parent
             radius: height / 2
@@ -233,6 +234,18 @@ Item {
             gradient: Gradient {
                 GradientStop { position: 0; color: tone.modeKeyTop }
                 GradientStop { position: 1; color: tone.modeKeyBottom }
+            }
+            // Its shade drawn again with a fine grain, so no lines show
+            // between its greys.
+            GrainFill {
+                anchors.fill: parent
+                anchors.margins: 1
+                upper: tone.modeKeyTop
+                lower: tone.modeKeyBottom
+                keyHeight: modeFace.height
+                topInset: 1
+                widest: modeRow.width
+                round: Math.max(0, modeFace.height / 2 - 1)
             }
             // The key lifts off the bar on a soft, blurred shadow that
             // fades out all round, with no hard line beneath it.
