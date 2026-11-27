@@ -588,8 +588,8 @@ Item {
     SequentialAnimation {
         id: openingSequence
         ParallelAnimation {
-            NumberAnimation { target: sheet; property: "opacity"; to: 1; duration: root.own(180); easing.type: Easing.OutCubic }
-            NumberAnimation { target: root; property: "openingRise"; to: 0; duration: root.own(180); easing.type: Easing.OutCubic }
+            NumberAnimation { target: sheet; property: "opacity"; to: 1; duration: root.own(120); easing.type: Easing.OutCubic }
+            NumberAnimation { target: root; property: "openingRise"; to: 0; duration: root.own(120); easing.type: Easing.OutCubic }
         }
         PauseAnimation { duration: root.own(120) }
         NumberAnimation { target: root; property: "openingShine"; to: 1; duration: root.own(460); easing.type: Easing.InOutSine }
