@@ -8,9 +8,9 @@ import QtQuick.Effects
 
 // The raised key Search marks what is chosen with, as under the mode shown,
 // and the field is made of: one flat fill with a fine edge, a lit rim along
-// its top, and two shadows, a soft one close under it and a wide, faint one
-// that fades out all round, so it lifts off the sheet with no hard line
-// beneath it. It fades in and out where it is.
+// its top, and two shadows held in close under it, a tight one and a
+// softer one whose edge alone shows past the key, so it lifts off the sheet
+// with no hard line beneath it. It fades in and out where it is.
 Item {
     id: key
     required property SearchColors tone
@@ -27,7 +27,7 @@ Item {
     visible: opacity > 0
     Behavior on opacity { NumberAnimation { duration: key.fadeDuration; easing.type: Easing.OutCubic } }
 
-    // The wide shadow, round the key and its close one.
+    // The softer shadow, round the key and its tight one.
     Item {
         anchors.fill: parent
         layer.enabled: key.visible
@@ -35,10 +35,10 @@ Item {
             autoPaddingEnabled: true
             shadowEnabled: true
             shadowColor: key.tone.modeKeyShadow
-            blurMax: 48
-            shadowBlur: 1
-            shadowOpacity: 0.42 + 0.2 * key.lift
-            shadowVerticalOffset: 4 + 2 * key.lift
+            blurMax: 12
+            shadowBlur: 0.8
+            shadowOpacity: 0.32 + 0.18 * key.lift
+            shadowVerticalOffset: 2 + key.lift
         }
 
         Rectangle {
