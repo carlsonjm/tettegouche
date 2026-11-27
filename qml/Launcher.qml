@@ -610,6 +610,8 @@ Item {
         root.drawerOpen = false
         root.drawerProgress = 0
         root.sortMenuOpen = false
+        // Folders left open close, so Apps opens as it was arranged.
+        root.closeFolders("")
         root.openedStraight = ""
         modeSettle.stop()
         modeTimeout.stop()
@@ -703,6 +705,7 @@ Item {
         const activation = root.launcherController.activateIfOpen(index)
         if (activation < 0) return false
         if (activation > 0) {
+            root.closeFolders("")
             root.launcherController.finishLaunch()
             return true
         }
@@ -756,13 +759,31 @@ Item {
     }
 
     // Apps' folders open and close in place, and the choice stays on the
-    // folder's row.
+    // folder's row. One is open at a time: opening another closes the
+    // last, as does starting an application or opening Search again.
     function toggleFolder(index) {
         const folder = root.applicationCatalog.folderId(index)
         if (!folder) return
-        root.applicationCatalog.setFolderOpen(folder, !root.applicationCatalog.isOpen(index))
+        const opening = !root.applicationCatalog.isOpen(index)
+        if (opening) root.closeFolders(folder)
+        root.applicationCatalog.setFolderOpen(folder, opening)
+        root.openedFolders = opening ? [folder] : []
         const row = root.applicationCatalog.folderRow(folder)
         if (row >= 0) applicationGrid.currentIndex = row
+    }
+    // The folders opened since Search last opened.
+    property var openedFolders: []
+    // Closes every open folder but the one named, including any left open
+    // before.
+    function closeFolders(except) {
+        const ids = root.openedFolders.slice()
+        if (root.applicationCatalog && typeof root.applicationCatalog.folderList === "function") {
+            for (const folder of root.applicationCatalog.folderList()) ids.push(folder.id)
+        }
+        for (const id of ids) {
+            if (id !== except) root.applicationCatalog.setFolderOpen(id, false)
+        }
+        root.openedFolders = except ? [except] : []
     }
     // The folder whose name is being changed, on its own row.
     property string renamingFolder: ""
@@ -867,6 +888,7 @@ Item {
         const activation = root.launcherController.activateCatalogIfOpen(index)
         if (activation < 0) return false
         if (activation > 0) {
+            root.closeFolders("")
             root.launcherController.finishLaunch()
             return true
         }
@@ -878,6 +900,7 @@ Item {
             launchTimeout.restart()
         }
         if (root.applicationCatalog.launch(index)) {
+            root.closeFolders("")
             if (!waitsForWindow) {
                 root.launcherController.finishLaunch()
             }

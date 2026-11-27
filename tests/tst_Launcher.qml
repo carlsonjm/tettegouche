@@ -991,6 +991,37 @@ TestCase {
     // opens and closes in place, its applications on a line under its own;
     // its sheet renames it under its tile or removes it. An application's sheet puts it in a folder, or takes it out
     // of the one it is in. A folder carried leaves as one.
+    // Folders close once done with: opening another closes the last,
+    // starting an application closes them, and so does Search opening again.
+    function test_foldersCloseAfterUse() {
+        controller.opened()
+        controller.catalogActivated = -1
+        catalog.openSet = ({})
+        catalog.append({name: "Games", icon: "", kind: "folder", isFolder: true, folderId: "f1", inFolder: ""})
+        catalog.append({name: "Tools", icon: "", kind: "folder", isFolder: true, folderId: "f2", inFolder: ""})
+        catalog.append({name: "App 0", icon: "application-x-executable", kind: "application", isFolder: false, folderId: "", inFolder: "f1"})
+        catalog.append({name: "App 1", icon: "application-x-executable", kind: "application", isFolder: false, folderId: "", inFolder: "f2"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.toggleFolder(0)
+        verify(catalog.openSet.f1)
+        launcher.toggleFolder(1)
+        verify(!catalog.openSet.f1)
+        verify(catalog.openSet.f2)
+        // Search opening again closes what was left open.
+        controller.opened()
+        wait(100)
+        verify(!catalog.openSet.f2)
+        // Starting an application from an open folder closes it.
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.toggleFolder(0)
+        verify(catalog.openSet.f1)
+        launcher.runCatalogApplication(2, "App 0")
+        verify(!catalog.openSet.f1)
+        catalog.clear()
+        catalog.openSet = ({})
+    }
     function test_folders() {
         controller.opened()
         controller.catalogActivated = -1
