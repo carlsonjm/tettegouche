@@ -184,6 +184,8 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/panel-left-open.svg
         assets/icons/lucide/panel-left-close.svg
         assets/icons/lucide/eye.svg
+        assets/icons/lucide/list-filter.svg
+        assets/icons/lucide/arrow-up-down.svg
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/lucide/sparkles.svg

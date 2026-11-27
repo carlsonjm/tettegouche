@@ -28,7 +28,8 @@ Item {
     required property SheetMenu folderSheet
     required property Item searchField
     required property Item sheet
-    required property Item sortButton
+    // The row of a new folder's choosing, over the applications while it shows.
+    required property Item choosingRow
     readonly property alias applicationLines: applicationLines
 
     Component {
@@ -48,7 +49,7 @@ Item {
                 && launcher.renamingFolder === folder
             objectName: (isFolder ? "apps-folder-" : "application-tile-") + row
             Accessible.role: Accessible.Button
-            Accessible.name: isFolder ? words.i18n("%1, folder", info.name) : info.name
+            Accessible.name: isFolder ? words.i18n("%1, folder", info.name || "") : info.name || ""
             Accessible.focused: chosen
             Accessible.expandable: isFolder
             Accessible.expanded: open
@@ -224,7 +225,7 @@ Item {
                     // two start on the same line.
                     y: 10 + applicationGrid.tile.icon + 6
                     horizontalAlignment: Text.AlignHCenter
-                    text: catalogDelegate.info.name
+                    text: catalogDelegate.info.name || ""
                     color: launcher.primaryText
                     font.pixelSize: 12
                     // Two lines before a name is cut, as in Recent apps;
@@ -280,7 +281,7 @@ Item {
 
     x: 0
     y: searchField.y + searchField.height + drawerHandle.sectionGap
-        + sortButton.height + 8
+        + (choosingRow.visible ? choosingRow.height + 8 : 0)
     width: parent.width
     height: Math.max(0, parent.height - y)
     clip: true

@@ -1717,67 +1717,70 @@ Item {
                 enabled: opacity > 0.5
                 z: 4
 
-                // The eye shows what is hidden: hidden applications in Browse
-                // everything, hidden files in Files. Again, it hides them. It
-                // sits inside search, just left of its search icon.
+                // The drawer's actions, in the eye's old spot inside search
+                // so the field looks the same in every mode: New folder, the
+                // order, the size and Show hidden, on a sheet from its corner.
+                // A fine ring says hidden things are showing.
                 Item {
-                    id: hiddenButton
-                    objectName: "hidden-button"
+                    id: actionsButton
+                    objectName: "drawer-actions"
                     readonly property bool showing: root.filesMode
                         ? !!root.fileBrowser && root.fileBrowser.hidden
                         : root.applicationCatalog.showHidden
-                    function toggle() {
+                    readonly property bool sheetOpen: appsActions.visible
+                        || root.sortMenuOpen
+                        || (!!filesLoader.item && filesLoader.item.actionsOpen)
+                    function openSheet() {
+                        root.sortMenuOpen = false
                         if (root.filesMode) {
-                            if (root.fileBrowser) root.fileBrowser.hidden = !root.fileBrowser.hidden
+                            if (filesLoader.item) filesLoader.item.openActions(actionsButton)
                         } else {
-                            root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
+                            appsActions.openUnder(actionsButton)
                         }
                     }
                     x: searchField.x + searchField.width - 12 - (searchField.trailingAction.visible ? 36 : 0) - width
                     // Held on the field itself, not on the header, which
-                    // rises from the foot of Search as Apps opens: the eye
-                    // fades in and out where it sits, never riding up.
+                    // rises from the foot of Search as Apps opens: the
+                    // button fades in and out where it sits, never riding up.
                     y: searchField.y - drawerHandle.y + (searchField.height - height) / 2
                     width: 42
                     height: 42
                     opacity: drawerHandle.controlsOpacity
                     enabled: root.drawerOpen && opacity > 0.9
-                    Accessible.role: Accessible.CheckBox
-                    Accessible.name: root.filesMode ? words.i18n("Show hidden files")
-                        : words.i18n("Show hidden applications")
-                    Accessible.checked: showing
-                    Accessible.onPressAction: toggle()
+                    Accessible.role: Accessible.ButtonMenu
+                    Accessible.name: root.filesMode ? words.i18n("Files actions")
+                        : words.i18n("Apps actions")
+                    Accessible.onPressAction: openSheet()
                     Rectangle {
+                        objectName: "drawer-actions-face"
                         anchors.centerIn: parent
                         width: 30
                         height: 30
                         radius: height / 2
-                        color: hiddenPress.pressed ? tone.controlPressed
-                            : hiddenButton.showing ? tone.controlHover
-                            : hiddenHover.hovered ? root.controlColor : "transparent"
+                        color: actionsPress.pressed || actionsButton.sheetOpen ? tone.controlPressed
+                            : actionsHover.hovered ? root.controlColor : "transparent"
+                        border.width: actionsButton.showing ? 1.5 : 0
+                        border.color: tone.focusRing
                         Behavior on color { ColorAnimation { duration: root.ms(90) } }
                     }
                     SuiteIcon {
                         anchors.centerIn: parent
-                        glyph: hiddenButton.showing ? "eye" : "eye-off"
+                        glyph: "list-filter"
                         width: 18
                         height: 18
                     }
                     HoverHandler {
-                        id: hiddenHover
+                        id: actionsHover
                         acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
                     }
                     MouseArea {
-                        id: hiddenPress
+                        id: actionsPress
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: hiddenButton.toggle()
+                        onClicked: actionsButton.openSheet()
                     }
-                    // Named under a resting pointer, as Files' glyphs are.
-                    QQC2.ToolTip.visible: hiddenHover.hovered && hiddenButton.enabled
-                    QQC2.ToolTip.text: root.filesMode
-                        ? (showing ? words.i18n("Hide hidden files") : words.i18n("Show hidden files"))
-                        : (showing ? words.i18n("Hide hidden applications") : words.i18n("Show hidden applications"))
+                    QQC2.ToolTip.visible: actionsHover.hovered && actionsButton.enabled && !actionsButton.sheetOpen
+                    QQC2.ToolTip.text: words.i18n("Actions")
                     QQC2.ToolTip.delay: 600
                 }
 
@@ -1870,96 +1873,13 @@ Item {
                 visible: root.filesMode && root.drawerProgress>0.01
                 opacity: root.drawerProgress
             }
-            // Apps' row over its applications, the same cluster Files has at
-            // the right of its own: New folder, the order, then the size.
-            SizePill {
-                id: appsSize
-                objectName: "apps-size"
-                x: parent.width - width
-                y: sortButton.y
-                width: 72; height: 42
-                visible: sortButton.visible
-                opacity: sortButton.opacity
-                enabled: sortButton.enabled
-                z: 5
-                level: root.applicationCatalog ? root.applicationCatalog.tileSize : 1
-                onResize: step => applicationGrid.resizeTiles(step)
-            }
-            Item {
-                id: sortButton
-                objectName: "sort-button"
-                // By the catalog's numbers for them; 1 is no longer one.
-                readonly property var orderNames: [words.i18n("A to Z"), words.i18n("A to Z"),
-                    words.i18n("Most used"), words.i18n("Newest installed")]
-                Accessible.role: Accessible.ButtonMenu
-                Accessible.name: words.i18n("Sort: %1", sortLabel.text)
-                Accessible.onPressAction: root.sortMenuOpen = !root.sortMenuOpen
-                x: appsSize.x - 8 - width
-                y: searchField.y + searchField.height + drawerHandle.sectionGap
-                width: sortLabel.implicitWidth + 46
-                height: 42
-                visible: !root.filesMode && !root.choosingFolder && opacity > 0
-                opacity: drawerHandle.controlsOpacity
-                enabled: root.drawerOpen && !root.filesMode && opacity > 0.9
-                z: 5
-                Rectangle {
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width
-                    height: 30
-                    radius: height / 2
-                    color: sortPress.pressed || root.sortMenuOpen ? tone.controlPressed
-                        : sortHover.hovered ? tone.controlHover : root.controlColor
-                    Behavior on color { ColorAnimation { duration: root.ms(90) } }
-                    Text {
-                        id: sortLabel
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: 14
-                        text: sortButton.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
-                        color: root.primaryText
-                        font.pixelSize: 13
-                    }
-                    SuiteIcon {
-                        glyph: "chevron-down"
-                        width: 14; height: 14
-                        anchors.right: parent.right
-                        anchors.rightMargin: 12
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-                HoverHandler {
-                    id: sortHover
-                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                }
-                MouseArea {
-                    id: sortPress
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.sortMenuOpen = !root.sortMenuOpen
-                }
-            }
-
-            // New folder, beside the order, as Files has it.
-            ModePill {
-                id: newAppsFolder
-                objectName: "apps-new-folder"
-                label: words.i18n("New folder")
-                primaryText: root.primaryText
-                controlColor: root.controlColor
-                x: sortButton.x - 8 - width
-                y: sortButton.y
-                visible: sortButton.visible && !root.choosingFolder
-                opacity: sortButton.opacity
-                enabled: sortButton.enabled
-                z: 5
-                onActivated: root.startFolder()
-            }
             // Choosing for a new folder: what to do, Cancel, and Make folder
             // once two are chosen.
             Item {
                 id: folderChoosing
                 objectName: "apps-folder-choosing"
                 x: 0
-                y: sortButton.y
+                y: searchField.y + searchField.height + drawerHandle.sectionGap
                 width: parent.width
                 height: 42
                 visible: root.choosingFolder && !root.filesMode
@@ -2014,7 +1934,79 @@ Item {
                 folderSheet: folderSheet
                 searchField: searchField
                 sheet: sheet
-                sortButton: sortButton
+                choosingRow: folderChoosing
+            }
+
+            // Apps' actions, from the button in search: New folder, the
+            // order, the size and Show hidden. New folder and the order end
+            // here; the size and Show hidden change in place.
+            SheetMenu {
+                id: appsActions
+                objectName: "apps-actions"
+                bounds: sheet
+                bottomMargin: root.keysReach
+                keysReach: root.keysReach
+                readonly property var orderNames: [words.i18n("A to Z"), words.i18n("A to Z"),
+                    words.i18n("Most used"), words.i18n("Newest installed")]
+                SheetMenuItem {
+                    objectName: "apps-new-folder"
+                    glyph: "folder"
+                    text: words.i18n("New folder")
+                    enabled: !root.choosingFolder
+                    onTriggered: root.startFolder()
+                }
+                SheetMenuItem {
+                    objectName: "sort-button"
+                    glyph: "arrow-up-down"
+                    text: words.i18n("Order")
+                    value: appsActions.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
+                    Accessible.name: words.i18n("Sort: %1", value)
+                    onTriggered: root.sortMenuOpen = true
+                }
+                Item {
+                    objectName: "apps-size-line"
+                    readonly property bool isSheetMenuRow: true
+                    width: parent ? parent.width : implicitWidth
+                    implicitWidth: 14 + 30 + appsSizeLabel.implicitWidth + 24 + appsSize.width + 6
+                    height: 42
+                    SuiteIcon {
+                        glyph: "layout-grid"
+                        width: 18; height: 18
+                        x: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Text {
+                        id: appsSizeLabel
+                        x: 44
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: words.i18n("Size")
+                        color: root.primaryText
+                        font.pixelSize: 14
+                    }
+                    SizePill {
+                        id: appsSize
+                        objectName: "apps-size"
+                        anchors.right: parent.right
+                        anchors.rightMargin: 6
+                        width: 72; height: 42
+                        level: root.applicationCatalog ? root.applicationCatalog.tileSize : 1
+                        onResize: step => applicationGrid.resizeTiles(step)
+                    }
+                }
+                Item {
+                    width: parent ? parent.width : 0
+                    height: 9
+                    Rectangle { x: 8; y: 4; width: parent.width - 16; height: 1; color: tone.line }
+                }
+                SheetMenuItem {
+                    objectName: "apps-show-hidden"
+                    glyph: "eye"
+                    text: words.i18n("Show hidden")
+                    toggle: true
+                    checked: root.applicationCatalog.showHidden
+                    Accessible.name: words.i18n("Show hidden applications")
+                    onTriggered: root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
+                }
             }
 
             // An application's sheet: its own actions, then Pin to dock or
@@ -2215,9 +2207,10 @@ Item {
             Rectangle {
                 id: sortMenu
                 objectName: "sort-menu"
-                // Under the sort button, its right edge level with the button's.
-                x: sortButton.x + sortButton.width - width
-                y: sortButton.y + sortButton.height + 4
+                // Under the actions button, where the actions sheet was, its
+                // right edge level with the button's.
+                x: drawerHandle.x + actionsButton.x + actionsButton.width - width
+                y: drawerHandle.y + actionsButton.y + actionsButton.height + 4
                 width: 160
                 height: sortChoices.implicitHeight + 12
                 radius: root.noteRadius
