@@ -28,13 +28,25 @@ Item {
     // The ends, each on a whole dot of the screen.
     readonly property real endWidth: Math.min(width / 2, Math.ceil(round * dots) / dots)
     visible: !Qt.colorEqual(upper, lower) && width > 0 && height > 1
+    // Drawn only once the window has shown its first frame, then faded in,
+    // so the grain never holds Search back from opening: painting it takes
+    // tens of milliseconds in a fresh process.
+    property bool armed: false
+    opacity: armed ? 1 : 0
+    Behavior on opacity { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+    Connections {
+        target: grain.Window.window
+        enabled: !grain.armed
+        function onFrameSwapped() { grain.armed = true }
+    }
+    Component.onCompleted: if (!Window.window) armed = true
 
     // Draws the grain on one canvas, inside the rounded shape set by
     // shapeX and shapeWidth, row by row of the screen's dots.
     function paint(canvas, shapeX, shapeWidth) {
         const ctx = canvas.getContext("2d")
         ctx.reset()
-        if (!visible || canvas.width < 1 || canvas.height < 1) return
+        if (!armed || !visible || canvas.width < 1 || canvas.height < 1) return
         if (shapeWidth > 0) {
             ctx.beginPath()
             ctx.roundedRect(shapeX, 0, shapeWidth, canvas.height, round, round)
@@ -95,6 +107,7 @@ Item {
             function onDotsChanged() { requestPaint() }
             function onKeyHeightChanged() { requestPaint() }
             function onRoundChanged() { requestPaint() }
+            function onArmedChanged() { requestPaint() }
         }
     }
 

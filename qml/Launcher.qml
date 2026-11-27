@@ -1727,7 +1727,7 @@ Item {
                     readonly property bool showing: root.filesMode
                         ? !!root.fileBrowser && root.fileBrowser.hidden
                         : root.applicationCatalog.showHidden
-                    readonly property bool sheetOpen: appsActions.visible
+                    readonly property bool sheetOpen: (!!appsActionsLoader.item && appsActionsLoader.item.visible)
                         || root.sortMenuOpen
                         || (!!filesLoader.item && filesLoader.item.actionsOpen)
                     function openSheet() {
@@ -1735,7 +1735,8 @@ Item {
                         if (root.filesMode) {
                             if (filesLoader.item) filesLoader.item.openActions(actionsButton)
                         } else {
-                            appsActions.openUnder(actionsButton)
+                            appsActionsLoader.active = true
+                            appsActionsLoader.item.openUnder(actionsButton)
                         }
                     }
                     x: searchField.x + searchField.width - 12 - (searchField.trailingAction.visible ? 36 : 0) - width
@@ -1939,73 +1940,82 @@ Item {
 
             // Apps' actions, from the button in search: New folder, the
             // order, the size and Show hidden. New folder and the order end
-            // here; the size and Show hidden change in place.
-            SheetMenu {
-                id: appsActions
-                objectName: "apps-actions"
-                bounds: sheet
-                bottomMargin: root.keysReach
-                keysReach: root.keysReach
-                readonly property var orderNames: [words.i18n("A to Z"), words.i18n("A to Z"),
-                    words.i18n("Most used"), words.i18n("Newest installed")]
-                SheetMenuItem {
-                    objectName: "apps-new-folder"
-                    glyph: "folder"
-                    text: words.i18n("New folder")
-                    enabled: !root.choosingFolder
-                    onTriggered: root.startFolder()
-                }
-                SheetMenuItem {
-                    objectName: "sort-button"
-                    glyph: "arrow-up-down"
-                    text: words.i18n("Order")
-                    value: appsActions.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
-                    Accessible.name: words.i18n("Sort: %1", value)
-                    onTriggered: root.sortMenuOpen = true
-                }
-                Item {
-                    objectName: "apps-size-line"
-                    readonly property bool isSheetMenuRow: true
-                    width: parent ? parent.width : implicitWidth
-                    implicitWidth: 14 + 30 + appsSizeLabel.implicitWidth + 24 + appsSize.width + 6
-                    height: 42
-                    SuiteIcon {
-                        glyph: "layout-grid"
-                        width: 18; height: 18
-                        x: 14
-                        anchors.verticalCenter: parent.verticalCenter
+            // here; the size and Show hidden change in place. Made the first
+            // time it is asked for, so Search opens no slower for it.
+            Loader {
+                id: appsActionsLoader
+                active: false
+                sourceComponent: appsActionsComponent
+            }
+            Component {
+                id: appsActionsComponent
+                SheetMenu {
+                    id: appsActions
+                    objectName: "apps-actions"
+                    bounds: sheet
+                    bottomMargin: root.keysReach
+                    keysReach: root.keysReach
+                    readonly property var orderNames: [words.i18n("A to Z"), words.i18n("A to Z"),
+                        words.i18n("Most used"), words.i18n("Newest installed")]
+                    SheetMenuItem {
+                        objectName: "apps-new-folder"
+                        glyph: "folder"
+                        text: words.i18n("New folder")
+                        enabled: !root.choosingFolder
+                        onTriggered: root.startFolder()
                     }
-                    Text {
-                        id: appsSizeLabel
-                        x: 44
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: words.i18n("Size")
-                        color: root.primaryText
-                        font.pixelSize: 14
+                    SheetMenuItem {
+                        objectName: "sort-button"
+                        glyph: "arrow-up-down"
+                        text: words.i18n("Order")
+                        value: appsActions.orderNames[Math.max(0, Math.min(3, root.applicationCatalog.sortOrder))]
+                        Accessible.name: words.i18n("Sort: %1", value)
+                        onTriggered: root.sortMenuOpen = true
                     }
-                    SizePill {
-                        id: appsSize
-                        objectName: "apps-size"
-                        anchors.right: parent.right
-                        anchors.rightMargin: 6
-                        width: 72; height: 42
-                        level: root.applicationCatalog ? root.applicationCatalog.tileSize : 1
-                        onResize: step => applicationGrid.resizeTiles(step)
+                    Item {
+                        objectName: "apps-size-line"
+                        readonly property bool isSheetMenuRow: true
+                        width: parent ? parent.width : implicitWidth
+                        implicitWidth: 14 + 30 + appsSizeLabel.implicitWidth + 24 + appsSize.width + 6
+                        height: 42
+                        SuiteIcon {
+                            glyph: "layout-grid"
+                            width: 18; height: 18
+                            x: 14
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            id: appsSizeLabel
+                            x: 44
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: words.i18n("Size")
+                            color: root.primaryText
+                            font.pixelSize: 14
+                        }
+                        SizePill {
+                            id: appsSize
+                            objectName: "apps-size"
+                            anchors.right: parent.right
+                            anchors.rightMargin: 6
+                            width: 72; height: 42
+                            level: root.applicationCatalog ? root.applicationCatalog.tileSize : 1
+                            onResize: step => applicationGrid.resizeTiles(step)
+                        }
                     }
-                }
-                Item {
-                    width: parent ? parent.width : 0
-                    height: 9
-                    Rectangle { x: 8; y: 4; width: parent.width - 16; height: 1; color: tone.line }
-                }
-                SheetMenuItem {
-                    objectName: "apps-show-hidden"
-                    glyph: "eye"
-                    text: words.i18n("Show hidden")
-                    toggle: true
-                    checked: root.applicationCatalog.showHidden
-                    Accessible.name: words.i18n("Show hidden applications")
-                    onTriggered: root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
+                    Item {
+                        width: parent ? parent.width : 0
+                        height: 9
+                        Rectangle { x: 8; y: 4; width: parent.width - 16; height: 1; color: tone.line }
+                    }
+                    SheetMenuItem {
+                        objectName: "apps-show-hidden"
+                        glyph: "eye"
+                        text: words.i18n("Show hidden")
+                        toggle: true
+                        checked: root.applicationCatalog.showHidden
+                        Accessible.name: words.i18n("Show hidden applications")
+                        onTriggered: root.applicationCatalog.showHidden = !root.applicationCatalog.showHidden
+                    }
                 }
             }
 
