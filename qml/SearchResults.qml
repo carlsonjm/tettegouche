@@ -315,14 +315,24 @@ Item {
             visible: index >= 0
             radius: launcher.paperRadius
             color: "transparent"
-            // The fill holds the result's own row only; the rows under it
-            // take a pill of their own once the keys go in among them.
+            // The highlight holds the result's own row only: the raised key
+            // the mode shown sits on. The rows under it take a key of their
+            // own once the keys go in among them, and the result keeps a
+            // faint fill; under the pointer a row only washes faintly.
             Rectangle {
                 objectName: "parent-highlight-" + resultDelegate.index
                 width: parent.width; height: resultsArea.rowHeight; radius: launcher.paperRadius
                 color: resultDelegate.current
-                    ? (resultDelegate.childrenEntered ? tone.hover : tone.current)
-                    : (hover.hovered ? tone.hover : "transparent")
+                    ? (resultDelegate.childrenEntered ? tone.subtle : "transparent")
+                    : (hover.hovered ? tone.subtle : "transparent")
+                RaisedKey {
+                    objectName: "result-key-" + resultDelegate.index
+                    anchors.fill: parent
+                    tone: resultsArea.tone
+                    fadeDuration: launcher.ms(120)
+                    radius: launcher.paperRadius
+                    shown: resultDelegate.current && !resultDelegate.childrenEntered
+                }
             }
 
             Row {
@@ -447,8 +457,15 @@ Item {
                         width: deviceChildren.width
                         height: 40
                         radius: height / 2
-                        color: resultDelegate.current && launcher.selectedChildKey === launcher.childKey(modelData)
-                            ? tone.current : (childHover.hovered ? tone.hover : "transparent")
+                        readonly property bool chosen: resultDelegate.current
+                            && launcher.selectedChildKey === launcher.childKey(modelData)
+                        color: !chosen && childHover.hovered ? tone.subtle : "transparent"
+                        RaisedKey {
+                            anchors.fill: parent
+                            tone: resultsArea.tone
+                            fadeDuration: launcher.ms(120)
+                            shown: childRow.chosen
+                        }
                         Rectangle { x: 12; anchors.verticalCenter: parent.verticalCenter; width: 5; height: 5; radius: 2.5; color: launcher.secondaryText }
                         Text {
                             x: 27; width: parent.width - x - 12; height: parent.height

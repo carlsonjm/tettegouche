@@ -95,8 +95,17 @@ Item {
             width: parent.width
             height: 64 + (quick.editing ? choiceColumn.height + 14 : 0)
             radius: quick.launcher.paperRadius
-            color: quick.launcher.quickActionLeads ? (quick.editing ? quick.tone.hover : quick.tone.current)
+            color: quick.launcher.quickActionLeads ? (quick.editing ? quick.tone.hover : "transparent")
                 : rowHover.hovered ? quick.tone.hover : quick.tone.subtle
+            // While it leads, it sits on the raised key the mode shown does.
+            RaisedKey {
+                width: parent.width
+                height: 64
+                tone: quick.tone
+                fadeDuration: quick.launcher.ms(120)
+                radius: quick.launcher.paperRadius
+                shown: quick.launcher.quickActionLeads && !quick.editing
+            }
             Accessible.role: Accessible.Button
             Accessible.name: title.text
             Accessible.description: sub.text
