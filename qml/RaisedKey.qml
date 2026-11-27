@@ -4,11 +4,10 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 
 // The raised key under the mode shown, made again wherever Search marks what
 // is chosen, as under the chosen result: lighter at its top edge, with a
-// hairline and the same soft shadow. It fades in and out where it is.
+// hairline, and no shadow. It fades in and out where it is.
 Item {
     id: key
     required property SearchColors tone
@@ -52,16 +51,7 @@ Item {
                 round: Math.max(0, Math.min(key.radius, face.height / 2) - 1)
             }
         }
-        // As the mode highlight's: a soft, blurred shadow that fades out
-        // all round, with no hard line beneath it.
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: key.tone.modeKeyShadow
-            shadowBlur: 0.45
-            shadowOpacity: 0.6
-            shadowVerticalOffset: 1
-        }
+        // No shadow: the fade and the fine rim raise it, and nothing is
+        // laid over it to draw as Search opens.
     }
 }

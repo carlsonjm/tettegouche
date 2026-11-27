@@ -4,7 +4,6 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -93,18 +92,8 @@ Rectangle {
             widest: searchField.parent ? searchField.parent.width - 2 : width
             round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
         }
-        // It lifts on the mode highlight's own shadow, the same in every
-        // state.
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            objectName: "search-field-shadow"
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: searchField.tone.modeKeyShadow
-            shadowBlur: 0.45
-            shadowOpacity: 0.6
-            shadowVerticalOffset: 1
-        }
+        // No shadow: the fade and the fine rim raise it, and nothing is
+        // laid over it to draw as Search opens.
     }
     HoverHandler {
         id: fieldHover

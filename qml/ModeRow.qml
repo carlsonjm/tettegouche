@@ -4,7 +4,6 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -247,17 +246,8 @@ Item {
                 widest: modeRow.width
                 round: Math.max(0, modeFace.height / 2 - 1)
             }
-            // The key lifts off the bar on a soft, blurred shadow that
-            // fades out all round, with no hard line beneath it.
-            layer.enabled: true
-            layer.effect: MultiEffect {
-                autoPaddingEnabled: true
-                shadowEnabled: true
-                shadowColor: tone.modeKeyShadow
-                shadowBlur: 0.45
-                shadowOpacity: 0.6
-                shadowVerticalOffset: 1
-            }
+            // No shadow: the fade and the fine rim raise it, and nothing is
+            // laid over it to draw as Search opens.
         }
     }
 
