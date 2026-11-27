@@ -75,22 +75,26 @@ QtObject {
     readonly property color subtle: dark ? "#13ffffff" : wash(0.05)
     readonly property color current: dark ? "#3dffffff" : wash(0.16)
     // The modes along Search's top: the one highlight that glides under
-    // the mode shown, a raised key, one flat fill with a hairline lit
-    // along its top; the words beside it, quieter until the pointer
+    // the mode shown, a raised key, lighter at its top edge, with a hairline
+    // and a soft shadow; the words beside it, quieter until the pointer
     // comes; and the faint wash under a mode as it is pressed.
-    readonly property color modeKey: dark ? suite("#383838") : "#ffffff"
-    // The lit rim along a raised key's upper edge.
-    readonly property color keyRim: dark ? "#1affffff" : "#ffffff"
+    // Solid, so its shadow stays under it and never shows through.
+    readonly property color modeKeyTop: dark ? suite("#3E3E3E") : "#ffffff"
+    readonly property color modeKeyBottom: dark ? suite("#313131") : "#ffffff"
     readonly property color modeKeyEdge: dark ? "#16ffffff" : Qt.rgba(0, 0, 0, 0.07)
+    readonly property color modeKeyShadow: dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color modeText: dark ? "#94ffffff" : wash(0.58)
     readonly property color modeTextHover: dark ? "#dbffffff" : wash(0.85)
     readonly property color modeHover: dark ? "#0dffffff" : wash(0.04)
     readonly property color modePressed: dark ? "#17ffffff" : wash(0.07)
-    // Search's field: the highlight's material one step quieter, so the
-    // mode shown still leads; lit a step brighter while
-    // it holds the keys or what was typed.
-    readonly property color fieldFill: dark ? suite("#282828") : "#ffffff"
-    readonly property color fieldLitFill: dark ? suite("#2F2F2F") : "#ffffff"
+    // Search's field: the highlight's material, its shade falling as
+    // gently from top to bottom, a step darker so the mode shown still
+    // leads; a step brighter while it holds the keys or what was typed.
+    // Solid, so its shadow stays under it.
+    readonly property color fieldTop: dark ? suite("#323232") : "#ffffff"
+    readonly property color fieldBottom: dark ? suite("#222222") : "#ffffff"
+    readonly property color fieldLitTop: dark ? suite("#383838") : "#ffffff"
+    readonly property color fieldLitBottom: dark ? suite("#282828") : "#ffffff"
     readonly property color fieldEdge: dark ? "#12ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color fieldEdgeHover: dark ? "#1affffff" : Qt.rgba(0, 0, 0, 0.11)
     // A button on a row, such as a quick action's: a quiet capsule with a
