@@ -423,6 +423,11 @@ private:
     QTimer m_guestWait;
     // When Search was last shown, while it is open.
     QElapsedTimer m_shownAt;
+    // From an ask to open until Search's first frame, for the journal.
+    QElapsedTimer m_openClock;
+    // Hidden a while, the launcher gives back what it drew with; opened
+    // again soon, it shows at once with all of it still in place.
+    QTimer m_release;
     bool m_keysKept = false;
     QList<std::function<void()>> m_whenShown;
     quint64 m_contextGeneration = 0;
