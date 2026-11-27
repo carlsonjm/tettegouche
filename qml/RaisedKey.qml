@@ -4,11 +4,10 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 
 // The raised key under the mode shown, made again wherever Search marks what
-// is chosen, as under the chosen result: lighter at its top edge, with a
-// hairline and the same soft shadow. It fades in and out where it is.
+// is chosen, as under the chosen result: one even shade, its rim lit along
+// the top, and no shadow. It fades in and out where it is.
 Item {
     id: key
     required property SearchColors tone
@@ -21,25 +20,13 @@ Item {
     visible: opacity > 0
     Behavior on opacity { NumberAnimation { duration: key.fadeDuration; easing.type: Easing.OutCubic } }
 
-    Rectangle {
+    FlatKey {
+        id: face
         anchors.fill: parent
         radius: key.radius
-        border.width: 1
-        border.color: key.tone.modeKeyEdge
-        gradient: Gradient {
-            GradientStop { position: 0; color: key.tone.modeKeyTop }
-            GradientStop { position: 1; color: key.tone.modeKeyBottom }
-        }
-        // As the mode highlight's: a soft, blurred shadow that fades out
-        // all round, with no hard line beneath it.
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: key.tone.modeKeyShadow
-            shadowBlur: 0.45
-            shadowOpacity: 0.6
-            shadowVerticalOffset: 1
-        }
+        fill: key.tone.modeKeyFill
+        rimTop: key.tone.modeKeyRimTop
+        rim: key.tone.modeKeyEdge
+        // No shadow, and nothing drawn as Search opens.
     }
 }

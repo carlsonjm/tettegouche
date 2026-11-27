@@ -61,8 +61,8 @@ Rectangle {
         }
     }
 
-    // Search centred, with the eye inside it by its search icon; the order
-    // sits beside New folder, below.
+    // Search centred, with the actions button inside it, where Search's
+    // Files has it.
     Item {
         id: header
         objectName: "files-window-header"
@@ -72,44 +72,47 @@ Rectangle {
         height: 44
         readonly property real fieldWidth: Math.max(160, Math.min(width, Math.max(360, width / 2)))
 
+        // The folder's actions, where the eye was inside search, as in
+        // Search's Files: New folder, the order, the size and Show hidden on
+        // a sheet. A fine ring says hidden files are showing.
         Item {
-            id: eye
-            objectName: "files-window-hidden"
+            id: actionsButton
+            objectName: "files-window-actions"
             readonly property bool showing: !!window.fileBrowser && window.fileBrowser.hidden
             x: field.x + field.width - 8 - clear.width - width
             z: 1
             anchors.verticalCenter: parent.verticalCenter
             width: 42
             height: 42
-            Accessible.role: Accessible.CheckBox
-            Accessible.name: words.i18n("Show hidden files")
-            Accessible.checked: showing
-            Accessible.onPressAction: window.fileBrowser.hidden = !window.fileBrowser.hidden
+            Accessible.role: Accessible.ButtonMenu
+            Accessible.name: words.i18n("Files actions")
+            Accessible.onPressAction: pane.openActions(actionsButton)
             Rectangle {
                 anchors.centerIn: parent
                 width: 30
                 height: 30
                 radius: height / 2
-                color: eyePress.pressed ? tone.controlPressed
-                    : eye.showing ? tone.controlHover
-                    : eyeHover.hovered ? tone.control : "transparent"
+                color: actionsPress.pressed || pane.actionsOpen ? tone.controlPressed
+                    : actionsHover.hovered ? tone.control : "transparent"
+                border.width: actionsButton.showing ? 1.5 : 0
+                border.color: tone.focusRing
                 Behavior on color { ColorAnimation { duration: window.ms(90) } }
             }
             SuiteIcon {
                 anchors.centerIn: parent
-                glyph: eye.showing ? "eye" : "eye-off"
+                glyph: "list-filter"
                 width: 18
                 height: 18
             }
             HoverHandler {
-                id: eyeHover
+                id: actionsHover
                 acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
             }
             MouseArea {
-                id: eyePress
+                id: actionsPress
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: window.fileBrowser.hidden = !window.fileBrowser.hidden
+                onClicked: pane.openActions(actionsButton)
             }
         }
 

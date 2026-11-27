@@ -152,7 +152,7 @@ qt_add_resources(tettegouche "tettegouche_qml"
     FILES qml/Launcher.qml qml/SearchField.qml qml/ModeRow.qml qml/DotMark.qml qml/RecentRow.qml qml/HelpersRow.qml
         qml/SearchResults.qml qml/QuickActionRow.qml qml/AppsGrid.qml qml/FilesPane.qml qml/NotesPane.qml qml/PeoplePane.qml qml/ModePill.qml qml/SuiteIcon.qml
         qml/WindowActions.qml qml/FilesWindow.qml
-        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml qml/AskAnswer.qml qml/RaisedKey.qml
+        qml/SheetMenu.qml qml/SheetMenuItem.qml qml/SheetConfirm.qml qml/SearchColors.qml qml/SizePill.qml qml/AskAnswer.qml qml/RaisedKey.qml qml/GrainFill.qml qml/FlatKey.qml qml/AppName.qml
         assets/icons/lucide/ellipsis-vertical.svg
         assets/icons/lucide/chevron-down.svg
         assets/icons/lucide/chevron-left.svg
@@ -184,6 +184,8 @@ qt_add_resources(tettegouche "tettegouche_qml"
         assets/icons/lucide/panel-left-open.svg
         assets/icons/lucide/panel-left-close.svg
         assets/icons/lucide/eye.svg
+        assets/icons/lucide/list-filter.svg
+        assets/icons/lucide/arrow-up-down.svg
         assets/icons/lucide/eye-off.svg
         assets/icons/lucide/folder-open.svg
         assets/icons/lucide/sparkles.svg

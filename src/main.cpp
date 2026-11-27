@@ -33,6 +33,7 @@
 #include <QDBusConnection>
 #include <QDBusMessage>
 #include <QElapsedTimer>
+#include <QFile>
 #include <QGuiApplication>
 #include <QPalette>
 #include <QLockFile>
@@ -45,6 +46,8 @@
 #include <QThread>
 #include <QTime>
 #include <QTimer>
+
+#include <unistd.h>
 
 #include <functional>
 #include <memory>
@@ -243,6 +246,23 @@ int answerForRunningLauncher(QGuiApplication &application)
 
 int main(int argc, char **argv)
 {
+    // How long Search takes to open, from the start of the process: one line
+    // in the journal for each step, so a slower start can be traced.
+    QElapsedTimer started;
+    started.start();
+    {
+        // And how long the process ran before main: loading its libraries.
+        QFile stat(QStringLiteral("/proc/self/stat")), uptime(QStringLiteral("/proc/uptime"));
+        if (stat.open(QIODevice::ReadOnly) && uptime.open(QIODevice::ReadOnly)) {
+            const QByteArray line = stat.readAll();
+            const QList<QByteArray> fields = line.mid(line.lastIndexOf(')') + 2).split(' ');
+            const double since = uptime.readAll().split(' ').value(0).toDouble();
+            const long ticks = sysconf(_SC_CLK_TCK);
+            if (fields.size() > 19 && ticks > 0)
+                qInfo("tettegouche startup: %.0f ms before main",
+                      (since - fields.at(19).toDouble() / ticks) * 1000.0);
+        }
+    }
     if (qEnvironmentVariableIsEmpty("QT_QPA_PLATFORM")) {
         qputenv("QT_QPA_PLATFORM", QByteArrayLiteral("wayland"));
     }
@@ -533,10 +553,19 @@ int main(int argc, char **argv)
         {QStringLiteral("askClient"), QVariant::fromValue<QObject *>(&ask)},
         {QStringLiteral("peopleClient"), QVariant::fromValue<QObject *>(&people)},
     });
+    const qint64 beforeQml = started.elapsed();
     view.setSource(QUrl(QStringLiteral("qrc:/qml/Launcher.qml")));
     if (view.status() == QQuickView::Error) {
         return 3;
     }
+    qInfo("tettegouche startup: set up %lld ms, Search made %lld ms, at %lld ms",
+          beforeQml, started.elapsed() - beforeQml, started.elapsed());
+    QObject::connect(&view, &QQuickWindow::frameSwapped, &view, [&started] {
+        static bool first = true;
+        if (!first) return;
+        first = false;
+        qInfo("tettegouche startup: first frame at %lld ms", started.elapsed());
+    }, Qt::QueuedConnection);
 
     QDBusConnection session = QDBusConnection::sessionBus();
     TransferActivityBridge activities(&fileBrowser);

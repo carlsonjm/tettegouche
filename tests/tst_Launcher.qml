@@ -588,6 +588,23 @@ TestCase {
         }
     }
     // Half applications, then the files, as the launcher's model lists them.
+    // The drawer's actions button in search opens its sheet, Apps' or Files'.
+    function openDrawerActions(sheetName) {
+        const button = findChild(launcher, "drawer-actions")
+        tryVerify(() => button.enabled)
+        mouseClick(button, button.width / 2, button.height / 2)
+        const actions = findChild(launcher, sheetName)
+        tryCompare(actions, "opened", true)
+        return actions
+    }
+    function chooseAction(sheetName, line) {
+        openDrawerActions(sheetName)
+        const item = findChild(launcher, line)
+        verify(item.visible && item.enabled)
+        mouseClick(item, item.width / 2, item.height / 2)
+        return item
+    }
+
     function fillRecent(n) {
         recentStub.clear()
         const applications = Math.ceil(n / 2)
@@ -747,6 +764,22 @@ TestCase {
         catalog.clear()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
+    }
+
+    // A word too long for its tile is never split across lines: the name
+    // gets a little smaller until the word fits, and still breaks between
+    // words.
+    Component { id: appName; App.AppName {} }
+    function test_applicationNameKeepsWordsWhole() {
+        const one = createTemporaryObject(appName, test, {width: 60, text: "Authenticator"})
+        compare(one.lineCount, 1)
+        verify(one.font.pixelSize < 12 && one.font.pixelSize >= one.smallestSize)
+        verify(one.contentWidth <= one.width + 0.5)
+        const two = createTemporaryObject(appName, test, {width: 60, text: "Output Browser"})
+        compare(two.font.pixelSize, 12)
+        compare(two.lineCount, 2)
+        const short = createTemporaryObject(appName, test, {width: 60, text: "Kate"})
+        compare(short.font.pixelSize, 12)
     }
 
     // A long name takes a second line before it is cut, and every name
@@ -915,8 +948,8 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // New folder sits beside the order over Apps. It asks for applications;
-    // a tap chooses one, and Make folder, from two, gathers them into a
+    // New folder is on Apps' actions sheet. It asks for applications; a
+    // tap chooses one, and Make folder, from two, gathers them into a
     // folder that opens with its name ready. Esc or Cancel lets it go.
     function test_appsNewFolder() {
         controller.opened()
@@ -925,14 +958,16 @@ TestCase {
         launcher.setDrawerOpen(true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const newFolder = findChild(launcher, "apps-new-folder")
-        const sort = findChild(launcher, "sort-button")
-        verify(newFolder.visible && sort.visible)
-        compare(newFolder.y, sort.y)
-        verify(newFolder.x + newFolder.width <= sort.x)
-        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        // No row of pills over the applications: they start under search.
+        const grid = findChild(launcher, "application-grid")
+        const field = findChild(launcher, "search-field")
+        const gridTop = grid.mapToItem(launcher, 0, 0).y
+        compare(gridTop, field.mapToItem(launcher, 0, field.height).y + 16)
+        chooseAction("apps-actions", "apps-new-folder")
         verify(launcher.choosingFolder)
-        verify(!newFolder.visible && !sort.visible)
+        tryCompare(findChild(launcher, "apps-actions"), "opened", false)
+        // The choosing row takes the place over them meanwhile.
+        verify(grid.mapToItem(launcher, 0, 0).y > gridTop)
         const make = findChild(launcher, "apps-folder-make")
         verify(make.visible && !make.enabled)
         const launchesBefore = controller.catalogActivated
@@ -950,13 +985,13 @@ TestCase {
         compare(launcher.renamingFolder, "made")
         launcher.renamingFolder = ""
 
-        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        chooseAction("apps-actions", "apps-new-folder")
         verify(launcher.choosingFolder)
         launcher.forceActiveFocus()
         keyClick(Qt.Key_Escape)
         verify(!launcher.choosingFolder)
         verify(launcher.drawerOpen)
-        mouseClick(newFolder, newFolder.width / 2, newFolder.height / 2)
+        chooseAction("apps-actions", "apps-new-folder")
         const cancel = findChild(launcher, "apps-folder-cancel")
         mouseClick(cancel, cancel.width / 2, cancel.height / 2)
         verify(!launcher.choosingFolder)
@@ -991,6 +1026,37 @@ TestCase {
     // opens and closes in place, its applications on a line under its own;
     // its sheet renames it under its tile or removes it. An application's sheet puts it in a folder, or takes it out
     // of the one it is in. A folder carried leaves as one.
+    // Folders close once done with: opening another closes the last,
+    // starting an application closes them, and so does Search opening again.
+    function test_foldersCloseAfterUse() {
+        controller.opened()
+        controller.catalogActivated = -1
+        catalog.openSet = ({})
+        catalog.append({name: "Games", icon: "", kind: "folder", isFolder: true, folderId: "f1", inFolder: ""})
+        catalog.append({name: "Tools", icon: "", kind: "folder", isFolder: true, folderId: "f2", inFolder: ""})
+        catalog.append({name: "App 0", icon: "application-x-executable", kind: "application", isFolder: false, folderId: "", inFolder: "f1"})
+        catalog.append({name: "App 1", icon: "application-x-executable", kind: "application", isFolder: false, folderId: "", inFolder: "f2"})
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.toggleFolder(0)
+        verify(catalog.openSet.f1)
+        launcher.toggleFolder(1)
+        verify(!catalog.openSet.f1)
+        verify(catalog.openSet.f2)
+        // Search opening again closes what was left open.
+        controller.opened()
+        wait(100)
+        verify(!catalog.openSet.f2)
+        // Starting an application from an open folder closes it.
+        launcher.setDrawerOpen(true)
+        tryCompare(launcher, "drawerProgress", 1)
+        launcher.toggleFolder(0)
+        verify(catalog.openSet.f1)
+        launcher.runCatalogApplication(2, "App 0")
+        verify(!catalog.openSet.f1)
+        catalog.clear()
+        catalog.openSet = ({})
+    }
     function test_folders() {
         controller.opened()
         controller.catalogActivated = -1
@@ -1137,7 +1203,9 @@ TestCase {
         compare(catalog.tileSize, 2)
         mouseWheel(lines, lines.width / 2, lines.height / 2, 0, -120, Qt.NoButton, Qt.ControlModifier)
         compare(catalog.tileSize, 1)
-        // The − / + pill at the right of the row, after the order.
+        // The − / + pill on the actions sheet, after the order; the sheet
+        // stays open while it changes.
+        const actions = openDrawerActions("apps-actions")
         const larger = findChild(launcher, "apps-size-larger")
         const smaller = findChild(launcher, "apps-size-smaller")
         mouseClick(larger, larger.width / 2, larger.height / 2)
@@ -1148,6 +1216,8 @@ TestCase {
         verify(!smaller.enabled)
         mouseClick(smaller, smaller.width / 2, smaller.height / 2)
         compare(catalog.tileSize, 0)
+        verify(actions.opened)
+        actions.close()
         catalog.tileSize = 1
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
@@ -1616,11 +1686,11 @@ TestCase {
         const search = findChild(launcher, "search-field")
         const grid = findChild(launcher, "application-grid")
         compare(header.y,0)
-        // Search keeps its place over the drawer, with the order's row over
-        // the applications.
+        // Search keeps its place over the drawer, and the applications start
+        // under it: their actions are on the sheet from search.
         compare(search.y,0)
-        compare(grid.y-search.y-search.height,16+50)
-        compare(grid.y, 44+16+50)
+        compare(grid.y-search.y-search.height,16)
+        compare(grid.y, 44+16)
         const closesBefore = controller.closes
         mouseClick(back, back.width / 2, back.height / 2)
         tryCompare(launcher, "drawerOpen", false)
@@ -2428,8 +2498,8 @@ TestCase {
         confirm.reject()
         compare(filesMock.trashCalls,trashes)
         filesMock.selectedPath=""
-        const newFolder=findChild(launcher,"new-folder")
-        mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        chooseAction("files-actions-sheet","new-folder")
+        tryCompare(findChild(launcher,"files-actions-sheet"),"opened",false)
         verify(findChild(launcher,"folder-name").visible)
         const folderInput=findChild(launcher,"folder-name")
         folderInput.text="Created folder"
@@ -2437,7 +2507,7 @@ TestCase {
         keyClick(Qt.Key_Return)
         compare(filesMock.createdName,"Created folder")
         compare(filesMock.filter,"")
-        mouseClick(newFolder,newFolder.width/2,newFolder.height/2)
+        chooseAction("files-actions-sheet","new-folder")
         tryVerify(function(){ return findChild(launcher,"folder-name").visible })
         // The form's row is laid out with the next frame; Cancel is tapped
         // where it is drawn, not where it sat before.
@@ -2750,8 +2820,9 @@ TestCase {
         launcher.setDrawerOpen(false)
         tryCompare(launcher,"drawerProgress",0)
     }
-    // Files' one row: the size pill after the order, the path typed at the
-    // empty end of the crumbs, and Refresh on F5.
+    // Files' one row is the way around: the size and the order are on the
+    // actions sheet from search, so the crumbs have the row; the path is
+    // typed at the empty end of the crumbs, and Refresh is on F5.
     function test_filesRow() {
         launcher.fileBrowser=filesMock
         filesMock.selectedPath=""
@@ -2761,13 +2832,21 @@ TestCase {
         launcher.setDrawerOpen(true,"files")
         tryCompare(launcher,"drawerProgress",1)
         wait(250)
+        const row=findChild(launcher,"files-row")
+        const navigation=findChild(launcher,"files-navigation")
+        // The crumbs have the row; nothing waits at its end.
+        verify(navigation.width >= row.width - 12)
+        const actions=openDrawerActions("files-actions-sheet")
         const size=findChild(launcher,"files-size")
         const sort=findChild(launcher,"files-sort")
-        verify(size.visible)
-        verify(sort.mapToItem(null,sort.width,0).x <= size.mapToItem(null,0,0).x-7.5)
+        verify(size.visible && sort.visible)
+        verify(sort.mapToItem(null,0,sort.height).y <= size.mapToItem(null,0,0).y+1)
         const larger=findChild(launcher,"files-size-larger")
         mouseClick(larger,larger.width/2,larger.height/2)
         compare(filesMock.tileSize,2)
+        verify(actions.opened)
+        actions.close()
+        tryCompare(actions,"opened",false)
         verify(!findChild(launcher,"path-toggle"))
         const end=findChild(launcher,"path-open-area")
         const editor=findChild(launcher,"path-editor")
@@ -2783,7 +2862,6 @@ TestCase {
         compare(filesMock.refreshes,refreshes+1)
         // A chosen file's actions take the right side.
         filesMock.selectedPath="/home/test/Notes.txt"
-        verify(!size.visible && !sort.visible)
         verify(findChild(launcher,"selection-copy").visible)
         filesMock.selectedPath=""
         filesMock.tileSize=1
@@ -3059,7 +3137,7 @@ TestCase {
         verify(pane.compact)
         verify(!tabs.visible && !openRow.visible)
         const files = findChild(launcher, "files-grid")
-        const actions = findChild(launcher, "new-folder")
+        const actions = findChild(launcher, "files-navigation")
         tryVerify(() => files.height >= 100)
         verify(actions.visible)
         verify(bottomOf(files) <= 360.5)
@@ -3283,10 +3361,12 @@ TestCase {
         filesMock.selectedPath = ""
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
+        const actions = openDrawerActions("files-actions-sheet")
         const newFolder = findChild(launcher, "new-folder")
         verify(newFolder.visible)
         filesMock.readOnly = true
         verify(!newFolder.visible)
+        verify(findChild(launcher, "files-sort").visible)
         filesMock.readOnly = false
         filesMock.entries = []
         filesMock.listingFailed = true
@@ -3297,6 +3377,7 @@ TestCase {
         const back = findChild(launcher, "files-way-back")
         verify(back.visible)
         compare(back.text, "Home")
+        actions.close()
         filesMock.navigated = []
         // The test runner's synthetic click does not reach a tap handler over
         // the grid; the pill's own action does, and a pointer's real click
@@ -3357,8 +3438,9 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // Files' order, beside New folder, opens under its pill and stays inside
-    // the sheet, and a line sets the order. Hidden files are the eye's.
+    // Files' order is on the actions sheet: its line names the order, and
+    // opens the choices where the sheet was, under the button and inside
+    // the pane; a line sets the order.
     function test_filesSortMenu() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -3366,30 +3448,37 @@ TestCase {
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
+        const actions = openDrawerActions("files-actions-sheet")
         const sort = findChild(launcher, "files-sort")
         const menu = findChild(launcher, "files-sort-menu")
-        verify(sort.visible)
+        compare(sort.value, "Name A–Z")
         const newFolder = findChild(launcher, "new-folder")
-        verify(Math.abs(sort.mapToItem(null, 0, sort.height / 2).y
-            - newFolder.mapToItem(null, 0, newFolder.height / 2).y) < 1)
-        verify(newFolder.mapToItem(null, newFolder.width, 0).x <= sort.mapToItem(null, 0, 0).x + 0.5)
+        // New folder first, then the order.
+        verify(newFolder.mapToItem(null, 0, newFolder.height).y <= sort.mapToItem(null, 0, 0).y + 0.5)
         mouseClick(sort, sort.width / 2, sort.height / 2)
         tryCompare(menu, "opened", true)
+        compare(actions.opened, false)
         const sheet = menu.parent
         verify(menu.x >= 0 && menu.x + menu.width <= sheet.width)
-        // Below the button where the pane has room for it, and always
-        // inside the pane.
-        const sortBottom = sort.mapToItem(sheet, 0, sort.height).y
-        verify(menu.y >= 0 && menu.y + menu.height <= sheet.height + 0.5)
-        if (sortBottom + menu.height <= sheet.height) verify(menu.y > sortBottom - 1)
-        verify(!findChild(launcher, "files-show-hidden"))
+        const button = findChild(launcher, "drawer-actions")
+        const buttonBottom = button.mapToItem(sheet, 0, button.height).y
+        verify(menu.y > buttonBottom - 1)
+        verify(menu.y + menu.height <= sheet.height + 0.5)
         menu.close()
+        filesMock.placeKind = "recent"
+        openDrawerActions("files-actions-sheet")
+        compare(sort.value, "Recent")
+        compare(sort.fixed, true)
+        actions.close()
+        filesMock.placeKind = "folder"
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
 
-    // The eye inside search shows what is hidden, in either drawer: hidden
-    // files in Files, hidden applications in Apps; again, it hides them.
+    // The actions button sits inside search, where the eye was, in either
+    // drawer. Its sheet's Show hidden shows what is hidden, hidden files in
+    // Files and hidden applications in Apps, and stays open as it changes;
+    // the button wears a fine ring while hidden things show.
     function test_hiddenEye() {
         launcher.fileBrowser = filesMock
         filesMock.placeKind = "folder"
@@ -3397,45 +3486,58 @@ TestCase {
         launcher.setDrawerOpen(true, "files")
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
-        const eye = findChild(launcher, "hidden-button")
+        const button = findChild(launcher, "drawer-actions")
+        const face = findChild(launcher, "drawer-actions-face")
         const field = findChild(launcher, "search-field")
         const query = findChild(launcher, "search-query")
-        verify(eye.visible && eye.enabled)
-        // The eye inside search, past what is typed.
-        verify(eye.mapToItem(null, 0, 0).x >= query.mapToItem(null, query.width, 0).x - 0.5)
-        verify(eye.mapToItem(null, eye.width, 0).x <= field.mapToItem(null, field.width, 0).x - 10)
-        verify(!eye.showing)
-        mouseClick(eye, eye.width / 2, eye.height / 2)
+        verify(button.visible && button.enabled)
+        // Inside search, past what is typed.
+        verify(button.mapToItem(null, 0, 0).x >= query.mapToItem(null, query.width, 0).x - 0.5)
+        verify(button.mapToItem(null, button.width, 0).x <= field.mapToItem(null, field.width, 0).x - 10)
+        verify(!button.showing)
+        compare(face.border.width, 0)
+        const filesActions = openDrawerActions("files-actions-sheet")
+        const showFiles = findChild(launcher, "files-show-hidden")
+        verify(showFiles.toggle && !showFiles.checked)
+        mouseClick(showFiles, showFiles.width / 2, showFiles.height / 2)
         compare(filesMock.hidden, true)
-        verify(eye.showing)
-        mouseClick(eye, eye.width / 2, eye.height / 2)
+        verify(showFiles.checked)
+        verify(filesActions.opened)
+        verify(button.showing)
+        verify(face.border.width > 0)
+        mouseClick(showFiles, showFiles.width / 2, showFiles.height / 2)
         compare(filesMock.hidden, false)
+        filesActions.close()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
 
         // In Apps it stays on the field all the way in and out, never
         // riding up with the header from Search's foot.
         const fieldMiddle = () => field.mapToItem(null, 0, field.height / 2).y
-        const eyeMiddle = () => eye.mapToItem(null, 0, eye.height / 2).y
+        const buttonMiddle = () => button.mapToItem(null, 0, button.height / 2).y
         launcher.setDrawerOpen(true)
         let checked = 0
         tryVerify(() => {
-            if (eye.opacity > 0) {
+            if (button.opacity > 0) {
                 checked++
-                if (Math.abs(eyeMiddle() - fieldMiddle()) > 0.5) return true
+                if (Math.abs(buttonMiddle() - fieldMiddle()) > 0.5) return true
             }
             return launcher.drawerProgress === 1
         })
-        compare(eyeMiddle(), fieldMiddle())
+        compare(buttonMiddle(), fieldMiddle())
         verify(checked > 0)
         wait(250)
         verify(!catalog.showHidden)
-        mouseClick(eye, eye.width / 2, eye.height / 2)
+        const appsActions = openDrawerActions("apps-actions")
+        const showApps = findChild(launcher, "apps-show-hidden")
+        mouseClick(showApps, showApps.width / 2, showApps.height / 2)
         verify(catalog.showHidden)
-        verify(eye.showing)
+        verify(button.showing)
+        verify(appsActions.opened)
         compare(filesMock.hidden, false)
-        mouseClick(eye, eye.width / 2, eye.height / 2)
+        mouseClick(showApps, showApps.width / 2, showApps.height / 2)
         verify(!catalog.showHidden)
+        appsActions.close()
         launcher.setDrawerOpen(false)
         tryCompare(launcher, "drawerProgress", 0)
     }
@@ -3670,7 +3772,7 @@ TestCase {
         filesMock.placeKind = "folder"
         const window = createTemporaryObject(filesWindowComponent, test, {fileBrowser: filesMock})
         verify(window)
-        const eye = findChild(window, "files-window-hidden")
+        const eye = findChild(window, "files-window-actions")
         const field = findChild(window, "files-window-search")
         const pane = findChild(window, "files-window-pane")
         const header = findChild(window, "files-window-header")
@@ -3684,10 +3786,17 @@ TestCase {
         verify(pane.mapToItem(window, 0, 0).y >= header.mapToItem(window, 0, header.height).y)
         compare(findChild(window, "drawer-back"), null)
         compare(findChild(window, "window-pop-out"), null)
+        // The actions button opens the pane's own sheet, as in Search.
         mouseClick(eye, eye.width / 2, eye.height / 2)
+        const actions = findChild(window, "files-actions-sheet")
+        tryCompare(actions, "opened", true)
+        const show = findChild(window, "files-show-hidden")
+        mouseClick(show, show.width / 2, show.height / 2)
         compare(filesMock.hidden, true)
-        mouseClick(eye, eye.width / 2, eye.height / 2)
+        verify(eye.showing)
+        mouseClick(show, show.width / 2, show.height / 2)
         compare(filesMock.hidden, false)
+        actions.close()
         window.forceActiveFocus()
         keyClick("r")
         keyClick("e")
@@ -3942,29 +4051,34 @@ TestCase {
         compare(findChild(launcher, "just-type-placeholder").text, data.mode === "files" ? "Find a file" : "Find an app")
         compare(query.mapToItem(field, 0, 0).x, 46)
         // The modes, then search, where it is on every screen, holding the
-        // header's row; the order sits below, over the drawer.
+        // header's row, with the actions button inside it in both drawers.
         verify(back.visible && back.enabled)
         verify(back.mapToItem(launcher, 0, back.height).y <= header.mapToItem(launcher, 0, 0).y)
         compare(middle(field).y, middle(header).y)
         verify(Math.abs(middle(field).x - middle(header).x) < 1)
         compare(field.width, header.width)
-        const appsSort = findChild(launcher, "sort-button")
-        compare(appsSort.visible, data.mode === "apps")
-        if (data.mode === "apps") {
-            verify(appsSort.enabled)
-            verify(appsSort.mapToItem(header, 0, 0).y >= header.height)
-            // New folder, the order, then the size at the right edge.
-            const appsSize = findChild(launcher, "apps-size")
-            verify(appsSize.visible)
-            verify(Math.abs(right(appsSize) - right(header)) < 1)
-            compare(appsSize.y, appsSort.y)
-            verify(right(appsSort) <= left(appsSize) - 7.5)
-        }
+        const button = findChild(launcher, "drawer-actions")
+        verify(button.visible && button.enabled)
+        verify(left(button) >= left(field) && right(button) <= right(field))
+        compare(middle(button).y, middle(field).y)
+        // Its sheet: New folder, the order, the size, then Show hidden.
+        const sheetName = data.mode === "files" ? "files-actions-sheet" : "apps-actions"
+        const actions = openDrawerActions(sheetName)
+        const top = name => findChild(launcher, name).mapToItem(launcher, 0, 0).y
+        const lines = data.mode === "files"
+            ? ["new-folder", "files-sort", "files-size-line", "files-show-hidden"]
+            : ["apps-new-folder", "sort-button", "apps-size-line", "apps-show-hidden"]
+        for (let i = 1; i < lines.length; ++i) verify(top(lines[i - 1]) < top(lines[i]))
+        // From the button's corner, its right edge by the button's.
+        verify(actions.y + actions.parent.mapToItem(launcher, 0, 0).y >= middle(button).y)
+        verify(Math.abs(actions.x + actions.width + actions.parent.mapToItem(launcher, 0, 0).x - right(button)) < 9)
+        actions.close()
+        tryCompare(actions, "opened", false)
         // The drawer reaches up to the row search held above it.
         tryVerify(() => findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid") !== null)
         const drawer = findChild(launcher, data.mode === "files" ? "files-pane" : "application-grid")
         verify(drawer.visible)
-        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16 + (data.mode === "apps" ? 50 : 0))
+        compare(drawer.mapToItem(header, 0, 0).y, header.height + 16)
         // A tap or click on search takes the keys, and a tap by its edge
         // asks for the on-screen ones; what is typed narrows the drawer,
         // from the field or from anywhere in the launcher.
@@ -4017,8 +4131,8 @@ TestCase {
         compare(field.height, 44)
         wait(600)
     }
-    // Esc closes the sort menu if it is open, otherwise the drawer, while
-    // search in the header holds the keys.
+    // Esc closes the actions sheet or the order's choices if one is open,
+    // otherwise the drawer, while search in the header holds the keys.
     function test_drawerHeaderEsc_data() {
         return [{ tag: "apps", mode: "apps" }, { tag: "files", mode: "files" }]
     }
@@ -4030,9 +4144,15 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 1)
         wait(250)
         const query = findChild(launcher, "search-query")
-        const sort = findChild(launcher, data.mode === "files" ? "files-sort" : "sort-button")
+        const sheetName = data.mode === "files" ? "files-actions-sheet" : "apps-actions"
         query.forceActiveFocus()
-        mouseClick(sort, sort.width / 2, sort.height / 2)
+        const actions = openDrawerActions(sheetName)
+        keyClick(Qt.Key_Escape)
+        tryCompare(actions, "opened", false)
+        verify(launcher.drawerOpen)
+        query.forceActiveFocus()
+        chooseAction(sheetName, data.mode === "files" ? "files-sort" : "sort-button")
+        query.forceActiveFocus()
         const filesMenu = findChild(launcher, "files-sort-menu")
         if (data.mode === "files") tryCompare(filesMenu, "opened", true)
         else tryCompare(launcher, "sortMenuOpen", true)
@@ -4102,8 +4222,8 @@ TestCase {
         tryCompare(launcher, "drawerOpen", true)
         tryCompare(launcher, "drawerProgress", 1)
         wait(250) // wait for animated geometry before clicking the moved sort button
-        const sort = findChild(launcher, "sort-button")
-        mouseClick(sort, sort.width / 2, sort.height / 2)
+        // The order, from the actions sheet, its choices where the sheet was.
+        chooseAction("apps-actions", "sort-button")
         tryCompare(launcher, "sortMenuOpen", true)
         compare(controller.closes, 0)
         const menu = findChild(launcher, "sort-menu")
@@ -4118,7 +4238,7 @@ TestCase {
         const rows = [["Most used", 2, 1], ["Newest installed", 3, 2], ["A to Z", 0, 0]]
         for (let i = 0; i < rows.length; ++i) {
             if (i > 0) {
-                mouseClick(sort, sort.width / 2, sort.height / 2)
+                chooseAction("apps-actions", "sort-button")
                 tryCompare(launcher, "sortMenuOpen", true)
                 tryCompare(menu, "opacity", 1)
             }

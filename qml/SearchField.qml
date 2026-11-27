@@ -4,7 +4,6 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -65,33 +64,19 @@ Rectangle {
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // The highlight's material: its shade falling gently from top to
-    // bottom, with a hairline round it. While it holds the keys or what was
-    // typed it brightens a step, with no ring; its hairline brightens a
-    // little under the pointer.
-    Rectangle {
+    // The highlight's material drawn flat: one even shade with a fine rim
+    // lit along its top. While it holds the keys or what was typed it
+    // brightens a step, with no ring; its rim brightens a little under the
+    // pointer.
+    FlatKey {
         id: fieldFace
         objectName: "search-field-face"
         anchors.fill: parent
         radius: searchField.radius
-        border.width: 1
-        border.color: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
-        gradient: Gradient {
-            GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
-            GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
-        }
-        // It lifts on the mode highlight's own shadow, the same in every
-        // state.
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            objectName: "search-field-shadow"
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: searchField.tone.modeKeyShadow
-            shadowBlur: 0.45
-            shadowOpacity: 0.6
-            shadowVerticalOffset: 1
-        }
+        fill: searchField.lit ? tone.fieldLitFill : tone.fieldFill
+        rimTop: searchField.lit ? tone.fieldRimTopLit : tone.fieldRimTop
+        rim: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
+        // No shadow, and nothing drawn as Search opens.
     }
     HoverHandler {
         id: fieldHover

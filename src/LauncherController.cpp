@@ -106,6 +106,11 @@ LauncherController::LauncherController(QQuickView *view,
     m_lateQuit.setSingleShot(true);
     m_lateQuit.setInterval(1000);
     connect(&m_lateQuit, &QTimer::timeout, qApp, &QCoreApplication::quit);
+    m_release.setSingleShot(true);
+    m_release.setInterval(10 * 60 * 1000);
+    connect(&m_release, &QTimer::timeout, this, [this] {
+        if (!m_view->isVisible()) m_view->releaseResources();
+    });
     m_guestWait.setSingleShot(true);
     m_guestWait.setInterval(GuestWait);
     connect(&m_guestWait, &QTimer::timeout, this, [this] {
@@ -608,6 +613,8 @@ void LauncherController::openFor(bool toType)
     if (m_opening) return;
     m_openedToType = toType;
     m_opening = true;
+    m_openClock.start();
+    m_release.stop();
     m_launchToken.clear();
     endGuestLease();
     m_guestRect = {};
@@ -633,10 +640,17 @@ void LauncherController::present()
     // Search sets out its first screen before the window shows, since the
     // window's first frame can be drawn as it is shown: what it held when it
     // last closed never reaches the screen. It takes the keys once shown.
+    const qint64 asked = m_openClock.elapsed();
     Q_EMIT aboutToOpen();
+    const qint64 laidOut = m_openClock.elapsed();
     m_view->show();
     m_view->requestActivate();
     Q_EMIT opened();
+    const qint64 shown = m_openClock.elapsed();
+    connect(m_view, &QQuickWindow::frameSwapped, this, [this, asked, laidOut, shown] {
+        qInfo("tettegouche open: ready to show %lld ms, first screen set out %lld ms, shown %lld ms, first frame %lld ms",
+              asked, laidOut - asked, shown - laidOut, m_openClock.elapsed());
+    }, Qt::SingleShotConnection);
     keepTheKeys();
     const auto steps = std::exchange(m_whenShown, {});
     for (const auto &step : steps) step();
@@ -1246,7 +1260,7 @@ void LauncherController::finishOrDeferQuit(bool keepReady)
     // once; it gives back what it drew with. One whose program was
     // replaced since it started leaves, so an update takes effect.
     if (keepReady && stayReady()) {
-        m_view->releaseResources();
+        m_release.start();
         return;
     }
     // A copy that just failed is told to Ambient before the launcher goes.

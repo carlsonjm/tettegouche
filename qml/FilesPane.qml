@@ -62,6 +62,14 @@ Item {
     // Trash shows what it holds: chosen files go back or are deleted for
     // good, and nothing else is done with them there.
     readonly property bool inTrash: !!browser && browser.placeKind === "trash"
+    // Recent keeps the order of use; no other order is offered there.
+    readonly property bool orderFixed: !!browser && browser.placeKind === "recent"
+    readonly property string orderName: orderFixed ? words.i18n("Recent")
+        : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][browser ? browser.sortMode : 0]
+    // The folder's actions, on a sheet from the button in search.
+    readonly property bool actionsOpen: filesActions.visible || sortMenu.visible
+    property Item actionsFrom: null
+    function openActions(from) { actionsFrom = from; filesActions.openUnder(from) }
     // While the places' edge is held, the width it is dragged to.
     property real placesDragWidth: -1
     // The place being renamed, by its id.
@@ -374,7 +382,79 @@ Item {
         }
         SheetMenuItem { objectName: "context-properties"; text: words.i18n("Properties"); visible: actions.targetPath.length>0; enabled: pane.selectedPaths.length===1; onTriggered: pane.showProperties(pane.selectedPaths[0]) }
     }
-    // The folder's order, kept inside the pane under its pill.
+    // The folder's actions, from the button in search: New folder, the
+    // order, the size and Show hidden. New folder and the order end here;
+    // the size and Show hidden change in place.
+    SheetMenu {
+        id: filesActions
+        objectName: "files-actions-sheet"
+        bounds: pane
+        bottomMargin: pane.keysReach
+        keysReach: pane.keysReach
+        SheetMenuItem {
+            objectName: "new-folder"
+            glyph: "folder"
+            text: words.i18n("New folder")
+            visible: !!pane.browser && pane.browser.canWrite
+            enabled: !!pane.browser && !pane.browser.busy
+            onTriggered: pane.newFolderForm()
+        }
+        SheetMenuItem {
+            id: orderLine
+            objectName: "files-sort"
+            readonly property bool fixed: pane.orderFixed
+            glyph: "arrow-up-down"
+            text: words.i18n("Order")
+            value: pane.orderName
+            Accessible.name: words.i18n("Sort: %1", value)
+            onTriggered: sortMenu.openUnder(pane.actionsFrom || orderLine)
+        }
+        Item {
+            objectName: "files-size-line"
+            readonly property bool isSheetMenuRow: true
+            width: parent ? parent.width : implicitWidth
+            implicitWidth: 14 + 30 + filesSizeLabel.implicitWidth + 24 + filesSize.width + 6
+            height: 42
+            SuiteIcon {
+                glyph: "layout-grid"
+                width: 18; height: 18
+                x: 14
+                anchors.verticalCenter: parent.verticalCenter
+            }
+            Text {
+                id: filesSizeLabel
+                x: 44
+                anchors.verticalCenter: parent.verticalCenter
+                text: words.i18n("Size")
+                color: tone.text
+                font.pixelSize: 14
+            }
+            SizePill {
+                id: filesSize
+                objectName: "files-size"
+                anchors.right: parent.right
+                anchors.rightMargin: 6
+                width: 72; height: 42
+                level: pane.browser ? pane.browser.tileSize : 1
+                onResize: step => pane.resizeTiles(step)
+            }
+        }
+        Item {
+            width: parent ? parent.width : 0
+            height: 9
+            Rectangle { x: 8; y: 4; width: parent.width - 16; height: 1; color: tone.line }
+        }
+        SheetMenuItem {
+            objectName: "files-show-hidden"
+            glyph: "eye"
+            text: words.i18n("Show hidden")
+            toggle: true
+            checked: !!pane.browser && pane.browser.hidden
+            Accessible.name: words.i18n("Show hidden files")
+            onTriggered: pane.browser.hidden = !pane.browser.hidden
+        }
+    }
+    // The folder's order, opened from the actions sheet where it was.
     SheetMenu {
         id: sortMenu
         objectName: "files-sort-menu"
@@ -382,10 +462,10 @@ Item {
         bottomMargin: pane.keysReach
         keysReach: pane.keysReach
         readonly property int mode: pane.browser ? pane.browser.sortMode : 0
-        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: sortMenu.mode === 0; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 0 }
-        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: sortMenu.mode === 1; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 1 }
-        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: sortMenu.mode === 2; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 2 }
-        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: sortMenu.mode === 3; enabled: !sortPill.fixed; onTriggered: pane.browser.sortMode = 3 }
+        SheetMenuItem { text: words.i18n("Name A–Z"); checkable: true; checked: sortMenu.mode === 0; enabled: !pane.orderFixed; onTriggered: pane.browser.sortMode = 0 }
+        SheetMenuItem { text: words.i18n("Name Z–A"); checkable: true; checked: sortMenu.mode === 1; enabled: !pane.orderFixed; onTriggered: pane.browser.sortMode = 1 }
+        SheetMenuItem { text: words.i18n("Newest first"); checkable: true; checked: sortMenu.mode === 2; enabled: !pane.orderFixed; onTriggered: pane.browser.sortMode = 2 }
+        SheetMenuItem { text: words.i18n("Largest first"); checkable: true; checked: sortMenu.mode === 3; enabled: !pane.orderFixed; onTriggered: pane.browser.sortMode = 3 }
     }
     // The one permanent delete Files offers, said plainly before it happens.
     SheetConfirm {
@@ -1099,8 +1179,9 @@ Item {
                 Action { text: words.i18n("New tab"); glyph: "plus"; Layout.preferredWidth: 42; onClicked: pane.browser.addTab() }
             }
             // One row under search, as every drawer has: the way around on
-            // the left, and on the right New folder, the order and the size,
-            // or what can be done with the files chosen.
+            // the left, and on the right what can be done with the files
+            // chosen. New folder, the order and the size are on the actions
+            // sheet, from the button in search.
             RowLayout {
                 objectName: "files-row"
                 Layout.fillWidth: true
@@ -1212,64 +1293,6 @@ Item {
                     }
                     // Paste only while something waits on the clipboard.
                     PillAction { objectName: "paste-here"; text: words.i18n("Paste"); visible: pane.browser && pane.browser.canPaste && pane.browser.canWrite && !(pane.selectedPaths && pane.selectedPaths.length>0); enabled: pane.browser && !pane.browser.busy; onClicked: pane.browser.paste() }
-                    PillAction { objectName: "new-folder"; text: words.i18n("New folder"); visible: !(pane.selectedPaths && pane.selectedPaths.length>0) && pane.browser && pane.browser.canWrite; enabled: pane.browser && !pane.browser.busy; onClicked: pane.newFolderForm() }
-                    // The order, a grey pill naming it, after New folder; Recent
-                    // keeps the order of use.
-                    Item {
-                        id: sortPill
-                        objectName: "files-sort"
-                        readonly property bool fixed: !!pane.browser && pane.browser.placeKind === "recent"
-                        visible: !(pane.selectedPaths && pane.selectedPaths.length > 0)
-                        Layout.preferredWidth: sortPillLabel.implicitWidth + 46
-                        Layout.preferredHeight: 42
-                        activeFocusOnTab: true
-                        Accessible.role: Accessible.ButtonMenu
-                        Accessible.name: words.i18n("Sort: %1", sortPillLabel.text)
-                        Accessible.onPressAction: sortMenu.openUnder(sortPill)
-                        Keys.onReturnPressed: sortMenu.openUnder(sortPill)
-                        Keys.onEnterPressed: sortMenu.openUnder(sortPill)
-                        Keys.onSpacePressed: sortMenu.openUnder(sortPill)
-                        Rectangle {
-                            y: 6; width: parent.width; height: parent.height - 12
-                            radius: height / 2
-                            color: sortPillPress.pressed || sortMenu.visible ? tone.controlPressed
-                                : sortPillHover.hovered ? tone.controlHover : tone.control
-                            border.width: sortPill.activeFocus ? 1 : 0
-                            border.color: tone.text
-                            Text {
-                                id: sortPillLabel
-                                anchors.verticalCenter: parent.verticalCenter
-                                x: 16
-                                text: sortPill.fixed ? words.i18n("Recent") : [words.i18n("Name A–Z"), words.i18n("Name Z–A"), words.i18n("Newest"), words.i18n("Largest")][pane.browser ? pane.browser.sortMode : 0]
-                                color: tone.text
-                            }
-                            SuiteIcon {
-                                glyph: "chevron-down"
-                                width: 14; height: 14
-                                anchors.right: parent.right
-                                anchors.rightMargin: 12
-                                anchors.verticalCenter: parent.verticalCenter
-                            }
-                        }
-                        HoverHandler {
-                            id: sortPillHover
-                            acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
-                        }
-                        MouseArea {
-                            id: sortPillPress
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: sortMenu.openUnder(sortPill)
-                        }
-                    }
-                    // The tiles' size, last, where every drawer has it.
-                    SizePill {
-                        objectName: "files-size"
-                        visible: !(pane.selectedPaths && pane.selectedPaths.length > 0)
-                        Layout.preferredWidth: 72; Layout.preferredHeight: 42
-                        level: pane.browser ? pane.browser.tileSize : 1
-                        onResize: step => pane.resizeTiles(step)
-                    }
                     // With files chosen, their own menu.
                     PillAction {
                         id: moreActions

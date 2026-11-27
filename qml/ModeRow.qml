@@ -4,7 +4,6 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -224,27 +223,15 @@ Item {
         Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
 
-        Rectangle {
+        FlatKey {
+            id: modeFace
             objectName: "mode-highlight-face"
             anchors.fill: parent
             radius: height / 2
-            border.width: 1
-            border.color: tone.modeKeyEdge
-            gradient: Gradient {
-                GradientStop { position: 0; color: tone.modeKeyTop }
-                GradientStop { position: 1; color: tone.modeKeyBottom }
-            }
-            // The key lifts off the bar on a soft, blurred shadow that
-            // fades out all round, with no hard line beneath it.
-            layer.enabled: true
-            layer.effect: MultiEffect {
-                autoPaddingEnabled: true
-                shadowEnabled: true
-                shadowColor: tone.modeKeyShadow
-                shadowBlur: 0.45
-                shadowOpacity: 0.6
-                shadowVerticalOffset: 1
-            }
+            fill: tone.modeKeyFill
+            rimTop: tone.modeKeyRimTop
+            rim: tone.modeKeyEdge
+            // No shadow, and nothing drawn as Search opens.
         }
     }
 

@@ -82,6 +82,10 @@ QtObject {
     readonly property color modeKeyTop: dark ? suite("#3E3E3E") : "#ffffff"
     readonly property color modeKeyBottom: dark ? suite("#313131") : "#ffffff"
     readonly property color modeKeyEdge: dark ? "#16ffffff" : Qt.rgba(0, 0, 0, 0.07)
+    // The raised key drawn flat: one even shade between its old top and
+    // bottom, its rim lit along the top.
+    readonly property color modeKeyFill: dark ? suite("#383838") : "#ffffff"
+    readonly property color modeKeyRimTop: dark ? "#26ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color modeKeyShadow: dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color modeText: dark ? "#94ffffff" : wash(0.58)
     readonly property color modeTextHover: dark ? "#dbffffff" : wash(0.85)
@@ -97,6 +101,12 @@ QtObject {
     readonly property color fieldLitBottom: dark ? suite("#282828") : "#ffffff"
     readonly property color fieldEdge: dark ? "#12ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color fieldEdgeHover: dark ? "#1affffff" : Qt.rgba(0, 0, 0, 0.11)
+    // The field drawn flat: one even shade, a step brighter while lit, its
+    // rim lit along the top.
+    readonly property color fieldFill: dark ? suite("#2A2A2A") : "#ffffff"
+    readonly property color fieldLitFill: dark ? suite("#303030") : "#ffffff"
+    readonly property color fieldRimTop: dark ? "#1fffffff" : Qt.rgba(0, 0, 0, 0.07)
+    readonly property color fieldRimTopLit: dark ? "#2bffffff" : Qt.rgba(0, 0, 0, 0.11)
     // A button on a row, such as a quick action's: a quiet capsule with a
     // fine edge, brighter under the pointer and pressed.
     readonly property color actionFill: dark ? "#14ffffff" : wash(0.05)
