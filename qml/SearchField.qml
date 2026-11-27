@@ -4,7 +4,6 @@
 */
 
 import QtQuick
-import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -65,40 +64,21 @@ Rectangle {
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // The highlight's material one step quieter: one flat fill, with a
-    // fine edge and a soft blurred shadow. While it holds the keys or what
-    // was typed it lifts a step, brighter on a deeper shadow, with no ring;
-    // its edge brightens a little under the pointer.
-    Rectangle {
+    // The highlight's material one step quieter: one flat fill with a fine
+    // edge, a lit rim along its top and a soft shadow. While it holds the
+    // keys or what was typed it lifts a step, brighter on a deeper shadow,
+    // with no ring; its edge brightens a little under the pointer.
+    RaisedKey {
         id: fieldFace
         objectName: "search-field-face"
         anchors.fill: parent
-        radius: parent.radius
-        border.width: 1
-        border.color: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
-        Behavior on border.color { ColorAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-        color: tone.fieldFill
-        Rectangle {
-            objectName: "search-field-lit"
-            anchors.fill: parent
-            anchors.margins: 1
-            radius: height / 2
-            color: tone.fieldLitFill
-            opacity: searchField.lit ? 1 : 0
-            Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-        }
-        layer.enabled: true
-        layer.effect: MultiEffect {
-            autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: tone.fieldShadow
-            shadowBlur: searchField.lit ? 0.6 : 0.4
-            shadowOpacity: searchField.lit ? 0.8 : 0.55
-            shadowVerticalOffset: searchField.lit ? 2 : 1
-            Behavior on shadowBlur { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-            Behavior on shadowOpacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-            Behavior on shadowVerticalOffset { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-        }
+        tone: searchField.tone
+        radius: searchField.radius
+        fadeDuration: launcher.ms(160)
+        fill: searchField.lit ? tone.fieldLitFill : tone.fieldFill
+        edge: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
+        lift: searchField.lit ? 1 : 0
+        Behavior on lift { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
     }
     HoverHandler {
         id: fieldHover

@@ -80,6 +80,8 @@ QtObject {
     // comes; and the faint wash under a mode as it is pressed.
     // Solid, so its shadow stays under it and never shows through.
     readonly property color modeKey: dark ? suite("#383838") : "#ffffff"
+    // The lit rim along a raised key's upper edge.
+    readonly property color keyRim: dark ? "#1fffffff" : "#ffffff"
     readonly property color modeKeyEdge: dark ? "#16ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color modeKeyShadow: dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color modeText: dark ? "#94ffffff" : wash(0.58)
@@ -88,12 +90,11 @@ QtObject {
     readonly property color modePressed: dark ? "#17ffffff" : wash(0.07)
     // Search's field: the highlight's material one step quieter, so the
     // mode shown still leads; lit a step brighter, on a deeper shadow, while
-    // it holds the keys or what was typed.
-    readonly property color fieldFill: dark ? suite("#242424") : "#ffffff"
-    readonly property color fieldLitFill: dark ? suite("#2B2B2B") : "#ffffff"
+    // it holds the keys or what was typed. Its shadow is the keys' own.
+    readonly property color fieldFill: dark ? suite("#282828") : "#ffffff"
+    readonly property color fieldLitFill: dark ? suite("#2F2F2F") : "#ffffff"
     readonly property color fieldEdge: dark ? "#12ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color fieldEdgeHover: dark ? "#1affffff" : Qt.rgba(0, 0, 0, 0.11)
-    readonly property color fieldShadow: dark ? Qt.rgba(0, 0, 0, 0.5) : Qt.rgba(0, 0, 0, 0.12)
     // A button on a row, such as a quick action's: a quiet capsule with a
     // fine edge, brighter under the pointer and pressed.
     readonly property color actionFill: dark ? "#14ffffff" : wash(0.05)
