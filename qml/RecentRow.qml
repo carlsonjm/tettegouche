@@ -85,18 +85,13 @@ Flickable {
                 height: 56
                 source: tile.model.icon
             }
-            Text {
+            AppName {
                 x: 6
                 y: 12 + 56 + 8
                 width: parent.width - 12
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.Wrap
-                maximumLineCount: 2
-                elide: Text.ElideRight
-                lineHeight: 0.95
                 text: tile.model.name
                 color: launcher.primaryText
-                font.pixelSize: 13
+                naturalSize: 13
             }
         }
         Rectangle {

@@ -64,50 +64,19 @@ Rectangle {
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // The highlight's material: its shade falling gently from top to
-    // bottom, with a hairline round it. While it holds the keys or what was
-    // typed it brightens a step, with no ring; its hairline brightens a
-    // little under the pointer.
-    Rectangle {
+    // The highlight's material drawn flat: one even shade with a fine rim
+    // lit along its top. While it holds the keys or what was typed it
+    // brightens a step, with no ring; its rim brightens a little under the
+    // pointer.
+    FlatKey {
         id: fieldFace
         objectName: "search-field-face"
         anchors.fill: parent
         radius: searchField.radius
-        border.width: 1
-        border.color: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
-        gradient: Gradient {
-            GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
-            GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
-        }
-        // Its shade drawn again with a fine grain, so no lines show
-        // between its greys. Each state has its grain drawn once and kept:
-        // the lit one shows over the other, so lighting the field as Search
-        // opens never draws the grain again before the first frame.
-        GrainFill {
-            objectName: "search-field-grain"
-            anchors.fill: parent
-            anchors.margins: 1
-            upper: tone.fieldTop
-            lower: tone.fieldBottom
-            keyHeight: fieldFace.height
-            topInset: 1
-            widest: searchField.parent ? searchField.parent.width - 2 : width
-            round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
-        }
-        GrainFill {
-            objectName: "search-field-grain-lit"
-            anchors.fill: parent
-            anchors.margins: 1
-            upper: tone.fieldLitTop
-            lower: tone.fieldLitBottom
-            keyHeight: fieldFace.height
-            topInset: 1
-            widest: searchField.parent ? searchField.parent.width - 2 : width
-            round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
-            shown: searchField.lit
-        }
-        // No shadow: the fade and the fine rim raise it, and nothing is
-        // laid over it to draw as Search opens.
+        fill: searchField.lit ? tone.fieldLitFill : tone.fieldFill
+        rimTop: searchField.lit ? tone.fieldRimTopLit : tone.fieldRimTop
+        rim: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
+        // No shadow, and nothing drawn as Search opens.
     }
     HoverHandler {
         id: fieldHover

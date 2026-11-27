@@ -214,7 +214,7 @@ Item {
                     visible: folderName.activeFocus
                 }
 
-                Text {
+                AppName {
                     objectName: "application-name"
                     visible: !catalogDelegate.isFolder
                     anchors.left: parent.left
@@ -224,16 +224,10 @@ Item {
                     // From under the icon, so a name of one line and one of
                     // two start on the same line.
                     y: 10 + applicationGrid.tile.icon + 6
-                    horizontalAlignment: Text.AlignHCenter
                     text: catalogDelegate.info.name || ""
                     color: launcher.primaryText
-                    font.pixelSize: 12
                     // Two lines before a name is cut, as in Recent apps;
                     // every tile size has the room under its icon.
-                    wrapMode: Text.Wrap
-                    maximumLineCount: 2
-                    lineHeight: 0.95
-                    elide: Text.ElideRight
                 }
 
                 HoverHandler { id: catalogHover }

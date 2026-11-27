@@ -766,6 +766,22 @@ TestCase {
         tryCompare(launcher, "drawerProgress", 0)
     }
 
+    // A word too long for its tile is never split across lines: the name
+    // gets a little smaller until the word fits, and still breaks between
+    // words.
+    Component { id: appName; App.AppName {} }
+    function test_applicationNameKeepsWordsWhole() {
+        const one = createTemporaryObject(appName, test, {width: 60, text: "Authenticator"})
+        compare(one.lineCount, 1)
+        verify(one.font.pixelSize < 12 && one.font.pixelSize >= one.smallestSize)
+        verify(one.contentWidth <= one.width + 0.5)
+        const two = createTemporaryObject(appName, test, {width: 60, text: "Output Browser"})
+        compare(two.font.pixelSize, 12)
+        compare(two.lineCount, 2)
+        const short = createTemporaryObject(appName, test, {width: 60, text: "Kate"})
+        compare(short.font.pixelSize, 12)
+    }
+
     // A long name takes a second line before it is cut, and every name
     // starts on the same line under its icon.
     function test_applicationNamesWrap() {

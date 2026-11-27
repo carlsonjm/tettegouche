@@ -223,31 +223,15 @@ Item {
         Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
         Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
 
-        Rectangle {
+        FlatKey {
             id: modeFace
             objectName: "mode-highlight-face"
             anchors.fill: parent
             radius: height / 2
-            border.width: 1
-            border.color: tone.modeKeyEdge
-            gradient: Gradient {
-                GradientStop { position: 0; color: tone.modeKeyTop }
-                GradientStop { position: 1; color: tone.modeKeyBottom }
-            }
-            // Its shade drawn again with a fine grain, so no lines show
-            // between its greys.
-            GrainFill {
-                anchors.fill: parent
-                anchors.margins: 1
-                upper: tone.modeKeyTop
-                lower: tone.modeKeyBottom
-                keyHeight: modeFace.height
-                topInset: 1
-                widest: modeRow.width
-                round: Math.max(0, modeFace.height / 2 - 1)
-            }
-            // No shadow: the fade and the fine rim raise it, and nothing is
-            // laid over it to draw as Search opens.
+            fill: tone.modeKeyFill
+            rimTop: tone.modeKeyRimTop
+            rim: tone.modeKeyEdge
+            // No shadow, and nothing drawn as Search opens.
         }
     }
 
