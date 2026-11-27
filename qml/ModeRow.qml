@@ -230,10 +230,7 @@ Item {
             radius: height / 2
             border.width: 1
             border.color: tone.modeKeyEdge
-            gradient: Gradient {
-                GradientStop { position: 0; color: tone.modeKeyTop }
-                GradientStop { position: 1; color: tone.modeKeyBottom }
-            }
+            color: tone.modeKey
             // The key lifts off the bar on a soft, blurred shadow that
             // fades out all round, with no hard line beneath it.
             layer.enabled: true

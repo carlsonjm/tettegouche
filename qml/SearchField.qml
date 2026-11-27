@@ -65,32 +65,25 @@ Rectangle {
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // The highlight's material one step quieter: a solid key, lighter at
-    // its top, with a fine edge and a soft blurred shadow. It lifts a step
-    // while it holds the keys or what was typed, and its edge brightens a
-    // little under the pointer.
+    // The highlight's material one step quieter: one flat fill, with a
+    // fine edge and a soft blurred shadow. While it holds the keys or what
+    // was typed it lifts a step, brighter on a deeper shadow, with no ring;
+    // its edge brightens a little under the pointer.
     Rectangle {
         id: fieldFace
         objectName: "search-field-face"
         anchors.fill: parent
         radius: parent.radius
         border.width: 1
-        border.color: searchField.lit ? tone.fieldEdgeLit
-            : fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
+        border.color: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
         Behavior on border.color { ColorAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-        gradient: Gradient {
-            GradientStop { position: 0; color: tone.fieldTop }
-            GradientStop { position: 1; color: tone.fieldBottom }
-        }
+        color: tone.fieldFill
         Rectangle {
             objectName: "search-field-lit"
             anchors.fill: parent
             anchors.margins: 1
             radius: height / 2
-            gradient: Gradient {
-                GradientStop { position: 0; color: tone.fieldLitTop }
-                GradientStop { position: 1; color: tone.fieldLitBottom }
-            }
+            color: tone.fieldLitFill
             opacity: searchField.lit ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
         }
@@ -106,18 +99,6 @@ Rectangle {
             Behavior on shadowOpacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
             Behavior on shadowVerticalOffset { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
         }
-    }
-    // A soft halo round it while it is lit.
-    Rectangle {
-        objectName: "search-ring"
-        anchors.fill: parent
-        anchors.margins: -3
-        radius: height / 2
-        color: "transparent"
-        border.width: 3
-        border.color: tone.fieldHalo
-        opacity: searchField.lit ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
     }
     HoverHandler {
         id: fieldHover

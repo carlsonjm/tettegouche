@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Effects
 
 // The raised key Search marks what is chosen with, as under the mode shown:
-// solid, lighter at its top, with a fine edge and a soft blurred shadow. It
+// one flat fill with a fine edge and a soft blurred shadow. It
 // fades in and out where it is.
 Item {
     id: key
@@ -26,10 +26,7 @@ Item {
         radius: key.radius
         border.width: 1
         border.color: key.tone.modeKeyEdge
-        gradient: Gradient {
-            GradientStop { position: 0; color: key.tone.modeKeyTop }
-            GradientStop { position: 1; color: key.tone.modeKeyBottom }
-        }
+        color: key.tone.modeKey
         layer.enabled: key.visible
         layer.effect: MultiEffect {
             autoPaddingEnabled: true
