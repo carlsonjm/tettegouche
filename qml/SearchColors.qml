@@ -87,6 +87,22 @@ QtObject {
     readonly property color modeTextHover: dark ? "#dbffffff" : wash(0.85)
     readonly property color modeHover: dark ? "#0dffffff" : wash(0.04)
     readonly property color modePressed: dark ? "#17ffffff" : wash(0.07)
+    // Search's field: the highlight's material, its shade falling as
+    // gently from top to bottom, a step darker so the mode shown still
+    // leads; a step brighter while it holds the keys or what was typed.
+    // Solid, so its shadow stays under it.
+    readonly property color fieldTop: dark ? suite("#323232") : "#ffffff"
+    readonly property color fieldBottom: dark ? suite("#222222") : "#ffffff"
+    readonly property color fieldLitTop: dark ? suite("#383838") : "#ffffff"
+    readonly property color fieldLitBottom: dark ? suite("#282828") : "#ffffff"
+    readonly property color fieldEdge: dark ? "#12ffffff" : Qt.rgba(0, 0, 0, 0.07)
+    readonly property color fieldEdgeHover: dark ? "#1affffff" : Qt.rgba(0, 0, 0, 0.11)
+    // A button on a row, such as a quick action's: a quiet capsule with a
+    // fine edge, brighter under the pointer and pressed.
+    readonly property color actionFill: dark ? "#14ffffff" : wash(0.05)
+    readonly property color actionHover: dark ? "#21ffffff" : wash(0.08)
+    readonly property color actionPressed: dark ? "#2bffffff" : wash(0.11)
+    readonly property color actionEdge: dark ? "#1affffff" : wash(0.08)
     readonly property color focusRing: dark ? "#b0ffffff" : wash(0.69)
     readonly property color track: dark ? "#24ffffff" : wash(0.14)
     readonly property color progress: dark ? "#d9ffffff" : wash(0.85)

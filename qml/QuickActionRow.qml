@@ -95,8 +95,17 @@ Item {
             width: parent.width
             height: 64 + (quick.editing ? choiceColumn.height + 14 : 0)
             radius: quick.launcher.paperRadius
-            color: quick.launcher.quickActionLeads ? (quick.editing ? quick.tone.hover : quick.tone.current)
+            color: quick.launcher.quickActionLeads ? (quick.editing ? quick.tone.hover : "transparent")
                 : rowHover.hovered ? quick.tone.hover : quick.tone.subtle
+            // While it leads, it sits on the raised key the mode shown does.
+            RaisedKey {
+                width: parent.width
+                height: 64
+                tone: quick.tone
+                fadeDuration: quick.launcher.ms(120)
+                radius: quick.launcher.paperRadius
+                shown: quick.launcher.quickActionLeads && !quick.editing
+            }
             Accessible.role: Accessible.Button
             Accessible.name: title.text
             Accessible.description: sub.text
@@ -224,32 +233,54 @@ Item {
                     id: openPill
                     objectName: "quick-action-pill"
                     anchors.verticalCenter: parent.verticalCenter
-                    width: quick.moot ? 0 : openLabel.implicitWidth + 32
+                    width: quick.moot ? 0 : openRow.implicitWidth + 32
                     height: 32
                     radius: 16
                     visible: !quick.moot
-                    color: quick.done ? (openTap.pressed ? quick.tone.controlPressed : quick.tone.controlHover)
-                        : openTap.pressed ? quick.tone.lightPressed : quick.tone.primaryText
+                    // A quiet capsule with a fine edge; while the row leads,
+                    // the Return mark before its word says Enter does it.
+                    color: openTap.pressed ? quick.tone.actionPressed
+                        : openTap.containsMouse ? quick.tone.actionHover : quick.tone.actionFill
+                    border.width: 1
+                    border.color: quick.tone.actionEdge
+                    scale: openTap.pressed ? 0.96 : 1
+                    Behavior on color { ColorAnimation { duration: quick.launcher.ms(120) } }
+                    Behavior on scale { NumberAnimation { duration: quick.launcher.ms(140); easing.type: Easing.OutCubic } }
                     Accessible.role: Accessible.Button
                     Accessible.name: openLabel.text
                     Accessible.onPressAction: quick.act()
+                    Row {
+                        id: openRow
+                        anchors.centerIn: parent
+                        spacing: 7
+                    Text {
+                        objectName: "quick-action-enter-mark"
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: quick.launcher.quickActionLeads && !quick.editing && !quick.done
+                        text: "\u21B5"
+                        color: quick.launcher.secondaryText
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                    }
                     Text {
                         id: openLabel
                         objectName: "quick-action-pill-label"
-                        anchors.centerIn: parent
+                        anchors.verticalCenter: parent.verticalCenter
                         text: quick.done ? quick.words.i18nc("a pill: take back what was just changed", "Undo")
                             : !quick.isSwitch ? quick.words.i18nc("a pill: open the note", "Open")
                             : quick.opens ? quick.words.i18nc("a pill: open a switch's page", "Open")
                             : quick.action !== null && quick.action.on ? quick.words.i18nc("a pill: turn a switch on", "Turn on")
                             : quick.words.i18nc("a pill: turn a switch off", "Turn off")
-                        color: quick.done ? quick.launcher.primaryText : quick.tone.surface
+                        color: quick.launcher.primaryText
                         font.pixelSize: 14
                         font.weight: Font.DemiBold
+                    }
                     }
                     // Taken here, so the row's own tap does not run it again.
                     MouseArea {
                         id: openTap
                         anchors.fill: parent
+                        hoverEnabled: true
                         enabled: !quick.launcher.guestDragged && !quick.launcher.applicationLaunchPending
                         onClicked: quick.act()
                     }

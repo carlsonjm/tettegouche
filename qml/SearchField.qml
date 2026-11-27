@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -57,41 +58,45 @@ Rectangle {
     width: Math.min(parent.width, launcher.sheetInnerWidth)
     height: launcher.fieldHeight
     radius: height / 2
-    color: launcher.controlColor
+    // The face below draws it.
+    color: "transparent"
     opacity: (launcher.applicationLaunchPending ? 0 : 1)
         * Math.max(0, 1 - launcher.modeProgress * 2)
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // A hairline of light along its upper edge, as on a raised
-    // key, and a ring that comes up while it holds the keys.
+    // The highlight's material: its shade falling gently from top to
+    // bottom, with a hairline round it. While it holds the keys or what was
+    // typed it brightens a step, with no ring; its hairline brightens a
+    // little under the pointer.
     Rectangle {
+        id: fieldFace
+        objectName: "search-field-face"
         anchors.fill: parent
-        radius: parent.radius
-        color: "transparent"
+        radius: searchField.radius
         border.width: 1
-        border.color: tone.dark ? "#14ffffff" : "#0d000000"
-        opacity: searchField.lit ? 0 : 1
-        Behavior on opacity { NumberAnimation { duration: launcher.ms(150) } }
-    }
-    Rectangle {
-        objectName: "search-ring"
-        anchors.fill: parent
-        anchors.margins: -3
-        radius: height / 2
-        color: "transparent"
-        border.width: 3
-        border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.16)
-        opacity: searchField.lit ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: launcher.ms(150) } }
-        Rectangle {
-            anchors.fill: parent
-            anchors.margins: 3
-            radius: height / 2
-            color: "transparent"
-            border.width: 1
-            border.color: Qt.rgba(tone.focusRing.r, tone.focusRing.g, tone.focusRing.b, 0.55)
+        border.color: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
+        gradient: Gradient {
+            GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
+            GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
         }
+        // It lifts on the mode highlight's own shadow, the same in every
+        // state.
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            objectName: "search-field-shadow"
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowColor: searchField.tone.modeKeyShadow
+            shadowBlur: 0.45
+            shadowOpacity: 0.6
+            shadowVerticalOffset: 1
+        }
+    }
+    HoverHandler {
+        id: fieldHover
+        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+        cursorShape: Qt.IBeamCursor
     }
 
     Behavior on opacity {
@@ -109,8 +114,10 @@ Rectangle {
         anchors.verticalCenter: parent.verticalCenter
         width: 18
         height: 18
-        opacity: (searchField.lit ? 0.9 : 0.55) * launcher.openingIcon
-        Behavior on opacity { NumberAnimation { duration: launcher.ms(150) } }
+        // As quiet as a mode not chosen until the pointer comes, and full
+        // while it is lit.
+        opacity: (searchField.lit ? 1 : fieldHover.hovered ? 0.9 : 0.62) * launcher.openingIcon
+        Behavior on opacity { NumberAnimation { duration: launcher.ms(180) } }
     }
 
     // Clears what was typed; with nothing typed, a hint of what
@@ -127,24 +134,32 @@ Rectangle {
         width: 40
         height: 40
         visible: query.text.length > 0
+        // A faint wash under the pointer and a small squeeze when pressed,
+        // as on a mode.
         Rectangle {
             anchors.centerIn: parent
             width: 30
             height: 30
             radius: 15
-            color: clearHover.hovered ? tone.controlHover : "transparent"
+            scale: clearTap.pressed ? 0.96 : 1
+            color: clearTap.pressed ? tone.modePressed : clearHover.hovered ? tone.modeHover : "transparent"
+            Behavior on color { ColorAnimation { duration: launcher.ms(120) } }
+            Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
         }
         SuiteIcon {
             anchors.centerIn: parent
             glyph: "x"
             width: 18
             height: 18
+            opacity: clearHover.hovered || clearTap.pressed ? 0.9 : 0.62
+            Behavior on opacity { NumberAnimation { duration: launcher.ms(180) } }
         }
         HoverHandler {
             id: clearHover
             acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
         }
         TapHandler {
+            id: clearTap
             onTapped: {
                 launcher.searchEngaged = true
                 query.text = ""
@@ -254,7 +269,7 @@ Rectangle {
                 : words.i18n("Just type")
             // As large as what is typed, so typing changes nothing but
             // the words.
-            color: tone.placeholderText
+            color: tone.modeText
             font.pixelSize: 16
             font.weight: Font.Medium
             opacity: launcher.openingText
