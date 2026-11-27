@@ -80,39 +80,53 @@ Rectangle {
             GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
             GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
         }
-        // Its shade drawn again over the inside with a fine grain, each
-        // point nudged by under a step either way, so the few greys between
-        // its top and bottom blend into one another and no lines show where
-        // one grey meets the next. The shades are the same; only the steps
-        // go. It is drawn once at the widest the field can be, and only
-        // uncovered as the field grows or shrinks, with its far end drawn
-        // apart and riding the field's edge.
+        // Its shade drawn again over the inside with a fine grain: every
+        // point is nudged at random by up to a step either way, so the few
+        // greys between its top and bottom blend into one even fade and no
+        // row is one flat grey. The shades are the same; only the steps go.
+        // One grain dot is one dot of the screen, never stretched. It is
+        // drawn once for the field at rest and once lit, at the widest the
+        // field can be, and only uncovered as the field grows or shrinks,
+        // with its far end drawn apart and riding the field's edge.
         Item {
             id: fieldGrain
             objectName: "search-field-grain"
-            readonly property color upper: searchField.lit ? tone.fieldLitTop : tone.fieldTop
-            readonly property color lower: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom
             readonly property real round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
+            readonly property real dots: Math.max(1, Screen.devicePixelRatio)
+            readonly property real widest: Math.max(width, searchField.parent ? searchField.parent.width : 0)
             anchors.fill: parent
             anchors.margins: 1
-            visible: !Qt.colorEqual(upper, lower)
-            Item {
-                width: Math.max(0, parent.width - fieldGrain.round)
-                height: parent.height
-                clip: true
-                FieldGrain {
-                    width: Math.max(fieldGrain.width, searchField.parent ? searchField.parent.width : 0)
-                    height: parent.height
-                    shapeX: 0
-                    shapeWidth: width
+            visible: tone.dark
+            Repeater {
+                model: [false, true]
+                delegate: Item {
+                    id: grainState
+                    required property bool modelData
+                    anchors.fill: parent
+                    visible: searchField.lit === modelData
+                    Item {
+                        width: Math.max(0, parent.width - fieldGrain.round)
+                        height: parent.height
+                        clip: true
+                        FieldGrain {
+                            lit: grainState.modelData
+                            width: fieldGrain.widest
+                            height: parent.height
+                            shapeX: 0
+                            shapeWidth: width
+                        }
+                    }
+                    FieldGrain {
+                        lit: grainState.modelData
+                        // On a whole dot of the screen, so the grain is
+                        // never stretched between dots.
+                        x: Math.floor((parent.width - 2 * fieldGrain.round) * fieldGrain.dots) / fieldGrain.dots
+                        width: parent.width - x
+                        height: parent.height
+                        shapeX: width - 4 * fieldGrain.round
+                        shapeWidth: 4 * fieldGrain.round
+                    }
                 }
-            }
-            FieldGrain {
-                anchors.right: parent.right
-                width: 2 * fieldGrain.round
-                height: parent.height
-                shapeX: -2 * fieldGrain.round
-                shapeWidth: 4 * fieldGrain.round
             }
         }
         // It lifts on the mode highlight's own shadow, the same in every
@@ -346,45 +360,64 @@ Rectangle {
         }
     }
 
-    // One piece of the field's grain: its shade, row by row, each point a
-    // step up where a fair draw falls under how far that row lies between
-    // two greys, cut to the field's rounded shape.
+    // One piece of the field's grain, at rest or lit: its shade, row by
+    // row of the screen's own dots, each dot nudged by a fair draw of up to
+    // a step lighter or darker, inside the field's rounded shape.
     component FieldGrain: Canvas {
+        property bool lit: false
         property real shapeX: 0
         property real shapeWidth: width
-        readonly property color upper: fieldGrain.upper
-        readonly property color lower: fieldGrain.lower
+        readonly property color upper: lit ? tone.fieldLitTop : tone.fieldTop
+        readonly property color lower: lit ? tone.fieldLitBottom : tone.fieldBottom
         readonly property bool shown: fieldGrain.visible
+        readonly property real dots: fieldGrain.dots
+        smooth: false
         onUpperChanged: requestPaint()
         onLowerChanged: requestPaint()
         onShownChanged: requestPaint()
+        onDotsChanged: requestPaint()
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
         onShapeXChanged: requestPaint()
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
-            const w = Math.ceil(width), h = Math.round(height)
-            if (!shown || w < 1 || h < 2) return
+            if (!shown || width < 1 || height < 2) return
             const whole = fieldFace.height
             ctx.beginPath()
-            ctx.roundedRect(shapeX, 0, shapeWidth, h, fieldGrain.round, fieldGrain.round)
+            ctx.roundedRect(shapeX, 0, shapeWidth, height, fieldGrain.round, fieldGrain.round)
             ctx.clip()
+            ctx.scale(1 / dots, 1 / dots)
+            const w = Math.ceil(width * dots), h = Math.ceil(height * dots)
             let seed = 0x2545f491 ^ w
+            const draw = () => {
+                seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5
+                return (seed & 0xffff) / 65536
+            }
             for (let y = 0; y < h; ++y) {
-                const t = (y + 1.5) / whole
-                const r = 255 * (upper.r + (lower.r - upper.r) * t)
-                const g = 255 * (upper.g + (lower.g - upper.g) * t)
-                const b = 255 * (upper.b + (lower.b - upper.b) * t)
-                const level = (r + g + b) / 3
-                const over = level - Math.floor(level)
-                const step = 1 - over
-                ctx.fillStyle = Qt.rgba((r - over) / 255, (g - over) / 255, (b - over) / 255, 1)
+                const t = (1 + (y + 0.5) / dots) / whole
+                const c = [upper.r + (lower.r - upper.r) * t, upper.g + (lower.g - upper.g) * t,
+                           upper.b + (lower.b - upper.b) * t].map(v => 255 * v)
+                const level = (c[0] + c[1] + c[2]) / 3
+                const base = Math.round(level)
+                // The same nudge on red, green and blue, so the grain is grey.
+                const v = c.map(x => (Math.round(x - level + base)) / 255)
+                const tones = [Qt.rgba(v[0] - 1 / 255, v[1] - 1 / 255, v[2] - 1 / 255, 1),
+                               Qt.rgba(v[0], v[1], v[2], 1),
+                               Qt.rgba(v[0] + 1 / 255, v[1] + 1 / 255, v[2] + 1 / 255, 1)]
+                ctx.fillStyle = tones[1]
                 ctx.fillRect(0, y, w, 1)
-                ctx.fillStyle = Qt.rgba((r + step) / 255, (g + step) / 255, (b + step) / 255, 1)
-                for (let x = 0; x < w; ++x) {
-                    seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5
-                    if ((seed & 0xffff) / 65536 < over) ctx.fillRect(x, y, 1, 1)
+                let run = 0, from = 0
+                for (let x = 0; x <= w; ++x) {
+                    const d = x < w ? Math.round(level + draw() + draw() - 1) - base : 0
+                    if (d !== run) {
+                        if (run !== 0) {
+                            ctx.fillStyle = tones[run + 1]
+                            ctx.fillRect(from, y, x - from, 1)
+                        }
+                        run = d
+                        from = x
+                    }
                 }
             }
         }
