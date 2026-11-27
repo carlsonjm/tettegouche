@@ -57,7 +57,7 @@ Rectangle {
     width: Math.min(parent.width, launcher.sheetInnerWidth)
     height: launcher.fieldHeight
     radius: height / 2
-    // The face below draws it, on a shadow of its own.
+    // The face below draws it.
     color: "transparent"
     opacity: (launcher.applicationLaunchPending ? 0 : 1)
         * Math.max(0, 1 - launcher.modeProgress * 2)
@@ -65,9 +65,9 @@ Rectangle {
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
     // The highlight's material one step quieter: one flat fill with a fine
-    // edge, a lit rim along its top and a soft shadow. While it holds the
-    // keys or what was typed it lifts a step, brighter on a deeper shadow,
-    // with no ring; its edge brightens a little under the pointer.
+    // edge lit along its top, and no shadow. While it holds the keys or what
+    // was typed its fill brightens a step, with no ring; its edge brightens
+    // a little under the pointer.
     RaisedKey {
         id: fieldFace
         objectName: "search-field-face"
@@ -77,8 +77,6 @@ Rectangle {
         fadeDuration: launcher.ms(160)
         fill: searchField.lit ? tone.fieldLitFill : tone.fieldFill
         edge: searchField.lit || fieldHover.hovered ? tone.fieldEdgeHover : tone.fieldEdge
-        lift: searchField.lit ? 1 : 0
-        Behavior on lift { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
     }
     HoverHandler {
         id: fieldHover
