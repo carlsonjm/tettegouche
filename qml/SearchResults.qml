@@ -392,7 +392,8 @@ Item {
                     }
                 }
 
-                // The light pill, 32 tall, as Ask's Do it.
+                // A quiet capsule with a fine edge, 32 tall, as a quick
+                // action's button.
                 Rectangle {
                     id: rowPill
                     objectName: "result-pill-" + resultDelegate.index
@@ -401,7 +402,12 @@ Item {
                     width: rowPillLabel.implicitWidth + 32
                     height: 32
                     radius: 16
-                    color: rowPillTap.pressed ? tone.lightPressed : tone.primaryText
+                    color: rowPillTap.pressed ? tone.actionPressed
+                        : rowPillTap.containsMouse ? tone.actionHover : tone.actionFill
+                    border.width: 1
+                    border.color: tone.actionEdge
+                    scale: rowPillTap.pressed ? 0.96 : 1
+                    Behavior on scale { NumberAnimation { duration: launcher.ms(140); easing.type: Easing.OutCubic } }
                     Accessible.role: Accessible.Button
                     Accessible.name: resultDelegate.pill.length > 0
                         ? words.i18nc("a pill, then the result it acts on", "%1: %2", resultDelegate.pill, resultDelegate.model.display || "") : ""
@@ -410,7 +416,7 @@ Item {
                         id: rowPillLabel
                         anchors.centerIn: parent
                         text: resultDelegate.pill
-                        color: tone.surface
+                        color: launcher.primaryText
                         font.pixelSize: 14
                         font.weight: Font.DemiBold
                     }
@@ -418,6 +424,7 @@ Item {
                     MouseArea {
                         id: rowPillTap
                         anchors.fill: parent
+                        hoverEnabled: true
                         enabled: !launcher.guestDragged && !launcher.applicationLaunchPending
                         onClicked: launcher.runResult(resultDelegate.index)
                     }

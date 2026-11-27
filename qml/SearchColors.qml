@@ -99,6 +99,12 @@ QtObject {
     readonly property color fieldEdgeLit: dark ? "#24ffffff" : Qt.rgba(0, 0, 0, 0.16)
     readonly property color fieldHalo: dark ? "#0fffffff" : Qt.rgba(0, 0, 0, 0.05)
     readonly property color fieldShadow: dark ? Qt.rgba(0, 0, 0, 0.5) : Qt.rgba(0, 0, 0, 0.12)
+    // A button on a row, such as a quick action's: a quiet capsule with a
+    // fine edge, brighter under the pointer and pressed.
+    readonly property color actionFill: dark ? "#14ffffff" : wash(0.05)
+    readonly property color actionHover: dark ? "#21ffffff" : wash(0.08)
+    readonly property color actionPressed: dark ? "#2bffffff" : wash(0.11)
+    readonly property color actionEdge: dark ? "#1affffff" : wash(0.08)
     readonly property color focusRing: dark ? "#b0ffffff" : wash(0.69)
     readonly property color track: dark ? "#24ffffff" : wash(0.14)
     readonly property color progress: dark ? "#d9ffffff" : wash(0.85)
