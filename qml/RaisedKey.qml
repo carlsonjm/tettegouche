@@ -8,8 +8,8 @@ import QtQuick.Effects
 
 // The raised key Search marks what is chosen with, as under the mode shown,
 // and the field is made of: one flat fill with a fine edge, a lit rim along
-// its top, and one soft shadow held in close under it, whose edge alone
-// shows past the key, with no hard line beneath it. It fades in and out where it is.
+// its top, and a wide soft shadow pulled in under it, whose far fade alone
+// shows past the key, with no line beneath it. It fades in and out where it is.
 Item {
     id: key
     required property SearchColors tone
@@ -20,25 +20,36 @@ Item {
     property color edge: tone.modeKeyEdge
     // How far it is lifted, 0 to 1: a deeper, wider shadow.
     property real lift: 0
+    // How far the shape casting the shadow sits inside the key's edge.
+    property real shadowInset: Math.min(10, height / 4)
     // How long it takes to fade, at Plasma's animation speed.
     property int fadeDuration: 120
     opacity: shown ? 1 : 0
     visible: opacity > 0
     Behavior on opacity { NumberAnimation { duration: key.fadeDuration; easing.type: Easing.OutCubic } }
 
-    // The shadow, fully blurred, so no line forms along the key's edge.
-    Item {
+    // The shadow: cast by a shape drawn smaller than the key and hidden
+    // under it, blurred wide, so only its far fade reaches out past the
+    // key's edge, and never a dark line along it.
+    Rectangle {
         anchors.fill: parent
+        anchors.margins: key.shadowInset
+        anchors.topMargin: key.shadowInset + 2 + 2 * key.lift
+        anchors.bottomMargin: key.shadowInset - 4 - 2 * key.lift
+        radius: Math.max(0, key.radius - key.shadowInset)
+        color: key.tone.modeKeyShadow
         layer.enabled: key.visible
         layer.effect: MultiEffect {
             autoPaddingEnabled: true
-            shadowEnabled: true
-            shadowColor: key.tone.modeKeyShadow
-            blurMax: 16
-            shadowBlur: 1
-            shadowOpacity: 0.45 + 0.2 * key.lift
-            shadowVerticalOffset: 2 + key.lift
+            blurEnabled: true
+            blurMax: 32
+            blur: 1
         }
+        opacity: 0.75 + 0.25 * key.lift
+    }
+
+    Item {
+        anchors.fill: parent
 
         Rectangle {
             id: face
