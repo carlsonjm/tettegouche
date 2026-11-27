@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtCore
 
 // The shade of a raised key or the field drawn again over its inside with a
 // fine grain: every dot of the screen nudged at random by up to a step
@@ -44,6 +45,11 @@ Item {
         function onFrameSwapped() { grain.armed = true }
     }
     Component.onCompleted: if (!Window.window) armed = true
+    // Where the drawn grain is kept between starts.
+    readonly property string cacheFolder: {
+        const folder = StandardPaths.writableLocation(StandardPaths.GenericCacheLocation).toString()
+        return folder.replace(/^file:\/\//, "")
+    }
 
     // Draws the grain on one canvas, inside the rounded shape set by
     // shapeX and shapeWidth, row by row of the screen's dots.
@@ -96,22 +102,61 @@ Item {
         }
     }
 
-    component Piece: Canvas {
+    // One piece of the grain: drawn once on a canvas and kept as a picture
+    // in the cache, which Search shows from then on. A canvas's drawing is
+    // lost whenever the window gives back what it draws with, as it may
+    // when hidden; a picture is shown again from the file, and the next
+    // start draws nothing at all.
+    component Piece: Item {
+        id: piece
         property real shapeX: 0
         property real shapeWidth: 0
-        smooth: false
-        onPaint: grain.paint(this, shapeX, shapeWidth)
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        Connections {
-            target: grain
-            function onUpperChanged() { requestPaint() }
-            function onLowerChanged() { requestPaint() }
-            function onVisibleChanged() { requestPaint() }
-            function onDotsChanged() { requestPaint() }
-            function onKeyHeightChanged() { requestPaint() }
-            function onRoundChanged() { requestPaint() }
-            function onArmedChanged() { requestPaint() }
+        readonly property string file: !grain.armed || !grain.visible || width < 1 || height < 1 ? ""
+            : grain.cacheFolder + "/tettegouche-grain-" + Qt.md5([grain.upper, grain.lower, grain.keyHeight, grain.topInset,
+                grain.round, grain.dots, width, height, shapeX, shapeWidth].join("|")) + ".png"
+        // Where the picture could not be kept, the canvas shows instead.
+        property bool unsaved: false
+        Image {
+            id: picture
+            anchors.fill: parent
+            smooth: false
+            cache: false
+            source: piece.file && !piece.unsaved ? "file://" + piece.file : ""
+            onStatusChanged: if (status === Image.Error) painter.active = true
+        }
+        Loader {
+            id: painter
+            anchors.fill: parent
+            active: false
+            sourceComponent: Canvas {
+                id: drawing
+                smooth: false
+                // Saving the picture reports it painted again; only the first
+                // report saves.
+                property bool saving: false
+                // Drawn unseen behind the picture, unless it cannot be kept.
+                opacity: piece.unsaved ? 1 : 0
+                Component.onCompleted: requestPaint()
+                onPaint: grain.paint(this, piece.shapeX, piece.shapeWidth)
+                onPainted: {
+                    if (piece.unsaved || saving) return
+                    const kept = piece.file
+                    if (!kept) return
+                    saving = true
+                    const ok = save(kept)
+                    if (ok) {
+                        picture.source = ""
+                        picture.source = "file://" + kept
+                        Qt.callLater(() => { painter.active = false })
+                    } else {
+                        piece.unsaved = true
+                    }
+                }
+                Connections {
+                    target: piece
+                    function onFileChanged() { if (piece.file) { drawing.saving = false; drawing.requestPaint() } }
+                }
+            }
         }
     }
 
@@ -129,11 +174,31 @@ Item {
             shapeWidth: width
         }
     }
-    Piece {
+    // The far end is small and rides the key's edge as it grows, so it is
+    // drawn on a canvas each time, and again as the window shows, which
+    // may have lost it while hidden.
+    Canvas {
+        id: farEnd
         x: Math.floor((grain.width - grain.endWidth) * grain.dots) / grain.dots
         width: grain.width - x
         height: grain.height
-        shapeX: width - 4 * grain.round
-        shapeWidth: 4 * grain.round
+        smooth: false
+        onPaint: grain.paint(this, width - 4 * grain.round, 4 * grain.round)
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        Connections {
+            target: grain
+            function onUpperChanged() { farEnd.requestPaint() }
+            function onLowerChanged() { farEnd.requestPaint() }
+            function onVisibleChanged() { farEnd.requestPaint() }
+            function onDotsChanged() { farEnd.requestPaint() }
+            function onKeyHeightChanged() { farEnd.requestPaint() }
+            function onRoundChanged() { farEnd.requestPaint() }
+            function onArmedChanged() { farEnd.requestPaint() }
+        }
+        Connections {
+            target: grain.Window.window
+            function onVisibleChanged() { if (grain.Window.window.visible) farEnd.requestPaint() }
+        }
     }
 }
