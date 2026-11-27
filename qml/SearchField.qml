@@ -80,6 +80,19 @@ Rectangle {
             GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
             GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
         }
+        // Its shade drawn again with a fine grain, so no lines show
+        // between its greys.
+        GrainFill {
+            objectName: "search-field-grain"
+            anchors.fill: parent
+            anchors.margins: 1
+            upper: searchField.lit ? tone.fieldLitTop : tone.fieldTop
+            lower: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom
+            keyHeight: fieldFace.height
+            topInset: 1
+            widest: searchField.parent ? searchField.parent.width - 2 : width
+            round: Math.max(0, Math.min(searchField.radius, fieldFace.height / 2) - 1)
+        }
         // It lifts on the mode highlight's own shadow, the same in every
         // state.
         layer.enabled: true
