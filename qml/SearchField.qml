@@ -4,6 +4,7 @@
 */
 
 import QtQuick
+import QtQuick.Effects
 import org.kde.ki18n
 import QtQuick.Controls as QQC2
 import org.kde.kirigami as Kirigami
@@ -64,60 +65,6 @@ Rectangle {
         * launcher.openingControls
     enabled: !launcher.applicationLaunchPending && (!launcher.modeOpen || launcher.keysHandOver)
 
-    // Under the pointer and while it holds the keys or what was typed, the
-    // field lifts on a shadow made of six faint layers, each falling twice
-    // as far and spreading twice as wide as the one before, so it is darkest
-    // close under the field and thins into a fade with no rim. At rest it
-    // casts none. On a light ground one soft shadow does it.
-    Canvas {
-        id: fieldShadow
-        objectName: "search-field-shadow"
-        readonly property int reach: 40
-        readonly property bool raised: searchField.lit || fieldHover.hovered
-        // Each layer: [across, down, blur, darkness].
-        readonly property var layers: {
-            if (!searchField.tone.dark) {
-                return searchField.lit ? [[0, 1, 6, 0.14]] : [[0, 1, 5, 0.10]]
-            }
-            const out = []
-            for (let i = 0; i < 6; ++i) {
-                const k = Math.pow(2, i) / 32
-                out.push([0, 7.75 * k, 7.75 * k * 2.4, 0.2])
-            }
-            return out
-        }
-        x: -reach
-        y: -reach
-        width: parent.width + 2 * reach
-        height: parent.height + 2 * reach
-        opacity: raised ? 1 : 0
-        visible: opacity > 0
-        Behavior on opacity { NumberAnimation { duration: launcher.ms(160); easing.type: Easing.OutCubic } }
-        onLayersChanged: requestPaint()
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
-        onPaint: {
-            const ctx = getContext("2d")
-            ctx.reset()
-            const w = width - 2 * reach
-            const h = height - 2 * reach
-            if (w < 2 || h < 2) return
-            const r = Math.min(searchField.radius, h / 2)
-            // Each layer is cast by a shape drawn far off to the left, so
-            // only its shadow lands here.
-            const away = width + 2 * reach
-            for (const l of layers) {
-                ctx.shadowOffsetX = away + l[0]
-                ctx.shadowOffsetY = l[1]
-                ctx.shadowBlur = l[2]
-                ctx.shadowColor = Qt.rgba(0, 0, 0, l[3])
-                ctx.fillStyle = "black"
-                ctx.beginPath()
-                ctx.roundedRect(reach - away, reach, w, h, r, r)
-                ctx.fill()
-            }
-        }
-    }
     // The highlight's material: its shade falling gently from top to
     // bottom, with a hairline round it. While it holds the keys or what was
     // typed it brightens a step, with no ring; its hairline brightens a
@@ -132,6 +79,18 @@ Rectangle {
         gradient: Gradient {
             GradientStop { position: 0; color: searchField.lit ? tone.fieldLitTop : tone.fieldTop }
             GradientStop { position: 1; color: searchField.lit ? tone.fieldLitBottom : tone.fieldBottom }
+        }
+        // It lifts on the mode highlight's own shadow, the same in every
+        // state.
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            objectName: "search-field-shadow"
+            autoPaddingEnabled: true
+            shadowEnabled: true
+            shadowColor: searchField.tone.modeKeyShadow
+            shadowBlur: 0.45
+            shadowOpacity: 0.6
+            shadowVerticalOffset: 1
         }
     }
     HoverHandler {
