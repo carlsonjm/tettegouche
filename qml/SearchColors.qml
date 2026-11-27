@@ -81,7 +81,7 @@ QtObject {
     // Solid, so its shadow stays under it and never shows through.
     readonly property color modeKey: dark ? suite("#383838") : "#ffffff"
     // The lit rim along a raised key's upper edge.
-    readonly property color keyRim: dark ? "#1fffffff" : "#ffffff"
+    readonly property color keyRim: dark ? "#14ffffff" : "#ffffff"
     readonly property color modeKeyEdge: dark ? "#16ffffff" : Qt.rgba(0, 0, 0, 0.07)
     readonly property color modeKeyShadow: dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(0, 0, 0, 0.16)
     readonly property color modeText: dark ? "#94ffffff" : wash(0.58)
